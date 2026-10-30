@@ -13626,7 +13626,7 @@
   {
    "id": "core.response.replay-returns-committed-value",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "grant-binding",
+   "anchor": "mission-response-parameters",
    "text": "A creation replay deduplicated under the applicable operation identifier (`approval_event_id` for direct approval ({{mission-record}}), or the identifier a Mission-creating profile defines) returns the committed effective value unchanged",
    "role": "AS",
    "strength": "stated",

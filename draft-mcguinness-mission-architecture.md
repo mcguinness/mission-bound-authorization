@@ -547,7 +547,9 @@ normative over both.
 The body reads in four parts, followed by appendices:
 
 - **The model** comes first: a Mission's life end to end
-  ({{mission-life}}); the Mission ({{the-mission}}), with its approval
+  ({{mission-life}}); the Mission ({{the-mission}}), with its
+  relationship to existing OAuth objects ({{why-a-new-object}}), plans
+  and execution ({{the-mission-the-plan-and-execution}}), approval
   and lifecycle ({{approval-and-lifecycle}}), authority path
   ({{mission-authority-path}}), delegated-authority layer
   ({{delegated-authority-layer}}), capability envelope
@@ -1107,8 +1109,8 @@ The family does not define:
   restraint applies to GNAP and the capability-system lineage
   (macaroons, Biscuit, UCAN, object-capability narrowing): the family
   composes with deployed grant protocols and attenuation primitives
-  rather than adding a competing one. The OAuth binding states the
-  comparison ({{I-D.draft-mcguinness-oauth-mission}}).
+  rather than adding a competing one. {{why-a-new-object}} compares
+  the Mission with the OAuth objects near it.
 - **A policy language.** The PDP evaluates the Mission's Authority Set,
   constraints, and state; how a deployment authors policy beyond them is
   local ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -1310,7 +1312,8 @@ Requesting client:
   requested it, never the approved agent (the OAuth binding).
 
 Executing delegate:
-: the outermost `act` actor (the OAuth binding's Delegation section).
+: the outermost `act` actor (the OAuth binding's Delegation Within a
+  Mission section).
 
 Credential holder:
 : the mediating PEP under mediated custody
@@ -3781,9 +3784,10 @@ direction.
 
 A deployment enters the family from the estate it already runs
 ({{entry-ramps}}). It can stop at issuance alone ({{issuance-only}}),
-adopt Missions one short task at a time ({{short-mission}}), size each
-Mission to one task ({{mission-granularity}}), and compose named patterns for untrusted input ({{quarantine-pattern}})
-and for work that never ends ({{standing-agent}}). The Deployment
+adopt Missions one short task at a time ({{short-mission}},
+{{mission-granularity}}), and compose named patterns for untrusted
+input ({{quarantine-pattern}}) and for work that never ends
+({{standing-agent}}). The Deployment
 Profile states what it built ({{deployment-profile}}).
 
 ## Entry Ramps by Estate {#entry-ramps}
@@ -5105,7 +5109,7 @@ with no `suspended` state and its own termination reasons, served by
 
 \[\[ To be removed from the final specification ]]
 
-- Gains, from the OAuth binding, Approval Role Mapping under Mission
+- Gains, from the OAuth binding, Approval Role Mapping beside Mission
   Creation Paths: how each creation scenario assigns the three
   `approval_basis` roles. The OAuth binding's Single Accountable
   Approver section points here. No requirement changed (#1892).

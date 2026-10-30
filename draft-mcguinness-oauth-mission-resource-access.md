@@ -718,8 +718,8 @@ A Common Constraint definition fixes:
 
 A constraint's intersection rule applies where a derivation combines
 two bounds for the same key, as in the proposal and policy-ceiling
-example of {{I-D.draft-mcguinness-mission-architecture}}, Section
-"Derivation Rule Example". A derivation need not run a
+example ({{I-D.draft-mcguinness-mission-architecture}}, Section
+"Derivation Rule Example"). A derivation need not run a
 particular intersection algorithm, and a ceiling whose specification
 defines a refusal rule is enforced by that rule, not silently
 intersected.

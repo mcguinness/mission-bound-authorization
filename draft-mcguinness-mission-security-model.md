@@ -444,7 +444,9 @@ data, exposure to untrusted content, and the ability to communicate
 externally. Issuance constrains the data-access leg: a Mission narrows
 authority from everything the agent's standing credentials allow to
 the resources the approved task needs, and per-task Missions further
-limit the effect of a compromise ({{I-D.draft-mcguinness-oauth-mission}}).
+limit the effect of a compromise ({{I-D.draft-mcguinness-oauth-mission}};
+{{I-D.draft-mcguinness-mission-architecture}}, Section "Mission
+Granularity").
 Issuance does not constrain the external-communication leg: within an
 approved Authority Set, an injected agent can read what the Mission
 permits and write to a sink the Mission permits. Constraining
@@ -1218,11 +1220,12 @@ Mission bypass through source authority held outside any Mission:
   an ordinary credential to the Mission, such as the Mission Join of
   {{I-D.draft-mcguinness-mission-authority-server}}, is one
   realization of the trusted enforcement path the OAuth binding
-  permits for such a credential. Residual: a held ordinary credential
+  permits for such a credential ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Authorization Server Metadata"). Residual: a held ordinary credential
   needs no request to the AS, and neither an AS nor a resource server
   can generally tell that a request made with one serves a Mission; a
-  workload's
-  provisioned authority exists beside any Mission that draws on it,
+  workload's provisioned authority exists beside any Mission that
+  draws on it,
   and Mission state does not revoke a grant held outside any Mission;
   at a resource that is not Mission-governed, absent mandatory
   mediation, such a grant acts with no Mission state, revocation, or

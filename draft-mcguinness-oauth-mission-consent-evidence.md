@@ -1868,13 +1868,10 @@ encoding difference to resolve before interoperating.
 
 - Layered Rendering adds non-normative practices for a large or varied
   Authority Set, grouping and splitting, from the OAuth binding's
-  Approval Comprehension; the evidence model cites the binding's rule
-  that a committed approval surface covers the provenance facts. No
-  requirement changes (#1892).
-
-- The split practice cites the architecture document's Mission
-  Granularity, which carries the evaluate-together boundary the OAuth
-  binding's Applicability stated. No requirement changes (#1892).
+  Approval Comprehension, the split practice citing the architecture
+  document's Mission Granularity; the evidence model cites the binding's
+  rule that a committed approval surface covers the provenance facts.
+  No requirement changes (#1892).
 
 # Acknowledgments
 {:numbered="false"}

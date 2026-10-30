@@ -440,6 +440,17 @@ Issuance-Only Deployment"); a separately specified runtime layer adds
 a per-action check for the action classes whose consequence needs one
 ({{runtime-boundary}}).
 
+The sections follow that chain. {{mission-intent}} and
+{{authorization-derivation}} define what a client submits and what the
+AS derives from it; {{mission-creation}} the approval, the record, and
+the grant binding; {{mission-bound-tokens}} issuance on every path;
+{{delegation}}, an optional capability, delegation within a Mission;
+{{token-consumption}} enforcement and introspection; and {{lifecycle}}
+the Mission's state and its termination. {{error-mapping}},
+{{discovery}}, {{protected-resource-metadata}}, {{extensibility}}, and
+{{conformance}} are reference sections, and {{deployment-choices}}
+lists what a deployment decides and how each party learns it.
+
 ## Applicability {#applicability}
 
 This document targets OAuth deployments where authority serves a
@@ -1416,7 +1427,7 @@ The approval surface renders the prose beside the derived Authority Set
 ({{direct-approval-steps}}) as the human check that the structure
 matches the words, not as a machine enforcement mechanism.
 
-## Authority Set Example {#derivation-policy-tasks}
+## Authority Set Example {#authority-set-example}
 
 The following is an example of an Authority Set. The read entry is
 delegable to depth 2 and bounded to a Q3 issuance window by the
@@ -1961,8 +1972,8 @@ and Consent Evidence can carry a partial presentation of that record
 The `adjudication.governance_record` member ({{mission-record}})
 marks an approval such a record backs, and
 {{I-D.draft-mcguinness-mission-architecture}} (Section "Approval Role
-Mapping") shows how each scenario assigns the three `approval_basis`
-roles.
+Mapping") shows how the common creation scenarios assign the three
+`approval_basis` roles.
 
 The issuer retains the Approval Governance Record, and this document
 defines no surface that discloses it. An artifact that refers to it
@@ -2926,45 +2937,6 @@ follows. The deployment either revokes the Mission or lets it expire at
 terminate it ({{lifecycle}}), so reprocessing the same timeout
 changes nothing.
 
-### Mission Identifier and Expiry in Responses {#mission-response-parameters}
-
-This document defines `mission_id` as a token-endpoint response
-parameter: a string carrying the Mission Identifier, returned
-alongside the issued token. It is an informational reference only:
-presenting it authorizes nothing ({{grant-binding-resolution}}), and a
-client MUST NOT derive authority from it.
-
-Alongside it, this document defines `mission_expires_at`: the exact
-RFC 3339 string recorded as the Mission Record's effective
-`expires_at` ({{mission-record}}), the common member of every
-Mission-creating success response, whatever surface completes the
-creation. `expires_in` describes the access token's lifetime, not the
-Mission's, and the effective expiry can be shorter than the requested
-`intent.expires_at`.
-
-A client learns both values from these members, not from the access
-token, which it treats as opaque ({{Section 6 of RFC9068}}). The AS
-returns them as follows:
-
-- The success response that first delivers a newly created Mission's
-  identifier or credential MUST carry both. On the authorization-code
-  path, the authorization response carrying only the code is not that
-  response; the token response redeeming the code is.
-- A delegated exchange response carries both as
-  {{delegated-exchange}} requires.
-- Any other Mission-bound token response, including a refresh,
-  designation ({{designation}}), or self-exchange ({{self-exchange}})
-  response, SHOULD carry both.
-- A creation replay deduplicated under the applicable operation
-  identifier (`approval_event_id` for direct approval
-  ({{mission-record}}), or the identifier a Mission-creating profile
-  defines) returns the committed effective value unchanged.
-
-On OAuth token responses `mission_expires_at` is additionally
-registered as a token-endpoint response parameter
-({{oauth-parameters-registration}}). It is informational in the same
-way: presenting it authorizes nothing.
-
 # Mission-Bound Token Issuance {#mission-bound-tokens}
 
 An access token issued under a Mission takes one of two forms:
@@ -2977,7 +2949,13 @@ An access token issued under a Mission takes one of two forms:
   or issuer-local resolution carries its claims, with the same
   enforcement obligations.
 
-{{issuance-gating}} states the issuance procedure for every path.
+{{issuance-gating}} states the issuance procedure for every path. The
+sections that follow state the token's claims ({{token-claims}}), its
+audience and the token response ({{token-response}}), refresh
+({{refresh-tokens}}), self-exchange ({{self-exchange}}),
+authentication claims and lifetime ({{token-authentication-lifetime}}),
+scope projection ({{scope-projection}}), and the `mission` claim
+({{mission-claim}}).
 
 ## Issuance Gating {#issuance-gating}
 
@@ -2995,15 +2973,21 @@ response that redeems a newly created Mission's authorization code
 ({{approval-code-protection}}); a refresh ({{refresh-tokens}}); a
 designation ({{designation}}); a delegated exchange
 ({{delegated-exchange}}); and a self-exchange ({{self-exchange}}).
-Companion profiles define further derivations. A derivation passes
-every check below, each stated where cited, with any difference by
-path; a path's own section states its further rules. The numbering is
-presentation order: it imposes no execution order and no error
-precedence ({{error-mapping}}, which gives the error codes). Sequencing
-that a rule requires still applies: the revocation refusal below
-applies at the AS's final decision to release the result, and a
-companion profile that sequences a check within a path keeps that
-sequence.
+Each of these paths passes every check below, each stated where cited,
+with any difference by path; a path's own section states its further
+rules. Any other derivation, such as one a companion profile defines,
+passes at least checks 1, 3, 5, 7, and 8.
+
+The numbering is presentation order: it imposes no execution order and
+no error precedence ({{error-mapping}} gives the error codes and the
+orders this document states). An order that a rule states still
+applies, including these: the Mission-governed refusal applies only to
+an otherwise processable request and, on a refresh, is decided before
+the refresh token is consumed or rotated ({{authority-proposal}}); a
+refresh establishes any scope projection before then
+({{scope-projection-refresh}}); the revocation refusal applies at the
+AS's final decision to release the result (check 10); and a companion
+profile that sequences a check within a path keeps that sequence.
 
 1. Mission resolution from the presented grant
    ({{grant-binding-resolution}}): the code, the refresh token, or the
@@ -3029,7 +3013,8 @@ sequence.
    delegated token, also an audience that processes the `act` chain
    ({{rs-mission-unaware}}).
 7. Scope projection ({{scope-projection}}), wherever `scope` is
-   emitted, requested, or the only form the target consumes.
+   emitted, requested, or the only form the target consumes; on a
+   refresh, with that section's protection of the refresh token.
 8. Claims and lifetime ({{token-claims}}, {{mission-claim}},
    {{mission-claim-reservation}}, {{token-authentication-lifetime}}):
    each token's `exp` does not exceed the Mission's `expires_at`; the
@@ -3286,6 +3271,45 @@ intact:
 }
 ~~~
 
+### Mission Identifier and Expiry in Responses {#mission-response-parameters}
+
+This document defines `mission_id` as a token-endpoint response
+parameter: a string carrying the Mission Identifier, returned
+alongside the issued token. It is an informational reference only:
+presenting it authorizes nothing ({{grant-binding-resolution}}), and a
+client MUST NOT derive authority from it.
+
+Alongside it, this document defines `mission_expires_at`: the exact
+RFC 3339 string recorded as the Mission Record's effective
+`expires_at` ({{mission-record}}), the common member of every
+Mission-creating success response, whatever surface completes the
+creation. `expires_in` describes the access token's lifetime, not the
+Mission's, and the effective expiry can be shorter than the requested
+`intent.expires_at`.
+
+A client learns both values from these members, not from the access
+token, which it treats as opaque ({{Section 6 of RFC9068}}). The AS
+returns them as follows:
+
+- The success response that first delivers a newly created Mission's
+  identifier or credential MUST carry both. On the authorization-code
+  path, the authorization response carrying only the code is not that
+  response; the token response redeeming the code is.
+- A delegated exchange response carries both as
+  {{delegated-exchange}} requires.
+- Any other Mission-bound token response, including a refresh,
+  designation ({{designation}}), or self-exchange ({{self-exchange}})
+  response, SHOULD carry both.
+- A creation replay deduplicated under the applicable operation
+  identifier (`approval_event_id` for direct approval
+  ({{mission-record}}), or the identifier a Mission-creating profile
+  defines) returns the committed effective value unchanged.
+
+On OAuth token responses `mission_expires_at` is additionally
+registered as a token-endpoint response parameter
+({{oauth-parameters-registration}}). It is informational in the same
+way: presenting it authorizes nothing.
+
 ## Refresh Tokens {#refresh-tokens}
 
 Issuance on a refresh applies the issuance procedure of
@@ -3381,7 +3405,7 @@ issued from it.
 This section applies to every issuance that emits `scope` on a
 Mission-bound token or whose request names a `scope` value, and to
 issuance for a target that consumes only `scope`: such a target
-receives a safe projection or a refusal (step 5 below).
+receives a safe projection or a refusal (projection step 5 below).
 
 ### Subset Condition {#scope-projection-subset}
 
@@ -3460,7 +3484,7 @@ mapping names but no carried entry makes safe (step 3), or any `scope`
 value the AS associates with a target that consumes
 `authorization_details` (step 4).
 
-An unknown, ambiguous, or stale mapping is a step 5 failure and yields
+An unknown, ambiguous, or stale mapping fails projection step 5 and yields
 the `invalid_target` error code even when the request also names a
 `scope` value; `invalid_scope` applies only under a mapping the AS
 trusts.
@@ -3632,153 +3656,6 @@ This reservation concerns access tokens and their introspection
 representation. An evidence or control artifact that embeds a
 `mission` descriptor ({{extension-points}}) is not an access token, and
 this section does not change its meaning.
-
-## Mission Lifecycle {#lifecycle}
-
-A Mission is in one of two states:
-
-- `active`: the only state in which the AS derives tokens.
-- `terminated`: a terminal state; the Mission has ended. Its
-  `termination` member ({{termination}}) gives the reason: `revoked`
-  when it was revoked ({{revocation}}), or `expired` when its
-  `expires_at` passed.
-
-The transitions are:
-
-| From | Event | To | Reason |
-|---|---|---|---|
-| (none) | approval event | `active` | |
-| `active` | revoke | `terminated` | `revoked` |
-| `active` | `expires_at` reached | `terminated` | `expired` |
-{: title="Mission lifecycle transitions"}
-
-The Mission Lifecycle States registry ({{iana-lifecycle-states}})
-holds these states, and the Mission Termination Reasons registry
-({{iana-termination-reasons}}) holds the reasons. A companion profile
-MAY register an additional state for a lifecycle it introduces (for
-example, a paused state). A companion
-profile that defines a further way for a Mission to end registers a
-termination reason, not a state.
-
-Wherever a Mission state is reported, including the Mission Record
-and the introspection `mission` member, a consumer MUST treat only
-the exact value `active` as permitting derivation or continued
-reliance, and MUST treat every other value, including one it does
-not recognize, as non-active and non-deriving (the
-forward-compatibility rule).
-
-For every state-dependent decision this document defines, the AS MUST
-treat a Mission as `active` only when its stored state is `active`
-and the decision time is strictly before `expires_at`. From
-`expires_at`, a Mission whose stored state is still `active` is
-`terminated` with reason `expired` for every such decision, whether
-or not that transition is persisted, including when persisting it
-fails.
-
-Persisting that transition, and emitting any lifecycle event a
-state-distribution companion defines, can happen after the decision
-that observed the boundary; persisting it never replaces a
-termination already recorded.
-
-### Mission Termination {#termination}
-
-A Mission whose `state` is `terminated` carries a `termination`
-object, in the Mission Record and wherever its state is reported with
-it; a Mission in any other state carries none. Its members are:
-
-`reason`:
-: REQUIRED. A string, a value of the Mission Termination Reasons
-  registry ({{iana-termination-reasons}}): `revoked` or `expired` in
-  this document, or a reason a companion profile registers.
-
-`terminated_at`:
-: REQUIRED, except as described below. A
-  string. An RFC 3339 {{RFC3339}} date-time: the instant the
-  termination took effect. For `expired`, it is the Mission's
-  `expires_at`.
-
-A companion profile that registers a reason defines that reason's
-further members. A profile that maintains a state version for the
-Mission adds the version of the transition that committed the
-termination as its audit reference.
-
-The issuer writes `termination` once, atomically with the transition
-to `terminated`, and MUST NOT change it: an expiry, or any later event,
-does not replace the reason or references of a Mission already
-terminated.
-
-A termination carries every member its reason requires, except as
-follows.
-
-A termination need not carry a member its reason requires when it
-was recorded before its reason defined that member, or derived
-from such a termination: such a termination exposes only the facts
-its record retained and omits a member it has no retained value for,
-`terminated_at` included, rather than inventing one. For `expired`,
-the retained `terminated_at` is the Mission's `expires_at`; for
-another reason, a retained commit time is its `terminated_at` only
-where that commit was the termination's effect.
-
-A consumer that receives such a termination, or a `reason` it does
-not recognize, still treats the Mission as terminated: it stops work
-governed by the Mission, follows no absent reference, and infers no
-cause-specific action.
-
-For a transition period, a consumer of a report that still carries
-`revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
-Mission's `state` MAY read it as `terminated` with that reason
-(`cascaded` as `parent_terminated`) and the facts the report
-retained; an emitter never reports those values as a state. That
-reading is local: the consumer never re-emits or re-signs it, and it
-verifies a signed artifact over its original bytes, which it retains,
-before reading it this way.
-
-### Revocation {#revocation}
-
-A Mission is revoked when the AS receives a revocation for it from a
-party the deployment's policy authorizes to revoke it, or when that
-policy itself terminates the Mission; either way, its termination
-reason is `revoked`. The Subject, the Approver, and an administrator
-are parties that policy can authorize; none is authorized by its role
-alone. A Mission Issuer MUST accept, through an authenticated means
-independent of possession of any token, a revocation by `mission_id`
-from a party the deployment's policy authorizes (so a Mission can be
-stopped even when no refresh token is held).
-
-When the AS establishes that the principal identified by a Mission's
-recorded `subject` ({{record-principal-members}}) has been
-deprovisioned, it SHOULD terminate that Mission with termination
-reason `revoked`. The rule reaches every Mission not yet terminated,
-including one a companion profile has suspended, and identifies the
-Subject by its recorded `iss` and `sub`. Temporary disablement, a
-source outage, or an unavailable lookup does not by itself establish
-deprovisioning. The departure or disablement of an Approver, an
-accountable owner, or a client triggers the rule only when that
-principal is the recorded Subject; an organizational Mission records
-the organizational principal as its Subject ({{authority-sources}}),
-so an approving officer's departure does not terminate it under this
-rule. A deployment that does not follow this rule documents why; that
-exception cannot bypass a continuing dependency the deployment
-requires or rewrite the recorded Subject. Termination stops further
-issuance ({{issuance-gating}}) but does not itself recall tokens
-already issued; an earlier execution cutoff depends on the
-deployment's enforcement mechanism.
-
-The wire shape of that operation is out of scope for this document. A
-deployment-defined authenticated surface satisfies this requirement;
-Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
-defines an interoperable `revoke` operation.
-
-Revoking a token does not by itself revoke a Mission. As
-{{Section 2.1 of RFC7009}} permits, a deployment's revocation policy
-can treat revoking a Mission's refresh token as revoking the Mission;
-a deployment that couples token revocation to Mission revocation
-documents that behavior.
-
-A deployment whose consumers rely on Mission state beyond a token's
-lifetime offers token introspection ({{introspection}}) or Mission
-Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read
-current state rather than infer it from token validity.
 
 # Delegation Within a Mission {#delegation}
 
@@ -4296,6 +4173,13 @@ A resource server can also:
 
 ### Mission-Unaware Resource Servers {#rs-mission-unaware}
 
+A resource server that receives no delegated token need not be
+Mission-aware. One that authorizes only from `scope` operates within
+the Mission only to the extent the AS established a safe projection
+for it at issuance ({{scope-projection}}); constrained authority that
+no safe projection carries is enforced only where a resource server,
+or a runtime layer, evaluates `authorization_details`.
+
 Two parties keep a delegated Mission-bound token, one carrying an
 `act` claim, from consumers that do not process the `act` chain:
 
@@ -4746,6 +4630,155 @@ revocation ({{composite-active}}):
   }
 }
 ~~~
+
+# Mission Lifecycle {#lifecycle}
+
+A Mission is in one of two states:
+
+- `active`: the only state in which the AS derives tokens.
+- `terminated`: a terminal state; the Mission has ended. Its
+  `termination` member ({{termination}}) gives the reason: `revoked`
+  when it was revoked ({{revocation}}), or `expired` when its
+  `expires_at` passed.
+
+The transitions are:
+
+| From | Event | To | Reason |
+|---|---|---|---|
+| (none) | approval event | `active` | |
+| `active` | revoke | `terminated` | `revoked` |
+| `active` | `expires_at` reached | `terminated` | `expired` |
+{: title="Mission lifecycle transitions"}
+
+The Mission Lifecycle States registry ({{iana-lifecycle-states}})
+holds these states, and the Mission Termination Reasons registry
+({{iana-termination-reasons}}) holds the reasons. A companion profile
+MAY register an additional state for a lifecycle it introduces (for
+example, a paused state). A companion
+profile that defines a further way for a Mission to end registers a
+termination reason, not a state.
+
+Wherever a Mission state is reported, including the Mission Record
+and the introspection `mission` member, a consumer MUST treat only
+the exact value `active` as permitting derivation or continued
+reliance, and MUST treat every other value, including one it does
+not recognize, as non-active and non-deriving (the
+forward-compatibility rule).
+
+For every state-dependent decision this document defines, the AS MUST
+treat a Mission as `active` only when its stored state is `active`
+and the decision time is strictly before `expires_at`. From
+`expires_at`, a Mission whose stored state is still `active` is
+`terminated` with reason `expired` for every such decision, whether
+or not that transition is persisted, including when persisting it
+fails.
+
+Persisting that transition, and emitting any lifecycle event a
+state-distribution companion defines, can happen after the decision
+that observed the boundary; persisting it never replaces a
+termination already recorded.
+
+## Mission Termination {#termination}
+
+A Mission whose `state` is `terminated` carries a `termination`
+object, in the Mission Record and wherever its state is reported with
+it; a Mission in any other state carries none. Its members are:
+
+`reason`:
+: REQUIRED. A string, a value of the Mission Termination Reasons
+  registry ({{iana-termination-reasons}}): `revoked` or `expired` in
+  this document, or a reason a companion profile registers.
+
+`terminated_at`:
+: REQUIRED, except as described below. A
+  string. An RFC 3339 {{RFC3339}} date-time: the instant the
+  termination took effect. For `expired`, it is the Mission's
+  `expires_at`.
+
+A companion profile that registers a reason defines that reason's
+further members. A profile that maintains a state version for the
+Mission adds the version of the transition that committed the
+termination as its audit reference.
+
+The issuer writes `termination` once, atomically with the transition
+to `terminated`, and MUST NOT change it: an expiry, or any later event,
+does not replace the reason or references of a Mission already
+terminated.
+
+A termination carries every member its reason requires, except as
+follows.
+
+A termination need not carry a member its reason requires when it
+was recorded before its reason defined that member, or derived
+from such a termination: such a termination exposes only the facts
+its record retained and omits a member it has no retained value for,
+`terminated_at` included, rather than inventing one. For `expired`,
+the retained `terminated_at` is the Mission's `expires_at`; for
+another reason, a retained commit time is its `terminated_at` only
+where that commit was the termination's effect.
+
+A consumer that receives such a termination, or a `reason` it does
+not recognize, still treats the Mission as terminated: it stops work
+governed by the Mission, follows no absent reference, and infers no
+cause-specific action.
+
+For a transition period, a consumer of a report that still carries
+`revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
+Mission's `state` MAY read it as `terminated` with that reason
+(`cascaded` as `parent_terminated`) and the facts the report
+retained; an emitter never reports those values as a state. That
+reading is local: the consumer never re-emits or re-signs it, and it
+verifies a signed artifact over its original bytes, which it retains,
+before reading it this way.
+
+## Revocation {#revocation}
+
+A Mission is revoked when the AS receives a revocation for it from a
+party the deployment's policy authorizes to revoke it, or when that
+policy itself terminates the Mission; either way, its termination
+reason is `revoked`. The Subject, the Approver, and an administrator
+are parties that policy can authorize; none is authorized by its role
+alone. A Mission Issuer MUST accept, through an authenticated means
+independent of possession of any token, a revocation by `mission_id`
+from a party the deployment's policy authorizes (so a Mission can be
+stopped even when no refresh token is held).
+
+When the AS establishes that the principal identified by a Mission's
+recorded `subject` ({{record-principal-members}}) has been
+deprovisioned, it SHOULD terminate that Mission with termination
+reason `revoked`. The rule reaches every Mission not yet terminated,
+including one a companion profile has suspended, and identifies the
+Subject by its recorded `iss` and `sub`. Temporary disablement, a
+source outage, or an unavailable lookup does not by itself establish
+deprovisioning. The departure or disablement of an Approver, an
+accountable owner, or a client triggers the rule only when that
+principal is the recorded Subject; an organizational Mission records
+the organizational principal as its Subject ({{authority-sources}}),
+so an approving officer's departure does not terminate it under this
+rule. A deployment that does not follow this rule documents why; that
+exception cannot bypass a continuing dependency the deployment
+requires or rewrite the recorded Subject. Termination stops further
+issuance ({{issuance-gating}}) but does not itself recall tokens
+already issued; an earlier execution cutoff depends on the
+deployment's enforcement mechanism.
+
+The wire shape of that operation is out of scope for this document. A
+deployment-defined authenticated surface satisfies this requirement;
+Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
+defines an interoperable `revoke` operation.
+
+Revoking a token does not by itself revoke a Mission. As
+{{Section 2.1 of RFC7009}} permits, a deployment's revocation policy
+can treat revoking a Mission's refresh token as revoking the Mission;
+a deployment that couples token revocation to Mission revocation
+documents that behavior.
+
+Token validity and Mission validity are distinct: an issued access
+token remains valid until it expires ({{issuance-gating}}). A
+deployment whose consumers rely on Mission state beyond a token's
+lifetime offers token introspection ({{introspection}}) or Mission
+Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read
+current state rather than infer it from token validity.
 
 # Error and Challenge Mapping {#error-mapping}
 
@@ -5317,10 +5350,13 @@ commitment. {{authority-proposal}}, {{discovery}}, and
 {{rs-enforcement}} address this downgrade at issuance, at the client,
 and at enforcement.
 
-The Mission Security Model
-({{I-D.draft-mcguinness-mission-security-model}}) analyzes the path
-that an ordinary credential the client already holds leaves open, and
-where mediation closes it.
+A held ordinary credential needs no request to the AS, and neither an
+AS nor a resource server can generally tell that a request made with
+one serves a Mission. An unmediated ordinary workflow at a resource
+that is not Mission-governed therefore remains a residual that only the
+client's own conformance closes; the Mission Security Model
+({{I-D.draft-mcguinness-mission-security-model}}) analyzes that path
+and where mediation closes it.
 
 The integrity of the `mission_bound_authorization_supported`
 ({{discovery}}) and `mission_bound_authorization_required`
@@ -5346,7 +5382,22 @@ what the Mission permits and write to a sink the Mission permits. The
 Mission Security Model
 ({{I-D.draft-mcguinness-mission-security-model}}) analyzes that
 residual; constraining it is the runtime layer's role
-({{runtime-boundary}}).
+({{runtime-boundary}}), and even there it is bounded, not closed:
+preventing misuse of data within the authorized scope needs an
+information-flow layer this document does not define.
+
+### Authority and Propagated Information {#information-propagation}
+
+Issuance gating bounds escalation by token acquisition
+({{issuance-gating}}, {{subset}}), and the same bound holds for
+information: an agent can inherit another agent's knowledge, but not
+its authority. A work product of one Mission is input, not authority,
+to an agent under another Mission, which acts on it only under its own
+Authority Set. Independent Missions communicating through shared state
+can still compose individually acceptable actions into behavior no
+single Mission authorized; the Mission Security Model
+({{I-D.draft-mcguinness-mission-security-model}}) analyzes that
+coordination.
 
 ## Enforcement Boundaries {#sec-enforcement}
 
@@ -5475,6 +5526,19 @@ refused there.
 Sender-constraining the primary token ({{token-claims}})
 likewise keeps a stolen token from being designated or
 self-exchanged.
+
+### Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
+
+Delegation depth ({{delegation-constraints}}) resets at each
+cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})
+and, where a deployment runs the child-delegation profile, at each
+child generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}),
+so the authority a Mission's descendants can reach can exceed what a
+single approval appears to bound at consent time. Where that apparent
+bound must hold in practice, a deployment can impose a global cap out
+of band; the Mission Security Model
+({{I-D.draft-mcguinness-mission-security-model}}) analyzes the
+composition.
 
 ### Client Attribution and Delegation Lineage {#client-id-misattribution}
 
@@ -6236,7 +6300,7 @@ WWW-Authenticate: DPoP error="insufficient_scope",
 A fresh token from the same Mission does not help: every token it
 derives is a subset of the same Authority Set ({{subset}}).
 
-## Stage 5: Revocation {#stage-5-suspension-resumption-and-revocation}
+## Stage 5: Revocation {#stage-5-revocation}
 
 At 08:50:00 the agent refreshes for the read-only token of the
 refresh example in {{token-response}}, which expires at 08:55:00.
@@ -6266,10 +6330,44 @@ enforcing from the token alone, can honor the read-only token until
 its `exp` at 08:55:00. A resource server that introspects at the
 issuer on every request stops honoring it on its next request.
 
+# Deployment Choices {#deployment-choices}
+
+The following table lists the choices this document leaves to a
+deployment, who makes each, and, for each party that needs to learn
+it, the existing signal, if any, from which that party learns it. A
+signal serves only the party entitled to read it: a client treats an
+access token as opaque ({{Section 6 of RFC9068}}), so a token's header
+and claims are resource-server signals. Where no signal exists, the
+table says so, and the party relies on the deployment's documentation
+or configuration. The cited sections govern.
+
+| Choice point | Decided by | Who learns it, and how |
+| --- | --- | --- |
+| Access-token format: JWT or opaque reference token ({{mission-bound-tokens}}) | AS | Resource server: a JWT's `typ` header parameter value `at+jwt` ({{token-claims}}, {{Section 4 of RFC9068}}); no in-band signal marks an opaque token, which it resolves as its deployment arranges ({{introspected-consumption}}). Client: none; it treats every access token as opaque |
+| Introspection, and issuer-local resolution of an opaque token ({{introspection}}, {{introspected-consumption}}) | AS | Resource server: the `introspection_endpoint` AS metadata ({{RFC8414}}); for issuer-local resolution, none, since the AS authorizes each reader inside its trusted implementation boundary |
+| Sender constraint: bearer, DPoP, or mTLS ({{token-claims}}) | AS, on the client's proof, if any | Resource server: the token's `cnf` claim, or the `cnf` member of an active introspection response ({{rs-enforcement}}, {{introspected-consumption}}). Client: for DPoP, the binding applied to the issued token, from `token_type` `DPoP` in the token response ({{Section 5 of RFC9449}}); for mTLS, the AS's mTLS metadata ({{Section 3.3 of RFC8705}}) states only that the AS supports certificate-bound tokens, and no token-response member says a given token is bound. A resource's DPoP requirement or mTLS support comes from its protected resource metadata ({{RFC9728}}), which also states support, not the binding of a given token. Settled for delegation: a designation is requested with a sender-constrained token, and a delegated token is bound to the delegate's own key ({{designation}}, {{delegated-exchange}}) |
+| Authorization-code binding: PKCE `S256` or a DPoP-bound code ({{approval-code-protection}}) | Client, among the methods the AS accepts | AS: the request's `code_challenge` ({{RFC7636}}), or its `dpop_jkt` parameter or DPoP proof ({{Section 10 of RFC9449}}). Client: the `code_challenge_methods_supported` ({{RFC8414}}) and `dpop_signing_alg_values_supported` ({{Section 5.1 of RFC9449}}) AS metadata |
+| Refresh-token binding: client authentication, sender constraint, or rotation ({{refresh-tokens}}) | AS | Client: under rotation, a new refresh token in each refresh response ({{Section 6 of RFC6749}}); for a DPoP binding, none beyond its own proof when it obtained the refresh token ({{Section 5 of RFC9449}}) |
+| Mission support ({{discovery}}) | AS | Client: the `mission_bound_authorization_supported` AS metadata; otherwise, out of band |
+| Supported types and their schemas ({{other-types}}) | AS; each resource server, for the types it accepts | Client: the AS's `authorization_details_types_supported` metadata ({{RFC9396}}) and, where advertised, its types metadata endpoint ({{discovery}}); a resource server's `authorization_details_types_supported` metadata ({{protected-resource-metadata}}) |
+| Derivation mode: authority proposal or configured mapping ({{derivation-modes}}) | Client, by proposing or not; deployment, by configuring mappings | Client: no metadata signal; the deployment publishes its mapping space as deployment documentation |
+| Transformation capabilities per type: `narrowing`, `delegation`, `projection` ({{transformation-capabilities}}) | AS operator, per type | Client, in order of preference: a `mission_transformation_capabilities` member in the type's entry at the types metadata endpoint, an equivalently shaped member of supported-type documentation, or deployment documentation. Resource server: none needed; it enforces entries as carried ({{delegation-constraints}}). Settled: the first carrier that declares a member governs, and a declared `narrowing` also governs Authority Set derivation |
+| Each entry's audience ({{transformation-capabilities}}) | Deployment | AS: a trusted entry-to-audience mapping, such as authenticated configuration or protected resource metadata ({{RFC9728}}). Client: none; it requests an audience with `resource` and reads the granted entries from the token response ({{token-response}}) |
+| Scope projection for a target ({{scope-projection}}) | Deployment, per target | AS: the target's protected resource metadata ({{RFC9728}}) or authenticated out-of-band configuration |
+| Mission-governed resources ({{authority-proposal}}) | Deployment, or the resource through its metadata | AS and client: the `mission_bound_authorization_required` protected resource metadata ({{protected-resource-metadata}}), which the AS authenticates; a deployment's own classification has no signal, and `false` or omission does not clear it. Resource server: its own configuration ({{rs-requirements}}) |
+| Delegation support ({{delegation}}) | AS | Delegating party and delegate: `grant_types_supported` listing the Token Exchange grant type ({{discovery}}); otherwise, out of band or by attempt. Settled: a delegate is identified by its client authentication, an `actor_token` is refused, and a public client is not a delegate ({{delegated-exchange}}) |
+| Audiences that process the `act` chain ({{rs-mission-unaware}}) | Deployment | AS: no protocol signal; neither parsing `act` nor `mission_bound_authorization_required` establishes it, and the AS establishes it by deployment means, for example its configuration |
+| Designated-client separation ({{designation}}) | Deployment | AS: no protocol signal; the AS establishes by deployment means, for example its configuration, that no resource server accepts the client's identifier as an audience |
+| Designation redemption count ({{designation}}) | AS | Delegate: no protocol signal; the AS's policy governs, and deployment documentation may describe it. An attempt reveals only its own outcome, not the permitted count |
+| Subject-authentication conveyance ({{rs-denials}}) | Deployment | Resource server: the `acr`, `amr`, and `auth_time` claims ({{token-authentication-lifetime}}), or introspection ({{Section 6 of RFC9470}}); where no Subject authentication applies, they are absent |
+| Revocation means ({{revocation}}) | Deployment | A party authorized to revoke: none in this document; a deployment-defined surface, or Mission Status's `revoke` operation |
+{: title="Deployment choices and how each party learns them"}
+
 # Design Context and Boundaries {#design-context}
 
-This appendix explains the design choices behind the Mission and
-records what this document leaves to other work.
+This appendix records what this document leaves to other work and
+explains one design choice: how a delegated token identifies its
+client.
 
 ## Scope {#scope-and-future-work}
 
@@ -6905,12 +7003,15 @@ resolve before interoperating.
   order. Mission Creation gathers Mission Approval, Standing-Consent
   Bases, Mission Record, Integrity and Commitments, and Binding the
   Mission to the Grant; Mission-Bound Access Tokens is retitled
-  Mission-Bound Token Issuance and gains Mission Lifecycle; Delegation
-  Within a Mission follows issuance; Token Consumption gathers Resource
-  Server Enforcement and Mission State via Token Introspection; Error
-  and Challenge Mapping, the two metadata sections, Extensibility and
-  Conformance follow. Every section keeps its anchor and, except the
-  issuance chapter, its title (#1892, D1026).
+  Mission-Bound Token Issuance and gains Mission Identifier and Expiry
+  in Responses and Self-Exchange Down-Scoping; Delegation Within a
+  Mission follows issuance; Token Consumption gathers Resource Server
+  Enforcement and Mission State via Token Introspection; Mission
+  Lifecycle follows as its own chapter; Error and Challenge Mapping, the
+  two metadata sections, Extensibility and Conformance follow, and the
+  Introduction names the chapters in order. Every moved section keeps
+  its anchor and title, except the issuance chapter's title (#1892,
+  D1026).
 - Revocation: a Mission Issuer MUST accept, through an authenticated
   means independent of possession of any token, a revocation by
   `mission_id` from a party the deployment's policy authorizes, where
@@ -6944,11 +7045,12 @@ resolve before interoperating.
   consumers rely on Mission state beyond a token's lifetime is
   unchanged (#1892, D1026).
 - Editorial, no requirement change: Prompt Injection and Data
-  Exfiltration and Downgrade by Omission keep their rules and residuals
-  and point to the Mission Security Model for the analysis; Authority
-  and Propagated Information and Composition and the Effective Ceiling,
-  which the Security Model and Mission Work Products carry, are removed
-  with the uncited Work Products reference (#1892, D1026).
+  Exfiltration, Downgrade by Omission, Authority and Propagated
+  Information, and Composition and the Effective Ceiling keep their
+  rules and residual risks and point to the Mission Security Model,
+  which carries the analysis; Composition and the Effective Ceiling
+  moves under Credentials and Delegation; the uncited Work Products
+  reference is removed (#1892, D1026).
 - Editorial, no requirement change: the Architecture carries material
   on the family rather than the protocol: Relationship to Existing
   OAuth Objects; Missions, Plans, and Execution; the Derivation Policy
@@ -6962,6 +7064,16 @@ resolve before interoperating.
   the Architecture as Approval Role Mapping, which Single Accountable
   Approver cites; the companions that cited it now cite Principals and
   Approval Basis, which defines the three roles (#1892, D1026).
+- Editorial, no requirement change: the issuance procedure covers the
+  five paths this document defines, and any other derivation passes at
+  least its resolution, state, subset, scope-projection and lifetime
+  checks, as the Issuance Gating list it replaced required; it names the
+  orders this document states, including the refresh-time ones of
+  Authority Proposal and Refresh Token Protection. Mission-Unaware
+  Resource Servers states that a resource server receiving no delegated
+  token need not be Mission-aware. The Deployment Choices appendix keeps
+  the Implementation Map's table of the choices a deployment makes and
+  how each party learns them (#1892, D1026).
 
 -01
 

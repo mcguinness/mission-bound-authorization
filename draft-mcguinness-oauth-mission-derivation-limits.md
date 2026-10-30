@@ -749,7 +749,9 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 - Editorial, no requirement change (#1892): Composition Across
   Missions cites the Security Model's effective-ceiling analysis, which
   carries the composition guidance the OAuth binding's Security
-  Considerations restated.
+  Considerations restated; Refresh and Token Exchange cites the
+  binding's Self-Exchange Down-Scoping, which left its delegation
+  chapter, beside Delegation Within a Mission.
 - Clarification (#1661, D793): What Counts separates a Template
   Dispatch's creation, one derivation per `dispatch_event_id`, from its
   delivery: a retry that returns the delivered token counts nothing,
