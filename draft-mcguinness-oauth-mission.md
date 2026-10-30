@@ -1231,6 +1231,20 @@ Supporting an evidence type is optional, but these rules are not: an
 AS that supports none still applies them and refuses every presented
 entry ({{conformance-roles}}).
 
+`submission_evidence` ({{record-content-members}}) is provenance, not
+enforcement input, and is not carried on the `mission` claim
+({{mission-claim}}). Recorded facts, such as a verified consent
+reference, are provenance and policy input only; a resource domain
+validates them under its own current policy
+({{third-party-data-subjects}}).
+
+No integrity anchor commits `submission_evidence`: its digests are
+only as trustworthy as the Mission Record that holds them and do not
+independently prove which artifacts were presented at admission. A
+profile whose threat model requires that proof commits normalized
+provenance under its own anchor `typ` ({{integrity-anchors}},
+{{extensibility}}).
+
 Mission Intent Submission Evidence for OAuth 2.0
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) specifies
 the evidence framework, including required-evidence resolution and the
@@ -2307,19 +2321,6 @@ the profile that uses it.
   : An object holding the verified output facts the type's
     specification selects for recording, nested so type-owned
     facts cannot collide with the common members.
-
-  `submission_evidence` is provenance, not enforcement input, and is
-  not carried on the `mission` claim ({{mission-claim}}). Recorded
-  facts, such as a verified consent reference, are provenance and
-  policy input only; a resource domain validates them under its own
-  current policy ({{third-party-data-subjects}}).
-
-  No integrity anchor commits `submission_evidence`: its digests are
-  only as trustworthy as the Mission Record that holds them and do not
-  independently prove which artifacts were presented at admission. A
-  profile whose threat model requires that proof commits normalized
-  provenance under its own anchor `typ` ({{integrity-anchors}},
-  {{extensibility}}).
 
 ### Principals and Approval Basis {#record-principal-members}
 
