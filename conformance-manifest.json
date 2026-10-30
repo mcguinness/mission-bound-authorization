@@ -7828,13 +7828,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#approval-basis, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8005,7 +8005,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "commitment"
     },
@@ -8056,7 +8056,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8780,7 +8780,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8791,7 +8791,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis; standing-consent creations record their own bases under companion rows. Immutability overlaps core.mission-record.members-immutable, whose witness compares every member, approval_basis included; this row adds presence from creation. Anchored at record-principal-members, the subsection holding the member; the sibling approval-basis rows anchor at the parent mission-record, and both pass the span rule. The witness's @spec tag names mission#approval-basis, which is not a core anchor. Mutation proofs (2026-10-29): a revocation that rewrote approval_basis.consent_principal fails the immutability witness on its whole-record comparison; a wrong basis type or consent principal at creation fails the direct-basis witness on its toEqual over the stored basis. Fresh review of #1893: partial: the immutability witness runs a derivation, suspend, resume and revoke, not the expired commit, so 'no later lifecycle transition changes it' is not asserted for expiry."
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis; standing-consent creations record their own bases under companion rows. Immutability overlaps core.mission-record.members-immutable, whose witness compares every member, approval_basis included; this row adds presence from creation. Anchored at record-principal-members, the subsection holding the member; the sibling approval-basis rows anchor at the parent mission-record, and both pass the span rule. The witness's @spec tag names mission#record-principal-members (#1898; it named the retired mission#approval-basis). Mutation proofs (2026-10-29): a revocation that rewrote approval_basis.consent_principal fails the immutability witness on its whole-record comparison; a wrong basis type or consent principal at creation fails the direct-basis witness on its toEqual over the stored basis. Fresh review of #1893: partial: the immutability witness runs a derivation, suspend, resume and revoke, not the expired commit, so 'no later lifecycle transition changes it' is not asserted for expiry."
   },
   {
    "id": "core.approval-basis.type-direct",
@@ -8818,7 +8818,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8856,7 +8856,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8893,7 +8893,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
-     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
      "level": "unit",
      "surface": "derivation"
     }
@@ -77627,13 +77627,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#approval-basis, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "token-endpoint"
     }

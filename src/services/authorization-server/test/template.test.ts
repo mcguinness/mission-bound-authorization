@@ -650,7 +650,7 @@ describe("instance ordinariness (@spec mission-template#dispatch)", () => {
   });
 });
 
-describe("approval basis (@spec mission#approval-basis, mission-template#template-lineage)", () => {
+describe("approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage)", () => {
   it("records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human", () => {
     const t = mkTemplate();
     const { mission } = dispatch(t.id, { dispatchEventId: "dsp-basis-1" });

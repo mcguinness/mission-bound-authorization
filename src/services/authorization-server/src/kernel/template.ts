@@ -1213,7 +1213,7 @@ export function dispatchFromTemplate(
     template_hash: template.template_hash,
     dispatch_policy: template.dispatch_policy,
   };
-  // @spec mission#approval-basis, mission-template#template-lineage —
+  // @spec mission#standing-consent-bases, mission-template#template-lineage —
   // standing consent to the template ceiling activates this instance:
   // consent_principal is the template's human (== approver, unchanged);
   // activation is the template lineage + this dispatch event;

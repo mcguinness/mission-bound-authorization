@@ -959,7 +959,7 @@ describe("child derivation cap is independent of the parent's (@spec child-deleg
   });
 });
 
-describe("approval basis (@spec mission#approval-basis, child-delegation#child-creation)", () => {
+describe("approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation)", () => {
   it("records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)", () => {
     const parent = approveParent();
     const { child } = createChild(parent.id, ["payments:invoice.read"]);
