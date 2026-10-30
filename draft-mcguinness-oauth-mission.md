@@ -512,9 +512,9 @@ All times are UTC on the same day.
 5. **Stop further issuance.** At 12:02 an authorized revocation makes
    the Mission non-active. A subsequent refresh, if the AS issued a
    refresh token, is refused with the `invalid_grant` error code
-   ({{issuance-gating}}). The already-issued access token can still
-   be honored on this stateless path until 12:05; revocation does not
-   undo a completed read ({{revocation}}).
+   ({{refusing-a-derivation}}). The already-issued access token can
+   still be honored on this stateless path until 12:05; revocation does
+   not undo a completed read ({{revocation}}).
 
 An ERP that instead introspects on every request stops honoring the
 token on its next request after revocation, through the composite
@@ -565,7 +565,7 @@ Mission Client:
 
 Mission-governed client:
 : A client that the deployment registers as Mission-governed ("a client
-  registered as Mission-governed"); {{authority-proposal}} states the
+  registered as Mission-governed"); {{mission-governed}} states the
   rule that registration triggers.
 
 Mission-aware Resource Server:
@@ -586,7 +586,7 @@ Mission Intent Submission (Submission envelope):
 : The object a client submits as the `mission_intent` parameter
   value: the Mission Intent under `intent`, and Intent Submission
   Evidence under `evidence` where any is presented
-  ({{submission-via-par}}).
+  ({{submission-envelope}}).
 
 Intent Submission Evidence:
 : Typed artifacts a client presents in support of claims about a
@@ -745,7 +745,7 @@ formats of {{RFC9493}}.
 
 A Mission Intent is a JSON object describing the task. The client
 submits it as the `intent` member of the Submission envelope
-({{submission-via-par}}), in place of `scope` or alongside a narrowed
+({{submission-envelope}}), in place of `scope` or alongside a narrowed
 `scope`.
 
 Before the approval event ({{approval-event}}), only the Mission Intent
@@ -777,7 +777,7 @@ disclosure: the Approver refuses authority the words do not support
 An AS that makes no use of an optional member still accepts it and
 records it with the Intent ({{submission-processing}}). The smallest
 Intent carries only the three required members, as in the Submission
-envelope example ({{submission-via-par}}). The following summary is
+envelope example ({{submission-envelope}}). The following summary is
 informative; the member definitions after it are authoritative.
 
 ## Intent Members {#intent-members}
@@ -874,11 +874,11 @@ The Mission Intent members are:
 The Approver's authentication strength for the approval event is
 requested with the standard `acr_values` and `max_age`
 authorization-request parameters, not on the Intent
-({{approval-authentication}}).
+({{approval-requested-strength}}).
 
 The Mission Intent's top level is closed to the members above and to
 those a companion profile the AS implements defines
-({{extensibility}}, {{submission-via-par}}).
+({{extensibility}}, {{submission-envelope}}).
 
 The following is an example of a Mission Intent:
 
@@ -1051,8 +1051,8 @@ A client MAY propose concrete authority for the task by submitting
 the standard {{RFC9396}} `authorization_details` request parameter,
 a JSON array of `authorization_details` objects, alongside
 `mission_intent` in the same pushed request
-({{submission-via-par}}). The carriage rules of {{submission-via-par}}
-apply to the proposal.
+({{submission-par-carriage}}). The carriage rules of
+{{submission-via-par}} apply to the proposal.
 
 The submitted `authorization_details` is a proposal, not authority
 ({{submission-via-par}}); the AS derives and bounds the Authority
@@ -1180,7 +1180,7 @@ failures keep their own errors:
   errors and precedence;
 - an invalid or expired grant keeps its error; and
 - a request under a grant bound to a Mission that is not `active`
-  keeps the refusal of {{issuance-gating}}.
+  keeps the refusal of {{refusing-a-derivation}}.
 
 Until that request completes, including when the AS resumes it after
 an interaction, the second rule applies to a Mission-governed client's
@@ -1257,7 +1257,7 @@ names.
    schema advertised for it or established out of band, with
    `invalid_authorization_details`, and a proposed entry that carries a
    `resource` member whose value is not among the Intent's
-   `target_resources`, with `invalid_request` ({{authority-proposal}}).
+   `target_resources`, with `invalid_request` ({{proposal-validation}}).
 4. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
 5. Apply any submission checks that configured admission policy or
@@ -1274,7 +1274,7 @@ names.
    membership of each entry that carries a `resource` member
    ({{derivation-modes}}) and, where a proposal was submitted, that
    each derived entry is a same-type subset of a proposed entry
-   ({{authority-proposal}}).
+   ({{proposal-derivation}}).
 8. Render the Intent, the Authority Set, and the material verified
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
@@ -1326,7 +1326,7 @@ entries depend on whether an authority proposal was submitted:
   `authorization_details`): the client submitted an authority
   proposal ({{authority-proposal}}), and the Authority Set is the
   proposal narrowed to policy. Each derived entry is a same-type
-  subset of a proposed entry ({{authority-proposal}}).
+  subset of a proposed entry ({{proposal-derivation}}).
 - **Configured-mapping mode**: no authority proposal was submitted,
   and a deployment-configured mapping, keyed on the Intent's
   `purpose` or `target_resources`, or on the requested `scope` values
@@ -1371,7 +1371,7 @@ In both modes the AS bounds every Authority Set entry by the Mission
 Intent: each entry that carries a `resource` member MUST have it among
 the Intent's `target_resources` values, by exact string equality. This
 membership check applies to the Authority Set, and to a proposal at
-submission ({{authority-proposal}}).
+submission ({{proposal-validation}}).
 
 A later token issuance is bounded by the subset rule against the
 Authority Set ({{subset}}), not by the target list again. A type whose
@@ -1398,7 +1398,7 @@ deployment policy, either omitted from the Authority Set or refused with
 the `access_denied` error code ({{error-mapping}}).
 
 When an omission or a narrowing leaves the Authority Set short of what
-was proposed ({{authority-proposal}}), Authority Set derivation is
+was proposed ({{proposal-derivation}}), Authority Set derivation is
 partial. The token response states what was granted
 ({{token-response}}).
 
@@ -1551,7 +1551,7 @@ type, the AS retains a valid candidate entry, whether proposed
 ({{authority-proposal}}) or yielded by a configured mapping
 ({{derivation-modes}}), unchanged, or omits it where this document
 permits omission; it never modifies the entry under a claimed subset
-relation. A malformed entry is refused as {{authority-proposal}}
+relation. A malformed entry is refused as {{proposal-validation}}
 states.
 
 The following rules govern an entry's original approved audience:
@@ -1644,7 +1644,7 @@ at that event or an earlier standing consent authorizes the instance:
 
 The direct realization runs as an OAuth 2.0 {{RFC6749}}
 authorization-code flow initiated from the PAR-issued `request_uri`
-({{submission-via-par}}). Because the authorization code is the
+({{submission-par-carriage}}). Because the authorization code is the
 artifact the Mission grant binds to ({{grant-binding-resolution}})
 and it passes through the front channel, the AS MUST bind the code
 to the requesting client with PKCE ({{RFC7636}}, `S256` challenge
@@ -2632,10 +2632,10 @@ issuer-bound envelope:
    - For `intent_hash`, `typ` is `mission-intent` and `value` is the
      approved Mission Intent object: the Submission envelope's
      `intent` member, not the envelope or its `evidence`
-     ({{submission-via-par}}).
+     ({{submission-envelope}}).
    - For `proposal_hash`, `typ` is `mission-proposed-authority` and
      `value` is the submitted `authorization_details` array exactly
-     as recorded ({{authority-proposal}}); the anchor is present
+     as recorded ({{proposal-derivation}}); the anchor is present
      exactly when a proposal was submitted.
    - For `authority_hash`, `typ` is `mission-authority-set` and
      `value` is the Authority Set as a JSON array of entries.
@@ -3407,10 +3407,10 @@ way: presenting it authorizes nothing.
 ## Refresh Tokens {#refresh-tokens}
 
 Issuance on a refresh applies the issuance procedure of
-{{issuance-gating}} as it states for a refresh. {{authority-proposal}} states a
-refresh's exemption from `mission_intent` and, for a Mission-governed
-resource, the refusal's precedence and its timing relative to consuming
-or rotating the refresh token.
+{{issuance-gating}} as it states for a refresh. {{mission-governed}}
+states a refresh's exemption from `mission_intent` and, for a
+Mission-governed resource, the refusal's precedence and its timing
+relative to consuming or rotating the refresh token.
 
 A Mission-bound refresh token is bound to the client it was issued
 to. For a confidential client, client authentication supplies the
@@ -3444,7 +3444,7 @@ apply to it. An exchange whose `subject_token` is a designation is a
 delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
 even when it carries no `actor_token`. Issuance applies the issuance
 procedure of {{issuance-gating}} as it states for a self-exchange.
-{{authority-proposal}} states a self-exchange request's exemption from
+{{mission-governed}} states a self-exchange request's exemption from
 `mission_intent` and the checks that still apply to it. A no-actor
 exchange is subject to the following:
 
@@ -3479,10 +3479,10 @@ that Subject.
 
 These claims neither establish approval nor expand Mission authority;
 the Approver's approval-time authentication remains provenance
-({{approval-authentication}}). Where no authentication of the Subject
-applies, as when a human approves a Mission for another principal or
-for a workload, the claims are absent, and their absence is not an
-authentication downgrade.
+({{approval-achieved-authentication}}). Where no authentication of the
+Subject applies, as when a human approves a Mission for another
+principal or for a workload, the claims are absent, and their absence is
+not an authentication downgrade.
 
 The `authorization_details` claim is the authoritative expression of
 a Mission-bound token's authority; a `scope` claim
@@ -3497,8 +3497,8 @@ this bound extends transitively to tokens minted in another trust
 domain.
 
 Within that bound, a derived token's lifetime is the AS's policy,
-which {{issuance-gating}} recommends keeping short. Token Exchange
-does not tightly couple an issued token's lifetime to its
+which {{derived-token-lifetime}} recommends keeping short. Token
+Exchange does not tightly couple an issued token's lifetime to its
 `subject_token`'s ({{Section 2.1 of RFC8693}}); {{designation}}
 states how this applies to a designation and to the delegated token
 issued from it.
@@ -3814,7 +3814,7 @@ token's outermost actor ({{delegation-constraints}}).
 Issuing a designation applies the issuance procedure of
 {{issuance-gating}} as it states for a designation. A designation
 request is a token request under an existing Mission-bound grant
-({{authority-proposal}}):
+({{mission-governed}}):
 it needs no `mission_intent`, and every other check that section names
 still applies to it.
 
@@ -3945,8 +3945,8 @@ AS issues the delegated token subject to all of the following:
   key.
 - **Each redemption is gated.** Issuing a delegated token is a
   derivation, refused unless the Mission is `active`
-  ({{issuance-gating}}). The AS MUST evaluate every redemption of a
-  designation afresh, as a derivation of its own: the credential the
+  ({{refusing-a-derivation}}). The AS MUST evaluate every redemption of
+  a designation afresh, as a derivation of its own: the credential the
   designation was derived from, and all applicable grant state
   backing that credential, are still valid; the Mission is `active`;
   and the delegation policy ({{delegation-constraints}}) and the
@@ -4242,7 +4242,7 @@ A resource server:
 5. MUST, when configured to require the `mission` claim for a
    Mission-governed resource, reject a token that lacks it with the
    `invalid_token` error code. The issuance-side duty that pairs with
-   this rejection is stated in {{authority-proposal}}, the downgrade
+   this rejection is stated in {{mission-governed}}, the downgrade
    it prevents in {{downgrade-by-omission}}, and the metadata that
    advertises the requirement in {{protected-resource-metadata}}.
 6. MUST accept a `mission` claim only from an issuer it explicitly
@@ -4867,7 +4867,7 @@ so an approving officer's departure does not terminate it under this
 rule. A deployment that does not follow this rule documents why; that
 exception cannot bypass a continuing dependency the deployment
 requires or rewrite the recorded Subject. Termination stops further
-issuance ({{issuance-gating}}) but does not itself recall tokens
+issuance ({{refusing-a-derivation}}) but does not itself recall tokens
 already issued; an earlier execution cutoff depends on the
 deployment's enforcement mechanism.
 
@@ -4880,7 +4880,7 @@ a deployment that couples token revocation to Mission revocation
 documents that behavior.
 
 Token validity and Mission validity are distinct: an issued access
-token remains valid until it expires ({{issuance-gating}}). A
+token remains valid until it expires ({{derived-token-lifetime}}). A
 deployment whose consumers rely on Mission state beyond a token's
 lifetime offers token introspection ({{introspection}}) or Mission
 Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read
@@ -4906,9 +4906,9 @@ defines no general precedence among the resulting errors; as under
 The orders this document does state still apply: a submission's
 processing order ({{submission-processing}}), and the Mission-governed
 refusal, which applies only to an otherwise processable request
-({{authority-proposal}}). The choice relaxes neither client
+({{mission-governed}}). The choice relaxes neither client
 authentication nor any rule that limits who receives a detail, such
-as `mission_error` ({{issuance-gating}}).
+as `mission_error` ({{mission-error-member}}).
 
 The tables are grouped by surface. The first table holds each
 failure whose rule is not confined to the surface of one of the other
@@ -4926,19 +4926,19 @@ exchange rows of the third table.
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the `act` chain ({{rs-mission-unaware}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason), or in another state that is not `active`, such as one a companion profile defines | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}), or a value the companion profile defines for its state ({{issuance-gating}}) |
+| Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason), or in another state that is not `active`, such as one a companion profile defines | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{refusing-a-derivation}}). Detail: `mission_error` ({{iana}}), or a value the companion profile defines for its state ({{mission-error-member}}) |
 | Token endpoint ({{subset}}, {{refresh-tokens}}): the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 | Token endpoint ({{subset}}): the comparison cannot establish that a requested RAR entry is a subset (an unrecognized member, an incomparable value) | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
-| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value), including a structurally invalid evidence entry ({{submission-via-par}}, {{intent-submission-evidence}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) ({{authority-proposal}}) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
-| PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| PAR or authorization request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| Token request, any grant type: an audience the token would carry, named or inferred, is a Mission-governed resource, and the request has no qualifying Mission binding ({{authority-proposal}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
-| Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
+| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value), including a structurally invalid evidence entry ({{submission-envelope}}, {{intent-submission-evidence}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) ({{proposal-validation}}) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
+| PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{proposal-validation}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| PAR or authorization request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{mission-governed}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| Token request, any grant type: an audience the token would carry, named or inferred, is a Mission-governed resource, and the request has no qualifying Mission binding ({{mission-governed}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-openid-connect}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
 | Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}, {{approval-commit}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, a well-formed request (including configured-mapping mode) is refused by AS policy, or the commit finds the effective expiry not later than the creation instant | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: for a configured-mapping refusal, a safe `error_description` can say whether no mapping matched or policy narrowed the candidates to nothing; for an expiry at the commit, a safe `error_description` can say that the requested expiry has passed; otherwise none unless a defined extension applies |
 {: title="PAR and authorization endpoint failures"}
 
@@ -5027,7 +5027,7 @@ out-of-band documentation, is that type's normative definition.
 An AS that advertises `mission_bound_authorization_supported: true`
 MUST also publish `pushed_authorization_request_endpoint`
 ({{RFC9126}}), since the authorization-code path accepts a Mission
-Intent only through PAR ({{submission-via-par}}).
+Intent only through PAR ({{submission-par-carriage}}).
 
 An AS that advertises `mission_bound_authorization_supported: true`
 SHOULD also advertise `authorization_details_types_metadata_endpoint`
@@ -5067,7 +5067,7 @@ parameter {{RFC9728}}:
   ({{mission-claim}}) is rejected ({{rs-enforcement}}). If omitted, the
   default value is `false`. An AS that has authenticated this metadata
   treats a `true` value as making the resource Mission-governed
-  ({{authority-proposal}}); `false` or omission does not clear a
+  ({{mission-governed}}); `false` or omission does not clear a
   deployment's classification.
 
 A type-defined `authorization_details` member may define its own
@@ -5131,7 +5131,7 @@ This document's extension points are:
   collision-resistant name. The owning specification defines,
   produces, and enforces each such member, and a recognized member
   never grants or widens authority beyond what that specification
-  states. Closed-top-level validation ({{submission-via-par}}) refuses
+  states. Closed-top-level validation ({{submission-envelope}}) refuses
   any top-level member that neither this document nor an implemented
   companion profile defines, and the AS ignores none it recognizes.
   Registration settles which specification owns a short name; it does
@@ -5177,8 +5177,8 @@ This document's extension points are:
   and no Mission reference exists before the record is `active`; the
   Mission Deferred Approval companion is such a profile
   ({{I-D.draft-mcguinness-oauth-mission-approval}}). A back-channel
-  carriage profile ({{submission-via-par}}) MAY instead couple the
-  approval decision to establishing the Mission grant binding and
+  carriage profile ({{submission-other-carriages}}) MAY instead couple
+  the approval decision to establishing the Mission grant binding and
   activating for redemption a grant the profile defines, such as a
   device code issued while the request was pending, provided the steps
   and their atomicity with the approval decision hold unchanged and no
@@ -5459,7 +5459,7 @@ manifest includes the approval basis, in a signed artifact.
 
 A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
-commitment. {{authority-proposal}}, {{discovery}}, and
+commitment. {{mission-governed}}, {{discovery}}, and
 {{rs-enforcement}} address this downgrade at issuance, at the client,
 and at enforcement.
 
@@ -5639,8 +5639,9 @@ following limit this exposure:
 - Binding each delegated token to the delegate's own key
   ({{delegated-exchange}}) confines a compromised delegate to its own
   credential.
-- Short derived-token lifetimes ({{issuance-gating}}), and marking
-  delegable only the entries that need delegation, keep it small.
+- Short derived-token lifetimes ({{derived-token-lifetime}}), and
+  marking delegable only the entries that need delegation, keep it
+  small.
 
 Audience replay into the exchange is a distinct path: a Mission-bound
 token obtained by or issued to one party, presented as a
@@ -5911,7 +5912,7 @@ Parameters" registry:
 - Parameter name: `mission_error`
 - Parameter usage location: token response
 - Change controller: IETF
-- Specification document(s): this document, {{issuance-gating}}
+- Specification document(s): this document, {{mission-error-member}}
 
 - Parameter name: `mission_expires_at`
 - Parameter usage location: token response
@@ -6257,7 +6258,7 @@ Host: as.example.com
 
 The AS (`as.example.com`) validates both, derives this Authority Set
 under a declared `narrowing` capability (each entry a same-type subset
-of a proposed entry, {{authority-proposal}},
+of a proposed entry, {{proposal-derivation}},
 {{transformation-capabilities}}), and renders it for `alice`'s
 consent:
 
@@ -6444,7 +6445,7 @@ refresh example in {{token-response}}, which expires at 08:55:00.
 At 08:53:20 the Mission is revoked, and the AS commits `terminated`
 with reason `revoked`. Revocation stops the Mission at the issuer
 ({{revocation}}). A later refresh is refused with the `mission_error`
-diagnostic ({{issuance-gating}}):
+diagnostic ({{mission-error-member}}):
 
 ~~~
 HTTP/1.1 400 Bad Request
@@ -6490,7 +6491,7 @@ or configuration. The cited sections govern.
 | Transformation capabilities per type: `narrowing`, `delegation`, `projection` ({{transformation-capabilities}}) | AS operator, per type | Client, in order of preference: a `mission_transformation_capabilities` member in the type's entry at the types metadata endpoint, an equivalently shaped member of supported-type documentation, or deployment documentation. Resource server: none needed; it enforces entries as carried ({{delegation-constraints}}). Settled: the first carrier that declares a member governs, and a declared `narrowing` also governs Authority Set derivation |
 | Each entry's audience ({{transformation-capabilities}}) | Deployment | AS: a trusted entry-to-audience mapping, such as authenticated configuration or protected resource metadata ({{RFC9728}}). Client: none; it requests an audience with `resource` and reads the granted entries from the token response ({{token-response}}) |
 | Scope projection for a target ({{scope-projection}}) | Deployment, per target | AS: the target's protected resource metadata ({{RFC9728}}) or authenticated out-of-band configuration |
-| Mission-governed resources ({{authority-proposal}}) | Deployment, or the resource through its metadata | AS and client: the `mission_bound_authorization_required` protected resource metadata ({{protected-resource-metadata}}), which the AS authenticates; a deployment's own classification has no signal, and `false` or omission does not clear it. Resource server: its own configuration ({{rs-requirements}}) |
+| Mission-governed resources ({{mission-governed}}) | Deployment, or the resource through its metadata | AS and client: the `mission_bound_authorization_required` protected resource metadata ({{protected-resource-metadata}}), which the AS authenticates; a deployment's own classification has no signal, and `false` or omission does not clear it. Resource server: its own configuration ({{rs-requirements}}) |
 | Delegation support ({{delegation}}) | AS | Delegating party and delegate: `grant_types_supported` listing the Token Exchange grant type ({{discovery}}); otherwise, out of band or by attempt. Settled: a delegate is identified by its client authentication, an `actor_token` is refused, and a public client is not a delegate ({{delegated-exchange}}) |
 | Audiences that process the `act` chain ({{rs-mission-unaware}}) | Deployment | AS: no protocol signal; neither parsing `act` nor `mission_bound_authorization_required` establishes it, and the AS establishes it by deployment means, for example its configuration |
 | Designated-client separation ({{designation}}) | Deployment | AS: no protocol signal; the AS establishes by deployment means, for example its configuration, that no resource server accepts the client's identifier as an audience |
@@ -6846,6 +6847,10 @@ resolve before interoperating.
 
 -02
 
+- Editorial, no requirement change: citations elsewhere in the
+  document name the subsection that states the cited rule, not its
+  parent section, where #1908's subsections make one precise (#1910,
+  D1045).
 - Editorial, no requirement change: Submission via PAR is retitled
   Submitting a Mission Intent, with subsections for the Submission
   envelope, its carriage through PAR, and other carriages. Authority
