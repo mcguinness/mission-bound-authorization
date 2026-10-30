@@ -35,7 +35,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, scopeMappingEntries, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, keyedRecordFrom, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, scopeMappingEntries, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
 import { type DurableEvidenceKey, evidenceKeyBundle, loadEvidenceKeyFile } from "./evidence-key-files.js";
 import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
@@ -1407,7 +1407,7 @@ export async function composeStack(opts: {
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
     stateSourcePlacement: stateSourcePlacement(statement),
     delegatePolicy: {
-      delegates: Object.fromEntries(Object.entries(masJoin.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
+      delegates: keyedRecordFrom(Object.entries(masJoin.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }] as const)),
     },
   };
   // D28: the PEP owns redemption. Its store's epoch is the requester epoch
@@ -1488,8 +1488,8 @@ export async function composeStack(opts: {
     // than by a missing config.
     masJoin: {
       delegatePolicy: {
-        delegates: Object.fromEntries(
-          Object.entries(masJoin.delegates).map(([clientId, d]) => [clientId, { maxDepth: d.max_depth }]),
+        delegates: keyedRecordFrom(
+          Object.entries(masJoin.delegates).map(([clientId, d]) => [clientId, { maxDepth: d.max_depth }] as const),
         ),
       },
       resolveOrdinaryAuthority,

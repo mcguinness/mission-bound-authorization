@@ -115,6 +115,17 @@ describe("mapping contract loader (@spec authority-server#mapping-contract, #818
   });
 });
 
+describe("mapping contract delegates: each client identifier is the policy's own entry (@spec authority-server#mission-join rule 4, #1884)", () => {
+  it("installs a delegate named __proto__ as an ordinary entry of the snapshot's delegate policy, which has no prototype", () => {
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
+    expect(cache.install(doc({ delegates: JSON.parse('{"__proto__": {"max_depth": 1}}') })).ok).toBe(true);
+    const delegates = cache.current().delegatePolicy?.delegates as Record<string, { maxDepth?: number }>;
+    expect(Object.getPrototypeOf(delegates)).toBeNull();
+    expect(Object.keys(delegates)).toEqual(["__proto__"]);
+    expect(Object.getOwnPropertyDescriptor(delegates, "__proto__")?.value).toEqual({ maxDepth: 1 });
+  });
+});
+
 describe("mapping contract cache: resolution (@spec authority-server#mission-join rules 3 and 4, #818)", () => {
   it("maps an issuer-qualified estate subject and client into the Mission's namespace", () => {
     const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });

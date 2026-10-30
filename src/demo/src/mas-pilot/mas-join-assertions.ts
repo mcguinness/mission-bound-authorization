@@ -49,6 +49,7 @@ import {
   TokenIntrospector,
 } from "@mission/mcp-payments";
 import { IssuerKeys } from "@mission/core";
+import { ownValue } from "@mission/demo-data";
 import { type JWTVerifyGetKey, jwtVerify } from "jose";
 import type { MasPilotConfig } from "./config.js";
 import { MappingContractCache } from "./mapping-contract.js";
@@ -174,7 +175,9 @@ export function pilotJoinAssertions(config: MasPilotConfig, opts: PilotJoinAsser
     if (!mapped || mapped.subject.iss !== mission.subject.iss || mapped.subject.sub !== mission.subject.sub) return undefined;
     const mappingVersion = `${contract.id}@${contract.version}`;
     if (mapped.clientId === mission.client_id) return { clientId: mapped.clientId, disposition: "client", mappingVersion };
-    const rule = contract.delegatePolicy?.delegates[mapped.clientId];
+    // @spec authority-server#mission-join rule 4 (#1884): the policy's own entry only.
+    const delegates = contract.delegatePolicy?.delegates;
+    const rule = delegates ? ownValue(delegates, mapped.clientId) : undefined;
     if (!rule) return undefined;
     const depth = opts.actorRecords.resolveDepth({ id: mission.id, issuer: mission.issuer }, mapped.clientId, mission.client_id);
     if (depth === undefined || (rule.maxDepth !== undefined && depth > rule.maxDepth)) return undefined;
