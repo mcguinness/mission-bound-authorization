@@ -2979,7 +2979,10 @@ response that redeems a newly created Mission's authorization code
 ({{approval-code-protection}}); a refresh ({{refresh-tokens}}); a
 designation ({{designation}}); a delegated exchange
 ({{delegated-exchange}}); and a self-exchange ({{self-exchange}}).
-Each of these paths passes every check below, each stated where cited,
+Designation and the delegated exchange belong to the optional Delegation
+capability, and self-exchange is optional too
+({{optional-capabilities}}). Each of these paths passes every check
+below, each stated where cited,
 with any difference by path; a path's own section states its further
 rules. Any other derivation, such as one a companion profile defines,
 passes at least checks 1, 3, 5, and 7, the `exp` bound of check 8, and
@@ -3052,6 +3055,15 @@ the acknowledgment and released after it is refused. A Token Exchange
 takes `invalid_request` because a presented token whose Mission is
 not `active` is unacceptable for the exchange, a case
 {{Section 2.2.2 of RFC8693}} assigns to that code.
+
+The AS acknowledges a revocation when it commits the Mission's
+termination with reason `revoked` ({{termination}}), whether a
+revocation request or the deployment's policy caused it
+({{revocation}}). Receiving or queuing a revocation request does not
+acknowledge it, and acknowledgment does not wait for an HTTP response
+to complete or an event to be delivered. The refusal at release
+re-checks only an acknowledged revocation; it is not a general
+re-check of Mission state.
 
 Where a profile of a Token Exchange that the AS implements assigns
 its own error code to either refusal, such as a continuation
@@ -3376,6 +3388,15 @@ exchange is subject to the following:
 2. The result MUST be a subset ({{subset}}) of the presented token's
    authority; it carries the same `mission` claim ({{mission-claim}})
    and adds no `act` chain.
+
+Self-exchange is an optional capability ({{optional-capabilities}}). An
+AS that does not support it refuses a no-actor exchange: with
+`unsupported_grant_type` ({{Section 5.2 of RFC6749}}) if it does not
+support the Token Exchange grant type, and otherwise with
+`invalid_request`, as for a presented token it does not accept for the
+exchange ({{Section 2.2.2 of RFC8693}}). Any other error that applies
+still applies, such as `invalid_client` for a client that fails
+authentication.
 
 ## Authentication Claims and Lifetime {#token-authentication-lifetime}
 
@@ -4960,7 +4981,9 @@ metadata ({{RFC8414}}): `introspection_endpoint` for introspection,
 and `grant_types_supported` containing
 `urn:ietf:params:oauth:grant-type:token-exchange` for self-exchange,
 for delegation, and for the companion's cross-domain grant issuance.
-Absent such a signal, a capability is discovered out of band or by
+Advertising that grant type does not by itself establish support for
+every exchange variant, such as self-exchange or delegation. Absent such
+a signal, a capability is discovered out of band or by
 attempt: a Token Exchange, a cross-domain grant issuance, or an
 introspection request fails if the issuer does not support it.
 
@@ -5209,7 +5232,7 @@ A **Mission Client** implements the client surfaces:
 ## Optional Capabilities {#optional-capabilities}
 
 Beyond these mandatory roles, an implementation can additionally claim
-three OPTIONAL capabilities. Each is independent, and an implementation
+four OPTIONAL capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:
 
 - **Delegation** ({{delegation}}): issuing designations
@@ -5217,6 +5240,10 @@ that supports none of them is still conformant:
   delegation chain, and consuming those tokens. Only a
   sender-constrained token can be designated, so Delegation requires
   sender-constrained primary tokens.
+- **Self-Exchange** ({{self-exchange}}): narrowing an agent's own
+  Mission-bound token by a Token Exchange that names no actor.
+  Supporting Delegation does not require Self-Exchange, and supporting
+  Self-Exchange does not require Delegation.
 - **Introspection** ({{introspection}}): reporting Mission state through
   the `mission` token introspection response member. Required where
   the AS issues opaque Mission-bound tokens to a resource server that
@@ -5498,6 +5525,16 @@ authorization ({{caller-authorization-and-minimization}}), and
 deployment permits to learn the distinction. Of the two values,
 `insufficient_authority` reveals least, and omitting the attribute
 reveals nothing.
+
+### Revocation Authority {#revocation-authority}
+
+A deployment's policy can authorize no party to request a Mission's
+revocation ({{revocation}}). Under such a policy no external party can
+request revocation, so containing a Mission depends on its expiry and
+on any termination the deployment's policy drives. No role, such as the
+Subject, the Approver, or an administrator, gains revocation authority
+by default, and the policy's choice does not remove the Mission
+Issuer's token-independent revocation means.
 
 ## Credentials and Delegation {#sec-credentials}
 
@@ -7097,6 +7134,14 @@ resolve before interoperating.
   the Architecture as Approval Role Mapping, which Single Accountable
   Approver cites; the companions that cited it now cite Principals and
   Approval Basis, which defines the three roles (#1892, D1026).
+- Self-exchange is an OPTIONAL capability, independent of Delegation:
+  an AS that does not support it refuses a no-actor exchange with
+  `unsupported_grant_type` when it lacks the Token Exchange grant type,
+  and otherwise with `invalid_request`; advertising that grant type
+  does not establish every exchange variant. An acknowledged revocation
+  is the AS's commit of the Mission's termination with reason
+  `revoked`. Security Considerations state the consequence of a policy
+  that authorizes no party to request revocation (#1892, D1031).
 
 -01
 

@@ -300,6 +300,7 @@
    "child-delegation.direct-approval",
    "core.instance-context",
    "core.delegation",
+   "core.self-exchange",
    "runtime.instance-context",
    "runtime.credential-lifetime-freshness",
    "mas.instance-bound-join",
@@ -7092,7 +7093,7 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#1892 ruling 6 (row debt). Facet: the provenance part of step 8; the Intent and Authority Set parts are rowed under approval-context-changes and approval-preparation. Partial: the witness asserts the page's 'Verified intent provenance' section and a verified fact value (admission.example). No test changes the verified facts between rendering and decision. Lead for the builder: the decision re-runs evidence verification (provider.ts), while the render revision's committed context (approval-render-revision.ts ApprovalContext) carries no submission_evidence member, so a change to the verified facts alone may go undetected; confirm before citing any witness for the re-render clause. The cited leaf title contains a U+2014 character, written as a JSON escape here; it must match the test title exactly."
+   "notes": "#1892 ruling 6 (row debt). Facet: the provenance part of step 8; the Intent and Authority Set parts are rowed under approval-context-changes and approval-preparation. Partial: the witness asserts the page's 'Verified intent provenance' section and a verified fact value (admission.example). No test changes the verified facts between rendering and decision. The re-render clause applies (#1892 ruling 6, D1031): the reference's approval context omits submission_evidence, so a change to the verified facts alone is not re-rendered; #1897 tracks the fix and its witness. The cited leaf title contains a U+2014 character, written as a JSON escape here; it must match the test title exactly."
   },
   {
    "id": "core.submission.rendered-surface-covers-provenance",
@@ -7115,7 +7116,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. Reading question for the owner: the reference's render revision commits 'the complete context the page showed' (approval-render-revision.ts) without submission_evidence; if that counts as committing the rendered approval surface, the reference does not meet this MUST."
+   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. #1892 ruling 6 (D1031): the reference's render revision commits the rendered approval surface (the context a rendering showed, which the decision is bound to), so this MUST applies to it; its context omits the provenance facts, a gap #1897 tracks. The row stays todo until a witness shows a change to the verified facts alone keeps a stale approval from proceeding, with an unchanged-facts control; it is not inapplicable."
   },
   {
    "id": "core.submission-evidence.structural-entry-refusal",
@@ -12150,7 +12151,44 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Release fence #1498 (D663); witnesses on every fenced path, #250. Single-process only (#641); counter settlement for work spent before the fence stays with #935."
+   "notes": "Release fence #1498 (D663); witnesses on every fenced path, #250. Single-process only (#641); counter settlement for work spent before the fence stays with #935. #1892 ruling 2 (D1031): an acknowledged revocation is the AS's commit of the termination with reason revoked (core.issuance-gating.acknowledged-at-termination-commit)."
+  },
+  {
+   "id": "core.issuance-gating.acknowledged-at-termination-commit",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "issuance-gating",
+   "text": "The AS acknowledges a revocation when it commits the Mission's termination with reason `revoked` ({{termination}}), whether a revocation request or the deployment's policy caused it ({{revocation}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the release-time refusal binds from the AS's commit of the Mission's termination with reason revoked, whether a revocation request or the deployment's policy caused it: a derivation released after that commit is refused, receiving or queuing a request does not by itself refuse one, and the refusal does not wait for a response or an event to be delivered"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > refresh: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same refresh without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 2 (D1031). Partial: the release-fence witnesses commit a revocation by request after the save-time gate and the signature, and assert the code exchange and the refresh refused at release with nothing issued. Not witnessed: a policy-initiated termination with reason revoked, and that receiving or queuing a request alone does not refuse a derivation."
   },
   {
    "id": "core.issuance-gating.profile-code-override",
@@ -79704,7 +79742,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.self-exchange"
    },
    "profiles": [
     "issuance"
@@ -79730,7 +79769,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1153 review (D353). The AS issues one Mission access token to a client other than the Mission Record's client_id: a Dispatch returns the instance's token to the Dispatcher while the instance's approved agent is the selected Agent. The Dispatcher's exchange of that token is refused (the dispatch-handoff test); the selected Agent reaches the transport through the Template profile's Dispatch Handoff (#1158). The async-delegation test changes the Mission Record's client_id under a real token."
+   "notes": "#1153 review (D353). The AS issues one Mission access token to a client other than the Mission Record's client_id: a Dispatch returns the instance's token to the Dispatcher while the instance's approved agent is the selected Agent. The Dispatcher's exchange of that token is refused (the dispatch-handoff test); the selected Agent reaches the transport through the Template profile's Dispatch Handoff (#1158). The async-delegation test changes the Mission Record's client_id under a real token. #1892 ruling 1 (D1031): self-exchange is an OPTIONAL capability, so the row applies where core.self-exchange is claimed; the reference supports it wherever it registers the Token Exchange grant type."
   },
   {
    "id": "core.error-mapping.token-exchange-token-refusal",
@@ -81257,7 +81296,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.self-exchange"
    },
    "profiles": [
     "issuance"
@@ -81325,7 +81365,38 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#825 PR 2c (D312); the recovery path was closed after the owner's review (D353). The presented token in the tests is a real down-scoped token, a family's own access token. The AS's one no-actor exchange is the async-delegation transport; it has no separate self-exchange endpoint. The unreadable-authority guard is covered directly through presentedTokenAuthority, since the AS never signs a Mission access token without authorization_details. The child-grant bound is child-delegation.attenuation.presented-token-bound (D353)."
+   "notes": "#825 PR 2c (D312); the recovery path was closed after the owner's review (D353). The presented token in the tests is a real down-scoped token, a family's own access token. The AS's one no-actor exchange is the async-delegation transport; it has no separate self-exchange endpoint. The unreadable-authority guard is covered directly through presentedTokenAuthority, since the AS never signs a Mission access token without authorization_details. The child-grant bound is child-delegation.attenuation.presented-token-bound (D353). #1892 ruling 1 (D1031): self-exchange is an OPTIONAL capability, so the row applies where core.self-exchange is claimed; the reference supports it wherever it registers the Token Exchange grant type."
+  },
+  {
+   "id": "core.self-exchange.unsupported-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "self-exchange",
+   "text": "An AS that does not support it refuses a no-actor exchange: with `unsupported_grant_type` ({{Section 5.2 of RFC6749}}) if it does not support the Token Exchange grant type, and otherwise with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an AS that does not support self-exchange refuses a no-actor exchange, issuing nothing: with unsupported_grant_type when it does not support the Token Exchange grant type, and otherwise with invalid_request; any other applicable error, such as invalid_client, still applies",
+    "local": "the reference registers the Token Exchange grant type only when a token-exchange profile is enabled, and it supports self-exchange wherever it registers the grant"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/self-exchange-unsupported.test.ts",
+     "name": "an AS without the Token Exchange grant refuses a self-exchange (@spec mission#self-exchange, mission#optional-capabilities, #1892, D1031) > refuses a no-actor exchange of the Mission's own access token with unsupported_grant_type, issuing nothing, while the Mission's refresh still succeeds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 1 (D1031). Partial: the witness builds the AS with every token-exchange profile off, so the grant is not registered, and asserts unsupported_grant_type with no token member, with a refresh control. Mutation proof (2026-10-29): registering the grant unconditionally fails it (invalid_request). The invalid_request branch, an AS that registers the grant but does not support self-exchange, has no witness: the reference supports self-exchange wherever it registers the grant."
   },
   {
    "id": "runtime.oauth.required-instance-attribution",
