@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-30T01:15:08Z
-Source repository commit: 0d52fd1d2827c56e6c9ebfd1ee4b30d13432922f
+Generated: 2026-10-30T03:35:15Z
+Source repository commit: 0d6db598cb2500294a683bd134a0a81945debd7c
 Member count: 9
 
 Reading order:
@@ -8607,6 +8607,7 @@ Table of Contents
      16.1.  Commitment and Consent Integrity
        16.1.1.  Consent Binding
        16.1.2.  Downgrade by Omission
+       16.1.3.  Compromised or Over-Broad Derivation
      16.2.  Agent-Specific Threats
        16.2.1.  Prompt Injection and Data Exfiltration
        16.2.2.  Authority and Propagated Information
@@ -8764,9 +8765,9 @@ Table of Contents
    every path; Section 8, an optional capability, delegation within a
    Mission; Section 9 enforcement and introspection; and Section 10 the
    Mission's state and its termination.  Section 11, Section 12,
-   Section 13, Section 14, and Section 15 are reference sections, and
-   Appendix B lists what a deployment decides and how each party learns
-   it.
+   Section 13, and Section 14 are reference sections; Section 15 defines
+   the conformance roles; and Appendix B lists what a deployment decides
+   and how each party learns it.
 
 1.1.  Applicability
 
@@ -9636,6 +9637,11 @@ Table of Contents
    type (Section 5.5).
 
 5.1.  Derivation Modes
+
+   Derivation is governed by local policy: different authorization
+   servers can derive different Authority Sets from the same Mission
+   Intent, and interoperability begins at the derived Authority Set and
+   its integrity anchors (Section 6.4.1).
 
    Authority Set derivation is mechanical: one procedure whose candidate
    entries depend on whether an authority proposal was submitted:
@@ -11311,27 +11317,29 @@ Table of Contents
    exchange (Section 7.5).  Each of these paths passes every check
    below, each stated where cited, with any difference by path; a path's
    own section states its further rules.  Any other derivation, such as
-   one a companion profile defines, passes at least checks 1, 3, 5, 7,
-   and 8.
+   one a companion profile defines, passes at least checks 1, 3, 5, and
+   7, the exp bound of check 8, and check 10.
 
    The numbering is presentation order: it imposes no execution order
-   and no error precedence (Section 11 gives the error codes and the
-   orders this document states).  An order that a rule states still
-   applies, including these: the Mission-governed refusal applies only
-   to an otherwise processable request and, on a refresh, is decided
-   before the refresh token is consumed or rotated (Section 4.3); a
-   refresh establishes any scope projection before then (Section 7.7.6);
-   the revocation refusal applies at the AS's final decision to release
-   the result (check 10); and a companion profile that sequences a check
-   within a path keeps that sequence.
+   and no error precedence (Section 11 gives the error codes).  An order
+   that a rule states still applies, including these: the Mission-
+   governed refusal applies only to an otherwise processable request
+   and, on a refresh, is decided before the refresh token is consumed or
+   rotated (Section 4.3); a refresh establishes any scope projection
+   before then or within the same atomic issuance (Section 7.7.6); a
+   delegated exchange authenticates the client before it refuses an
+   actor_token (Section 8.2); the revocation refusal applies at the AS's
+   final decision to release the result (check 10); and a companion
+   profile that sequences a check within a path keeps that sequence.
 
    1.   Mission resolution from the presented grant (Section 6.5.1): the
         code, the refresh token, or the subject_token, which on a
         delegated exchange is the designation.
 
    2.   Client and sender binding, as the path's section states for the
-        code, the refresh token, the token a designation request
-        presents, the delegate, and the self-exchanging agent.
+        code (Section 6.1.1), the refresh token (Section 7.4), the token
+        a designation request presents (Section 8.1), the delegate
+        (Section 8.2), and the self-exchanging agent (Section 7.5).
 
    3.   Mission state: the Mission is active (below, Section 10); a
         delegated exchange evaluates each redemption afresh
@@ -11343,16 +11351,16 @@ Table of Contents
    5.   Subset (Section 5.4): against the Mission Authority Set, and
         also against the presented refresh grant on a refresh, the
         presented token on a designation or a self-exchange, and the
-        designation on a delegated exchange; on those two delegation
-        exchanges, only as Section 8.4 permits.  An entry is narrowed,
-        issued to another audience, delegated, or projected only under a
-        declared capability (Section 5.5.1).
+        designation on a delegated exchange; on a designation or a
+        delegated exchange, only as Section 8.4 permits.  An entry is
+        narrowed, issued to another audience, delegated, or projected
+        only under a declared capability (Section 5.5.1).
 
-   6.   Audience (Section 7.2, Section 7.3): by each entry's original
-        approved audience; for a designation, the resource audiences of
-        its entries, not the client its aud names; for a delegated
-        token, also an audience that processes the act chain
-        (Section 9.1.2).
+   6.   Audience (Section 7.2, Section 7.3, Section 5.5.1): by each
+        entry's original approved audience; for a designation, the
+        resource audiences of its entries, not the client its aud names;
+        for a delegated token, also an audience that processes the act
+        chain (Section 9.1.2).
 
    7.   Scope projection (Section 7.7), wherever scope is emitted,
         requested, or the only form the target consumes; on a refresh,
@@ -11360,11 +11368,13 @@ Table of Contents
 
    8.   Claims and lifetime (Section 7.2, Section 7.8, Section 7.8.1,
         Section 7.6): each token's exp does not exceed the Mission's
-        expires_at; the three exchanges keep the presented token's
-        mission claim, with the differences Section 8.1 and Section 8.2
-        state.
+        expires_at; a designation, a delegated exchange, and a self-
+        exchange keep the presented token's mission claim, with the
+        differences Section 8.1 and Section 8.2 state.
 
-   9.   Response members (Section 7.3, Section 7.3.1).
+   9.   Response members: the response echoes the granted
+        authorization_details (Section 7.3) and carries mission_id and
+        mission_expires_at as Section 7.3.1 states.
 
    10.  Release: the revocation refusal below applies at the AS's final
         decision to release the result.
@@ -13109,6 +13119,12 @@ Table of Contents
    from a party the deployment's policy authorizes (so a Mission can be
    stopped even when no refresh token is held).
 
+   The wire shape of that revocation is out of scope for this document.
+   A deployment-defined authenticated surface satisfies this
+   requirement; Mission Status
+   ([I-D.draft-mcguinness-oauth-mission-status]) defines an
+   interoperable revoke operation.
+
    When the AS establishes that the principal identified by a Mission's
    recorded subject (Section 6.3.3) has been deprovisioned, it SHOULD
    terminate that Mission with termination reason revoked.  The rule
@@ -13127,17 +13143,13 @@ Table of Contents
    recall tokens already issued; an earlier execution cutoff depends on
    the deployment's enforcement mechanism.
 
-   The wire shape of that operation is out of scope for this document.
-   A deployment-defined authenticated surface satisfies this
-   requirement; Mission Status
-   ([I-D.draft-mcguinness-oauth-mission-status]) defines an
-   interoperable revoke operation.
-
-   Revoking a token does not by itself revoke a Mission.  As Section 2.1
-   of [RFC7009] permits, a deployment's revocation policy can treat
-   revoking a Mission's refresh token as revoking the Mission; a
-   deployment that couples token revocation to Mission revocation
-   documents that behavior.
+   Revoking a token does not by itself revoke a Mission.  Section 2.1 of
+   [RFC7009] lets an authorization server's revocation policy extend a
+   token's revocation to related tokens and the underlying grant; a
+   deployment's revocation policy can likewise treat revoking a
+   Mission's refresh token as revoking the Mission; a deployment that
+   couples token revocation to Mission revocation documents that
+   behavior.
 
    Token validity and Mission validity are distinct: an issued access
    token remains valid until it expires (Section 7.1).  A deployment
@@ -13528,11 +13540,11 @@ Table of Contents
    The optional capabilities are discovered first through existing OAuth
    metadata ([RFC8414]): introspection_endpoint for introspection, and
    grant_types_supported containing urn:ietf:params:oauth:grant-
-   type:token-exchange for delegation and for the companion's cross-
-   domain grant issuance.  Absent such a signal, a capability is
-   discovered out of band or by attempt: a Token Exchange, a cross-
-   domain grant issuance, or an introspection request fails if the
-   issuer does not support it.
+   type:token-exchange for self-exchange, for delegation, and for the
+   companion's cross-domain grant issuance.  Absent such a signal, a
+   capability is discovered out of band or by attempt: a Token Exchange,
+   a cross-domain grant issuance, or an introspection request fails if
+   the issuer does not support it.
 
 13.  Protected Resource Metadata
 
@@ -13974,6 +13986,14 @@ Table of Contents
    metadata rests on the retrieval protections of [RFC8414] and
    [RFC9728], whose security considerations apply.
 
+16.1.3.  Compromised or Over-Broad Derivation
+
+   The AS is trusted to derive authority no broader than the Mission
+   Intent.  Both Authority Set derivation modes (Section 5), a proposal
+   narrowed to policy and a configured mapping, are mechanical rather
+   than free-form inference.  The recorded policy_version makes each
+   Authority Set derivation auditable by naming the policy it ran under.
+
 16.2.  Agent-Specific Threats
 
 16.2.1.  Prompt Injection and Data Exfiltration
@@ -13987,8 +14007,9 @@ Table of Contents
    bound it only through that disclosure (Section 4, Section 5).
 
    Within an approved Authority Set, an injected agent can still read
-   what the Mission permits and write to a sink the Mission permits.
-   The Mission Security Model
+   what the Mission permits and write to a sink the Mission permits: a
+   Mission governs actions, not the content that flows within an
+   authorized action.  The Mission Security Model
    ([I-D.draft-mcguinness-mission-security-model]) analyzes that
    residual; constraining it is the runtime layer's role
    (Section 16.3.1), and even there it is bounded, not closed:
@@ -15117,8 +15138,7 @@ Appendix A.  End-to-End Example
    This appendix follows one Mission in a single trust domain through
    Mission creation, token issuance, resource server enforcement, a
    refusal, and revocation.  It is illustrative and adds no
-   requirements.  The OAuth steps follow this document; the identity
-   setup follows [I-D.draft-ietf-wimse-aims].  Identifiers are
+   requirements.  The OAuth steps follow this document.  Identifiers are
    illustrative; the hash values are computed over the displayed objects
    (Section 6.4.1).
 
@@ -15417,166 +15437,173 @@ Appendix B.  Deployment Choices
    table says so, and the party relies on the deployment's documentation
    or configuration.  The cited sections govern.
 
-   +===============+===========+======================================+
-   |Choice point   |Decided by |Who learns it, and how                |
-   +===============+===========+======================================+
-   |Access-token   |AS         |Resource server: a JWT's typ header   |
-   |format: JWT or |           |parameter value at+jwt (Section 7.2,  |
-   |opaque         |           |Section 4 of [RFC9068]); no in-band   |
-   |reference token|           |signal marks an opaque token, which it|
-   |(Section 7)    |           |resolves as its deployment arranges   |
-   |               |           |(Section 9.2.4).  Client: none; it    |
-   |               |           |treats every access token as opaque   |
-   +---------------+-----------+--------------------------------------+
-   |Introspection, |AS         |Resource server: the                  |
-   |and issuer-    |           |introspection_endpoint AS metadata    |
-   |local          |           |([RFC8414]); for issuer-local         |
-   |resolution of  |           |resolution, none, since the AS        |
-   |an opaque token|           |authorizes each reader inside its     |
-   |(Section 9.2,  |           |trusted implementation boundary       |
-   |Section 9.2.4) |           |                                      |
-   +---------------+-----------+--------------------------------------+
-   |Sender         |AS, on the |Resource server: the token's cnf      |
-   |constraint:    |client's   |claim, or the cnf member of an active |
-   |bearer, DPoP,  |proof, if  |introspection response (Section 9.1,  |
-   |or mTLS        |any        |Section 9.2.4).  Client: for DPoP, the|
-   |(Section 7.2)  |           |binding applied to the issued token,  |
-   |               |           |from token_type DPoP in the token     |
-   |               |           |response (Section 5 of [RFC9449]); for|
-   |               |           |mTLS, the AS's mTLS metadata          |
-   |               |           |(Section 3.3 of [RFC8705]) states only|
-   |               |           |that the AS supports certificate-bound|
-   |               |           |tokens, and no token-response member  |
-   |               |           |says a given token is bound.  A       |
-   |               |           |resource's DPoP requirement or mTLS   |
-   |               |           |support comes from its protected      |
-   |               |           |resource metadata ([RFC9728]), which  |
-   |               |           |also states support, not the binding  |
-   |               |           |of a given token.  Settled for        |
-   |               |           |delegation: a designation is requested|
-   |               |           |with a sender-constrained token, and a|
-   |               |           |delegated token is bound to the       |
-   |               |           |delegate's own key (Section 8.1,      |
-   |               |           |Section 8.2)                          |
-   +---------------+-----------+--------------------------------------+
-   |Authorization- |Client,    |AS: the request's code_challenge      |
-   |code binding:  |among the  |([RFC7636]), or its dpop_jkt parameter|
-   |PKCE S256 or a |methods the|or DPoP proof (Section 10 of          |
-   |DPoP-bound code|AS accepts |[RFC9449]).  Client: the              |
-   |(Section 6.1.1)|           |code_challenge_methods_supported      |
-   |               |           |([RFC8414]) and                       |
-   |               |           |dpop_signing_alg_values_supported     |
-   |               |           |(Section 5.1 of [RFC9449]) AS metadata|
-   +---------------+-----------+--------------------------------------+
-   |Refresh-token  |AS         |Client: under rotation, a new refresh |
-   |binding: client|           |token in each refresh response        |
-   |authentication,|           |(Section 6 of [RFC6749]); for a DPoP  |
-   |sender         |           |binding, none beyond its own proof    |
-   |constraint, or |           |when it obtained the refresh token    |
-   |rotation       |           |(Section 5 of [RFC9449])              |
-   |(Section 7.4)  |           |                                      |
-   +---------------+-----------+--------------------------------------+
-   |Mission support|AS         |Client: the                           |
-   |(Section 12)   |           |mission_bound_authorization_supported |
-   |               |           |AS metadata; otherwise, out of band   |
-   +---------------+-----------+--------------------------------------+
-   |Supported types|AS; each   |Client: the AS's                      |
-   |and their      |resource   |authorization_details_types_supported |
-   |schemas        |server, for|metadata ([RFC9396]) and, where       |
-   |(Section 5.5)  |the types  |advertised, its types metadata        |
-   |               |it accepts |endpoint (Section 12); a resource     |
-   |               |           |server's                              |
-   |               |           |authorization_details_types_supported |
-   |               |           |metadata (Section 13)                 |
-   +---------------+-----------+--------------------------------------+
-   |Derivation     |Client, by |Client: no metadata signal; the       |
-   |mode: authority|proposing  |deployment publishes its mapping space|
-   |proposal or    |or not;    |as deployment documentation           |
-   |configured     |deployment,|                                      |
-   |mapping        |by         |                                      |
-   |(Section 5.1)  |configuring|                                      |
-   |               |mappings   |                                      |
-   +---------------+-----------+--------------------------------------+
-   |Transformation |AS         |Client, in order of preference: a     |
-   |capabilities   |operator,  |mission_transformation_capabilities   |
-   |per type:      |per type   |member in the type's entry at the     |
-   |narrowing,     |           |types metadata endpoint, an           |
-   |delegation,    |           |equivalently shaped member of         |
-   |projection     |           |supported-type documentation, or      |
-   |(Section 5.5.1)|           |deployment documentation.  Resource   |
-   |               |           |server: none needed; it enforces      |
-   |               |           |entries as carried (Section 8.4).     |
-   |               |           |Settled: the first carrier that       |
-   |               |           |declares a member governs, and a      |
-   |               |           |declared narrowing also governs       |
-   |               |           |Authority Set derivation              |
-   +---------------+-----------+--------------------------------------+
-   |Each entry's   |Deployment |AS: a trusted entry-to-audience       |
-   |audience       |           |mapping, such as authenticated        |
-   |(Section 5.5.1)|           |configuration or protected resource   |
-   |               |           |metadata ([RFC9728]).  Client: none;  |
-   |               |           |it requests an audience with resource |
-   |               |           |and reads the granted entries from the|
-   |               |           |token response (Section 7.3)          |
-   +---------------+-----------+--------------------------------------+
-   |Scope          |Deployment,|AS: the target's protected resource   |
-   |projection for |per target |metadata ([RFC9728]) or authenticated |
-   |a target       |           |out-of-band configuration             |
-   |(Section 7.7)  |           |                                      |
-   +---------------+-----------+--------------------------------------+
-   |Mission-       |Deployment,|AS and client: the                    |
-   |governed       |or the     |mission_bound_authorization_required  |
-   |resources      |resource   |protected resource metadata           |
-   |(Section 4.3)  |through its|(Section 13), which the AS            |
-   |               |metadata   |authenticates; a deployment's own     |
-   |               |           |classification has no signal, and     |
-   |               |           |false or omission does not clear it.  |
-   |               |           |Resource server: its own configuration|
-   |               |           |(Section 9.1.1)                       |
-   +---------------+-----------+--------------------------------------+
-   |Delegation     |AS         |Delegating party and delegate:        |
-   |support        |           |grant_types_supported listing the     |
-   |(Section 8)    |           |Token Exchange grant type             |
-   |               |           |(Section 12); otherwise, out of band  |
-   |               |           |or by attempt.  Settled: a delegate is|
-   |               |           |identified by its client              |
-   |               |           |authentication, an actor_token is     |
-   |               |           |refused, and a public client is not a |
-   |               |           |delegate (Section 8.2)                |
-   +---------------+-----------+--------------------------------------+
-   |Audiences that |Deployment |AS: no protocol signal; neither       |
-   |process the act|           |parsing act nor                       |
-   |chain          |           |mission_bound_authorization_required  |
-   |(Section 9.1.2)|           |establishes it, and the AS establishes|
-   |               |           |it by deployment means, for example   |
-   |               |           |its configuration                     |
-   +---------------+-----------+--------------------------------------+
-   |Designated-    |Deployment |AS: no protocol signal; the AS        |
-   |client         |           |establishes by deployment means, for  |
-   |separation     |           |example its configuration, that no    |
-   |(Section 8.1)  |           |resource server accepts the client's  |
-   |               |           |identifier as an audience             |
-   +---------------+-----------+--------------------------------------+
-   |Designation    |AS         |Delegate: no protocol signal; the AS's|
-   |redemption     |           |policy governs, and deployment        |
-   |count          |           |documentation may describe it.  An    |
-   |(Section 8.1)  |           |attempt reveals only its own outcome, |
-   |               |           |not the permitted count               |
-   +---------------+-----------+--------------------------------------+
-   |Subject-       |Deployment |Resource server: the acr, amr, and    |
-   |authentication |           |auth_time claims (Section 7.6), or    |
-   |conveyance     |           |introspection (Section 6 of           |
-   |(Section 9.1.4)|           |[RFC9470]); where no Subject          |
-   |               |           |authentication applies, they are      |
-   |               |           |absent                                |
-   +---------------+-----------+--------------------------------------+
-   |Revocation     |Deployment |A party authorized to revoke: none in |
-   |means          |           |this document; a deployment-defined   |
-   |(Section 10.2) |           |surface, or Mission Status's revoke   |
-   |               |           |operation                             |
-   +---------------+-----------+--------------------------------------+
+   +===============+============+======================================+
+   |Choice point   |Decided by  |Who learns it, and how                |
+   +===============+============+======================================+
+   |Access-token   |AS          |Resource server: a JWT's typ header   |
+   |format: JWT or |            |parameter value at+jwt (Section 7.2,  |
+   |opaque         |            |Section 4 of [RFC9068]); no in-band   |
+   |reference token|            |signal marks an opaque token, which   |
+   |(Section 7)    |            |it resolves as its deployment         |
+   |               |            |arranges (Section 9.2.4).  Client:    |
+   |               |            |none; it treats every access token as |
+   |               |            |opaque                                |
+   +---------------+------------+--------------------------------------+
+   |Introspection, |AS          |Resource server: the                  |
+   |and issuer-    |            |introspection_endpoint AS metadata    |
+   |local          |            |([RFC8414]); for issuer-local         |
+   |resolution of  |            |resolution, none, since the AS        |
+   |an opaque token|            |authorizes each reader inside its     |
+   |(Section 9.2,  |            |trusted implementation boundary       |
+   |Section 9.2.4) |            |                                      |
+   +---------------+------------+--------------------------------------+
+   |Sender         |AS, on the  |Resource server: the token's cnf      |
+   |constraint:    |client's    |claim, or the cnf member of an active |
+   |bearer, DPoP,  |proof, if   |introspection response (Section 9.1,  |
+   |or mTLS        |any         |Section 9.2.4).  Client: for DPoP,    |
+   |(Section 7.2)  |            |the binding applied to the issued     |
+   |               |            |token, from token_type DPoP in the    |
+   |               |            |token response (Section 5 of          |
+   |               |            |[RFC9449]); for mTLS, the AS's mTLS   |
+   |               |            |metadata (Section 3.3 of [RFC8705])   |
+   |               |            |states only that the AS supports      |
+   |               |            |certificate-bound tokens, and no      |
+   |               |            |token-response member says a given    |
+   |               |            |token is bound.  A resource's DPoP    |
+   |               |            |requirement or mTLS support comes     |
+   |               |            |from its protected resource metadata  |
+   |               |            |([RFC9728]), which also states        |
+   |               |            |support, not the binding of a given   |
+   |               |            |token.  Settled for delegation: a     |
+   |               |            |designation is requested with a       |
+   |               |            |sender-constrained token, and a       |
+   |               |            |delegated token is bound to the       |
+   |               |            |delegate's own key (Section 8.1,      |
+   |               |            |Section 8.2)                          |
+   +---------------+------------+--------------------------------------+
+   |Authorization- |Client,     |AS: the request's code_challenge      |
+   |code binding:  |among the   |([RFC7636]), or its dpop_jkt          |
+   |PKCE S256 or a |methods the |parameter or DPoP proof (Section 10   |
+   |DPoP-bound code|AS accepts  |of [RFC9449]).  Client: the           |
+   |(Section 6.1.1)|            |code_challenge_methods_supported      |
+   |               |            |([RFC8414]) and                       |
+   |               |            |dpop_signing_alg_values_supported     |
+   |               |            |(Section 5.1 of [RFC9449]) AS         |
+   |               |            |metadata                              |
+   +---------------+------------+--------------------------------------+
+   |Refresh-token  |AS          |Client: under rotation, a new refresh |
+   |binding: client|            |token in each refresh response        |
+   |authentication,|            |(Section 6 of [RFC6749]); for a DPoP  |
+   |sender         |            |binding, none beyond its own proof    |
+   |constraint, or |            |when it obtained the refresh token    |
+   |rotation       |            |(Section 5 of [RFC9449])              |
+   |(Section 7.4)  |            |                                      |
+   +---------------+------------+--------------------------------------+
+   |Mission support|AS          |Client: the                           |
+   |(Section 12)   |            |mission_bound_authorization_supported |
+   |               |            |AS metadata; otherwise, out of band   |
+   +---------------+------------+--------------------------------------+
+   |Supported types|AS; each    |Client: the AS's                      |
+   |and their      |resource    |authorization_details_types_supported |
+   |schemas        |server, for |metadata ([RFC9396]) and, where       |
+   |(Section 5.5)  |the types it|advertised, its types metadata        |
+   |               |accepts     |endpoint (Section 12); a resource     |
+   |               |            |server's                              |
+   |               |            |authorization_details_types_supported |
+   |               |            |metadata (Section 13)                 |
+   +---------------+------------+--------------------------------------+
+   |Derivation     |Client, by  |Client: no metadata signal; the       |
+   |mode: authority|proposing or|deployment publishes its mapping      |
+   |proposal or    |not;        |space as deployment documentation     |
+   |configured     |deployment, |                                      |
+   |mapping        |by          |                                      |
+   |(Section 5.1)  |configuring |                                      |
+   |               |mappings    |                                      |
+   +---------------+------------+--------------------------------------+
+   |Transformation |AS operator,|Client, in order of preference: a     |
+   |capabilities   |per type    |mission_transformation_capabilities   |
+   |per type:      |            |member in the type's entry at the     |
+   |narrowing,     |            |types metadata endpoint, an           |
+   |delegation,    |            |equivalently shaped member of         |
+   |projection     |            |supported-type documentation, or      |
+   |(Section 5.5.1)|            |deployment documentation.  Resource   |
+   |               |            |server: none needed; it enforces      |
+   |               |            |entries as carried (Section 8.4).     |
+   |               |            |Settled: the first carrier that       |
+   |               |            |declares a member governs, and a      |
+   |               |            |declared narrowing also governs       |
+   |               |            |Authority Set derivation              |
+   +---------------+------------+--------------------------------------+
+   |Each entry's   |Deployment  |AS: a trusted entry-to-audience       |
+   |audience       |            |mapping, such as authenticated        |
+   |(Section 5.5.1)|            |configuration or protected resource   |
+   |               |            |metadata ([RFC9728]).  Client: none;  |
+   |               |            |it requests an audience with resource |
+   |               |            |and reads the granted entries from    |
+   |               |            |the token response (Section 7.3)      |
+   +---------------+------------+--------------------------------------+
+   |Scope          |Deployment, |AS: the target's protected resource   |
+   |projection for |per target  |metadata ([RFC9728]) or authenticated |
+   |a target       |            |out-of-band configuration             |
+   |(Section 7.7)  |            |                                      |
+   +---------------+------------+--------------------------------------+
+   |Mission-       |Deployment, |AS and client: the                    |
+   |governed       |or the      |mission_bound_authorization_required  |
+   |resources      |resource    |protected resource metadata           |
+   |(Section 4.3)  |through its |(Section 13), which the AS            |
+   |               |metadata    |authenticates; a deployment's own     |
+   |               |            |classification has no signal, and     |
+   |               |            |false or omission does not clear it.  |
+   |               |            |Resource server: its own              |
+   |               |            |configuration (Section 9.1.1)         |
+   +---------------+------------+--------------------------------------+
+   |Delegation     |AS          |Delegating party and delegate:        |
+   |support        |            |grant_types_supported listing the     |
+   |(Section 8)    |            |Token Exchange grant type             |
+   |               |            |(Section 12); otherwise, out of band  |
+   |               |            |or by attempt.  Settled: a delegate   |
+   |               |            |is identified by its client           |
+   |               |            |authentication, an actor_token is     |
+   |               |            |refused, and a public client is not a |
+   |               |            |delegate (Section 8.2)                |
+   +---------------+------------+--------------------------------------+
+   |Audiences that |Deployment  |AS: no protocol signal; neither       |
+   |process the act|            |parsing act nor                       |
+   |chain          |            |mission_bound_authorization_required  |
+   |(Section 9.1.2)|            |establishes it, and the AS            |
+   |               |            |establishes it by deployment means,   |
+   |               |            |for example its configuration         |
+   +---------------+------------+--------------------------------------+
+   |Designated-    |Deployment  |AS: no protocol signal; the AS        |
+   |client         |            |establishes by deployment means, for  |
+   |separation     |            |example its configuration, that no    |
+   |(Section 8.1)  |            |resource server accepts the client's  |
+   |               |            |identifier as an audience             |
+   +---------------+------------+--------------------------------------+
+   |Designation    |AS          |Delegate: no protocol signal; the     |
+   |redemption     |            |AS's policy governs, and deployment   |
+   |count          |            |documentation may describe it.  An    |
+   |(Section 8.1)  |            |attempt reveals only its own outcome, |
+   |               |            |not the permitted count               |
+   +---------------+------------+--------------------------------------+
+   |Subject-       |Deployment  |Resource server: the acr, amr, and    |
+   |authentication |            |auth_time claims (Section 7.6), or    |
+   |conveyance     |            |introspection (Section 6 of           |
+   |(Section 9.1.4)|            |[RFC9470]); where no Subject          |
+   |               |            |authentication applies, they are      |
+   |               |            |absent                                |
+   +---------------+------------+--------------------------------------+
+   |Revocation     |Mission     |A party authorized to revoke: none in |
+   |means          |Issuer, for |this document; a deployment-defined   |
+   |(Section 10.2) |the means;  |surface, or Mission Status's revoke   |
+   |               |the         |operation                             |
+   |               |deployment's|                                      |
+   |               |policy, for |                                      |
+   |               |who may     |                                      |
+   |               |revoke      |                                      |
+   +---------------+------------+--------------------------------------+
 
-       Table 10: Deployment choices and how each party learns them
+        Table 10: Deployment choices and how each party learns them
 
 Appendix C.  Design Context and Boundaries
 
@@ -16211,25 +16238,28 @@ Appendix E.  Document History
       client_id names the Agent (#1851, D971).
 
    *  Editorial, no requirement change: Issuance Gating opens with the
-      issuance procedure, the numbered checks every issuance path
-      passes, in presentation order with no execution order or error
-      precedence; the release-time revocation refusal and any sequencing
-      a companion profile defines are unchanged.  The Issuance Checks
-      index is removed: the procedure and the sections it cites state
-      its paths and per-path details (#1892, D1026).
+      issuance procedure, the numbered checks each of the five issuance
+      paths passes; any other derivation passes at least the resolution,
+      state, subset, scope-projection and exp checks the Issuance Gating
+      list it replaces required, and the release-time revocation
+      refusal.  The numbering is presentation order, with no execution
+      order or error precedence, and the orders this document states are
+      unchanged.  The Issuance Checks index is removed: the procedure
+      and the sections it cites state its paths and per-path details
+      (#1892, D1026).
 
    *  Editorial, no requirement change: text that restates rules stated
-      elsewhere is removed: the Implementation Map; the End-to-End
-      Example's timeline and companion variations (its Stage 5 is
-      retitled Revocation); the derivation-policy paragraphs that the
-      Architecture's Derivation Boundary carries; the step overview of
-      Direct Approval Steps; the record summary in Committing the
-      Mission; the scope-only paragraph of Mission-Unaware Resource
-      Servers; the Projection Example, which the Resource Access Profile
-      gives; the three-sides restatement in Downgrade by Omission;
-      Compromised or Over-Broad Derivation; Authority Hash and Mission
-      Identity; and Authority Materialized Before Containment, which the
-      Containment profile states (#1892, D1026).
+      elsewhere is removed: the Implementation Map's index, its
+      deployment-choices table becoming the Deployment Choices appendix;
+      the End-to-End Example's timeline and companion variations (its
+      Stage 5 is retitled Revocation); the derivation-policy paragraphs
+      that the Architecture's Derivation Boundary carries; the step
+      overview of Direct Approval Steps; the record summary in
+      Committing the Mission; the Projection Example, which the Resource
+      Access Profile gives; the three-sides restatement in Downgrade by
+      Omission; Authority Hash and Mission Identity; and Authority
+      Materialized Before Containment, which the Containment profile
+      states (#1892, D1026).
 
    *  Editorial, no requirement change: the sections follow processing
       order.  Mission Creation gathers Mission Approval, Standing-
@@ -16277,10 +16307,10 @@ Appendix E.  Document History
       Profile state, is removed with its Cedar reference (#1892, D1026).
 
    *  Editorial, no requirement change: Revocation no longer restates
-      the token-lifetime bound of Issuance Gating or the introspection
-      overlay; its duty to offer token introspection or Mission Status
-      where consumers rely on Mission state beyond a token's lifetime is
-      unchanged (#1892, D1026).
+      the introspection overlay, and its wire-shape sentence follows the
+      requirement it scopes; its duty to offer token introspection or
+      Mission Status where consumers rely on Mission state beyond a
+      token's lifetime is unchanged (#1892, D1026).
 
    *  Editorial, no requirement change: Prompt Injection and Data
       Exfiltration, Downgrade by Omission, Authority and Propagated
@@ -16295,7 +16325,9 @@ Appendix E.  Document History
       Existing OAuth Objects; Missions, Plans, and Execution; the
       Derivation Policy appendix's worked example; and the guidance on
       sizing a Mission to one task, which Applicability now points to.
-      The Introduction's two-layer framing becomes a pointer, and the
+      The Introduction's two-layer framing becomes a pointer, and
+      Mission-Unaware Resource Servers states that a resource server
+      receiving no delegated token need not be Mission-aware; the
       Mission Authority Server pointer of Mission-Bound Token Issuance
       and the End-to-End Example's agent-identity stage, each stated
       elsewhere, are removed with the uncited SPIFFE client
@@ -16306,18 +16338,6 @@ Appendix E.  Document History
       Accountable Approver cites; the companions that cited it now cite
       Principals and Approval Basis, which defines the three roles
       (#1892, D1026).
-
-   *  Editorial, no requirement change: the issuance procedure covers
-      the five paths this document defines, and any other derivation
-      passes at least its resolution, state, subset, scope-projection
-      and lifetime checks, as the Issuance Gating list it replaced
-      required; it names the orders this document states, including the
-      refresh-time ones of Authority Proposal and Refresh Token
-      Protection.  Mission-Unaware Resource Servers states that a
-      resource server receiving no delegated token need not be Mission-
-      aware.  The Deployment Choices appendix keeps the Implementation
-      Map's table of the choices a deployment makes and how each party
-      learns them (#1892, D1026).
 
    -01
 
