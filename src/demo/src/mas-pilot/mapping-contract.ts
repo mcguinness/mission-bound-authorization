@@ -19,7 +19,7 @@
  */
 
 import { canonicalDigest, type JsonValue, type ResourceContractDeclarations, type ResourceContractRef } from "@mission/core";
-import { keyedRecord, ownValue, parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
+import { keyedRecord, keyedRecordFrom, ownValue, parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
 import { bindingKey, type ScopeBinding, type ScopeBindingLedger, sameBinding } from "./scope-binding-ledger.js";
 import {
   type AuthorityEntry,
@@ -218,7 +218,8 @@ export function parseMappingContract(
   if (delegatesRaw === null || typeof delegatesRaw !== "object" || Array.isArray(delegatesRaw)) {
     throw new MappingContractError("delegates must be an object");
   }
-  const delegates: Record<string, { max_depth: number }> = {};
+  // @spec authority-server#mission-join rule 4 (#1884): no prototype.
+  const delegates = keyedRecord<{ max_depth: number }>();
   for (const [client, entryRaw] of Object.entries(delegatesRaw as Record<string, unknown>)) {
     const entry = object(entryRaw, `delegates.${client}`, ["max_depth"]);
     const depth = entry.max_depth;
@@ -288,7 +289,7 @@ class MappingSnapshot implements JoinMappingContract {
     this.id = doc.contract_id;
     this.version = doc.version;
     this.delegatePolicy = {
-      delegates: Object.fromEntries(Object.entries(doc.delegates).map(([c, d]) => [c, { maxDepth: d.max_depth }])),
+      delegates: keyedRecordFrom(Object.entries(doc.delegates).map(([c, d]) => [c, { maxDepth: d.max_depth }] as const)),
     };
     for (const row of doc.subjects) this.subjects.set(keyOf(row.from.iss, row.from.sub), row);
     for (const row of doc.clients) this.clients.set(keyOf(row.from.iss, row.from.client_id), row);

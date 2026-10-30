@@ -14,6 +14,8 @@
  * check of the composition rather than either function in isolation.
  */
 
+import { readFileSync } from "node:fs";
+import { keyedRecordFrom, parseMasJoinPolicy } from "@mission/demo-data";
 import { describe, expect, it } from "vitest";
 import { deriveJoinDelegation, resolveBaselineJoin } from "../src/mas-join.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
@@ -84,6 +86,46 @@ describe("resolveBaselineJoin: client join (@spec authority-server#mission-join 
       delegatePolicy: { delegates: { "delegate-a": {} } },
     });
     expect(result).toEqual({ ok: false, reason: "mission_binding_failed" });
+  });
+});
+
+describe("resolveBaselineJoin: only the policy's own entry is an enumerated delegate (@spec authority-server#mission-join rule 4, #1884)", () => {
+  /** A delegable entry open to any delegate, so only rule 4 can refuse the join. */
+  const OPEN_ENTRY: AuthorityEntry = {
+    type: MISSION_RESOURCE_ACCESS_TYPE,
+    resource: RESOURCE,
+    actions: [READ],
+    join_delegation: { max_depth: 2 },
+  };
+
+  it("denies mission_binding_failed to each client named after an inherited member the policy does not enumerate, with a valid depth and an entry open to any delegate", () => {
+    for (const clientId of ["constructor", "toString", "hasOwnProperty", "valueOf", "__proto__"]) {
+      const result = resolveBaselineJoin({
+        view: view({ authority_set: [OPEN_ENTRY] }),
+        subject: SUBJECT,
+        clientId,
+        delegatePolicy: { delegates: {} },
+        delegateDepth: 1,
+      });
+      expect(result, clientId).toEqual({ ok: false, reason: "mission_binding_failed" });
+    }
+  });
+
+  it("honors __proto__ configured as a delegate as an ordinary client identifier, through the configuration parser", () => {
+    const raw = JSON.parse(readFileSync(new URL("../../../config/mas-join.json", import.meta.url), "utf8")) as Record<string, unknown>;
+    raw.delegates = JSON.parse('{"__proto__": {"max_depth": 2}}');
+    const parsed = parseMasJoinPolicy(raw);
+    expect(Object.getPrototypeOf(parsed.delegates)).toBeNull();
+    expect(Object.keys(parsed.delegates)).toEqual(["__proto__"]);
+    const delegates = keyedRecordFrom(Object.entries(parsed.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }] as const));
+    const result = resolveBaselineJoin({
+      view: view({ authority_set: [OPEN_ENTRY] }),
+      subject: SUBJECT,
+      clientId: "__proto__",
+      delegatePolicy: { delegates },
+      delegateDepth: 1,
+    });
+    expect(result).toEqual({ ok: true, disposition: "delegate", authoritySet: [OPEN_ENTRY] });
   });
 });
 

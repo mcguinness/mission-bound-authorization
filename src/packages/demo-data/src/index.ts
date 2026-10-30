@@ -736,6 +736,13 @@ export function keyedRecord<T>(): Record<string, T> {
   return Object.create(null) as Record<string, T>;
 }
 
+/** A {@link keyedRecord} holding `entries`, each as an ordinary own entry (#1884). */
+export function keyedRecordFrom<T>(entries: Iterable<readonly [string, T]>): Record<string, T> {
+  const record = keyedRecord<T>();
+  for (const [key, value] of entries) record[key] = value;
+  return record;
+}
+
 /**
  * @spec authority-server#mission-join rule 8 (bound 1), resource-access#resource-contract
  * (#1847, D989): the authority a credential's scope values confer on
@@ -2099,7 +2106,9 @@ export function parseMasJoinPolicy(raw: unknown): MasJoinPolicy {
   const root = asObject(file, raw, "mas_join");
   onlyMembers(file, root, MAS_JOIN_MEMBERS, "mas_join");
   const delegatesRaw = asObject(file, root.delegates, "mas_join.delegates");
-  const delegates: Record<string, { max_depth: number }> = {};
+  // @spec authority-server#mission-join rule 4 (#1884): keyed by client
+  // identifiers from configuration, with no prototype.
+  const delegates = keyedRecord<{ max_depth: number }>();
   for (const [clientId, raw] of Object.entries(delegatesRaw)) {
     const ctx = `mas_join.delegates.${clientId}`;
     const entry = asObject(file, raw, ctx);

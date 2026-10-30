@@ -29905,9 +29905,21 @@
      "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > never conflates an estate client whose identifier string equals the Mission's client_id: only the contract's resolution is compared",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: only the policy's own entry is an enumerated delegate (@spec authority-server#mission-join rule 4, #1884) > denies mission_binding_failed to each client named after an inherited member the policy does not enumerate, with a valid depth and an entry open to any delegate",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mas-join.test.ts",
+     "name": "resolveBaselineJoin: only the policy's own entry is an enumerated delegate (@spec authority-server#mission-join rule 4, #1884) > honors __proto__ configured as a delegate as an ordinary client identifier, through the configuration parser",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. #557 review point 1: resolved by evaluate() itself now, over EvaluateOptions.delegatePolicy; the PEP forwards PepDeps.masJoin.delegatePolicy unchanged but no longer calls resolveBaselineJoin. #818 slice 1: an estate client registered under the Mission's own client_id string is denied at the PDP (evaluate-join-mapping.test.ts) and at the MAS pilot's gateway (src/demo/test/mas-pilot.test.ts)."
+   "notes": "#557. #557 review point 1: resolved by evaluate() itself now, over EvaluateOptions.delegatePolicy; the PEP forwards PepDeps.masJoin.delegatePolicy unchanged but no longer calls resolveBaselineJoin. #818 slice 1: an estate client registered under the Mission's own client_id string is denied at the PDP (evaluate-join-mapping.test.ts) and at the MAS pilot's gateway (src/demo/test/mas-pilot.test.ts). #1884: rule 4 reads only the delegate policy's own entry, so a client identifier naming an inherited member (constructor, toString, hasOwnProperty, valueOf, __proto__) is not an enumerated delegate; the witness gives each such name a valid depth and an entry open to any delegate, so only rule 4 refuses, and a delegate configured as __proto__ through parseMasJoinPolicy joins as an ordinary client identifier. Proved by mutation (2026-10-30): a rule 4 that reads an inherited member admits constructor; a join-policy parser or keyedRecordFrom that builds a plain object loses the __proto__ delegate. The MAS pilot's mapping-contract delegates are null-prototype too (witnessed in src/demo/test/mas-pilot-mapping.test.ts); the Join Assertion path's own-entry read has no witness of its own."
   },
   {
    "id": "mas.baseline-join.delegate-narrowing",

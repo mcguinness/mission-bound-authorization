@@ -28,6 +28,7 @@
  * Record data.
  */
 
+import { ownValue } from "@mission/demo-data";
 import type { AuthorityEntry, MissionView } from "./policy-view.js";
 
 /**
@@ -198,7 +199,11 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
   // delegate authorization joins from here. No default. maxDepth here is
   // the DEPLOYMENT'S static ceiling (DelegatePolicy); `input.delegateDepth`
   // is the caller-supplied, per-decision current depth (see the type doc).
-  const delegateRule = input.delegatePolicy?.delegates[input.clientId];
+  // @spec authority-server#mission-join rule 4 (#1884): only the policy's own
+  // entry: a client identifier naming an inherited member (`constructor`,
+  // `__proto__`) is not an enumerated delegate.
+  const delegates = input.delegatePolicy?.delegates;
+  const delegateRule = delegates ? ownValue(delegates, input.clientId) : undefined;
   if (!delegateRule) return { ok: false, reason: "mission_binding_failed" };
 
   // Rule 5: "A delegate with no actor record under the Mission is not
