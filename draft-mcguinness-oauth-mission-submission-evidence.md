@@ -256,7 +256,8 @@ type conforms to this document.
 
 Verified evidence is not copied into the Authority Set, and the facts
 the Mission Record retains are not carried on the `mission` claim
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record"). A
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Intent Submission
+Evidence"). A
 resource server does not need to understand this document.
 
 # Security Considerations {#security-considerations}
