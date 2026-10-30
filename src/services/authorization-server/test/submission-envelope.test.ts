@@ -84,6 +84,9 @@ const SHIPPED_REGISTRY_SIZE = INTENT_SUBMISSION_EVIDENCE_TYPES.size;
 // ---------------------------------------------------------------------------
 const TEST_TYPE = "urn:test:intent-evidence:stub";
 let verifierMode: "ok" | "fail" = "ok";
+/** The admission issuer the stub reports, so a test can change the verified facts alone (#1897). */
+const STUB_ADMISSION_ISSUER = "https://admission.example";
+let stubAdmissionIssuer = STUB_ADMISSION_ISSUER;
 let lastVerifyInput: IntentSubmissionEvidenceVerifyInput | undefined;
 registerIntentSubmissionEvidenceType(TEST_TYPE, {
   validate(entry) {
@@ -100,7 +103,7 @@ registerIntentSubmissionEvidenceType(TEST_TYPE, {
     lastVerifyInput = input;
     if (verifierMode === "fail") throw new Error("stub artifact expired");
     return {
-      admission_issuer: "https://admission.example",
+      admission_issuer: stubAdmissionIssuer,
       presenter_client: input.presenter.clientId,
       bound_intent_hash: input.intentHash,
     };
@@ -545,6 +548,95 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
     expect(record?.intent_hash).toBe(intentHash(ISSUER_E2E, TASK_INTENT as never));
     // Round-trips through the store.
     expect(e2eAs.kernel.get(record?.id ?? "")?.submission_evidence).toEqual(facts);
+  });
+
+  it("a change to the verified facts alone between rendering and decision creates no Mission and asks for review again; the page rendered again shows the changed facts and approves them; unchanged facts approve (@spec mission#submission-processing, mission#approval-context-changes, #1897, D1031)", async () => {
+    verifierMode = "ok";
+    const CHANGED_ISSUER = "https://admission-changed.example";
+    /** PAR with the test evidence, then the authorization request: the approval interaction and its cookies. */
+    const open = async () => {
+      const cookies = new Map<string, string>();
+      const cookieHeader = () => [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+      const keep = (res: Response) => {
+        for (const line of res.headers.getSetCookie()) {
+          const [pair] = line.split(";");
+          const eq = (pair as string).indexOf("=");
+          cookies.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
+        }
+      };
+      const par = await pushPar(ISSUER_E2E, agentKey, {
+        login_hint: "alice",
+        mission_intent: JSON.stringify({ intent: TASK_INTENT, evidence: [TEST_ENTRY] }),
+      });
+      expect(par.status, await par.clone().text()).toBe(201);
+      const { request_uri } = (await par.json()) as { request_uri: string };
+      const res = await fetch(`${ISSUER_E2E}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`, {
+        redirect: "manual",
+      });
+      keep(res);
+      const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+      // One approval session for the interaction: its renderings and decisions share a principal.
+      const approval = { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()), "content-type": "application/json" };
+      const headers = () => approval;
+      const page = async () =>
+        (await fetch(`${ISSUER_E2E}/interaction/${uid}`, { headers: { cookie: approval.cookie as string } })).text();
+      const decide = (render_revision: string) =>
+        fetch(`${ISSUER_E2E}/interaction/${uid}/decide`, {
+          method: "POST",
+          redirect: "manual",
+          headers: approval,
+          body: JSON.stringify({ decision: "approve", render_revision }),
+        });
+      /** The resume saves the code, which commits the held decision (#1863). */
+      const resume = async (decided: Response) => {
+        keep(decided);
+        let at = decided.headers.get("location") ?? "";
+        while (at.startsWith(ISSUER_E2E)) {
+          const r = await fetch(at, { redirect: "manual", headers: { cookie: cookieHeader() } });
+          keep(r);
+          at = r.headers.get("location") ?? "";
+        }
+        return new URL(at).searchParams.get("code");
+      };
+      return { uid, headers, page, decide, resume };
+    };
+
+    try {
+      const flow = await open();
+      expect(await flow.page()).toContain("admission.example");
+      const stale = await renderedRevision(ISSUER_E2E, flow.uid, flow.headers());
+      // The decision's re-verification now yields different facts; the Intent
+      // and the Authority Set are unchanged.
+      stubAdmissionIssuer = CHANGED_ISSUER;
+      const refused = await flow.decide(stale);
+      const refusal = (await refused.json()) as { error?: string; changed?: string[] };
+      expect(refused.status, JSON.stringify(refusal)).toBe(409);
+      expect(refusal.error).toBe("approval_context_changed");
+      expect(refusal.changed).toEqual(["submission_evidence"]);
+      expect(e2eAs.kernel.findByApprovalEvent(`apev_${flow.uid}`)).toBeUndefined();
+      // The page rendered again shows the changed facts, and its approval records them.
+      expect(await flow.page()).toContain("admission-changed.example");
+      const fresh = await renderedRevision(ISSUER_E2E, flow.uid, flow.headers());
+      const approved = await flow.decide(fresh);
+      expect(approved.status, await approved.clone().text()).toBe(303);
+      expect(await flow.resume(approved)).toBeTruthy();
+      const record = e2eAs.kernel.findByApprovalEvent(`apev_${flow.uid}`);
+      expect(record?.submission_evidence?.[0]?.facts?.admission_issuer).toBe(CHANGED_ISSUER);
+
+      // Control: facts unchanged between rendering and decision (each
+      // verification has its own instant) approve on the first rendering.
+      stubAdmissionIssuer = STUB_ADMISSION_ISSUER;
+      const control = await open();
+      await control.page();
+      const decided = await control.decide(await renderedRevision(ISSUER_E2E, control.uid, control.headers()));
+      expect(decided.status, await decided.clone().text()).toBe(303);
+      expect(await control.resume(decided)).toBeTruthy();
+      expect(e2eAs.kernel.findByApprovalEvent(`apev_${control.uid}`)?.submission_evidence?.[0]?.facts?.admission_issuer).toBe(
+        STUB_ADMISSION_ISSUER,
+      );
+    } finally {
+      stubAdmissionIssuer = STUB_ADMISSION_ISSUER;
+    }
   });
 
   it("anti-downgrade on the wire: a required type absent refuses the PAR submission; presenting it proceeds", async () => {
