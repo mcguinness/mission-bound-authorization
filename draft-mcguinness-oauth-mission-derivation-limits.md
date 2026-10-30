@@ -50,6 +50,14 @@ normative:
 informative:
   RFC8785:
   RFC8792:
+  I-D.draft-mcguinness-mission-security-model:
+    title: "Mission Security Model"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-security-model.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -374,8 +382,8 @@ A refresh is one derivation, and a refresh that rotates both the
 access token and the refresh token is one. A Token Exchange under the
 Mission is one derivation, whether it down-scopes a token for the
 approved agent or issues a delegated token
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation Within a
-Mission").
+({{I-D.draft-mcguinness-oauth-mission}}, Sections "Self-Exchange
+Down-Scoping" and "Delegation Within a Mission").
 
 The one exception is a delegation family under the Continuation
 profile's async delegation transport
@@ -637,10 +645,10 @@ Cross-domain projection composes separately: local issuance at a
 Resource AS is not counted against the origin issuer's cap
 ({{cross-domain-counting}}), and neither are the tokens a consuming
 Authorization Server issues under the Mission Issuance Grant profile
-({{issuance-grant-counting}}). The OAuth binding's composition guidance
-applies to the derivation limit as to its other bounds
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Composition and the
-Effective Ceiling").
+({{issuance-grant-counting}}). The Mission Security Model's
+effective-ceiling analysis applies to the derivation limit as to the
+other bounds ({{I-D.draft-mcguinness-mission-security-model}}, Section
+"Adversary Model and Coverage").
 
 ## Audit Recomputation {#sec-audit}
 
@@ -738,6 +746,12 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 
 -00
 
+- Editorial, no requirement change (#1892): Composition Across
+  Missions cites the Security Model's effective-ceiling analysis, which
+  carries the composition guidance the OAuth binding's Security
+  Considerations restated; Refresh and Token Exchange cites the
+  binding's Self-Exchange Down-Scoping, which left its delegation
+  chapter, beside Delegation Within a Mission.
 - Clarification (#1661, D793): What Counts separates a Template
   Dispatch's creation, one derivation per `dispatch_event_id`, from its
   delivery: a retry that returns the delivered token counts nothing,

@@ -298,7 +298,8 @@ under the runtime profile's re-evaluation surfaces
 never joins this record.
 
 Where the governed Mission populates `approval_basis.adjudication`
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping") and
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis") and
 this record exists:
 
 - `adjudication.governance_record` is `true`;
@@ -2260,6 +2261,11 @@ disclosed mismatch is definitive.
 
 \[\[ To be removed from the final specification ]]
 
+- Relationship to the Issuance Profile cites the OAuth binding's
+  Principals and Approval Basis section, which defines
+  `approval_basis.adjudication`, since that binding's Role Mapping
+  appendix moved to the architecture document. No requirement changed
+  (#1892).
 - Scope of the Recency Rules says the record is historical evidence and
   that the effect of a later change to an Approver's role, a
   delegation, or the governing policy on an existing Mission is

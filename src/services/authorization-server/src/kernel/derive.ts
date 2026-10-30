@@ -668,7 +668,7 @@ function minAmount(
   // @spec resource-access#initial-common-constraints (#1263, D446): two
   // `max_amount` values naming different currencies have no intersection, and
   // the combination fails; there is no conversion and no "ceiling wins"
-  // exception (the OAuth binding's Derivation Policy appendix). The submitted
+  // exception (the architecture's Derivation Policy Properties). The submitted
   // proposal is refused, never answered with the ceiling's cap or silently
   // omitted. intersectForProjection below drops the fragment instead: a
   // projection intersects two already-derived entries, where no submitted
