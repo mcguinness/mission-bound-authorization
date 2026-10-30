@@ -1782,7 +1782,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     rar: AuthorityEntry[],
   ): { projected: AuthorityEntry[]; collapsed: boolean } {
     try {
-      return projectRarThroughMission(authoritySource, record, rar);
+      return projectRarThroughMission(authoritySource, record, rar, kernel.narrowingDeclaration());
     } catch (e) {
       if (e instanceof SourceUnavailableError) throw sourceUnavailableError(e.message);
       throw e;
@@ -2105,7 +2105,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * before consumption. It returns the grant's `ceiling` and the set the
    * access token will carry (`issued`), which the projection pre-check
    * decides over; undefined where the grant's authority does not resolve,
-   * a failure left to the ordinary path.
+   * a failure left to the ordinary path. A projection that leaves the
+   * credential nothing it may carry (fully contained, or modified where the
+   * narrowing declaration does not permit it; #1377, D1025) refuses
+   * `invalid_grant` here, before consumption, not after it.
    */
   function preCheckRefreshRar(ctx: unknown): { ceiling: unknown; issued: unknown } | undefined {
     const c = ctx as {
@@ -2120,7 +2123,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     let ceiling: unknown;
     try {
       ceiling = rarThroughEffectiveSet(c.oidc.entities.Grant);
-    } catch {
+    } catch (e) {
+      if (e instanceof errors.InvalidGrant) throw e;
       return undefined;
     }
     return { ceiling, issued: narrowToRequestedRar(ctx, ceiling) };

@@ -1304,12 +1304,58 @@ export class SourceUnavailableError extends Error {}
  * choose their own failure shape; both current call sites (provider.ts's
  * code/refresh rar projection, continuation-grant.ts's resumed-delivery
  * projection) treat a `collapsed` result as `invalid_grant`.
+ *
+ * The output is gated by `declaration` ({@link projectThroughEffectiveUnder}),
+ * whatever source supplied the effective set: a remote source's set is gated
+ * here as the kernel's is.
  */
 export function projectRarThroughMission(
   source: EffectiveAuthoritySource,
   record: MissionRecord,
   rar: readonly AuthorityEntry[],
+  declaration: NarrowingDeclaration,
 ): { projected: AuthorityEntry[]; collapsed: boolean } {
-  const projected = projectThroughEffective(rar, source.effectiveAuthoritySet(record));
+  const projected = projectThroughEffectiveUnder(declaration, rar, source.effectiveAuthoritySet(record));
   return { projected, collapsed: rar.length > 0 && projected.length === 0 };
+}
+
+/**
+ * @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+ * (#1377, D1025): {@link projectThroughEffective} with its final output gated
+ * by `declaration`. For each candidate entry:
+ *  - its fragments, where the declaration permits narrowing each of them
+ *    against the entry (always, in full: the ungated projection);
+ *  - otherwise the entry itself, as it stands, where an effective entry
+ *    equals it: the projection rebuilds every fragment, so an entry the
+ *    Mission still holds unchanged would otherwise be issued normalized (an
+ *    explicit `resource_match: "exact"` dropped);
+ *  - otherwise only its permitted fragments. An entry the effective set
+ *    modified, where narrowing it is not permitted, is never issued as if
+ *    approved.
+ * The result follows `candidate` order with identical entries de-duplicated,
+ * as projectThroughEffective's does.
+ */
+export function projectThroughEffectiveUnder(
+  declaration: NarrowingDeclaration,
+  candidate: readonly AuthorityEntry[],
+  effective: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  const out: AuthorityEntry[] = [];
+  const seen = new Set<string>();
+  const add = (entry: AuthorityEntry): void => {
+    const key = JSON.stringify(entry);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(entry);
+  };
+  for (const entry of candidate) {
+    const fragments = projectThroughEffective([entry], effective);
+    const permitted = fragments.filter((f) => narrowingPermits(declaration, f, entry));
+    if (permitted.length < fragments.length && effective.some((e) => entriesEqual(e, entry))) {
+      add(entry);
+      continue;
+    }
+    for (const f of permitted) add(f);
+  }
+  return out;
 }

@@ -23,6 +23,8 @@ const hoisted = await vi.hoisted(async () => {
   const file = join(dir, "policy.json");
   const policy = JSON.parse(readFileSync(file, "utf8")) as { ceiling: Record<string, unknown>[] };
   (policy.ceiling[0] as Record<string, unknown>).resource_match = "prefix";
+  // The reports entry states its default explicitly, which equality keeps.
+  (policy.ceiling[3] as Record<string, unknown>).resource_match = "exact";
   writeFileSync(file, JSON.stringify(policy, null, 2));
   const previous = process.env.MISSION_CONFIG_DIR;
   process.env.MISSION_CONFIG_DIR = dir;
@@ -73,6 +75,30 @@ async function start(port: number, extra: Record<string, unknown> = {}): Promise
 }
 
 const stop = (s: Srv) => new Promise<void>((r) => s.server.close(() => r()));
+
+/** A server whose effective set comes from an injected source: its own kernel's set, less `drop`'s action. */
+interface RemoteSrv extends Srv {
+  drop(action: string | undefined): void;
+}
+
+async function startRemote(port: number, extra: Record<string, unknown> = {}): Promise<RemoteSrv> {
+  let dropped: string | undefined;
+  let kernel: BuiltAs["kernel"] | undefined;
+  const authoritySource = {
+    effectiveAuthoritySet(record: Parameters<BuiltAs["kernel"]["effectiveAuthoritySet"]>[0]): AuthorityEntry[] {
+      const set = (kernel as BuiltAs["kernel"]).effectiveAuthoritySet(record);
+      return dropped === undefined ? set : set.map((e) => ({ ...e, actions: e.actions.filter((a) => a !== dropped) }));
+    },
+  };
+  const s = await start(port, { ...extra, authoritySource });
+  kernel = s.as.kernel;
+  return {
+    ...s,
+    drop: (action) => {
+      dropped = action;
+    },
+  };
+}
 
 async function clientAssertion(s: Srv): Promise<string> {
   return new SignJWT({})
@@ -174,14 +200,18 @@ async function approve(s: Srv, proposal: AuthorityEntry[] | undefined, targets: 
 }
 
 /** The full issuance: approval, then the code exchange. */
-async function issue(s: Srv, proposal: AuthorityEntry[]): Promise<{ at: string; rt: string; keys: Keys; missionId: string }> {
-  const redirect = await approve(s, proposal);
+async function issue(
+  s: Srv,
+  proposal: AuthorityEntry[] | undefined,
+  resource: string = RESOURCE,
+): Promise<{ at: string; rt: string; keys: Keys; missionId: string }> {
+  const redirect = await approve(s, proposal, [resource]);
   const code = redirect.searchParams.get("code");
   expect(code, redirect.toString()).toBeTruthy();
   const keys = (await generateKeyPair("ES256", { extractable: true })) as Keys;
   const exchanged = await token(
     s,
-    { grant_type: "authorization_code", code: code as string, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource: RESOURCE },
+    { grant_type: "authorization_code", code: code as string, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource },
     keys,
   );
   expect(exchanged.status, JSON.stringify(exchanged.body)).toBe(200);
@@ -278,15 +308,19 @@ function exactOnlyCapabilities(): TransformationCapabilities {
 let shipped: Srv;
 let undeclared: Srv;
 let exactOnly: Srv;
+let remoteShipped: RemoteSrv;
+let remoteUndeclared: RemoteSrv;
 
 beforeAll(async () => {
   shipped = await start(14951);
   undeclared = await start(14952, { transformationCapabilities: { declared: {}, narrowing: NARROWING_UNDECLARED } });
   exactOnly = await start(14953, { transformationCapabilities: exactOnlyCapabilities() });
+  remoteShipped = await startRemote(14956);
+  remoteUndeclared = await startRemote(14957, { transformationCapabilities: { declared: {}, narrowing: NARROWING_UNDECLARED } });
 });
 
 afterAll(async () => {
-  await Promise.all([stop(shipped), stop(undeclared), stop(exactOnly)]);
+  await Promise.all([stop(shipped), stop(undeclared), stop(exactOnly), stop(remoteShipped), stop(remoteUndeclared)]);
   if (hoisted.previous === undefined) delete process.env.MISSION_CONFIG_DIR;
   else process.env.MISSION_CONFIG_DIR = hoisted.previous;
   rmSync(hoisted.dir, { recursive: true, force: true });
@@ -404,5 +438,39 @@ describe("automatic projection after partial containment: an entry the declarati
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
     expect(refused.result.body.error).toBe("invalid_grant");
     expect(refused.saved).toBe(0);
+  });
+});
+
+describe("the token endpoint gates the projected output under the declaration, whatever source supplies the effective set (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025)", () => {
+  it("with narrowing undeclared, a remote source that removes one of an entry's actions refuses the refresh invalid_grant before consumption, saving no refresh token, where the shipped declaration issues the narrowed entry", async () => {
+    const issued = await issue(remoteUndeclared, [structuredClone(CEILING)]);
+    remoteUndeclared.drop("payments:invoice.list");
+    try {
+      const refused = await countingRefreshSaves(remoteUndeclared, () => refresh(remoteUndeclared, issued.rt, issued.keys));
+      expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
+      expect(refused.result.body.error).toBe("invalid_grant");
+      expect(refused.saved).toBe(0);
+    } finally {
+      remoteUndeclared.drop(undefined);
+    }
+    // Control: the same source under the shipped declaration narrows the entry.
+    const control = await issue(remoteShipped, [structuredClone(CEILING)]);
+    remoteShipped.drop("payments:invoice.list");
+    try {
+      const refreshed = await refresh(remoteShipped, control.rt, control.keys);
+      expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+      expect(entriesOf(refreshed.body.access_token as string)[0]?.actions).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+    } finally {
+      remoteShipped.drop(undefined);
+    }
+  });
+
+  it("with narrowing undeclared, an approved entry stating resource_match exact is issued at the code exchange as it stands, the member kept", async () => {
+    const reports = DERIVATION_POLICY.ceiling[3] as AuthorityEntry;
+    expect(reports.resource_match).toBe("exact");
+    const issued = await issue(undeclared, undefined, reports.resource as string);
+    const [entry] = entriesOf(issued.at);
+    expect(entry).toHaveProperty("resource_match", "exact");
+    expect(recorded([entry as AuthorityEntry])).toEqual([reports]);
   });
 });

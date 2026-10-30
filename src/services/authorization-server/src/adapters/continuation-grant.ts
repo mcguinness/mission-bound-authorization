@@ -1615,7 +1615,7 @@ function projectRarThroughEffective(
   record: MissionRecord,
   rar: AuthorityEntry[],
 ): AuthorityEntry[] {
-  return projectRarThroughMission(authoritySource(opts), record, rar).projected;
+  return projectRarThroughMission(authoritySource(opts), record, rar, opts.kernel.narrowingDeclaration()).projected;
 }
 
 /**
