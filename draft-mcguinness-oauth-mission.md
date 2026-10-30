@@ -1807,6 +1807,17 @@ privileged-administration actions under the deployment's
 classification, or a consumption bound
 ({{I-D.draft-mcguinness-mission-metering}}).
 
+The authentication actually achieved for the approval event (`acr`,
+`amr`, and `auth_time`, in the sense {{RFC9470}} and {{OpenID.Core}}
+define them) is approval-time provenance, not requested Intent. This
+document never records it as a Mission Intent member, and an AS
+MUST NOT read it back from a Mission Intent member.
+
+Where a deployment records Consent Evidence, the achieved values
+belong in its `authentication_context` member
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). This
+document defines no Mission Record member for them.
+
 #### Requested Strength {#approval-requested-strength}
 
 For the direct flow, a client MAY additionally request an
@@ -1856,19 +1867,6 @@ requires.
 
 In every approval interaction, the `prompt`, `login_hint`, and
 `id_token_hint` parameters concern the Approver.
-
-#### Achieved Authentication {#approval-achieved-authentication}
-
-The authentication actually achieved for the approval event (`acr`,
-`amr`, and `auth_time`, in the sense {{RFC9470}} and {{OpenID.Core}}
-define them) is approval-time provenance, not requested Intent. This
-document never records it as a Mission Intent member, and an AS
-MUST NOT read it back from a Mission Intent member.
-
-Where a deployment records Consent Evidence, the achieved values
-belong in its `authentication_context` member
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). This
-document defines no Mission Record member for them.
 
 ### Subject Establishment {#subject-establishment}
 
@@ -1972,6 +1970,12 @@ An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.
 
+Mission Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
+layered rendering of a committed disclosure, including what its first
+layer carries and practices for a large or varied Authority Set, and
+lets the Approver ask the basis for an entry before deciding.
+
 ### Changes Before the Decision {#approval-context-changes}
 
 If any of the following changes between approval rendering and the
@@ -1990,21 +1994,6 @@ a proposal was submitted) is computed over the approved context. Because
 the proposal is committed separately, a proposal swapped between
 rendering and decision changes `proposal_hash` even where `intent_hash`
 is unchanged.
-
-### Approval Comprehension {#approval-comprehension}
-
-The approval event commits the Mission Intent and Authority Set the
-AS records as approved. Those commitments establish neither that the
-AS rendered them faithfully nor that the Approver understood them
-({{consent-binding}}). Step 5 of {{direct-approval-steps}} requires
-human-meaningful rendering; comprehension cannot be inferred from an
-approval or its integrity anchors.
-
-Mission Consent Evidence
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
-layered rendering of a committed disclosure, including what its first
-layer carries and practices for a large or varied Authority Set, and
-lets the Approver ask the basis for an entry before deciding.
 
 ### Authorization Code Protection {#approval-code-protection}
 
@@ -2753,13 +2742,6 @@ binding, and it does not recall an access token already issued before
 its `exp` absent a runtime state check the token's consumer performs
 ({{revocation}}, {{introspection}}).
 
-An issuer that needs to cascade a lifecycle operation, or to
-enumerate a Mission's bound grant lineages and credentials, maintains
-its own issuer-side index from the Mission to each binding; a Mission
-Management companion
-({{I-D.draft-mcguinness-oauth-mission-management}}) can standardize
-that index's wire surface.
-
 When the authorization code expires unredeemed, no derivation is
 possible under the Mission regardless of which lifecycle outcome
 follows. The deployment either revokes the Mission or lets it expire at
@@ -3266,7 +3248,7 @@ that Subject.
 
 These claims neither establish approval nor expand Mission authority;
 the Approver's approval-time authentication remains provenance
-({{approval-achieved-authentication}}). Where no authentication of the
+({{approval-authentication}}). Where no authentication of the
 Subject applies, as when a human approves a Mission for another
 principal or for a workload, the claims are absent, and their absence is
 not an authentication downgrade.
@@ -5400,8 +5382,9 @@ no requirement from the substrate contract
 
 # Implementation Considerations {#implementation-considerations}
 
-This section states two requirements: approval idempotency and the
-retention of the Mission Record.
+This section states two requirements, approval idempotency and the
+retention of the Mission Record, and how an issuer locates a
+Mission's grant bindings.
 
 ## Approval Idempotency {#approval-idempotency}
 
@@ -5417,6 +5400,15 @@ The **audit horizon** is the deployment-declared retention window for
 the Mission Record and its evidence: at least the Mission's lifetime
 plus a declared post-expiry period. A deployment retains a
 `terminated` Mission's record for its audit horizon.
+
+## Binding Index {#binding-index}
+
+An issuer that needs to cascade a lifecycle operation, or to
+enumerate a Mission's bound grant lineages and credentials, maintains
+its own issuer-side index from the Mission to each binding; a Mission
+Management companion
+({{I-D.draft-mcguinness-oauth-mission-management}}) can standardize
+that index's wire surface.
 
 # Security Considerations {#security-considerations}
 
@@ -5477,6 +5469,13 @@ binds the locale, disclosure-template version, or material notices the
 Approver was shown. A buggy or malicious rendering layer could
 therefore show a narrower or different task than the committed
 Authority Set without a committed trace.
+
+The approval event commits the Mission Intent and Authority Set the
+AS records as approved. Those commitments establish neither that the
+AS rendered them faithfully nor that the Approver understood them.
+Step 5 of {{direct-approval-steps}} requires human-meaningful
+rendering; comprehension cannot be inferred from an approval or its
+integrity anchors.
 
 A deployment whose Missions carry high-risk authority can retain
 presentation-level audit evidence from which the disclosure shown can

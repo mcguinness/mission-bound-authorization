@@ -3871,7 +3871,7 @@ approval fatigue, and combining unrelated authority into one broad
 Mission can make approval difficult to evaluate. A useful boundary
 is a task whose purpose, authority, and bounds the Approver can
 evaluate together ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Approval Comprehension").
+"Consent Binding").
 
 Optional companions can reduce repeated approvals through standing
 consent ({{I-D.draft-mcguinness-oauth-mission}}, Section
