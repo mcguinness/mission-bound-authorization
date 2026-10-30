@@ -19,6 +19,8 @@ import {
   matchResource,
   ResourceContractDeclarations,
   resolveOperationTarget,
+  type ScopeProjectionMapping,
+  unenforcedConstraintRefusal,
 } from "@mission/core";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -136,6 +138,35 @@ function intakeViolation(operand: unknown): string | undefined {
   }
 }
 
+/**
+ * @spec resource-access#subset (#1377, D712): "A key present only in A narrows A only when it has defined semantics
+ * and the resource server serving A.`resource` can enforce it." The case's `enforced_constraints` is that server's
+ * known keys; absent, it is known to enforce none. Decided by this authorization server's own issuance refusal
+ * ({@link unenforcedConstraintRefusal}), which a Token Exchange applies after its subset gates, over the keys only
+ * the candidate carries: a key both operands carry is compared by its own rule. Presence is effective presence (D1025):
+ * Resource Access makes `requires_action_approval: false` "equivalent to omitting the member", so on either operand
+ * that value does not make the key present. Neither entry is rewritten, and the issuance check stays presence-keyed:
+ * that stricter issuance policy is not the comparison.
+ */
+function candidateOnlyUnenforced(input: Record<string, unknown>): string | undefined {
+  const candidate = input.candidate as AuthorityEntry;
+  const present = (entry: AuthorityEntry): [string, unknown][] =>
+    Object.entries(entry.constraints ?? {}).filter(([k, v]) => !(k === "requires_action_approval" && v === false));
+  const referenceKeys = present(input.reference as AuthorityEntry).map(([k]) => k);
+  const only = Object.fromEntries(present(candidate).filter(([k]) => !referenceKeys.includes(k)));
+  if (Object.keys(only).length === 0) return undefined;
+  const enforced = input.enforced_constraints as string[] | undefined;
+  const audience = {
+    version: "resource-access-cases",
+    mission_aware: true,
+    mode: "authorization_details",
+    ...(enforced ? { mission_constraints_supported: enforced } : {}),
+  } as ScopeProjectionMapping["audiences"][string];
+  return unenforcedConstraintRefusal({ audiences: { [candidate.resource]: audience } }, [candidate.resource], [
+    { resource: candidate.resource, constraints: only },
+  ]);
+}
+
 /** Runs one case against this implementation; called only when every required capability is implemented. */
 function run(c: Case): void {
   const input = c.input;
@@ -144,19 +175,19 @@ function run(c: Case): void {
       // #1596 (D727): a three-way result. Both operands pass the authorization
       // server's proposal intake before any comparison, each on its own, so an
       // obvious mismatch never conceals unsupported or malformed input in the
-      // other: either failing is `refuse`. Only then does the boolean subset
-      // relation, which stays fail-closed, decide `subset` or `not-subset`.
-      const candidateViolation = intakeViolation(input.candidate);
-      const referenceViolation = intakeViolation(input.reference);
+      // other: either failing is `refuse`. So does a key only the candidate
+      // carries that the serving resource server is not known to enforce
+      // (#1377, D712). Only then does the boolean subset relation, which stays
+      // fail-closed, decide `subset` or `not-subset`.
+      const violation =
+        intakeViolation(input.candidate) ?? intakeViolation(input.reference) ?? candidateOnlyUnenforced(input);
       const outcome =
-        candidateViolation !== undefined || referenceViolation !== undefined
+        violation !== undefined
           ? "refuse"
           : isSubsetEntry(input.candidate as AuthorityEntry, input.reference as AuthorityEntry)
             ? "subset"
             : "not-subset";
-      expect(outcome, `${c.expected.reason} (${candidateViolation ?? referenceViolation ?? "valid operands"})`).toBe(
-        c.expected.outcome,
-      );
+      expect(outcome, `${c.expected.reason} (${violation ?? "valid operands"})`).toBe(c.expected.outcome);
       return;
     }
     case "derive": {
@@ -511,6 +542,24 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     });
     it("dg-inherit-07: a proposal-added list over a policy-deferring ceiling entry admits a delegate both permit", () => {
       runCited("dg-inherit-07");
+    });
+    it("sub-enf-01: a key only the candidate carries narrows where the serving resource server enforces it", () => {
+      runCited("sub-enf-01");
+    });
+    it("sub-enf-02: a key only the candidate carries that the serving resource server is not known to enforce is refused", () => {
+      runCited("sub-enf-02");
+    });
+    it("sub-enf-03: a key only the candidate carries, with no enforcement context, is refused", () => {
+      runCited("sub-enf-03");
+    });
+    it("sub-enf-06: a key without defined semantics is refused even where the serving resource server lists it", () => {
+      runCited("sub-enf-06");
+    });
+    it("sub-enf-08: a candidate's false against an absent key adds no key and needs no enforcement context", () => {
+      runCited("sub-enf-08");
+    });
+    it("sub-enf-09: a candidate's true against a reference's false is a key only the candidate carries, refused without enforcement context", () => {
+      runCited("sub-enf-09");
     });
   });
 

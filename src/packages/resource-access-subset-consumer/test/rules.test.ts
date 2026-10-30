@@ -1,7 +1,8 @@
 // Targeted tests of the general rules behind each check, beyond the current
 // case list: decimal grammar and precision, currency grammar and exact
 // comparison, instants, A-labels, URI syntax, unsupported-input refusal,
-// constraint omission and resource_contract form, approval and preservation.
+// constraint omission, enforcement context for a key only the candidate
+// carries, and resource_contract form, approval and preservation.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -23,6 +24,7 @@ import {
   parseAbsoluteUri,
   parseCurrentContracts,
   parseDecimal,
+  parseEnforcedConstraints,
   parseEntry,
   parseInstant,
   runCase,
@@ -817,7 +819,6 @@ describe("constraint omission (resource-access#subset step 3)", () => {
     const rar = (v: boolean) => ({ ...base, constraints: { requires_action_approval: v } });
     expect(subsetCheck(omitted, rar(false)).outcome).toBe("subset");
     expect(subsetCheck(omitted, rar(true)).outcome).toBe("not-subset");
-    expect(subsetCheck(rar(false), omitted).outcome).toBe("subset");
     for (const constraints of [
       { tenant: "acme" },
       { allowed_tools: [] },
@@ -829,11 +830,220 @@ describe("constraint omission (resource-access#subset step 3)", () => {
         subsetCheck(omitted, { ...base, constraints }).outcome,
         JSON.stringify(constraints),
       ).toBe("not-subset");
+    }
+  });
+});
+
+describe("a key only the candidate carries (resource-access#subset; vectors README, Checks, subset)", () => {
+  // "A key present only in A narrows A only when it has defined semantics and
+  // the resource server serving A.resource can enforce it." The case's
+  // enforced_constraints names the keys that resource server enforces.
+  const omitted = { ...base };
+  const added: Record<string, unknown>[] = [
+    { tenant: "acme" },
+    { allowed_tools: [] },
+    { data_classification: ["public"] },
+    { time_window: { not_after: "2026-12-31T00:00:00Z" } },
+    { max_amount: { amount: "0", currency: "USD" } },
+    { recipient_domain: "example.com" },
+    { resource_issued_after: "2026-01-01T00:00:00Z" },
+    { resource_issued_before: "2026-12-31T00:00:00Z" },
+    { requires_action_approval: true },
+  ];
+  const keyOf = (constraints: Record<string, unknown>) => Object.keys(constraints)[0] ?? "";
+  const usd = (a: string) => ({ max_amount: { amount: a, currency: "USD" } });
+
+  it("narrows the candidate where enforced_constraints names the key", () => {
+    for (const constraints of added) {
+      const key = keyOf(constraints);
+      expect(subsetCheck({ ...base, constraints }, omitted, [key]).outcome, key).toBe("subset");
       expect(
-        subsetCheck({ ...base, constraints }, omitted).outcome,
-        JSON.stringify(constraints),
+        subsetCheck({ ...base, constraints }, omitted, ["tenant", key, "max_amount"]).outcome,
+        key,
       ).toBe("subset");
     }
+  });
+
+  it("refuses as missing comparison context when enforced_constraints is absent", () => {
+    for (const constraints of added) {
+      const result = subsetCheck({ ...base, constraints }, omitted);
+      expect(result.outcome, keyOf(constraints)).toBe("refuse");
+      expect(result.reason, keyOf(constraints)).toMatch(/^missing comparison context/);
+    }
+  });
+
+  it("refuses when enforced_constraints does not name the key, an empty list included", () => {
+    for (const constraints of added) {
+      const key = keyOf(constraints);
+      // Keys are JSON member names, named exactly.
+      for (const enforced of [
+        [],
+        [key === "tenant" ? "max_amount" : "tenant"],
+        [key.toUpperCase()],
+      ]) {
+        const result = subsetCheck({ ...base, constraints }, omitted, enforced);
+        expect(result.outcome, `${key} under ${JSON.stringify(enforced)}`).toBe("refuse");
+        expect(result.reason, `${key} under ${JSON.stringify(enforced)}`).toContain(
+          "cannot narrow",
+        );
+      }
+    }
+  });
+
+  it("needs every key only the candidate carries to be named", () => {
+    const two = { ...base, constraints: { tenant: "acme", ...usd("10") } };
+    const refused = subsetCheck(two, omitted, ["tenant"]);
+    expect(refused.outcome).toBe("refuse");
+    expect(refused.reason).toContain("max_amount");
+    expect(subsetCheck(two, omitted, ["max_amount", "tenant"]).outcome).toBe("subset");
+  });
+
+  it("decides presence first: an omission-equivalent value makes no key present on either operand", () => {
+    // requires_action_approval: "A value of false is equivalent to omitting
+    // the member". The vectors README: such a value "does not make the key
+    // present, on either operand"; a candidate's true against a reference's
+    // false adds the key and "needs enforcement context like every other
+    // added bound".
+    const rar = (v: boolean) => ({ ...base, constraints: { requires_action_approval: v } });
+    const named = ["requires_action_approval"];
+    for (const enforced of [undefined, [], ["tenant"], named]) {
+      const context = JSON.stringify(enforced);
+      // false against absence, and absence against false, add no key.
+      expect(subsetCheck(rar(false), omitted, enforced).outcome, context).toBe("subset");
+      expect(subsetCheck(omitted, rar(false), enforced).outcome, context).toBe("subset");
+      expect(subsetCheck(rar(false), rar(false), enforced).outcome, context).toBe("subset");
+      // A key both operands effectively carry needs no context.
+      expect(subsetCheck(rar(true), rar(true), enforced).outcome, context).toBe("subset");
+      // Removing the requirement adds no key, so the relation decides.
+      expect(subsetCheck(rar(false), rar(true), enforced).outcome, context).toBe("not-subset");
+      expect(subsetCheck(omitted, rar(true), enforced).outcome, context).toBe("not-subset");
+    }
+    // true against false, and true against absence, add the key.
+    for (const reference of [rar(false), omitted]) {
+      const name = JSON.stringify(reference.constraints ?? {});
+      const none = subsetCheck(rar(true), reference);
+      expect(none.outcome, name).toBe("refuse");
+      expect(none.reason, name).toMatch(/^missing comparison context/);
+      for (const enforced of [[], ["tenant"]]) {
+        const unnamed = subsetCheck(rar(true), reference, enforced);
+        expect(unnamed.outcome, name).toBe("refuse");
+        expect(unnamed.reason, name).toContain("cannot narrow");
+      }
+      expect(subsetCheck(rar(true), reference, named).outcome, name).toBe("subset");
+    }
+  });
+
+  it("names only effectively present keys, and leaves the parsed values as given", () => {
+    const withFalse = { ...base, constraints: { requires_action_approval: false, tenant: "acme" } };
+    const none = subsetCheck(withFalse, omitted);
+    expect(none.outcome).toBe("refuse");
+    expect(none.reason).toContain("tenant");
+    expect(none.reason).not.toContain("requires_action_approval");
+    expect(subsetCheck(withFalse, omitted, ["tenant"]).outcome).toBe("subset");
+    // Neither entry is rewritten: the key and its value stay in the parse.
+    const parsed = parseEntry(withFalse);
+    expect(parsed.ok && parsed.entry.constraints.get("requires_action_approval")).toBe(false);
+    expect(parsed.ok && parsed.entry.constraints.has("requires_action_approval")).toBe(true);
+  });
+
+  it("needs no enforcement context for a key both operands carry", () => {
+    const capped = { ...base, constraints: usd("500.00") };
+    const cappedTenant = { ...base, constraints: { ...usd("500.00"), tenant: "acme" } };
+    // Only tenant is the candidate's alone, so only tenant needs naming.
+    expect(subsetCheck(cappedTenant, capped, ["tenant"]).outcome).toBe("subset");
+    for (const enforced of [undefined, [], ["tenant"]]) {
+      expect(subsetCheck(capped, capped, enforced).outcome, JSON.stringify(enforced)).toBe(
+        "subset",
+      );
+      expect(
+        subsetCheck({ ...base, constraints: usd("900") }, capped, enforced).outcome,
+        JSON.stringify(enforced),
+      ).toBe("not-subset");
+    }
+  });
+
+  it("never lets enforcement admit an unsupported key or an invalid value", () => {
+    // Enforcement does not give a key defined semantics: an unknown key stays
+    // unsupported input, refused when the operands are validated.
+    for (const key of ["x_unknown", "vendors", "terminal_when"]) {
+      const result = subsetCheck({ ...base, constraints: { [key]: "v" } }, omitted, [key]);
+      expect(result.outcome, key).toBe("refuse");
+      expect(result.reason, key).toContain("candidate: unsupported input");
+    }
+    const badTenant = subsetCheck({ ...base, constraints: { tenant: 42 } }, omitted, ["tenant"]);
+    expect(badTenant.outcome).toBe("refuse");
+    expect(badTenant.reason).toContain("candidate: invalid input");
+  });
+
+  it("refuses before the relation, so a failed relation never conceals it", () => {
+    const tenant = { tenant: "acme" };
+    const mismatches: Record<string, readonly [Record<string, unknown>, Record<string, unknown>]> =
+      {
+        "different resources": [
+          { ...base, resource: "https://other.example/mcp", constraints: tenant },
+          omitted,
+        ],
+        "disjoint actions": [
+          { ...base, actions: ["payments:payment.execute"], constraints: tenant },
+          omitted,
+        ],
+        "a reference key the candidate omits": [
+          { ...base, constraints: tenant },
+          { ...base, constraints: usd("1") },
+        ],
+        "a broader shared key": [
+          { ...base, constraints: { ...tenant, ...usd("900") } },
+          { ...base, constraints: usd("500") },
+        ],
+        "a removed resource_contract": [
+          { ...base, constraints: tenant },
+          { ...base, resource_contract: { ...reference } },
+        ],
+      };
+    for (const [name, [a, b]] of Object.entries(mismatches)) {
+      // Control: with the key named, the relation decides.
+      expect(subsetCheck(a, b, ["tenant"]).outcome, name).toBe("not-subset");
+      expect(subsetCheck(a, b).outcome, `${name}, no context`).toBe("refuse");
+      expect(subsetCheck(a, b, []).outcome, `${name}, tenant not named`).toBe("refuse");
+    }
+  });
+
+  it("reads a case's enforced_constraints, an absent one giving no context", () => {
+    const subsetCase = (enforced?: unknown): VectorCase => ({
+      id: "rules-sub-enf",
+      requires: ["subset.exact-resource", "constraint.tenant"],
+      check: "subset",
+      input: {
+        candidate: { ...base, constraints: { tenant: "acme" } },
+        reference: omitted,
+        ...(enforced === undefined ? {} : { enforced_constraints: enforced }),
+      },
+      expected: { outcome: "subset" },
+    });
+    expect(runCase(subsetCase(["tenant"]), definitions).outcome).toBe("subset");
+    expect(runCase(subsetCase(["max_amount"]), definitions).outcome).toBe("refuse");
+    expect(runCase(subsetCase([]), definitions).outcome).toBe("refuse");
+    const absent = runCase(subsetCase(), definitions);
+    expect(absent.outcome).toBe("refuse");
+    expect(absent.error).toBeUndefined();
+  });
+
+  it("throws on a malformed enforced_constraints rather than reading it as none", () => {
+    for (const value of [
+      {},
+      "tenant",
+      null,
+      true,
+      [null],
+      [1],
+      [["tenant"]],
+      [{ key: "tenant" }],
+    ]) {
+      expect(() => parseEnforcedConstraints(value), JSON.stringify(value)).toThrow();
+    }
+    expect(parseEnforcedConstraints(undefined)).toBeUndefined();
+    expect(parseEnforcedConstraints([])).toEqual([]);
+    expect(parseEnforcedConstraints(["tenant", "max_amount"])).toEqual(["tenant", "max_amount"]);
   });
 });
 

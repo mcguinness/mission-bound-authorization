@@ -1687,6 +1687,460 @@
         "#1596",
         "D727"
       ]
+    },
+    {
+      "id": "sub-enf-01",
+      "description": "The candidate adds a tenant the reference lacks, and the serving resource server enforces tenant",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "enforced_constraints": [
+          "tenant"
+        ]
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "a key only the candidate carries narrows when it has defined semantics and the resource server serving the candidate's resource enforces it"
+      },
+      "refs": [
+        "#1377",
+        "D712"
+      ]
+    },
+    {
+      "id": "sub-enf-02",
+      "description": "The candidate adds a tenant the reference lacks, and the serving resource server is not known to enforce tenant",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "enforced_constraints": [
+          "max_amount"
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a key the serving resource server is not known to enforce cannot narrow; the comparison is refused, never decided with the key removed"
+      },
+      "refs": [
+        "#1377",
+        "D712"
+      ]
+    },
+    {
+      "id": "sub-enf-03",
+      "description": "The candidate adds a tenant the reference lacks, with no enforcement context",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a key only the candidate carries needs enforcement context; without it the comparison is refused (missing comparison context)"
+      },
+      "refs": [
+        "#1377",
+        "D712"
+      ]
+    },
+    {
+      "id": "sub-enf-04",
+      "description": "The candidate adds a tenant the reference lacks, with no enforcement context and an action the reference does not list",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.approve"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "missing enforcement context is reported before the relation, as unsupported input is, so a disjoint action does not conceal it"
+      },
+      "refs": [
+        "#1377",
+        "D712"
+      ]
+    },
+    {
+      "id": "sub-enf-05",
+      "description": "The candidate adds a tenant and keeps the reference's cap; the serving resource server is known to enforce only tenant",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            },
+            "tenant": "acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            }
+          }
+        },
+        "enforced_constraints": [
+          "tenant"
+        ]
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "only a key the candidate alone carries needs enforcement context; a key both operands carry is compared by its own rule"
+      },
+      "refs": [
+        "#1377",
+        "D712"
+      ]
+    },
+    {
+      "id": "sub-enf-06",
+      "description": "The candidate adds an unknown key that the serving resource server lists as enforced",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_unknown"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "x_unknown": "v"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "enforced_constraints": [
+          "x_unknown"
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "enforcement by the serving resource server does not give a key defined semantics; the key is unsupported input"
+      },
+      "refs": [
+        "#1377",
+        "D712"
+      ]
+    },
+    {
+      "id": "sub-enf-07",
+      "description": "The candidate adds requires_action_approval the reference lacks, and the serving resource server is not known to enforce it",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": true
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "enforced_constraints": [
+          "tenant"
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "even a key whose own rule lets narrowing add it narrows only where the serving resource server enforces it"
+      },
+      "refs": [
+        "#1377",
+        "D712"
+      ]
+    },
+    {
+      "id": "sub-enf-08",
+      "description": "The candidate states requires_action_approval false where the reference omits it, with no enforcement context",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": false
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "false is equivalent to omitting the member, so the candidate adds no key and needs no enforcement context"
+      },
+      "refs": [
+        "#1377",
+        "D712",
+        "D1025"
+      ]
+    },
+    {
+      "id": "sub-enf-09",
+      "description": "The candidate requires action approval where the reference states false, with no enforcement context",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": true
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": false
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the reference's false is equivalent to omission, so the candidate's true is a key only the candidate carries and needs enforcement context"
+      },
+      "refs": [
+        "#1377",
+        "D712",
+        "D1025"
+      ]
+    },
+    {
+      "id": "sub-enf-10",
+      "description": "The candidate requires action approval where the reference states false, and the serving resource server enforces it",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": true
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": false
+          }
+        },
+        "enforced_constraints": [
+          "requires_action_approval"
+        ]
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "the added requirement narrows where the serving resource server enforces it"
+      },
+      "refs": [
+        "#1377",
+        "D712",
+        "D1025"
+      ]
+    },
+    {
+      "id": "sub-enf-11",
+      "description": "The candidate adds a tenant and states requires_action_approval false; the serving resource server is known to enforce only tenant",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.requires_action_approval",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "requires_action_approval": false,
+            "tenant": "acme"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "enforced_constraints": [
+          "tenant"
+        ]
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "the false value adds no key, so only the added tenant needs enforcement context"
+      },
+      "refs": [
+        "#1377",
+        "D712",
+        "D1025"
+      ]
     }
   ]
 }
