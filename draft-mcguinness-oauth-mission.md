@@ -378,63 +378,32 @@ means independent of possession of any token ({{revocation}}), and a
 token derived from it by Token Exchange identifies the same Mission
 ({{grant-binding}}).
 
-A Mission is created and used in a single chain:
+A client submits a **Mission Intent** describing the task, optionally
+proposing `authorization_details` ({{RFC9396}}). The AS derives the
+**Authority Set**, the concrete authority the task needs, and the
+Approver consents to that Authority Set itself, not to the task
+description alone ({{approval-event}}). The AS records the Mission,
+committing the Intent as `intent_hash` and the approved Authority Set
+as `authority_hash` ({{integrity-anchors}}), and binds the resulting
+grant to it server-side; any grant lineage bound to a Mission
+resolves to exactly that Mission, which the client never selects or
+reassigns ({{grant-binding}}). Every access token the agent obtains
+under the Mission carries the derived authorization details and a
+`mission` claim identifying that Mission, and a resource server
+enforces statelessly from the token ({{rs-enforcement}}). A user thus
+approves the authority for a task once, and that approval, not a
+per-request scope grant, bounds and outlives every token the agent
+derives.
 
-1. **Submit.** The client submits a structured **Mission Intent**
-   describing the task (goal, target resources, task bounds) instead
-   of requesting raw scopes, optionally proposing concrete authority
-   alongside it as standard `authorization_details`.
-2. **Derive authority.** The AS derives **authorization details**
-   ({{RFC9396}}), the **Authority Set**: the concrete authority the
-   task needs.
-3. **Approve.** At an **approval event**, the approval rendering
-   shows the Intent's task, and the Approver consents to the derived
-   Authority Set itself, not to the task description alone
-   ({{approval-event}}). The AS commits the Mission Intent as
-   **`intent_hash`** and the approved Authority Set as
-   **`authority_hash`** ({{integrity-anchors}}). It records a durable
-   **Mission** whose record associates the disclosed task, the
-   approved authority, and the approval basis ({{mission-record}}).
-4. **Bind the grant.** The AS binds the OAuth grant the approval
-   produces to that Mission, server-side ({{grant-binding}}). Each
-   later issuance operation from that grant lineage, such as a
-   refresh, is a derivation ({{issuance-gating}}) and resolves to
-   exactly this Mission; the client never selects or reassigns it.
-   Under a profile, the AS can bind a further grant lineage to the
-   same Mission; each lineage resolves to exactly one Mission.
-5. **Issue and enforce.** Every derived authority is no broader than
-   the approved Authority Set ({{subset}}). Every access token the
-   agent obtains under the Mission carries the derived authorization
-   details and a **`mission` claim** identifying that Mission (`id`,
-   `issuer`). A resource server enforces statelessly from the token.
-6. **Stop issuance.** Token issuance and refresh are **gated on
-   Mission state**: a Mission that is not `active` yields no further
-   derivation ({{issuance-gating}}), including from any grant lineage
-   bound to it ({{grant-binding-state}}). Revoking or expiring the
-   Mission therefore stops the agent from obtaining further
-   authority.
-
-Steps 3 to 6 state the properties this document provides;
-{{conformance}} states the requirements that realize them.
-
-A user thus approves the authority for a task once, and that
-approval, not a per-request scope grant, bounds and outlives every
-token the agent derives. The Mission Record commits the consented
-authority once, as `authority_hash`; a party holding the complete
-Authority Set can recompute the commitment and compare the result
-with `authority_hash` ({{consent-binding}}). Mission Approved-Set
-Verification
-({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
-defines how a token that carries only a narrowed subset is checked
-against the complete set.
-
-A deployment can run the chain alone
+{{protocol-flow}} shows this flow, {{first-mission}} walks through an
+example, and {{conformance}} states the requirements that realize
+these properties. A deployment can use Missions for issuance alone
 ({{I-D.draft-mcguinness-mission-architecture}}, Section "The
 Issuance-Only Deployment"); a separately specified runtime layer adds
 a per-action check for the action classes whose consequence needs one
 ({{runtime-boundary}}).
 
-The sections follow that chain. {{mission-intent}} and
+The sections follow this flow. {{mission-intent}} and
 {{authorization-derivation}} define what a client submits and what the
 AS derives from it; {{mission-creation}} the approval, the record, and
 the grant binding; {{mission-bound-tokens}} issuance on every path;
