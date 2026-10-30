@@ -25281,7 +25281,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1886 (D1023 ruling 2). Todo: the reference receiver reads no stream-control SET; it refuses verification and Stream Updated SETs as malformed and bounds reliance by the issuer's observation time (#1747), so it has no liveness to count. Planned witness, with the receiver's reliance bound that #1824 owns: a receiver test in which a Stream Updated SET received after the heartbeat interval leaves the stream not verified live and the cached state stale once mission_max_stale_seconds has passed since the last verification or heartbeat event. The spec-rule model in stream-pause.test.ts ignores Stream Updated events, but it models the rule; it is not a consumer."
+   "notes": "#1886 (D1023 ruling 2). Todo. Owner: #1896 (D1028), to which #1886 transferred this witness; transferred, not completed.  the reference receiver reads no stream-control SET; it refuses verification and Stream Updated SETs as malformed and bounds reliance by the issuer's observation time (#1747), so it has no liveness to count. Planned witness, in #1896, under the receiver's reliance bound from #1824 (merged): a receiver test in which a Stream Updated SET received after the heartbeat interval leaves the stream not verified live and the cached state stale once mission_max_stale_seconds has passed since the last verification or heartbeat event. The spec-rule model in stream-pause.test.ts ignores Stream Updated events, but it models the rule; it is not a consumer."
   },
   {
    "id": "signals.consumer.heartbeat-interval-finite-agreed",
@@ -25311,7 +25311,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "#1886 (D1023 ruling 3). Partial: the emitter's interval is witnessed finite, but the agreement with the consumer is configuration no test observes, and no discovery member exists. Proved by mutation: a guard that refuses only NaN and non-positive values accepts an infinite interval and fails the test. The withholding issuer's MUST is signals.discharge.agreed-heartbeat-interval."
+   "notes": "#1886 (D1023 ruling 3). Partial. Evidence of the interval agreement is owned by #1896 (D1028), transferred from #1886, not completed: the emitter's interval is witnessed finite, but the agreement with the consumer is configuration no test observes, and no discovery member exists. Proved by mutation: a guard that refuses only NaN and non-positive values accepts an infinite interval and fails the test. The withholding issuer's MUST is signals.discharge.agreed-heartbeat-interval."
   },
   {
    "id": "signals.consumer.unknown-interval-not-verified-live",
@@ -25333,7 +25333,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1886 (D1023 ruling 3). Todo: the reference receiver does not implement the stream-liveness rule; it reads no verification or heartbeat event and bounds reliance by the issuer's observation time plus maxStaleSeconds (#1747), which is what this rule yields for an unknown interval but is no witness of it. Planned witness, with the receiver's reliance bound that #1824 owns: a receiver configured with no heartbeat interval gives no lease once mission_max_stale_seconds has passed since its last verified verification or heartbeat event, while one configured with a longer agreed interval still relies on the stream it holds verified live."
+   "notes": "#1886 (D1023 ruling 3). Todo. Owner: #1896 (D1028), to which #1886 transferred this witness; transferred, not completed.  the reference receiver does not implement the stream-liveness rule; it reads no verification or heartbeat event and bounds reliance by the issuer's observation time plus maxStaleSeconds (#1747), which is what this rule yields for an unknown interval but is no witness of it. Planned witness, in #1896, under the receiver's reliance bound from #1824 (merged): a receiver configured with no heartbeat interval gives no lease once mission_max_stale_seconds has passed since its last verified verification or heartbeat event, while one configured with a longer agreed interval still relies on the stream it holds verified live."
   },
   {
    "id": "management.bulk.version-pinned-per-member",
