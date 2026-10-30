@@ -444,14 +444,26 @@ describe("automatic projection after partial containment: an entry the declarati
 describe("the token endpoint gates the projected output under the declaration, whatever source supplies the effective set (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025)", () => {
   it("with narrowing undeclared, a remote source that removes one of an entry's actions refuses the refresh invalid_grant before consumption, saving no refresh token, where the shipped declaration issues the narrowed entry", async () => {
     const issued = await issue(remoteUndeclared, [structuredClone(CEILING)]);
-    remoteUndeclared.drop("payments:invoice.list");
+    // Every refresh of this approval grant rotates (its elapsed share read as
+    // 80%), so a refusal after consumption would spend the presented token.
+    const rotating = vi
+      .spyOn(remoteUndeclared.as.provider.RefreshToken.prototype as unknown as { ttlPercentagePassed(): number }, "ttlPercentagePassed")
+      .mockReturnValue(80);
     try {
-      const refused = await countingRefreshSaves(remoteUndeclared, () => refresh(remoteUndeclared, issued.rt, issued.keys));
-      expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
-      expect(refused.result.body.error).toBe("invalid_grant");
-      expect(refused.saved).toBe(0);
+      remoteUndeclared.drop("payments:invoice.list");
+      try {
+        const refused = await countingRefreshSaves(remoteUndeclared, () => refresh(remoteUndeclared, issued.rt, issued.keys));
+        expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
+        expect(refused.result.body.error).toBe("invalid_grant");
+        expect(refused.saved).toBe(0);
+      } finally {
+        remoteUndeclared.drop(undefined);
+      }
+      // Not consumed: with the source's set unchanged again, the same token refreshes.
+      const again = await refresh(remoteUndeclared, issued.rt, issued.keys);
+      expect(again.status, JSON.stringify(again.body)).toBe(200);
     } finally {
-      remoteUndeclared.drop(undefined);
+      rotating.mockRestore();
     }
     // Control: the same source under the shipped declaration narrows the entry.
     const control = await issue(remoteShipped, [structuredClone(CEILING)]);
