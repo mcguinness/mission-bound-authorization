@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
-    "content_sha256": "f1c09f9c8a101b85df084e74ec6228f84ab9239c1646bc277aee724c52999a66"
+    "revision": "474f87f0400bf079c35651abb377619404a6a899",
+    "content_sha256": "d9afc8b199d6dde0e09fcd02dc8e65578b9405f54d66cdf4575fdbb0dc4b9248"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -7105,7 +7105,7 @@
    "id": "core.submission.rendered-surface-covers-provenance",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-processing",
-   "text": "Where a deployment commits the rendered approval surface, that commitment MUST cover the normalized provenance facts, at least as a digest of their canonical `submission_evidence` representation ({{mission-record}})",
+   "text": "Where a deployment commits the rendered approval surface, that commitment MUST cover the normalized provenance facts, at least as a digest of their canonical `submission_evidence` representation ({{mission-record}}). That commitment MAY omit each element's `verified_at`, which the AS generates at each verification, and no other member: `type`, `artifact_hash`, and `facts`, including any timestamp within `facts`, stay covered.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7117,19 +7117,37 @@
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a deployment commits the rendered approval surface of a submission that presented evidence, the commitment covers the normalized verified facts, at least as a digest over their canonical submission_evidence representation, so the committed surface cannot stand for the same approval with different provenance facts"
+    "normative": "where a deployment commits the rendered approval surface of a submission that presented evidence, the commitment covers the normalized verified facts as a digest over their canonical submission_evidence representation, which may leave out each element's verified_at and no other member (type, artifact_hash and facts, any timestamp within facts included), so the committed surface cannot stand for the same approval with different provenance facts"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/submission-envelope.test.ts",
      "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > a change to the verified facts alone between rendering and decision creates no Mission and asks for review again; the page rendered again shows the changed facts and approves them; unchanged facts approve (@spec mission#submission-processing, mission#approval-context-changes, #1897, D1031)",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-provenance.test.ts",
+     "name": "the approval context commits the verified submission facts without each verification's instant (@spec mission#submission-processing, #1897, D1035) > two verifications of identical facts at distinct instants commit the same context",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-provenance.test.ts",
+     "name": "the approval context commits the verified submission facts without each verification's instant (@spec mission#submission-processing, #1897, D1035) > a change to type, artifact_hash or any member of facts, a timestamp within facts included, changes only the submission_evidence part",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-provenance.test.ts",
+     "name": "the approval context commits the verified submission facts without each verification's instant (@spec mission#submission-processing, #1897, D1035) > no presented evidence commits null, and presenting evidence changes the context",
+     "level": "unit",
+     "surface": "commitment"
     }
    ],
-   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. #1892 ruling 6 (D1031): the reference's render revision commits the rendered approval surface (the context a rendering showed, which the decision is bound to), so this MUST applies to it; its context omits the provenance facts, a gap #1897 tracks. #1897: the render revision commits the normalized verified facts (each fact's type, artifact_hash and facts) as a digest, and a change to them alone keeps the stale approval from proceeding, with an unchanged-facts control. Proved by mutation (2026-10-29): committing no facts approves the stale decision; committing each fact's verified_at too refuses the unchanged-facts control. Partial: the commitment omits each verification's verified_at, which differs between the rendering's and the decision's verification by construction, so it is not a digest of the full canonical submission_evidence representation the MUST names as its floor. Whether verified_at belongs to the normalized provenance facts is a reading for the owner."
+   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. #1892 ruling 6 (D1031): the reference's render revision commits the rendered approval surface (the context a rendering showed, which the decision is bound to), so this MUST applies to it; its context omits the provenance facts, a gap #1897 tracks. #1897: the render revision commits the normalized verified facts (each fact's type, artifact_hash and facts) as a digest, and a change to them alone keeps the stale approval from proceeding, with an unchanged-facts control. Proved by mutation (2026-10-29): committing no facts approves the stale decision; committing each fact's verified_at too refuses the unchanged-facts control. Owner ruling D1035 (#1897): the commitment may omit each element's AS-generated verified_at and no other member; the OAuth binding states the permission beside the MUST, and the companions' full-record commitments are unchanged. Tested: the unit witnesses fix two distinct verification instants over identical facts (the same commitment) and change type, artifact_hash and each member of facts, a timestamp within facts included (only submission_evidence changes); the endpoint witness shows the stale decision refused and unchanged facts approved. Proved by mutation (2026-10-30): committing verified_at too fails the distinct-instants witness; leaving facts out of the commitment fails the changed-facts witness."
   },
   {
    "id": "core.submission-evidence.structural-entry-refusal",
