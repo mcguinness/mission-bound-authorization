@@ -16917,7 +16917,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the AS applies none of narrowing, delegation and projection to an entry of a type for which it has not declared that capability: with narrowing undeclared, a request that would narrow an entry is refused or the entry is carried unchanged; with delegation undeclared, no entry of the type is delegated, and an exchange left with no entry is refused; with projection undeclared, no scope is projected from an entry of the type, so a scope-only target is refused and an explicitly requested value is answered invalid_scope",
+    "normative": "the AS applies none of narrowing, delegation and projection to an entry of a type for which it has not declared that capability: with narrowing undeclared, a request that would narrow an entry is refused or the entry is carried unchanged; with delegation undeclared, no entry of the type is delegated, and an exchange left with no entry is refused; with projection undeclared, no entry of the type supplies a projected scope value, so a scope-only target is refused when no other applicable carried entry supplies a safe projection, and an explicitly requested value is answered invalid_scope when no applicable carried entry can safely supply it",
     "local": "the reference declares all three for mission_resource_access (narrowing as a qualified domain, delegation and projection true) in its metadata entry and its deployment documentation, from one configuration, and applies each per entry type: narrowing at every narrowing site (D1025); delegation in delegableEntries, on the designation, the delegated redemption, the ID-JAG continuation and the cross-domain grant to a delegate; projection in projectScope, on the code exchange, refresh, the authorization decision, the async-delegation Token Exchange and the cross-org chain exchange (D1037). Each witness runs the capability omitted and declared false beside a declared control."
    },
    "level": "endpoint",
@@ -17383,7 +17383,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "without narrowing, scope is the only form other than exactly as approved in which an entry is issued, and only under a declared projection: with projection undeclared, no scope is projected from the entry and a scope-only target is refused"
+    "normative": "without narrowing, scope is the only form other than exactly as approved in which an entry is issued, and only under a declared projection: with projection undeclared, no scope is projected from the entry, and a scope-only target is refused when no other applicable carried entry supplies a safe projection"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -68039,7 +68039,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "with projection undeclared for the type, the AS applies the carried-as-approved fallback to scope: it emits no projected scope for the type's entries, carries them as approved where the target consumes authorization_details, and refuses issuance to a scope-only target that no other carried entry serves",
+    "normative": "with projection undeclared for the type, the AS applies the carried-as-approved fallback to scope: it emits no projected scope for the type's entries, carries them as approved where the target consumes authorization_details, and refuses issuance to a scope-only target when no other applicable carried entry supplies a safe projection",
     "local": "the reference implements the four conditions and declares projection true (D1037), so it does not itself make this choice; configured with projection omitted or declared false, it applies this fallback on every scope-emitting path"
    },
    "level": "endpoint",
@@ -68338,7 +68338,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "with projection not claimed, no scope is emitted for a mission_resource_access entry: an authorization_details target carries the entry, a scope-only target is refused"
+    "normative": "with projection not claimed, no scope is emitted for a mission_resource_access entry: an authorization_details target carries the entry, and a scope-only target is refused when no other applicable carried entry supplies a safe projection"
    },
    "level": "endpoint",
    "coverage": "tested",
