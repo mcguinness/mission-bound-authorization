@@ -1566,6 +1566,9 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.3.2.2">
                     <p id="section-toc.1-1.16.2.3.2.2.1"><a href="#section-16.3.2" class="auto internal xref">16.3.2</a>.  <a href="#name-denial-detail-disclosure" class="internal xref">Denial Detail Disclosure</a></p>
 </li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.3.2.3">
+                    <p id="section-toc.1-1.16.2.3.2.3.1"><a href="#section-16.3.3" class="auto internal xref">16.3.3</a>.  <a href="#name-revocation-authority" class="internal xref">Revocation Authority</a></p>
+</li>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16.2.4">
@@ -5065,7 +5068,10 @@ response that redeems a newly created Mission's authorization code
 (<a href="#approval-code-protection" class="auto internal xref">Section 6.1.1</a>); a refresh (<a href="#refresh-tokens" class="auto internal xref">Section 7.4</a>); a
 designation (<a href="#designation" class="auto internal xref">Section 8.1</a>); a delegated exchange
 (<a href="#delegated-exchange" class="auto internal xref">Section 8.2</a>); and a self-exchange (<a href="#self-exchange" class="auto internal xref">Section 7.5</a>).
-Each of these paths passes every check below, each stated where cited,
+Designation and the delegated exchange belong to the optional Delegation
+capability, and self-exchange is optional too
+(<a href="#optional-capabilities" class="auto internal xref">Section 15.2</a>). Each of these paths passes every check
+below, each stated where cited,
 with any difference by path; a path's own section states its further
 rules. Any other derivation, such as one a companion profile defines,
 passes at least checks 1, 3, 5, and 7, the <code>exp</code> bound of check 8, and
@@ -5157,19 +5163,27 @@ the acknowledgment and released after it is refused. A Token Exchange
 takes <code>invalid_request</code> because a presented token whose Mission is
 not <code>active</code> is unacceptable for the exchange, a case
 <span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> assigns to that code.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
-<p id="section-7.1-6">Where a profile of a Token Exchange that the AS implements assigns
+<p id="section-7.1-6">The AS acknowledges a revocation when it commits the Mission's
+termination with reason <code>revoked</code> (<a href="#termination" class="auto internal xref">Section 10.1</a>), whether a
+revocation request or the deployment's policy caused it
+(<a href="#revocation" class="auto internal xref">Section 10.2</a>). Receiving or queuing a revocation request does not
+acknowledge it, and acknowledgment does not wait for an HTTP response
+to complete or an event to be delivered. The refusal at release
+re-checks only an acknowledged revocation; it is not a general
+re-check of Mission state.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
+<p id="section-7.1-7">Where a profile of a Token Exchange that the AS implements assigns
 its own error code to either refusal, such as a continuation
 profile's code for an ended chain, the AS uses that profile's code
 instead; the refusal itself, and the <code>mission_error</code> member below,
-still apply.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
-<p id="section-7.1-7">The error code alone does not tell a client which gate refused. On a
+still apply.<a href="#section-7.1-7" class="pilcrow">¶</a></p>
+<p id="section-7.1-8">The error code alone does not tell a client which gate refused. On a
 refusal under this section the AS <span class="bcp14">SHOULD</span> include, alongside <code>error</code>,
 the <code>mission_error</code> token-error-response member
 (<a href="#oauth-parameters-registration" class="auto internal xref">Section 19.1</a>) with one
 of the values <code>revoked</code>, <code>expired</code>, or <code>superseded</code> (where a companion
 defines supersession), the Mission's termination reason
-(<a href="#termination" class="auto internal xref">Section 10.1</a>).<a href="#section-7.1-7" class="pilcrow">¶</a></p>
-<p id="section-7.1-8">These values are termination reasons. A companion profile that
+(<a href="#termination" class="auto internal xref">Section 10.1</a>).<a href="#section-7.1-8" class="pilcrow">¶</a></p>
+<p id="section-7.1-9">These values are termination reasons. A companion profile that
 defines another Mission state (<a href="#lifecycle" class="auto internal xref">Section 10</a>), which this section
 also refuses, or a further refusal at issuance defines any
 <code>mission_error</code> value for it, as Mission Status does for a suspended
@@ -5178,13 +5192,13 @@ Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite
 exhausted limit
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Section
 "Enforcement at Issuance"). A Mission in a state from which it can
-return to <code>active</code> <span class="bcp14">MUST NOT</span> be reported with a termination reason.<a href="#section-7.1-8" class="pilcrow">¶</a></p>
-<p id="section-7.1-9">The <code>mission_error</code> member is diagnostic only and optional, whichever
+return to <code>active</code> <span class="bcp14">MUST NOT</span> be reported with a termination reason.<a href="#section-7.1-9" class="pilcrow">¶</a></p>
+<p id="section-7.1-10">The <code>mission_error</code> member is diagnostic only and optional, whichever
 document defines its value: it grants nothing, an unrecognized value
 is ignored and is not authoritative about the Mission's state, and it
 is returned only to the authenticated client presenting the Mission's
-grant.<a href="#section-7.1-9" class="pilcrow">¶</a></p>
-<p id="section-7.1-10">The <code>mission_error</code> values this section names each report a
+grant.<a href="#section-7.1-10" class="pilcrow">¶</a></p>
+<p id="section-7.1-11">The <code>mission_error</code> values this section names each report a
 terminated Mission (<a href="#termination" class="auto internal xref">Section 10.1</a>): no retry under the same grant
 cures the refusal. Further work needs a new approval or, for
 <code>superseded</code>, the successor Mission
@@ -5195,8 +5209,8 @@ credential held outside the Mission is no fallback for its task
 the refresh token remains usable. This reading is keyed on the value,
 not on the error code, because the same refusal covers a Mission in a
 non-terminal state that a companion profile registers
-(<a href="#iana-lifecycle-states" class="auto internal xref">Section 19.7</a>), whose meaning that profile defines.<a href="#section-7.1-10" class="pilcrow">¶</a></p>
-<p id="section-7.1-11">Derived tokens <span class="bcp14">SHOULD</span> be short-lived so that a transition to
+(<a href="#iana-lifecycle-states" class="auto internal xref">Section 19.7</a>), whose meaning that profile defines.<a href="#section-7.1-11" class="pilcrow">¶</a></p>
+<p id="section-7.1-12">Derived tokens <span class="bcp14">SHOULD</span> be short-lived so that a transition to
 <code>terminated</code> takes effect promptly without per-request
 revocation checks. A resource server that does not check Mission state
 per request can accept a derived token until its <code>exp</code>, so the token's
@@ -5205,7 +5219,7 @@ Short-lived means within the termination latency the deployment
 accepts. This document sets no numerical bound; a deployment profile
 can. The cap at the Mission's <code>expires_at</code>
 (<a href="#token-authentication-lifetime" class="auto internal xref">Section 7.6</a>) does not by itself make a token
-short-lived.<a href="#section-7.1-11" class="pilcrow">¶</a></p>
+short-lived.<a href="#section-7.1-12" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="token-claims">
@@ -5513,6 +5527,14 @@ authority; it carries the same <code>mission</code> claim (<a href="#mission-cla
 and adds no <code>act</code> chain.<a href="#section-7.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
+<p id="section-7.5-3">Self-exchange is an optional capability (<a href="#optional-capabilities" class="auto internal xref">Section 15.2</a>). An
+AS that does not support it refuses a no-actor exchange: with
+<code>unsupported_grant_type</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>) if it does not
+support the Token Exchange grant type, and otherwise with
+<code>invalid_request</code>, as for a presented token it does not accept for the
+exchange (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>). Any other error that applies
+still applies, such as <code>invalid_client</code> for a client that fails
+authentication.<a href="#section-7.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="token-authentication-lifetime">
@@ -7627,7 +7649,9 @@ metadata (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>): <cod
 and <code>grant_types_supported</code> containing
 <code>urn:ietf:params:oauth:grant-type:token-exchange</code> for self-exchange,
 for delegation, and for the companion's cross-domain grant issuance.
-Absent such a signal, a capability is discovered out of band or by
+Advertising that grant type does not by itself establish support for
+every exchange variant, such as self-exchange or delegation. Absent such
+a signal, a capability is discovered out of band or by
 attempt: a Token Exchange, a cross-domain grant issuance, or an
 introspection request fails if the issuer does not support it.<a href="#section-12-9" class="pilcrow">¶</a></p>
 </section>
@@ -7971,7 +7995,7 @@ treating it as a reference, not a credential.<a href="#section-15.1-8.3.1" class
 <a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-optional-capabilities" class="section-name selfRef">Optional Capabilities</a>
         </h3>
 <p id="section-15.2-1">Beyond these mandatory roles, an implementation can additionally claim
-three <span class="bcp14">OPTIONAL</span> capabilities. Each is independent, and an implementation
+four <span class="bcp14">OPTIONAL</span> capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:<a href="#section-15.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-15.2-2.1">
@@ -7982,41 +8006,47 @@ sender-constrained token can be designated, so Delegation requires
 sender-constrained primary tokens.<a href="#section-15.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-15.2-2.2">
-            <p id="section-15.2-2.2.1"><strong>Introspection</strong> (<a href="#introspection" class="auto internal xref">Section 9.2</a>): reporting Mission state through
+            <p id="section-15.2-2.2.1"><strong>Self-Exchange</strong> (<a href="#self-exchange" class="auto internal xref">Section 7.5</a>): narrowing an agent's own
+Mission-bound token by a Token Exchange that names no actor.
+Supporting Delegation does not require Self-Exchange, and supporting
+Self-Exchange does not require Delegation.<a href="#section-15.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-15.2-2.3">
+            <p id="section-15.2-2.3.1"><strong>Introspection</strong> (<a href="#introspection" class="auto internal xref">Section 9.2</a>): reporting Mission state through
 the <code>mission</code> token introspection response member. Required where
 the AS issues opaque Mission-bound tokens to a resource server that
 does not use issuer-local resolution (<a href="#introspected-consumption" class="auto internal xref">Section 9.2.4</a>).
 Issuer-local resolution does not by itself support a claim of this
-capability.<a href="#section-15.2-2.2.1" class="pilcrow">¶</a></p>
+capability.<a href="#section-15.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-15.2-2.3">
-            <p id="section-15.2-2.3.1"><strong>Cross-Domain</strong>: projecting a Mission so it is honored by an
+          <li class="normal" id="section-15.2-2.4">
+            <p id="section-15.2-2.4.1"><strong>Cross-Domain</strong>: projecting a Mission so it is honored by an
 authorization server in another trust domain. An implementation
-claiming this capability preserves, across the hop:<a href="#section-15.2-2.3.1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-15.2-2.3.2">
-<li id="section-15.2-2.3.2.1">
-                <p id="section-15.2-2.3.2.1.1">the Mission reference (<code>mission.id</code>, <code>mission.issuer</code>) and the
-<code>authority_hash</code> the projection carries, intact;<a href="#section-15.2-2.3.2.1.1" class="pilcrow">¶</a></p>
+claiming this capability preserves, across the hop:<a href="#section-15.2-2.4.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-15.2-2.4.2">
+<li id="section-15.2-2.4.2.1">
+                <p id="section-15.2-2.4.2.1.1">the Mission reference (<code>mission.id</code>, <code>mission.issuer</code>) and the
+<code>authority_hash</code> the projection carries, intact;<a href="#section-15.2-2.4.2.1.1" class="pilcrow">¶</a></p>
 </li>
-              <li id="section-15.2-2.3.2.2">
-                <p id="section-15.2-2.3.2.2.1">authority that only narrows (<a href="#subset" class="auto internal xref">Section 5.4</a>);<a href="#section-15.2-2.3.2.2.1" class="pilcrow">¶</a></p>
+              <li id="section-15.2-2.4.2.2">
+                <p id="section-15.2-2.4.2.2.1">authority that only narrows (<a href="#subset" class="auto internal xref">Section 5.4</a>);<a href="#section-15.2-2.4.2.2.1" class="pilcrow">¶</a></p>
 </li>
-              <li id="section-15.2-2.3.2.3">
-                <p id="section-15.2-2.3.2.3.1">projection performed only by, or under the authorization of, the
+              <li id="section-15.2-2.4.2.3">
+                <p id="section-15.2-2.4.2.3.1">projection performed only by, or under the authorization of, the
 Mission <code>issuer</code>, gated on the Mission's <code>active</code> state
-(<a href="#lifecycle" class="auto internal xref">Section 10</a>, <a href="#issuance-gating" class="auto internal xref">Section 7.1</a>); and<a href="#section-15.2-2.3.2.3.1" class="pilcrow">¶</a></p>
+(<a href="#lifecycle" class="auto internal xref">Section 10</a>, <a href="#issuance-gating" class="auto internal xref">Section 7.1</a>); and<a href="#section-15.2-2.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
-              <li id="section-15.2-2.3.2.4">
-                <p id="section-15.2-2.3.2.4.1">projected credential lifetimes capped by the Mission's
-<code>expires_at</code> (<a href="#token-authentication-lifetime" class="auto internal xref">Section 7.6</a>).<a href="#section-15.2-2.3.2.4.1" class="pilcrow">¶</a></p>
+              <li id="section-15.2-2.4.2.4">
+                <p id="section-15.2-2.4.2.4.1">projected credential lifetimes capped by the Mission's
+<code>expires_at</code> (<a href="#token-authentication-lifetime" class="auto internal xref">Section 7.6</a>).<a href="#section-15.2-2.4.2.4.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
-<p id="section-15.2-2.3.3">
+<p id="section-15.2-2.4.3">
 This bar is self-contained in this document. The companion Mission
 Cross-Domain Projection profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) specifies the
 interoperable mechanism that satisfies it, and implementations that
-interoperate across the hop implement that companion.<a href="#section-15.2-2.3.3" class="pilcrow">¶</a></p>
+interoperate across the hop implement that companion.<a href="#section-15.2-2.4.3" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-15.2-3">Mission Approved-Set Verification
@@ -8321,6 +8351,20 @@ authorization (<a href="#caller-authorization-and-minimization" class="auto inte
 deployment permits to learn the distinction. Of the two values,
 <code>insufficient_authority</code> reveals least, and omitting the attribute
 reveals nothing.<a href="#section-16.3.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="revocation-authority">
+<section id="section-16.3.3">
+          <h4 id="name-revocation-authority">
+<a href="#section-16.3.3" class="section-number selfRef">16.3.3. </a><a href="#name-revocation-authority" class="section-name selfRef">Revocation Authority</a>
+          </h4>
+<p id="section-16.3.3-1">A deployment's policy can authorize no party to request a Mission's
+revocation (<a href="#revocation" class="auto internal xref">Section 10.2</a>). Under such a policy no external party can
+request revocation, so containing a Mission depends on its expiry and
+on any termination the deployment's policy drives. No role, such as the
+Subject, the Approver, or an administrator, gains revocation authority
+by default, and the policy's choice does not remove the Mission
+Issuer's token-independent revocation means.<a href="#section-16.3.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -10846,6 +10890,16 @@ uncited SPIFFE client authentication reference (#1892, D1026).<a href="#appendix
 the Architecture as Approval Role Mapping, which Single Accountable
 Approver cites; the companions that cited it now cite Principals and
 Approval Basis, which defines the three roles (#1892, D1026).<a href="#appendix-E-3.49.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-E-3.50">
+          <p id="appendix-E-3.50.1">Self-exchange is an <span class="bcp14">OPTIONAL</span> capability, independent of Delegation:
+an AS that does not support it refuses a no-actor exchange with
+<code>unsupported_grant_type</code> when it lacks the Token Exchange grant type,
+and otherwise with <code>invalid_request</code>; advertising that grant type
+does not establish every exchange variant. An acknowledged revocation
+is the AS's commit of the Mission's termination with reason
+<code>revoked</code>. Security Considerations state the consequence of a policy
+that authorizes no party to request revocation (#1892, D1031).<a href="#appendix-E-3.50.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-E-4">-01<a href="#appendix-E-4" class="pilcrow">¶</a></p>
