@@ -519,7 +519,7 @@ Table of Contents
    *  MUST have an exp that does not exceed the Mission's expires_at,
       per the issuance profile's expiry rule
       ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Bound
-      Access Tokens");
+      Token Issuance");
 
    *  MUST be sender-constrained ([RFC7800]) to the presenting client by
       the proof-of-possession mechanism the cross-domain grant profile
@@ -643,7 +643,7 @@ Table of Contents
    Sender-constraining is REQUIRED for the cross-domain grant, stronger
    than the [RFC9700] recommendation the issuance profile adopts for the
    primary access token ([I-D.draft-mcguinness-oauth-mission], Section 
-   "Mission-Bound Access Tokens"): the grant's position at the trust
+   "Mission-Bound Token Issuance"): the grant's position at the trust
    boundary demands it (Section 15.2), and the underlying grant provides
    no replay backstop of its own.
 
@@ -1736,22 +1736,21 @@ Appendix A.  End-to-End Example (Non-Normative)
 
    Scenario: agent s6BhdRkqt3, acting for alice (user_3p2q8mN1a0kV7tR),
    reconciles Q3 invoices in a partner ERP under Mission
-   msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY.  Stage 0 (agent identity) and
-   Stage 1 (Mission creation at the home AS) are the base profile's
-   single-domain walkthrough, extended here in one way: the Mission
-   Intent's target_resources also names the partner ERP
-   https://erp.partner.example.com, so the approved Authority Set
-   additionally carries, for that resource, an invoices.read entry (for
-   invoices issued in 2026-Q3, delegable to ai_agent actors at depth 1)
-   and a journal-entries.write entry capped at a max_amount of 500.00
-   USD.  The Mission was recorded active with authority_hash sha-
-   256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM and intent_hash sha-
-   256:PKG6dLDsex-HyP9hs4NJpxqAocHYUmpDmoMH4UaoW-o (this Mission is not
-   the single-domain walkthrough's: its Intent and Authority Set extend
-   that example's, so its identifier and anchors differ).  The partner
-   ERP is behind the Resource AS ras.partner.example.com, so the agent's
-   next step is a cross-domain projection rather than a home-domain
-   access token.
+   msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY.  Stage 1 (Mission creation at
+   the home AS) is the base profile's single-domain walkthrough,
+   extended here in one way: the Mission Intent's target_resources also
+   names the partner ERP https://erp.partner.example.com, so the
+   approved Authority Set additionally carries, for that resource, an
+   invoices.read entry (for invoices issued in 2026-Q3, delegable to
+   ai_agent actors at depth 1) and a journal-entries.write entry capped
+   at a max_amount of 500.00 USD.  The Mission was recorded active with
+   authority_hash sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM
+   and intent_hash sha-256:PKG6dLDsex-HyP9hs4NJpxqAocHYUmpDmoMH4UaoW-o
+   (this Mission is not the single-domain walkthrough's: its Intent and
+   Authority Set extend that example's, so its identifier and anchors
+   differ).  The partner ERP is behind the Resource AS
+   ras.partner.example.com, so the agent's next step is a cross-domain
+   projection rather than a home-domain access token.
 
    In the examples in this document, the partner ERP's operation
    contract identifies https://erp.partner.example.com as the operation
@@ -1999,6 +1998,13 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  The End-to-End Example starts from the base profile's Stage 1,
+      since that profile's example no longer has an agent-identity
+      stage, and the expiry-ceiling and sender-constraint citations name
+      the base profile's Mission-Bound Token Issuance chapter, the
+      retitled Mission-Bound Access Tokens.  No requirement changed
+      (#1892).
 
    *  Changes a requirement, a normative wire change (#1630, D751):
       every cross-domain grant's mission claim carries the Mission's

@@ -1473,8 +1473,9 @@ JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a
       </h2>
 <p id="section-3-1">This section is <span class="bcp14">OPTIONAL</span>. The issuance profile's stateless baseline
 needs no dedicated status surface
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Revocation"), and a
-consumer that does not use this operation is unaffected.<a href="#section-3-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Sections "Resource Server
+Enforcement" and "Revocation"), and a consumer that does not use this
+operation is unaffected.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">The dedicated Mission Status operation is the canonical status surface
 the issuance profile defers. Unlike token introspection
 (<a href="#introspection-projection" class="auto internal xref">Section 4</a>), which answers "is this
@@ -3172,10 +3173,11 @@ shortening a Mission's <code>expires_at</code>) remain deferred to future work.<
       </h2>
 <p id="section-6-1">This section is <span class="bcp14">OPTIONAL</span>. The issuance profile bounds outstanding
 self-contained tokens by their lifetime and <span class="bcp14">OPTIONAL</span> token
-introspection (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Revocation"). A deployment that needs a Mission state change to take
-effect faster than token lifetime alone combines the propagation
-mechanisms below and sizes token lifetimes to match.<a href="#section-6-1" class="pilcrow">¶</a></p>
+introspection (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Sections
+"Issuance Gating" and "Mission State via Token Introspection"). A
+deployment that needs a Mission state change to take effect faster
+than token lifetime alone combines the propagation mechanisms below
+and sizes token lifetimes to match.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">Each mechanism is discovered from its own metadata:<a href="#section-6-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6-3.1">
@@ -4321,21 +4323,28 @@ Mission Termination Reasons registry
 <p id="appendix-A-2">-01<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-3.1">
-          <p id="appendix-A-3.1.1">The Mission Status Request gives the client authentication
-parameters of mTLS and private-key JWT as examples; a method that
-carries its credentials in HTTP header fields keeps them there.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.1.1">Mission Status Operation and Revocation Propagation cite the OAuth
+binding's Resource Server Enforcement, Issuance Gating, and Mission
+State via Token Introspection sections, where the stateless baseline
+and the token-lifetime bound are stated, together with or instead of
+its Revocation section. No requirement changed (#1892).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.2">
-          <p id="appendix-A-3.2.1">IANA Considerations adds the Mission Status and Mission Lifecycle
-endpoints as usage locations for <code>invalid_request</code> and
-<code>invalid_client</code>.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.2.1">The Mission Status Request gives the client authentication
+parameters of mTLS and private-key JWT as examples; a method that
+carries its credentials in HTTP header fields keeps them there.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.3">
-          <p id="appendix-A-3.3.1">A metadata-only change and a schedule are issuer-held state
+          <p id="appendix-A-3.3.1">IANA Considerations adds the Mission Status and Mission Lifecycle
+endpoints as usage locations for <code>invalid_request</code> and
+<code>invalid_client</code>.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.4">
+          <p id="appendix-A-3.4.1">A metadata-only change and a schedule are issuer-held state
 associated with the Mission, outside its Mission Record; an AS may
 store them with the record, and a signed or exchanged Mission
 Record does not carry them. Authorization, atomicity, versioning
-and scheduling rules are unchanged (#1879).<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+and scheduling rules are unchanged (#1879).<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>

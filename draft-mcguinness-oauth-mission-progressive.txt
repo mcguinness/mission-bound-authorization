@@ -1128,7 +1128,7 @@ Table of Contents
 
    *  the Approver who consented the ceiling remains the accountable
       consent_principal ([I-D.draft-mcguinness-oauth-mission],
-      Section "Role Mapping"); and
+      Section "Principals and Approval Basis"); and
 
    *  the successor's predecessor member links the drawdown chain for an
       authorized auditor exactly as for human-approved expansions
@@ -1497,6 +1497,11 @@ Appendix A.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Audit Linkage cites the OAuth binding's Principals and Approval
+      Basis section for the accountable consent_principal, since that
+      binding's Role Mapping appendix moved to the architecture
+      document.  No requirement changed (#1892).
 
    *  ceiling_consent_hash keeps the latest explicitly human-consented
       ceiling's hash apart from a policy-narrowed ceiling_hash; the

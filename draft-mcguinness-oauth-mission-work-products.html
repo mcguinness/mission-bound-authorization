@@ -1314,10 +1314,10 @@ and the subset rule as the issuance profile defines them.<a href="#section-2-1" 
 artifact-plane reading of a claim the issuance profile already makes on
 the credential plane: authority exists only by derivation for a Mission,
 so no possessed thing, credential or artifact, substitutes for the
-Mission's live gate. Alignment with a forthcoming issuance-profile Security
-Considerations statement of this property is anticipated; this document
-states the property for work products and imposes nothing new on the
-issuance profile.<a href="#section-2-2" class="pilcrow">¶</a></p>
+Mission's live gate. The OAuth binding's Security Considerations
+state the same property (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Authority and Propagated Information"); this document states
+it for work products and imposes nothing new on the issuance profile.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">Child delegation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>)
 is the legitimate authority path this document points to: where an agent
 needs authority to act on what it read, it obtains a Child Mission
@@ -2304,11 +2304,16 @@ which remains deferred in <a href="#binding-guardrails" class="auto internal xre
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Added the informative Artifact-Lineage Label Persistence appendix
+          <p id="appendix-B-2.1.1">Relationship to Other Profiles cites the OAuth binding's Security
+Considerations statement of the invariant instead of anticipating
+one. No requirement changed (#1892).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Added the informative Artifact-Lineage Label Persistence appendix
 and clarified the deferred-mechanism list. Labels use a declared
 conservative join, remain outside policy-free provenance, and stay
 under trusted-mediator custody. No normative requirement changed
-(#757).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+(#757).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

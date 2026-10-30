@@ -1777,7 +1777,7 @@ bounds cross-domain revocation latency; see
           <p id="section-8-4.6.1"><span class="bcp14">MUST</span> have an <code>exp</code> that does not exceed the Mission's
 <code>expires_at</code>, per the issuance profile's expiry rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound
-Access Tokens");<a href="#section-8-4.6.1" class="pilcrow">¶</a></p>
+Token Issuance");<a href="#section-8-4.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-4.7">
           <p id="section-8-4.7.1"><span class="bcp14">MUST</span> be sender-constrained (<span>[<a href="#RFC7800" class="cite xref">RFC7800</a>]</span>) to the presenting client by
@@ -1904,7 +1904,7 @@ its invariants, <a href="#origin-principal" class="auto internal xref">Section 1
 <p id="section-8-15">Sender-constraining is <span class="bcp14">REQUIRED</span> for the cross-domain grant, stronger
 than the <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span> recommendation the issuance profile adopts for the
 primary access token (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Mission-Bound Access Tokens"): the grant's position at the trust
+"Mission-Bound Token Issuance"): the grant's position at the trust
 boundary demands it (<a href="#grant-at-boundary" class="auto internal xref">Section 15.2</a>), and the underlying grant
 provides no replay backstop of its own.<a href="#section-8-15" class="pilcrow">¶</a></p>
 </section>
@@ -3125,9 +3125,9 @@ point-of-use check, and Stage 3 gains prompt cross-domain revocation
 from Status or Signals.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
 <p id="appendix-A-5">Scenario: agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>
 (<code>user_3p2q8mN1a0kV7tR</code>), reconciles Q3 invoices in a partner ERP
-under Mission <code>msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY</code>. Stage 0 (agent
-identity) and Stage 1 (Mission creation at the home AS) are the base
-profile's single-domain walkthrough, extended here in one way: the
+under Mission <code>msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY</code>. Stage 1 (Mission
+creation at the home AS) is the base profile's single-domain
+walkthrough, extended here in one way: the
 Mission Intent's <code>target_resources</code> also names the partner ERP
 <code>https://erp.partner.example.com</code>, so the approved Authority Set
 additionally carries, for that resource, an <code>invoices.read</code> entry
@@ -3441,7 +3441,14 @@ exceeds the Mission's <code>expires_at</code>. The ID-JAG carried identity
 <p id="appendix-B-2">-01<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Changes a requirement, a normative wire change (#1630, D751): every
+          <p id="appendix-B-3.1.1">The End-to-End Example starts from the base profile's Stage 1,
+since that profile's example no longer has an agent-identity stage,
+and the expiry-ceiling and sender-constraint citations name the base
+profile's Mission-Bound Token Issuance chapter, the retitled
+Mission-Bound Access Tokens. No requirement changed (#1892).<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.2">
+          <p id="appendix-B-3.2.1">Changes a requirement, a normative wire change (#1630, D751): every
 cross-domain grant's <code>mission</code> claim carries the Mission's
 <code>expires_at</code>, unchanged and never the grant's <code>exp</code>. The Resource AS
 refuses with <code>invalid_grant</code> a grant whose <code>expires_at</code> is absent,
@@ -3449,16 +3456,16 @@ not an RFC 3339 date-time, or already elapsed, and preserves it
 unchanged on every local token, including one from which further
 credentials are issued. The local token's <code>exp</code> still never exceeds
 the grant's, and carrying the value extends no lifetime and
-authorizes no renewal.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">The Resource AS's local token states its Mission-binding profile
-(grant, authority bound, state check, and consumer checks), as the
-issuance profile's Claim Reservation requires. No requirement
-changed (#1531).<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+authorizes no renewal.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Changes a requirement (#1374): the Mission Issuer omits an entry's
+          <p id="appendix-B-3.3.1">The Resource AS's local token states its Mission-binding profile
+(grant, authority bound, state check, and consumer checks), as the
+issuance profile's Claim Reservation requires. No requirement
+changed (#1531).<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.4">
+          <p id="appendix-B-3.4.1">Changes a requirement (#1374): the Mission Issuer omits an entry's
 <code>delegation</code> from the conveyed copy unless every retained origin of
 its delegate eligibility is a committed <code>allowed_delegates</code> list and
 the conveyed member is no broader than each approved entry's. The
@@ -3466,10 +3473,10 @@ grant conveys no provenance and no way to evaluate the issuer's
 policy. The omission removes a nested <code>children</code> grant, never
 changes which entries a grant carries, and leaves the Mission Record
 and <code>authority_hash</code> unchanged. A Resource AS evaluates a conveyed
-<code>sub_profile</code> against its own classification.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+<code>sub_profile</code> against its own classification.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">Changes a requirement (#1166, D510): the cross-domain grant names the
+        <li class="normal" id="appendix-B-3.5">
+          <p id="appendix-B-3.5.1">Changes a requirement (#1166, D510): the cross-domain grant names the
 requesting client's registration at the target Resource AS, as
 ID-JAG -04 Sections 3.1 and 5 define <code>client_id</code>, resolved from a
 destination-scoped mapping; a missing or ambiguous mapping is
@@ -3480,50 +3487,50 @@ authenticated (<code>invalid_grant</code> on mismatch, ID-JAG -04 Section
 approved agent and on reading the grant's <code>client_id</code> become an
 identity-source rule: destination authentication establishes the
 local identity, and an equal identifier string in both domains is
-not a conflict.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+not a conflict.<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.5">
-          <p id="appendix-B-3.5.1">Adds two requirements at the Resource AS: it issues no refresh
+        <li class="normal" id="appendix-B-3.6">
+          <p id="appendix-B-3.6.1">Adds two requirements at the Resource AS: it issues no refresh
 token or equivalent renewal authority on a Mission-bound grant,
 tightening the recommendation of Section 4.4.3 of ID-JAG -04, and
 a delegated token it issues, with every token descended from it,
 expires no later than the original grant. Cross-Domain Revocation
 Latency states the exposure measured from revocation as bounded by
 the outstanding grant's remaining lifetime, replacing the claim that
-latency is the downstream token lifetime (#1180).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-3.6">
-          <p id="appendix-B-3.6.1">Changes a requirement: grant issuance refuses a subject token that
-does not resolve to a Mission with <code>invalid_request</code>, where it was
-<code>invalid_grant</code>, as Section 2.2.2 of RFC 8693 requires for an
-invalid subject token; redemption keeps <code>invalid_grant</code> (#1178).<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
+latency is the downstream token lifetime (#1180).<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.7">
-          <p id="appendix-B-3.7.1">Grant issuance at the originating AS refuses a Mission that is not
-<code>active</code> with <code>invalid_request</code>, following the issuance profile's
-Token Exchange rule; redemption at the Resource AS keeps
-<code>invalid_grant</code> (#1154).<a href="#appendix-B-3.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.7.1">Changes a requirement: grant issuance refuses a subject token that
+does not resolve to a Mission with <code>invalid_request</code>, where it was
+<code>invalid_grant</code>, as Section 2.2.2 of RFC 8693 requires for an
+invalid subject token; redemption keeps <code>invalid_grant</code> (#1178).<a href="#appendix-B-3.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.8">
-          <p id="appendix-B-3.8.1">Introspection at a Resource AS: a non-issuer Resource AS omits
-<code>mission.termination</code> as well as <code>mission.state</code> (#705).<a href="#appendix-B-3.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.8.1">Grant issuance at the originating AS refuses a Mission that is not
+<code>active</code> with <code>invalid_request</code>, following the issuance profile's
+Token Exchange rule; redemption at the Resource AS keeps
+<code>invalid_grant</code> (#1154).<a href="#appendix-B-3.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.9">
-          <p id="appendix-B-3.9.1">Issuing the Cross-Domain Grant: the comparison with the primary
-access token names the RFC 9700 recommendation the issuance profile
-adopts; the issuance profile sets no BCP 14 level of its own there.
-No requirement changed.<a href="#appendix-B-3.9.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.9.1">Introspection at a Resource AS: a non-issuer Resource AS omits
+<code>mission.termination</code> as well as <code>mission.state</code> (#705).<a href="#appendix-B-3.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.10">
-          <p id="appendix-B-3.10.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
+          <p id="appendix-B-3.10.1">Issuing the Cross-Domain Grant: the comparison with the primary
+access token names the RFC 9700 recommendation the issuance profile
+adopts; the issuance profile sets no BCP 14 level of its own there.
+No requirement changed.<a href="#appendix-B-3.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.11">
+          <p id="appendix-B-3.11.1">Controls taxonomy retirement (#636): <code>max_derivations</code> renamed
 <code>derivation_limit</code> at its one normative reference (Issuing the
 Cross-Domain Grant). The Document History entry below is left
 unchanged: it is a historical record of the disclosure pattern this
 document mirrored at the time, under that pattern's then-current
-name.<a href="#appendix-B-3.10.1" class="pilcrow">¶</a></p>
+name.<a href="#appendix-B-3.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.11">
-          <p id="appendix-B-3.11.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
+        <li class="normal" id="appendix-B-3.12">
+          <p id="appendix-B-3.12.1">Reshaped Per-Domain Delegation Depth's disclosure from a flat
 <span class="bcp14">SHOULD</span> to a conditional, interface-addressed <span class="bcp14">MUST</span>, mirroring the
 child delegation profile's <code>max_derivations</code> disclosure pattern,
 and corrected the composed-bound arithmetic: the disclosed bound is
@@ -3531,18 +3538,18 @@ the sum of each distinct Resource AS domain's applicable
 <code>max_depth</code> (or a conservative per-domain maximum), not one
 per-domain <code>max_depth</code> times a flat domain count, and domains are
 counted by distinct Resource AS from the resource-to-AS mapping,
-never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.11.1" class="pilcrow">¶</a></p>
+never by resource count (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>).<a href="#appendix-B-3.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.12">
-          <p id="appendix-B-3.12.1">Editorial density pass: split several overlong paragraphs (no BCP-14
+        <li class="normal" id="appendix-B-3.13">
+          <p id="appendix-B-3.13.1">Editorial density pass: split several overlong paragraphs (no BCP-14
 keyword sentence changed) and merged a duplicated sentence in
 Per-Domain Delegation Depth (the unconditional "a Resource AS of
 this document begins its delegation depth at 0" restated what the
 preceding, correctly conditioned sentence already said; the
-citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.12.1" class="pilcrow">¶</a></p>
+citation moved onto that sentence and the duplicate was dropped).<a href="#appendix-B-3.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.13">
-          <p id="appendix-B-3.13.1">Added an explicit Resource AS requirement to authenticate the
+        <li class="normal" id="appendix-B-3.14">
+          <p id="appendix-B-3.14.1">Added an explicit Resource AS requirement to authenticate the
 redeeming client at redemption, distinct from the cross-domain
 grant's sender-constraint, and restated local-token client
 identification as a property-level requirement bound to that
@@ -3552,7 +3559,7 @@ the RFC 9068 case) rather than naming <code>client_id</code> directly (S-12).
 Scoped the origin-identity-carriage sentence to the Origin
 Principal profile when claimed, and separately barred reinterpreting
 the cross-domain grant's own <code>client_id</code> claim as the local
-identifier under any profile.<a href="#appendix-B-3.13.1" class="pilcrow">¶</a></p>
+identifier under any profile.<a href="#appendix-B-3.14.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
