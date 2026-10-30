@@ -34,13 +34,14 @@ const hoisted = await vi.hoisted(async () => {
 import { readFileSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
 import { type JsonValue, NARROWING_UNDECLARED, narrowingDomainDigest, resolveNarrowing } from "@mission/core";
-import { DERIVATION_POLICY, TRANSFORMATION_CAPABILITIES, type TransformationCapabilities } from "@mission/demo-data";
+import { DERIVATION_POLICY, TOPOLOGY, TRANSFORMATION_CAPABILITIES, type TransformationCapabilities } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { capabilitiesWith, UNDECLARED_VARIANTS } from "./transformation-capabilities.helper.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const VERIFIER = "qualified-narrowing-verifier-0123456789-0123456789-01";
@@ -295,13 +296,23 @@ const EXACT_ONLY = {
   constraints: ["max_amount", "vendors", "tenant", "requires_action_approval"],
 };
 
+/** Only `narrowing` undeclared: `delegation` and `projection` stay declared, so each witness isolates narrowing. */
+const NARROWING_UNDECLARED_ONLY: TransformationCapabilities = {
+  declared: { mission_resource_access: { delegation: true, projection: true } },
+  narrowing: NARROWING_UNDECLARED,
+  delegation: true,
+  projection: true,
+};
+
 function exactOnlyCapabilities(): TransformationCapabilities {
   const value = { domain: { id: EXACT_ONLY.id, digest: narrowingDomainDigest(EXACT_ONLY as unknown as JsonValue) } };
   const resolved = resolveNarrowing(value, (id) => (id === EXACT_ONLY.id ? EXACT_ONLY : undefined));
   expect(resolved?.declaration.kind).toBe("domain");
   return {
-    declared: { mission_resource_access: { narrowing: value } },
+    declared: { mission_resource_access: { narrowing: value, delegation: true, projection: true } },
     narrowing: resolved?.declaration ?? NARROWING_UNDECLARED,
+    delegation: true,
+    projection: true,
   };
 }
 
@@ -313,10 +324,10 @@ let remoteUndeclared: RemoteSrv;
 
 beforeAll(async () => {
   shipped = await start(14951);
-  undeclared = await start(14952, { transformationCapabilities: { declared: {}, narrowing: NARROWING_UNDECLARED } });
+  undeclared = await start(14952, { transformationCapabilities: NARROWING_UNDECLARED_ONLY });
   exactOnly = await start(14953, { transformationCapabilities: exactOnlyCapabilities() });
   remoteShipped = await startRemote(14956);
-  remoteUndeclared = await startRemote(14957, { transformationCapabilities: { declared: {}, narrowing: NARROWING_UNDECLARED } });
+  remoteUndeclared = await startRemote(14957, { transformationCapabilities: NARROWING_UNDECLARED_ONLY });
 });
 
 afterAll(async () => {
@@ -329,10 +340,10 @@ afterAll(async () => {
 describe("the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing)", () => {
   const metadata = async (s: Srv) => (await (await fetch(`${s.issuer}/authorization-details-types`)).json()) as Record<string, Json>;
 
-  it("the shipped server declares narrowing for mission_resource_access as its qualified value, and nothing it does not declare", async () => {
+  it("the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare", async () => {
     const entry = (await metadata(shipped)).mission_resource_access as Json;
     expect(entry.mission_transformation_capabilities).toEqual(TRANSFORMATION_CAPABILITIES.declared.mission_resource_access);
-    expect(Object.keys(entry.mission_transformation_capabilities as Json)).toEqual(["narrowing"]);
+    expect(Object.keys(entry.mission_transformation_capabilities as Json).sort()).toEqual(["delegation", "narrowing", "projection"]);
   });
 
   it("the deployment documentation states the same declaration as the metadata entry (step 7)", async () => {
@@ -344,9 +355,9 @@ describe("the types metadata entry carries the declared transformation capabilit
     expect(doc).toContain("config/narrowing-domains/mission-resource-access-2026-10-29.json");
   });
 
-  it("a server declaring nothing carries no member, so every capability falls through to deployment documentation", async () => {
+  it("a server not declaring narrowing carries no narrowing member, so narrowing falls through to deployment documentation", async () => {
     const entry = (await metadata(undeclared)).mission_resource_access as Json;
-    expect(entry).not.toHaveProperty("mission_transformation_capabilities");
+    expect(entry.mission_transformation_capabilities).toEqual({ delegation: true, projection: true });
   });
 });
 
@@ -504,5 +515,42 @@ describe("the token endpoint gates the projected output under the declaration, w
     const [entry] = entriesOf(issued.at);
     expect(entry).toHaveProperty("resource_match", "exact");
     expect(recorded([entry as AuthorityEntry])).toEqual([reports]);
+  });
+});
+
+/**
+ * @spec mission#transformation-capabilities (#1377, D1037): "Without
+ * `narrowing`, the AS MUST NOT issue an entry to any audience other than its
+ * original approved audience, or, except as `scope` under a declared
+ * `projection`, in any form other than exactly as approved." The server here
+ * leaves narrowing undeclared; its projection is read at each issuance.
+ */
+describe("without narrowing, scope is the one transformed form, and only under a declared projection (@spec mission#transformation-capabilities, #1377, D1037)", () => {
+  const PLAIN = TOPOLOGY.resources.plainRs;
+  // The plain resource server's ceiling entry, so derivation carries it unchanged.
+  const reports = structuredClone(DERIVATION_POLICY.ceiling.find((e) => e.resource === PLAIN)) as AuthorityEntry;
+
+  it("with narrowing undeclared, a scope-only target is issued the projected scope while projection is declared, and refused invalid_target while it is omitted or false", async () => {
+    const declared = await issue(undeclared, [reports], PLAIN);
+    expect(claims(declared.at).scope).toBe("reports.read reports.write");
+    for (const variant of UNDECLARED_VARIANTS) {
+      const saved = NARROWING_UNDECLARED_ONLY.projection;
+      NARROWING_UNDECLARED_ONLY.projection = capabilitiesWith({ projection: variant }).projection;
+      try {
+        const code = (await approve(undeclared, [reports], [PLAIN])).searchParams.get("code");
+        expect(code, variant).toBeTruthy();
+        const keys = (await generateKeyPair("ES256", { extractable: true })) as Keys;
+        const res = await token(
+          undeclared,
+          { grant_type: "authorization_code", code: code as string, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource: PLAIN },
+          keys,
+        );
+        expect(res.status, `${variant}: ${JSON.stringify(res.body)}`).toBe(400);
+        expect(res.body.error).toBe("invalid_target");
+        expect(res.body.error_description).toMatch(/no safe scope projection/);
+      } finally {
+        NARROWING_UNDECLARED_ONLY.projection = saved;
+      }
+    }
   });
 });

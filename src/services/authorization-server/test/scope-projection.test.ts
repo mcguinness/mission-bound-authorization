@@ -42,6 +42,7 @@ import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthoriza
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { browserApprovalHeaders, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
 
 const PORT = 14620;
 const RS_PORT = 14621;
@@ -59,6 +60,8 @@ type Json = Record<string, unknown>;
 
 /** The live mapping the AS reads at every issuance. */
 const MAPPING = structuredClone(SCOPE_PROJECTION);
+/** The live transformation capabilities the AS reads at every projection (#1377, D1037). */
+const CAPS = liveCapabilities();
 const SHIPPED_PLAIN = structuredClone(SCOPE_PROJECTION.audiences[PLAIN]);
 
 /**
@@ -341,6 +344,7 @@ beforeAll(async () => {
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     approvalSessions: SESSIONS,
     scopeProjection: MAPPING,
+    transformationCapabilities: CAPS,
     resourceContracts: CONTRACTS,
     testTokenSigningJwk: (await exportJWK(signing.privateKey)) as JWK,
   });
@@ -1660,5 +1664,225 @@ describe("revocation with a scope-only Resource Server (@spec mission#scope-proj
     expect(((await denied.json()) as Json).error).toBe("invalid_token");
     // The JWT-only plain RS cannot see revocation: the token still validates there until it expires.
     expect((await callRs(RS_PORT, "GET", at, keys)).status).toBe(200);
+  });
+});
+
+/**
+ * @spec mission#transformation-capabilities, resource-access#transformation-capabilities
+ * (#1377, D1037): "The AS MUST NOT ... project to `scope` an entry of a type
+ * for which it has not declared the corresponding capability." With
+ * `projection` omitted or declared `false`, no entry of the type supplies a
+ * safe projection: a `scope`-only target is refused, an explicitly requested
+ * value is answered `invalid_scope`, and an `authorization_details` target
+ * still carries the entries as approved. Each case ends with the declared
+ * control on the same server.
+ */
+describe("the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities)", () => {
+  it("the code exchange to a scope-only target is refused invalid_target while projection is omitted or false, and projects once declared", async () => {
+    for (const variant of UNDECLARED_VARIANTS) {
+      const keys = await newKeys();
+      const code = await approve([entry([READ])]);
+      await withCapability(CAPS, "projection", variant, async () => {
+        const res = await redeem(code, keys);
+        expect(res.status, `${variant}: ${JSON.stringify(res.body)}`).toBe(400);
+        expect(res.body.error).toBe("invalid_target");
+        expect(res.body.error_description).toMatch(/no safe scope projection/);
+        expect(res.body.access_token).toBeUndefined();
+      });
+    }
+    const declared = await issue([entry([READ])]);
+    expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+    expect(declared.body.scope).toBe("reports.read");
+  });
+
+  it("a refresh to a scope-only target is refused invalid_target while projection is omitted or false, and the same refresh token projects once declared", async () => {
+    const base = await issue([entry([READ])]);
+    expect(base.status, JSON.stringify(base.body)).toBe(200);
+    const rt = base.body.refresh_token as string;
+    for (const variant of UNDECLARED_VARIANTS) {
+      await withCapability(CAPS, "projection", variant, async () => {
+        const res = await refresh(rt, base.keys);
+        expect(res.status, `${variant}: ${JSON.stringify(res.body)}`).toBe(400);
+        expect(res.body.error).toBe("invalid_target");
+        expect(res.body.access_token).toBeUndefined();
+      });
+    }
+    const declared = await refresh(rt, base.keys);
+    expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+    expect(declared.body.scope).toBe("reports.read");
+  });
+
+  it("an explicitly requested scope is answered invalid_scope at the authorization decision, before any Mission exists, and at the token endpoint, while projection is omitted or false; declared, the same request is granted", async () => {
+    for (const variant of UNDECLARED_VARIANTS) {
+      const keys = await newKeys();
+      const code = await approve([entry([READ])], PLAIN, "reports.read");
+      await withCapability(CAPS, "projection", variant, async () => {
+        const before = as.kernel.allMissions().length;
+        const decided = await authorize([entry([READ])], { scope: "reports.read" });
+        expect(decided.par.status, JSON.stringify(decided.par.body)).toBe(201);
+        expect(decided.code, `${variant}: ${JSON.stringify(decided)}`).toBeUndefined();
+        expect(decided.error).toBe("invalid_scope");
+        expect(decided.description).toMatch(/reports\.read cannot be granted/);
+        // Configured-mapping mode: the value keys the entry it stands for,
+        // which then supplies no safe projection of that value.
+        const intentOnly = await authorize(undefined, { scope: "reports.read" });
+        expect(intentOnly.par.status, JSON.stringify(intentOnly.par.body)).toBe(201);
+        expect(intentOnly.code, `${variant}: ${JSON.stringify(intentOnly)}`).toBeUndefined();
+        expect(intentOnly.error).toBe("invalid_scope");
+        expect(as.kernel.allMissions().length).toBe(before);
+
+        const redeemed = await redeem(code, keys);
+        expect(redeemed.status, `${variant}: ${JSON.stringify(redeemed.body)}`).toBe(400);
+        expect(redeemed.body.error).toBe("invalid_scope");
+        expect(redeemed.body.error_description).toMatch(/reports\.read cannot be granted/);
+      });
+    }
+    const declared = await issue([entry([READ, WRITE])], "reports.read");
+    expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+    expect(declared.body.scope).toBe("reports.read");
+    const intentOnly = await authorize(undefined, { scope: "reports.read" });
+    expect(intentOnly.code, JSON.stringify(intentOnly)).toBeTruthy();
+  });
+
+  it("the async-delegation Token Exchange to a scope-only target is refused invalid_target, counting no derivation, while projection is omitted or false, and projects once declared", async () => {
+    const base = await issue([entry([READ])]);
+    expect(base.status, JSON.stringify(base.body)).toBe(200);
+    const acting = base.keys;
+    const subject = await handle(base.body.access_token as string, acting);
+    const exchange = () =>
+      token(
+        {
+          grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+          request_refresh_token: "true",
+          subject_token: subject,
+          subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+          resource: PLAIN,
+          creation_request_id: crypto.randomUUID(),
+        },
+        acting,
+      );
+    const missionId = (decodeJwt(base.body.access_token as string).mission as { id: string }).id;
+    const count = as.kernel.get(missionId)?.derivation_count;
+    for (const variant of UNDECLARED_VARIANTS) {
+      await withCapability(CAPS, "projection", variant, async () => {
+        const res = await exchange();
+        expect(res.status, `${variant}: ${JSON.stringify(res.body)}`).toBe(400);
+        expect(res.body.error).toBe("invalid_target");
+        expect(res.body.error_description).toMatch(/no safe scope projection/);
+      });
+    }
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(count);
+    const declared = await exchange();
+    expect(declared.status, JSON.stringify(declared.body)).toBe(200);
+    expect(declared.body.scope).toBe("reports.read");
+  });
+
+  it("an authorization_details target is issued while projection is omitted or false, its entries carried as approved and no scope emitted", async () => {
+    const proposal: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: PAYMENTS, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
+    ];
+    for (const variant of [...UNDECLARED_VARIANTS, "true" as const]) {
+      const keys = await newKeys();
+      const code = await approve(proposal, PAYMENTS);
+      await withCapability(CAPS, "projection", variant, async () => {
+        const res = await redeem(code, keys, PAYMENTS);
+        expect(res.status, `${variant}: ${JSON.stringify(res.body)}`).toBe(200);
+        expect(res.body.scope).toBeUndefined();
+        const claims = decodeJwt(res.body.access_token as string);
+        expect(claims.scope).toBeUndefined();
+        const approved = as.kernel.get((claims.mission as { id: string }).id)?.authority_set;
+        expect(approved).toHaveLength(1);
+        expect(claims.authorization_details).toEqual(approved);
+      });
+    }
+  });
+});
+
+/**
+ * @spec resource-access#scope-projection (#1377, D1037): conditions 3 and 4 of
+ * a safe projection at the token endpoint. A `max_amount` the target enforces
+ * less tightly than the entry, or a `resource_contract` the mapping value does
+ * not carry, leaves no safe value, so the `scope`-only target is refused.
+ */
+describe("the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection)", () => {
+  const readValue = (mandatory_controls: Json, extra: Json = {}) => ({
+    version: `conditions-${JSON.stringify(mandatory_controls)}-${JSON.stringify(extra)}`,
+    mission_aware: false,
+    mode: "scope_only",
+    scopes: { "reports.read": { rights: rights([READ]), mandatory_controls, ...extra } },
+  });
+  const capped = (amount: string) => entry([READ], { constraints: { max_amount: { amount, currency: "USD" } } });
+
+  it("condition 3: an entry's max_amount below the target's enforced cap is refused invalid_target; a cap at or above the control projects", async () => {
+    await withPlain(readValue({ max_amount: { amount: "500.00", currency: "USD" } }), async () => {
+      const refused = await issue([capped("100.00")]);
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toMatch(/no safe scope projection/);
+      for (const amount of ["500.00", "1000.00"]) {
+        const ok = await issue([capped(amount)]);
+        expect(ok.status, `${amount}: ${JSON.stringify(ok.body)}`).toBe(200);
+        expect(ok.body.scope).toBe("reports.read");
+      }
+    });
+  });
+
+  it("condition 4: an entry carrying a resource_contract is refused invalid_target where the mapping value names no contract, and projects where it names the same one", async () => {
+    const contracted = entry([READ], { resource_contract: plainContractRef("v2") });
+    await withPlain(readValue({}), async () => {
+      const refused = await issue([contracted]);
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toMatch(/no safe scope projection/);
+    });
+    await withPlain(readValue({}, { resource_contract: plainContractRef("v2") }), async () => {
+      const ok = await issue([contracted]);
+      expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+      expect(ok.body.scope).toBe("reports.read");
+    });
+    // "An entry without the member satisfies this condition only where the
+    // target requires no reference for those operations."
+    await withPlain(readValue({}, { requires_resource_contract: true }), async () => {
+      const refused = await issue([entry([READ])]);
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toMatch(/no safe scope projection/);
+    });
+  });
+
+  // @spec resource-access#scope-projection (#1377, D1037): "Where a target's
+  // `scope` values are themselves action identifiers, each value can stand
+  // for the action of the same name, and the mapping is the identity." "A
+  // value the action grammar does not admit, such as a URI-form `scope`,
+  // stands for an action identifier the mapping names instead."
+  it("scope values that are action identifiers project through the identity mapping, both ways, and a URI-form value stands for the action its mapping names", async () => {
+    const only = (value: string) => ({
+      version: `value-form-${value}`,
+      mission_aware: false,
+      mode: "scope_only",
+      scopes: { [value]: { rights: rights([READ]), mandatory_controls: {} } },
+    });
+    await withPlain(only(READ), async () => {
+      const projected = await issue([entry([READ])]);
+      expect(projected.status, JSON.stringify(projected.body)).toBe(200);
+      expect(projected.body.scope).toBe(READ);
+      // The requested value stands for the entry carrying the action of the same name.
+      const r = await authorize(undefined, { scope: READ });
+      expect(r.code, JSON.stringify(r)).toBeTruthy();
+      const res = await redeem(r.code as string, await newKeys());
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      expect(res.body.scope).toBe(READ);
+      const missionId = (decodeJwt(res.body.access_token as string).mission as { id: string }).id;
+      expect(as.kernel.get(missionId)?.authority_set.map((e) => e.actions)).toEqual([[READ]]);
+    });
+    const URI_VALUE = "https://plain.test/scopes/reports.read";
+    await withPlain(only(URI_VALUE), async () => {
+      const projected = await issue([entry([READ, WRITE])]);
+      expect(projected.status, JSON.stringify(projected.body)).toBe(200);
+      expect(projected.body.scope).toBe(URI_VALUE);
+      const requested = await issue([entry([READ, WRITE])], URI_VALUE);
+      expect(requested.status, JSON.stringify(requested.body)).toBe(200);
+      expect(requested.body.scope).toBe(URI_VALUE);
+    });
   });
 });

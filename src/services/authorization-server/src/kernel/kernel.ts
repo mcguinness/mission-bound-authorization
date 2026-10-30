@@ -894,6 +894,13 @@ export interface KernelOptions {
    */
   narrowing?: NarrowingDeclaration;
   /**
+   * @spec mission#transformation-capabilities (#1377, D1037): the `delegation`
+   * and `projection` capabilities this server declares for
+   * `mission_resource_access`, read at each use. Absent: both declared, so a
+   * kernel constructed without it behaves as before.
+   */
+  transformationCapabilities?: { readonly delegation: boolean; readonly projection: boolean };
+  /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
    * `authority_source` from this and from nothing else: never from
@@ -1387,6 +1394,18 @@ export class MissionKernel {
   }
 
   /** @spec resource-access#qualified-narrowing (#1377, D1025): the declared `narrowing` capability every narrowing site applies. */
+  /** @spec mission#transformation-capabilities (#1377, D1037): whether `delegation` is declared for `type`. */
+  delegationDeclared(type: string): boolean {
+    const caps = this.opts.transformationCapabilities;
+    return type === "mission_resource_access" && (caps ? caps.delegation === true : true);
+  }
+
+  /** @spec mission#transformation-capabilities (#1377, D1037): whether `projection` is declared for `type`. */
+  projectionDeclared(type: string): boolean {
+    const caps = this.opts.transformationCapabilities;
+    return type === "mission_resource_access" && (caps ? caps.projection === true : true);
+  }
+
   narrowingDeclaration(): NarrowingDeclaration {
     return this.opts.narrowing ?? NARROWING_IN_FULL;
   }
@@ -4284,8 +4303,12 @@ export class MissionKernel {
     delegate: DelegateCandidate,
     depth: number,
   ): AuthorityEntry[] {
+    // @spec mission#transformation-capabilities (#1377, D1037): "The AS MUST
+    // NOT ... delegate ... an entry of a type for which it has not declared the
+    // corresponding capability": no entry of such a type is delegable, on any
+    // of the four delegation paths, which each refuse an empty result.
     return this.delegationEligibility(record, candidates, delegate, depth)
-      .filter((d) => d.outcome === "eligible")
+      .filter((d) => d.outcome === "eligible" && this.delegationDeclared(d.entry.type))
       .map((d) => d.entry);
   }
 

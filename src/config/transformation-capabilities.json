@@ -1,5 +1,5 @@
 {
-  "$comment": "@spec resource-access#qualified-narrowing, mission#transformation-capabilities (#1377, D1025): the transformation capabilities this authorization server declares per authorization_details type, emitted in the type's metadata entry and stated in its deployment documentation (src/docs/resource-access-transformation-capabilities.md). narrowing is a qualified value naming a narrowing domain by id and digest; delegation and projection are not declared. narrowing_domains lists the domain documents, by path under this directory; the loader refuses to start on a declaration naming a missing, malformed or mismatched document, or one claiming a constraints key this implementation does not implement.",
+  "$comment": "@spec resource-access#qualified-narrowing, mission#transformation-capabilities (#1377, D1025): the transformation capabilities this authorization server declares per authorization_details type, emitted in the type's metadata entry and stated in its deployment documentation (src/docs/resource-access-transformation-capabilities.md). narrowing is a qualified value naming a narrowing domain by id and digest; delegation and projection are declared true (#1377, D1037), and an undeclared capability is never applied: no entry of an undeclared type is delegable or projected. narrowing_domains lists the domain documents, by path under this directory; the loader refuses to start on a declaration naming a missing, malformed or mismatched document, or one claiming a constraints key this implementation does not implement.",
   "types": {
     "mission_resource_access": {
       "narrowing": {
@@ -7,7 +7,9 @@
           "id": "https://mission-reference.example/narrowing-domains/mission-resource-access/2026-10-29",
           "digest": "sha-256:rvNN2eeexb_xw1lWEjn9-tAO-wP2P8LSK-2kHDQEHeQ"
         }
-      }
+      },
+      "delegation": true,
+      "projection": true
     }
   },
   "narrowing_domains": [

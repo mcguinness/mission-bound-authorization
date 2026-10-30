@@ -47,6 +47,7 @@ import {
   type FederationConfig,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
 import { SCOPE_PROJECTION } from "@mission/demo-data";
 
 const PORT = 14503;
@@ -81,6 +82,8 @@ const FULL_CEILING: AuthorityEntry[] = [
  * resource as an `authorization_details` consumer (so the exchange mints no
  * `scope`); the scope-projection describe below swaps the entry.
  */
+/** The live transformation capabilities the AS reads at every projection (#1377, D1037). */
+const CAPS = liveCapabilities();
 const SCOPE_MAPPING = {
   audiences: {
     ...SCOPE_PROJECTION.audiences,
@@ -358,6 +361,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     crossOrg: crossOrgOptions,
     scopeProjection: SCOPE_MAPPING as never,
+    transformationCapabilities: CAPS,
     // @spec cross-org-delegation#projection (D941): the destination's own
     // declarations, which a projected resource_contract must resolve under.
     resourceContracts: DESTINATION_CONTRACTS,
@@ -781,6 +785,32 @@ describe("scope projection on the cross-org exchange (@spec mission#scope-projec
       const { payload } = await jwtVerify(body.access_token, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
       expect(payload.scope).toBe("invoices.read");
       expect(payload.act).toBeDefined();
+    });
+  });
+
+  // @spec mission#transformation-capabilities (#1377, D1037): "The AS MUST NOT
+  // ... project to `scope` an entry of a type for which it has not declared
+  // the corresponding capability."
+  it("refuses invalid_target, recording no derivation evidence, while projection is omitted or false, where the declared server emits the safe scope", async () => {
+    await withAudience(scopeOnly(true), async () => {
+      for (const variant of UNDECLARED_VARIANTS) {
+        await withCapability(CAPS, "projection", variant, async () => {
+          const before = evidence.length;
+          const { chain, leafKeys } = await buildChain();
+          const res = await exchange({ subjectToken: present(chain), leafKeys });
+          const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+          expect(res.status, `${variant}: ${JSON.stringify(body)}`).toBe(400);
+          expect(body.error).toBe("invalid_target");
+          expect(body.error_description).toMatch(/no safe scope projection/);
+          expect(body.access_token).toBeUndefined();
+          expect(evidence.length).toBe(before);
+        });
+      }
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { scope?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      expect(body.scope).toBe("invoices.read");
     });
   });
 });

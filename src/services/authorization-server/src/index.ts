@@ -1842,6 +1842,7 @@ export async function buildAuthorizationServer(opts: {
     // @spec resource-access#qualified-narrowing (#1377, D1025): derivation and
     // every later narrowing apply the declared capability.
     narrowing: transformationCapabilities.narrowing,
+    transformationCapabilities,
     ...(authorityDependencyGate ? { authorityDependencyGate } : {}),
     // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
     // trusted entry-to-audience mapping (the same mapping the provider reads

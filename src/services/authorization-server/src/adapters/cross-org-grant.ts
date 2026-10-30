@@ -127,6 +127,8 @@ interface HandlerOpts {
    * resolve it ({@link projectLeafTool}).
    */
   resourceContracts: ResourceContractDeclarations;
+  /** @spec mission#transformation-capabilities (#1377, D1037): whether `projection` is declared for a type. */
+  projectionDeclared: (type: string) => boolean;
   tokenKey: CryptoKey;
   tokenKid: string;
   /** @spec RFC 9449 Section 4.3 (#1173): the shared token-endpoint proof verifier (iat window, jti replay). */
@@ -389,6 +391,7 @@ export async function handleCrossOrgChainExchange(
     mapping: opts.scopeProjection,
     audiences: [requestedAud],
     entries: outputAuthority,
+    projectionDeclared: opts.projectionDeclared,
     delegated: true,
     ...(requested.length ? { requested: { values: requested, explicit: true } } : {}),
   });

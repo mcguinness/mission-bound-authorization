@@ -34,6 +34,7 @@ import {
 } from "../src/index.js";
 import { TokenIssuanceStore } from "../src/kernel/token-issuance-store.js";
 import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
+import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
@@ -366,6 +367,8 @@ async function acrossTheBoundary<T>(h: Harness, startMs: number, afterMs: number
 
 /** The main harness's own scope-projection mapping (a deep copy of the shipped one). */
 const onMapping = structuredClone(SCOPE_PROJECTION) as typeof SCOPE_PROJECTION;
+/** The live transformation capabilities `on` reads at every delegation (#1377, D1037). */
+const onCapabilities = liveCapabilities();
 
 let on: Harness;
 let off: Harness;
@@ -402,6 +405,7 @@ beforeAll(async () => {
     testIntrospectionPrincipals: [rsAlias, rsLate],
     // Its own copy of the mapping, so a test can reclassify a target mid-issuance.
     scopeProjection: onMapping,
+    transformationCapabilities: onCapabilities,
   });
   // The default deployment: no capability set, so the opt-in delegation is off.
   off = await harness(14871, {});
@@ -1798,8 +1802,8 @@ describe("the delegated exchange authenticates the designated client (@spec miss
 
 describe("delegation declared without narrowing: a delegated token carries an entry only when it equals the presented token's (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1717, #1377, D1025)", () => {
   // The configuration meets the rows' precondition: `delegation` declared and
-  // `narrowing` not. The authorization server gates nothing on `delegation`
-  // in this implementation; the equal-only carriage comes from the undeclared
+  // `narrowing` not. The declared `delegation` keeps the entries delegable
+  // (#1377, D1037); the equal-only carriage comes from the undeclared
   // `narrowing`. The ceiling is the Mission's own entry, so the proposal equals
   // it and derives unchanged.
   /** A second delegable entry, so a credential can carry one of the Mission's entries unchanged. */
@@ -1816,8 +1820,10 @@ describe("delegation declared without narrowing: a delegated token carries an en
       capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
       derivationPolicy: { policy_version: "delegation-without-narrowing", ceiling: [broadReads(), vendorReads()] },
       transformationCapabilities: {
-        declared: { mission_resource_access: { delegation: true } },
+        declared: { mission_resource_access: { delegation: true, projection: true } },
         narrowing: NARROWING_UNDECLARED,
+        delegation: true,
+        projection: true,
       },
     });
   });
@@ -1891,5 +1897,93 @@ describe("delegation declared without narrowing: a delegated token carries an en
     });
     expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
     expect(entriesOf(refreshed.body.access_token as string)).toEqual([vendor]);
+  });
+});
+
+/**
+ * @spec mission#transformation-capabilities (#1377, D1037): "The AS MUST NOT
+ * ... delegate ... an entry of a type for which it has not declared the
+ * corresponding capability." With `delegation` omitted or declared `false`,
+ * no `mission_resource_access` entry is delegable, so a designation and a
+ * pending designation's redemption each find nothing to carry and are
+ * refused, counting nothing; declared, the same requests are issued.
+ */
+describe("the delegation capability gates designation and redemption (@spec mission#transformation-capabilities)", () => {
+  it("with delegation omitted or false, a designation and a pending redemption are refused invalid_target, counting nothing; declared, both are issued", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const pending = await designate(on, accessToken, SUBAGENT);
+    expect(pending.status, JSON.stringify(pending.body)).toBe(200);
+    for (const variant of UNDECLARED_VARIANTS) {
+      await withCapability(onCapabilities, "delegation", variant, async () => {
+        const before = derivations(on, missionId);
+        const designation = await designate(on, accessToken, SUBAGENT);
+        expect(designation.status, `${variant}: ${JSON.stringify(designation.body)}`).toBe(400);
+        expect(designation.body.error).toBe("invalid_target");
+        expect(designation.body.error_description).toMatch(/no entry the designated client may be delegated/);
+        expect(designation.body.access_token).toBeUndefined();
+        const redemption = await redeem(on, pending.body.access_token as string);
+        expect(redemption.status, `${variant}: ${JSON.stringify(redemption.body)}`).toBe(400);
+        expect(redemption.body.error).toBe("invalid_target");
+        expect(redemption.body.access_token).toBeUndefined();
+        expect(derivations(on, missionId)).toBe(before);
+      });
+    }
+    const redeemed = await redeem(on, pending.body.access_token as string);
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+    const designated = await designate(on, accessToken, SUBAGENT);
+    expect(designated.status, JSON.stringify(designated.body)).toBe(200);
+  });
+});
+
+/**
+ * @spec resource-access#matching-allowed-delegates (#1377, D1037): "A
+ * delegate matcher that carries both `sub` and `sub_profile` is satisfied only
+ * when the delegate satisfies both. A delegate is permitted if it satisfies
+ * any of the entry's delegate matchers." The payments ceiling here lists two
+ * such matchers, each naming a delegate's `sub` and the `ai_agent` profile,
+ * and the approved entry carries them unchanged.
+ */
+describe("a delegate matcher naming both members needs both, at the designation exchange (@spec resource-access#matching-allowed-delegates)", () => {
+  const BOTH_MEMBERS = [
+    { sub: SUBAGENT, sub_profile: "ai_agent" },
+    { sub: INELIGIBLE, sub_profile: "ai_agent" },
+  ];
+  const CEILING = DERIVATION_POLICY.ceiling.map((e) =>
+    e.resource !== RESOURCE || !e.delegation ? e : { ...e, delegation: { ...e.delegation, allowed_delegates: BOTH_MEMBERS } },
+  );
+  let h: Harness;
+  beforeAll(async () => {
+    h = await harness(14958, {
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+      derivationPolicy: { ...DERIVATION_POLICY, ceiling: CEILING },
+      authoritySources: {
+        ...AUTHORITY_SOURCES,
+        entries: AUTHORITY_SOURCES.entries.map((e) => (e.id === "acme-people" ? { ...e, ceiling: CEILING } : e)),
+      },
+    });
+  });
+  afterAll(() => {
+    h?.server.close();
+  });
+
+  it("issues to the delegate meeting both members of a matcher, and refuses invalid_target one meeting only the profile or only the sub, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(h, [
+      { ...delegable(), delegation: { max_depth: 2, allowed_delegates: BOTH_MEMBERS } },
+    ]);
+    const recorded = (h.as.kernel.get(missionId)?.authority_set as Body[])[0]?.delegation;
+    expect(recorded).toMatchObject({ allowed_delegates: BOTH_MEMBERS });
+    const before = derivations(h, missionId);
+    // SECOND carries the ai_agent profile but neither matcher's sub.
+    const profileOnly = await designate(h, accessToken, SECOND);
+    expect(profileOnly.status, JSON.stringify(profileOnly.body)).toBe(400);
+    expect(profileOnly.body.error).toBe("invalid_target");
+    // INELIGIBLE is the second matcher's sub but carries no AS-asserted profile.
+    const subOnly = await designate(h, accessToken, INELIGIBLE);
+    expect(subOnly.status, JSON.stringify(subOnly.body)).toBe(400);
+    expect(subOnly.body.error).toBe("invalid_target");
+    expect(derivations(h, missionId)).toBe(before);
+    const both = await designate(h, accessToken, SUBAGENT);
+    expect(both.status, JSON.stringify(both.body)).toBe(200);
+    expect((decodeJwt(both.body.access_token as string) as Body).aud).toBe(SUBAGENT);
   });
 });

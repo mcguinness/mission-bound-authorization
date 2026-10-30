@@ -6,13 +6,13 @@ claims (#1377). Resource Access names deployment documentation as a
 declaration carrier (§ Transformation Capabilities,
 `{#transformation-capabilities}`). **This note is that carrier for the
 reference** (§1): it declares `narrowing` for the type as a qualified value
-naming a narrowing domain (§ Qualified Narrowing), and leaves `delegation`
-and `projection` undeclared. It is not the interoperable supported-subset
+naming a narrowing domain (§ Qualified Narrowing), and `delegation` and
+`projection` as `true`. It is not the interoperable supported-subset
 profile either:
 that is #249's fixture (`vectors/mission-resource-access-subset/`), which §5
 relates to the reference's domain.
 
-Every statement here is true of the reference implementation at `272263fe`
+Every statement here is true of the reference implementation at `50cdc992`
 (paths relative to `src/`). Each rule names the code that applies or refuses
 it and the test (`it` title, in the named file) or case
 (`vectors/mission-resource-access/`) that witnesses it. Test files are under
@@ -46,7 +46,9 @@ both carriers it uses:
       "id": "https://mission-reference.example/narrowing-domains/mission-resource-access/2026-10-29",
       "digest": "sha-256:rvNN2eeexb_xw1lWEjn9-tAO-wP2P8LSK-2kHDQEHeQ"
     }
-  }
+  },
+  "delegation": true,
+  "projection": true
 }
 ```
 
@@ -110,14 +112,28 @@ action-family clauses, refusing family input (§2.1), and compares delegate
 matchers structurally (§2.4). The domain states what it implements instead
 (D538, D1025).
 
-`delegation` and `projection` stay undeclared. The reference still delegates
-(§3) and projects to `scope` (§4) without declaring them, so the OAuth
-binding's rule that "the AS MUST NOT narrow, delegate, or project to `scope`
-an entry of a type for which it has not declared the corresponding
-capability" is not met for those two:
-`core.other-types.transformation-boundary-declared` and
-`resource-access.transformation-capabilities.projection-undeclared-fallback`
-stay `todo`, each for its own audit (D1025).
+`delegation` and `projection` are declared `true` (D1037), after an audit of
+every rule each claims (§3, §4). Each is applied only where it is declared,
+per entry type:
+
+- `delegation`: no entry of a type without it is delegable
+  (`delegableEntries`, `services/authorization-server/src/kernel/kernel.ts`), so
+  the designation, the delegated redemption, the ID-JAG continuation and the
+  cross-domain grant each refuse a request left with no entry. A public client
+  is never a delegate on any of them (#1901).
+- `projection`: an entry of a type without it supplies no safe projection
+  (`projectScope`, `packages/mission-core/src/scope-projection.ts`), so it is
+  carried as approved where the target consumes `authorization_details`, and
+  a `scope`-only target is refused only when no other carried entry supplies
+  a safe projection.
+
+`delegation-exchange.test.ts`, `continuation-grant.test.ts` and
+`qualified-narrowing-cross-domain.test.ts` witness the `delegation` gate;
+`scope-projection.test.ts`, `cross-org-grant-endpoint.test.ts`,
+`qualified-narrowing-endpoint.test.ts` and
+`packages/mission-core/test/scope-projection.test.ts` witness the `projection`
+gate. Each runs the capability omitted and declared `false`, beside a declared
+control.
 
 ## 2. `narrowing`
 
@@ -228,16 +244,16 @@ matcher is `delegatePermitted` (`kernel/delegate-matcher.ts`).
 
 | Rule | Status | Witness |
 |---|---|---|
-| 1. The entry carries `delegation`; otherwise it is non-delegable | implemented | `delegation.test.ts` "(1) narrows out an entry that carries NO delegation member (non-delegable default)" |
+| 1. The entry carries `delegation`; otherwise it is non-delegable | implemented | `delegation.test.ts` "(1) narrows out an entry that carries NO delegation member (non-delegable default)"; endpoint: `continuation-grant.test.ts` "A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact" |
 | 2. `d` is within `max_depth`, with `d` from the server's own accounting | implemented | `delegation.test.ts` "(2) narrows out an entry when depth EXCEEDS delegation.max_depth" and "gates on the accounted depth, not the nesting of the presented act (@spec mission#delegation-constraints, D198)" |
-| 3. The delegate is permitted by `allowed_delegates` or, when absent, by policy at every exchange | implemented; the reference policy denies every delegate (`DENY_ALL_DELEGATION_POLICY`) | `delegation.test.ts` "(3) an ABSENT allowed_delegates list defers to policy and is never a blanket grant"; case dg-policy-01 |
-| Surviving entries keep `delegation` intact | implemented | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP" |
+| 3. The delegate is permitted by `allowed_delegates` or, when absent, by policy at every exchange | implemented; the reference policy denies every delegate (`DENY_ALL_DELEGATION_POLICY`) | `delegation.test.ts` "(3) an ABSENT allowed_delegates list defers to policy and is never a blanket grant"; endpoint: `delegate-eligibility-endpoint.test.ts` "an entry with no list that defers to policy is not delegable while the policy permits nobody: absence is never a grant", `delegation-exchange.test.ts` "a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing"; case dg-policy-01 |
+| Surviving entries keep `delegation` intact | implemented | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP"; endpoint: `delegation-exchange.test.ts` "issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each" |
 | Inherited eligibility: the policy decision and every retained list must both permit | implemented (`ceilingOrigin`, `combineOrigins`, `inheritOrigins`) | cases dg-inherit-01, -02, -04, -05, -07; row `resource-access.subset.inherited-allowed-delegates` |
 | Provenance retained with the Mission; an unresolvable approved entry or origin narrows out | implemented (`MissionRecord.eligibility_provenance`, `retainedOrigins`) | cases dg-inherit-03, dg-inherit-06 |
-| A `sub` matcher compares the client identifier exactly | implemented | `delegation.test.ts` "a { sub } matcher permits by CLIENT IDENTIFIER (the delegate's sub), and rejects a different sub" |
-| A `sub_profile` matcher is satisfied by membership among the actor's values | implemented; a matcher value naming several space-separated tokens requires every token | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP" |
-| A matcher with both members needs both; any matcher in the list permits | implemented | cases dg-match-01 to dg-match-04 |
-| Only an asserted `sub_profile` satisfies a matcher, never a self-asserted one | implemented (`DelegateCandidate.assertedProfile`) | `delegation.test.ts` "a SELF-ASSERTED profile (no asserted class) does NOT satisfy a sub_profile matcher"; case dg-match-05 |
+| A `sub` matcher compares the client identifier exactly | implemented | `delegation.test.ts` "a { sub } matcher permits by CLIENT IDENTIFIER (the delegate's sub), and rejects a different sub"; endpoint: `delegation-exchange.test.ts` "issues to the delegate meeting both members of a matcher, and refuses invalid_target one meeting only the profile or only the sub, counting nothing" |
+| A `sub_profile` matcher is satisfied by membership among the actor's values | implemented for a matcher value naming one actor type. Resource Access gives a matcher value carrying several space-separated values no meaning; the reference reads one as requiring every value, which is its interpretation, not specified behavior (#1902) | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP"; endpoint: `delegation-exchange.test.ts` "a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target" |
+| A matcher with both members needs both; any matcher in the list permits | implemented | cases dg-match-01 to dg-match-04 (kernel helper level); endpoint: `delegation-exchange.test.ts` "issues to the delegate meeting both members of a matcher, and refuses invalid_target one meeting only the profile or only the sub, counting nothing" |
+| Only an asserted `sub_profile` satisfies a matcher, never a self-asserted one | implemented (`DelegateCandidate.assertedProfile`; the continuation's assertion validator also drops a claimed `sub_profile`) | `delegation.test.ts` "a SELF-ASSERTED profile (no asserted class) does NOT satisfy a sub_profile matcher"; endpoint: `continuation-grant.test.ts` "a sub_profile the presented assertion's act claims for the delegate satisfies no matcher: svc-x claiming ai_agent is invalid_target, with no hop and no derivation"; case dg-match-05 |
 | A matcher carrying another member, neither member, or an empty or non-string value permits nothing, and the list's other matchers still decide | implemented (local, #1373): intake refuses such a matcher, and `delegatePermitted` applies the same rule (`delegateMatcherListViolation`) to one a record committed earlier still holds | `delegate-matcher.test.ts` "does NOT match a matcher whose sub or sub_profile matches but which carries another member"; `delegate-eligibility-endpoint.test.ts` "a committed matcher carrying another member permits nothing (#1373): a record holding one, from before intake refused it, does not admit the delegate it names" |
 
 How a Resource AS evaluates conveyed `sub` matchers is Cross-Domain's rule and
@@ -252,12 +268,13 @@ per-audience document `parseScopeProjectionMapping` validates.
 
 | Rule | Status | Witness |
 |---|---|---|
-| 1. The mapping covers the entry's resource set | implemented through the shared matcher (#1434): an `exact` entry needs the same `resource`, byte for byte. A `prefix` value is never safe for an `exact` entry. A `prefix` entry's mapping covers that prefix or a narrower resource within it, never a broader ancestor. | `packages/mission-core/test/scope-projection.test.ts` "resource match: a prefix value is never safe for an exact entry, nor a broader ancestor for a narrower prefix entry"; `scope-projection.test.ts` "refuses a prefix scope for an exact entry"; cases pj-05, pj-06 skip |
+| 1. The mapping covers the entry's resource set | implemented through the shared matcher (#1434): an `exact` entry needs the same `resource`, byte for byte. A `prefix` value is never safe for an `exact` entry. A `prefix` entry's mapping covers that prefix or a narrower resource within it, never a broader ancestor. | `packages/mission-core/test/scope-projection.test.ts` "resource match: a prefix value is never safe for an exact entry, nor a broader ancestor for a narrower prefix entry"; `scope-projection.test.ts` "refuses a prefix scope for an exact entry"; `prefix-ceiling-endpoint.test.ts` "emits the values scoped to the entry's prefix or to a narrower resource within it, and not the ancestor's value" and "refuses invalid_target where the only mapped value is scoped to an ancestor of the entry's prefix"; cases pj-05, pj-06 skip |
 | 2. Actions match without aggregation; a proper subset is allowed | implemented, by literal membership, one entry per value | `packages/mission-core/test/scope-projection.test.ts` "action aggregation: a value granting an action the entry does not carry is not safe" and "union widening: a value only two entries together cover is not emitted"; `scope-projection.test.ts` "a mapped value granting a proper subset of the entry's actions is a safe projection (@spec resource-access#scope-projection)" |
-| 3. Every carried `constraints` key is independently enforced | implemented for `max_amount` and `vendors`, the only controls a mapping can declare (`SCOPE_CONTROL_KEYS`); `requires_action_approval: false` counts as omitted. An entry carrying any other key, including the seven `common-constraints.ts` keys, `terminal_when` and `requires_action_approval: true`, is never projected. | `packages/mission-core/test/scope-projection.test.ts` "constraints: every carried key needs an independently enforced control at least as tight"; `scope-projection.test.ts` "refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight" |
-| 4. The contract is preserved: an entry carrying `resource_contract` projects only to a value whose mapping states the target performs its operations under exactly that contract, and an entry without one only where the target requires none (#249) | implemented: a `scope_only` value may declare `resource_contract` and `requires_resource_contract` | `packages/mission-core/test/resource-contract.test.ts` "projects an entry carrying a reference only where the mapping states the target performs under exactly that contract" and "projects an entry without one only where the target requires no reference"; `resource-contract.test.ts` "scope projection never drops it: an entry carrying a reference projects only to a value the mapping states is performed under exactly that contract" |
+| 3. Every carried `constraints` key is independently enforced | implemented for `max_amount` and `vendors`, the only controls a mapping can declare (`SCOPE_CONTROL_KEYS`); `requires_action_approval: false` counts as omitted. An entry carrying any other key, including the seven `common-constraints.ts` keys, `terminal_when` and `requires_action_approval: true`, is never projected. | `packages/mission-core/test/scope-projection.test.ts` "constraints: every carried key needs an independently enforced control at least as tight"; `scope-projection.test.ts` "refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight" and "condition 3: an entry's max_amount below the target's enforced cap is refused invalid_target; a cap at or above the control projects" |
+| 4. The contract is preserved: an entry carrying `resource_contract` projects only to a value whose mapping states the target performs its operations under exactly that contract, and an entry without one only where the target requires none (#249) | implemented: a `scope_only` value may declare `resource_contract` and `requires_resource_contract` | `packages/mission-core/test/resource-contract.test.ts` "projects an entry carrying a reference only where the mapping states the target performs under exactly that contract" and "projects an entry without one only where the target requires no reference"; `resource-contract.test.ts` "scope projection never drops it: an entry carrying a reference projects only to a value the mapping states is performed under exactly that contract"; `scope-projection.test.ts` "a value whose mapping names the current contract stands for an entry carrying that reference; the approval keeps it and the token projects (@spec resource-access#scope-projection)" and "condition 4: an entry carrying a resource_contract is refused invalid_target where the mapping value names no contract, and projects where it names the same one" |
+| A value that is an action identifier stands for that action (the identity mapping); a URI-form value stands for the action its mapping names | implemented: a value is judged by the rights its mapping names, never by its own name | `scope-projection.test.ts` "scope values that are action identifiers project through the identity mapping, both ways, and a URI-form value stands for the action its mapping names" |
 | An entry member the projection does not understand fails closed | implemented (`KNOWN_ENTRY_MEMBERS`) | `packages/mission-core/test/scope-projection.test.ts` "an entry member the projection does not understand, or a capability-source binding, fails closed" |
-| With `projection` undeclared, emit no projected `scope` for the type | not implemented: the reference projects without a declaration | none; cases pj-01 to pj-04 skip (`transformation-capabilities` and `scope-projection` are not in the case reader's implemented set) |
+| With `projection` undeclared, emit no projected `scope` for the type | implemented: `projectScope` takes the declaration per entry type; an undeclared type's entry supplies no safe projection, another carried entry still can | `scope-projection.test.ts` "the code exchange to a scope-only target is refused invalid_target while projection is omitted or false, and projects once declared", and its siblings for refresh, an explicitly requested scope, the async-delegation Token Exchange and an `authorization_details` target; `cross-org-grant-endpoint.test.ts` "refuses invalid_target, recording no derivation evidence, while projection is omitted or false, where the declared server emits the safe scope"; `qualified-narrowing-endpoint.test.ts`, the same with `narrowing` undeclared; `packages/mission-core/test/scope-projection.test.ts` "projection is declared per entry type: an undeclared type's entry supplies no value, another carried entry still does, and none refuses invalid_target", the fallback; cases pj-01 to pj-04 skip (`transformation-capabilities` and `scope-projection` are not in the case reader's implemented set) |
 
 ## 5. Supported domain
 
@@ -313,6 +330,6 @@ domain. Before it was made:
 
 A declaration is never an unqualified whole-type boolean narrowed by prose.
 The qualified `narrowing` establishes no `projection` evidence, and the four
-per-entry, per-target projection conditions of §4 still apply. The
-`delegation` declaration remains a separate audit. #249's fixture and #819's
-independent-consumer subset stay `exact`-only.
+per-entry, per-target projection conditions of §4 still apply. `delegation`
+and `projection` were declared after their own audit (D1037). #249's fixture
+and #819's independent-consumer subset stay `exact`-only.
