@@ -1223,6 +1223,11 @@ support this type, another <code>authorization_details</code> type, or both.<a h
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
             <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-transformation-capabilities" class="internal xref">Transformation Capabilities</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-qualified-narrowing" class="internal xref">Qualified Narrowing</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
             <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-modeling-tools-and-function" class="internal xref">Modeling Tools and Function Calls</a></p>
@@ -3184,6 +3189,113 @@ refuses issuance to a <code>scope</code>-only target only when no other applicab
 carried entry supplies a safe projection, and answers an explicitly
 requested <code>scope</code> it cannot grant as
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> specifies.<a href="#section-11-4" class="pilcrow">¶</a></p>
+<div id="qualified-narrowing">
+<section id="section-11.1">
+        <h3 id="name-qualified-narrowing">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-qualified-narrowing" class="section-name selfRef">Qualified Narrowing</a>
+        </h3>
+<p id="section-11.1-1">An authorization server that implements the subset rule for part of
+this document can declare <code>narrowing</code> for <code>mission_resource_access</code> as
+a qualified value instead of <code>true</code>: a JSON object with exactly one
+member, <code>domain</code>, whose value is an object with exactly these members:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11.1-2">
+          <dt id="section-11.1-2.1">
+<code>id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.2">
+            <p id="section-11.1-2.2.1"><span class="bcp14">REQUIRED</span>. A string containing an absolute URI that names one
+narrowing domain document.<a href="#section-11.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-2.3">
+<code>digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-2.4">
+            <p id="section-11.1-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The SHA-256 digest of the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
+serialization of that document, in the form of <code>resource_contract</code>'s
+<code>digest</code> (<a href="#resource-access-type" class="auto internal xref">Section 3</a>).<a href="#section-11.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-11.1-3">A <strong>narrowing domain</strong> document is a JSON object whose bytes never
+change for its <code>id</code>; a changed domain has a new <code>id</code>. The authorization
+server publishes it in deployment documentation; this document defines
+no metadata member or endpoint for it. It has exactly these members:<a href="#section-11.1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-11.1-4">
+          <dt id="section-11.1-4.1">
+<code>id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-4.2">
+            <p id="section-11.1-4.2.1"><span class="bcp14">REQUIRED</span>. The <code>id</code> that names it.<a href="#section-11.1-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-4.3">
+<code>type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-4.4">
+            <p id="section-11.1-4.4.1"><span class="bcp14">REQUIRED</span>. The string <code>mission_resource_access</code>.<a href="#section-11.1-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-4.5">
+<code>capability</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-4.6">
+            <p id="section-11.1-4.6.1"><span class="bcp14">REQUIRED</span>. The string <code>narrowing</code>, the capability the domain
+qualifies.<a href="#section-11.1-4.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-4.7">
+<code>resource_match</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-4.8">
+            <p id="section-11.1-4.8.1"><span class="bcp14">REQUIRED</span>. A non-empty array of the matching modes the domain covers
+(<a href="#resource-matching" class="auto internal xref">Section 4</a>): <code>exact</code>, <code>prefix</code>, or both.<a href="#section-11.1-4.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-4.9">
+<code>members</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-4.10">
+            <p id="section-11.1-4.10.1"><span class="bcp14">REQUIRED</span>. An array of the entry members the domain covers, including
+<code>type</code>, <code>resource</code>, and <code>actions</code>.<a href="#section-11.1-4.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-4.11">
+<code>constraints</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-4.12">
+            <p id="section-11.1-4.12.1"><span class="bcp14">REQUIRED</span>. An array of the <code>constraints</code> keys the domain covers, each
+a Common Constraint (<a href="#common-constraints" class="auto internal xref">Section 6</a>) or a key whose subset and
+intersection rules another specification or the deployment defines.<a href="#section-11.1-4.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-11.1-4.13">
+<code>limitations</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-11.1-4.14">
+            <p id="section-11.1-4.14.1"><span class="bcp14">OPTIONAL</span>. An array of identifiers, each naming a comparison the
+authorization server makes more conservatively than this document
+defines, so that it refuses rather than narrows. This document
+defines <code>delegate-matcher-identity</code>: an <code>allowed_delegates</code> or
+<code>children.allowed_child_actors</code> list is within its reference only
+when each matcher equals a reference matcher on <code>sub</code> and
+<code>sub_profile</code>, so a list narrower by containment is refused.<a href="#section-11.1-4.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-11.1-5">An entry is within a domain when its <code>resource_match</code> (<code>exact</code> when
+absent) is among the domain's <code>resource_match</code>, each of its members is
+among <code>members</code>, each of its <code>constraints</code> keys is among
+<code>constraints</code>, and each of its actions is an action identifier rather
+than an action family. Under a qualified declaration the authorization
+server applies <a href="#subset" class="auto internal xref">Section 5</a> and the intersection rules of
+<a href="#common-constraints" class="auto internal xref">Section 6</a> to a pair of entries both within the domain,
+with each listed limitation. For any other pair, <code>narrowing</code> is
+undeclared (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the entry is
+carried as approved, and a subset is established only by equality. An
+authorization server <span class="bcp14">MUST NOT</span> declare a qualified value whose domain
+lists a <code>constraints</code> key whose subset and intersection rules it does
+not implement.<a href="#section-11.1-5" class="pilcrow">¶</a></p>
+<p id="section-11.1-6">A qualified value declares <code>narrowing</code> for the domain only, and never
+as <code>true</code>. A reader treats a carrier as declaring <code>narrowing</code> <code>false</code>
+when the qualified value has a member other than <code>domain</code>, when <code>id</code> or
+<code>digest</code> is malformed, or when the document is unavailable, does not
+have this form, names another <code>id</code>, <code>type</code>, or <code>capability</code>, or does
+not match <code>digest</code>; that carrier still governs <code>narrowing</code>, and a later carrier
+does not supply it. <code>delegation</code> and <code>projection</code> remain booleans.<a href="#section-11.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="tools">
@@ -3932,6 +4044,14 @@ refused at submission.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 defines do not use <code>60</code> for the seconds field, though RFC 3339 permits
 it for an actual leap second; an entry carrying one is refused at
 submission.<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.6">
+          <p id="appendix-A-3.6.1">Qualified Narrowing: <code>narrowing</code> for <code>mission_resource_access</code> can be
+declared for a narrowing domain, a document named by <code>id</code> and
+<code>digest</code> that states the matching modes, members, constraints, and
+limitations it covers; an entry outside the domain is carried as
+approved, and a value the reader cannot validate declares <code>narrowing</code>
+            <code>false</code> (#1377, D1025).<a href="#appendix-A-3.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>

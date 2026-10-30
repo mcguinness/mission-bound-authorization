@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-30T04:17:25Z
-Source repository commit: 7d78ebf259431482bc3ba8b6b8fe6acb6deec6fc
+Generated: 2026-10-30T05:44:47Z
+Source repository commit: 977b7c429be649cc5f015295b1d58b24453f5b7b
 Member count: 9
 
 Reading order:
@@ -9938,11 +9938,16 @@ Table of Contents
    object with three OPTIONAL boolean members, narrowing, delegation,
    and projection; an absent member leaves that capability undeclared by
    this carrier, falling through to the next carrier in the order above.
-   For each capability, the first carrier in that order that declares
-   the member governs, whether it declares true or false; a later
-   carrier does not override it.  A declared capability permits a
-   transformation without requiring it, and waives no check this
-   document requires and no local policy under which the AS refuses one.
+   A type's specification MAY define another value for one of these
+   members; a carrier declaring such a value declares that capability as
+   the type's specification defines it, and a reader that does not
+   understand the value, or cannot validate it as that specification
+   requires, treats the carrier as declaring the capability false.  For
+   each capability, the first carrier in that order that declares the
+   member governs, whether it declares true or false; a later carrier
+   does not override it.  A declared capability permits a transformation
+   without requiring it, and waives no check this document requires and
+   no local policy under which the AS refuses one.
 
 6.  Mission Creation
 
@@ -16393,6 +16398,11 @@ Appendix E.  Document History
       Mission's termination with reason revoked.  Security
       Considerations state the consequence of a policy that authorizes
       no party to request revocation (#1892, D1031).
+
+   *  Declared Transformation Capabilities: a type's specification can
+      define a value other than a boolean for a capability member, and a
+      value the reader cannot validate declares that capability false
+      (#1377, D1025).
 
    -01
 
