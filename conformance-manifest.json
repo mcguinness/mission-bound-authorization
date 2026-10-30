@@ -19731,13 +19731,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > reproduces the core test vector exactly",
+     "name": "Authority Set entry commitment (@spec mission#entry-commitment) > reproduces the core test vector exactly",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > resolves different member insertion order to the same digest",
+     "name": "Authority Set entry commitment (@spec mission#entry-commitment) > resolves different member insertion order to the same digest",
      "level": "unit",
      "surface": "verification"
     }
