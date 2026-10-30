@@ -1394,8 +1394,8 @@ subset relation admits a narrower `resource` (for
 token entry that `target_resources` does not name, and a candidate
 outside every Authority Set entry fails that rule.
 
-The Mission records the policy version in force as `policy_version`
-({{mission-record}}).
+Where recorded, the Mission's `policy_version` names the policy
+version in force ({{mission-record}}).
 
 Generative Authority Set derivation is not one of this document's
 modes. As a local-policy extension, a model's output can be a
@@ -2237,11 +2237,11 @@ The following subsections define the record's members. The record's
 required members are its invariants: `id`, `issuer`, `state`,
 `intent`, `authority_set`, `authority_hash`, `intent_hash`, `subject`,
 `approval_basis` and `authority_source` with the members each
-requires, `client_id`, `policy_version`, `approval_event_id`,
-`created_at`, and `expires_at`, and, under the condition each states,
-`termination`, `proposed_authority`, `proposal_hash`, and
-`submission_evidence`. Every other member is optional or defined by
-the profile that uses it.
+requires, `client_id`, `approval_event_id`, `created_at`, and
+`expires_at`, and, under the condition each states, `termination`,
+`proposed_authority`, `proposal_hash`, and `submission_evidence`.
+Every other member is optional or defined by the profile that uses
+it.
 
 ### Identity and Lifecycle Members {#record-identity-members}
 
@@ -2474,9 +2474,14 @@ invalidate or deactivate the Mission.
 ### Provenance and Expiry {#record-provenance-members}
 
 `policy_version`:
-: REQUIRED. A string. An opaque audit correlator naming the
+: OPTIONAL. A string. An opaque audit correlator naming the
   derivation policy version in effect at the approval event; the
-  policy itself does not travel.
+  policy itself does not travel. It is REQUIRED where a feature or
+  profile the deployment uses depends on versioned derivation-policy
+  identification, such as standing-consent recency
+  ({{standing-consent-recency}}). A deployment using such a feature
+  records it from creation and never supplies a replacement value
+  later.
 
 `approval_event_id`:
 : REQUIRED. A string. A unique identifier of the approval event, used
@@ -2695,9 +2700,9 @@ records it.
 `intent_hash` and `authority_hash` are independent commitments to
 independent objects. That the approved task bounds the derived
 authority is a governance assertion, made by derivation policy and
-auditable through `policy_version` ({{authorization-derivation}}),
-not a cryptographic relation between the anchors: neither anchor
-proves anything about the other's object.
+auditable through `policy_version` where the Mission records it
+({{authorization-derivation}}), not a cryptographic relation between
+the anchors: neither anchor proves anything about the other's object.
 
 The `typ` value space is an extension point ({{extensibility}}):
 additional committed objects use this same envelope with a new `typ`
@@ -5512,7 +5517,7 @@ The AS is trusted to derive authority no broader than the Mission
 Intent. Both Authority Set derivation modes
 ({{authorization-derivation}}), a proposal narrowed to policy and a
 configured mapping, are mechanical rather than free-form inference.
-The recorded `policy_version` makes each Authority Set derivation
+Where recorded, `policy_version` makes each Authority Set derivation
 auditable by naming the policy it ran under.
 
 ## Agent-Specific Threats {#sec-agent}
