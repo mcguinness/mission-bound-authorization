@@ -9950,7 +9950,8 @@
    "surface": "authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering never presents a rendered bound (a task_bounds item, or a constraint of a derived entry) as enforced, or as a wider limit than the one enforced, unless some party in the deployment enforces it"
+    "normative": "the approval rendering never presents a rendered bound (a task_bounds item, or a constraint of a derived entry) as enforced unless some party in the deployment enforces it",
+    "local": "the authorization-code approval page states that a derived entry's max_amount applies to each action and imposes no total spending cap, so it does not present a Mission-wide total as enforced"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -11814,7 +11815,7 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a revocation of a token issued under the Mission, an access token or a refresh token, takes effect on that token and leaves the Mission `active`, unless the deployment's revocation policy couples token revocation to Mission revocation",
+    "normative": "unless the deployment documents a coupling of token revocation to Mission revocation, revoking a token issued under the Mission, an access token or a refresh token, does not itself cause a Mission lifecycle transition",
     "local": "the reference does not couple token revocation to Mission revocation: its RFC 7009 route revokes the token and its grant, and its revocation hooks cancel only deferral codes, never committing a Mission lifecycle transition"
    },
    "level": "endpoint",
@@ -11827,7 +11828,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1892 ruling 9 (iv) (D1026). Shares its witness with status.lifecycle.rfc7009-not-by-itself, Mission Status's statement of the same rule. The witness revokes, at the RFC 7009 endpoint, the refresh token of an async-delegation family under the Mission (a Token Exchange refresh lineage), asserts the 200 and the family's grant destroyed, and asserts the Mission's state is still active. Partial: it runs with the delegation capability on, and no test revokes an access token or a code-redemption refresh token and then checks the Mission."
+   "notes": "#1892 ruling 9 (iv) (D1026). Shares its witness with status.lifecycle.rfc7009-not-by-itself, Mission Status's statement of the same rule. The witness revokes, at the RFC 7009 endpoint, the refresh token of an async-delegation family under the Mission (a Token Exchange refresh lineage), asserts the 200 and the family's grant destroyed, and asserts the Mission's state is still active: no transition, for an active Mission. Partial: it runs with the delegation capability on, and no test revokes an access token or a code-redemption refresh token, or a token of a suspended or terminated Mission, and then checks that the Mission's state is unchanged. #1893 review: the observation states no lifecycle transition rather than an active Mission, since a suspended or terminated Mission keeps its state."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
@@ -21528,7 +21529,7 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "an RFC 7009 revocation of a Mission's refresh token leaves the Mission active where no revocation policy couples them"
+    "normative": "where no revocation policy couples them, an RFC 7009 revocation of a Mission's refresh token causes no Mission lifecycle transition"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21540,7 +21541,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run. Requoted (#1724 C10, D847): the authoritative-change clause names every lifecycle transition, not only the endpoint."
+   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run. Requoted (#1724 C10, D847): the authoritative-change clause names every lifecycle transition, not only the endpoint. #1893 review: the observation states no lifecycle transition rather than an active Mission, since a suspended or terminated Mission keeps its state; the witness asserts it for an active Mission."
   },
   {
    "id": "status.lifecycle.rfc7009-coupled-revoke-transition",
