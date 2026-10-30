@@ -1056,7 +1056,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 2 May 2027</td>
+<td class="center">Expires 3 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1069,12 +1069,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-oauth-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-29" class="published">29 October 2026</time>
+<time datetime="2026-10-30" class="published">30 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-02">2 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-03">3 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1125,7 +1125,7 @@ semantics are defined by Mission-Bound Authorization for OAuth 2.0.<a href="#sec
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 2 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 3 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1392,8 +1392,8 @@ requirement, and a binding whose proof the PEP has not verified for the
 request supplies no confirmation key to the decision. The requirement
 attaches to the action's class, not to issuance: the issuance profile's
 level for the primary access token is unchanged
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound Access
-Tokens").<a href="#section-3-5" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound Token
+Issuance").<a href="#section-3-5" class="pilcrow">¶</a></p>
 <p id="section-3-6">Under the issuance profile alone, introspection freshness is per use:
 each response is an observation for one decision, not a cacheable state
 assertion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
@@ -1452,8 +1452,8 @@ identifier it expects for itself (<span><a href="https://rfc-editor.org/rfc/rfc9
 a validated JWT or an introspection response, is a string or an array
 of strings (<span><a href="https://rfc-editor.org/rfc/rfc7519#section-4.1.3" class="relref">Section 4.1.3</a> of [<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>), and the issuance profile
 lets it name a resource server, API, or security domain
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound Access
-Tokens"). An <code>aud</code> value names the boundary when it equals the
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound Token
+Issuance"). An <code>aud</code> value names the boundary when it equals the
 boundary identifier or is an audience alias for it. An audience alias
 is trusted deployment configuration, scoped to one validated issuer
 and token profile, that maps an <code>aud</code> value to exactly one protected
@@ -1618,7 +1618,7 @@ the token's own <code>exp</code>: the baseline <code>mission</code> claim need n
 itself surface it. The issuance
 profile caps the <code>exp</code> of every token the Mission Issuer derives at
 the Mission's <code>expires_at</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Mission-Bound Access Tokens"), so the <code>exp</code> check enforces
+Section "Mission-Bound Token Issuance"), so the <code>exp</code> check enforces
 the Mission's expiry transitively, as the runtime core's time input
 expects. A profile that makes the <code>expires_at</code> member <span class="bcp14">REQUIRED</span> for
 the credentials it governs, such as the Issuance Grant profile
@@ -2157,7 +2157,12 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Boundary and Audience: the runtime core's boundary identifier is the
+          <p id="appendix-A-2.1.1">The sender-constraint, audience and <code>exp</code> cap citations name the
+OAuth binding's Mission-Bound Token Issuance chapter, the retitled
+Mission-Bound Access Tokens. No requirement changed (#1892).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Boundary and Audience: the runtime core's boundary identifier is the
 protected resource's resource identifier, spelled as its RFC 9728
 <code>resource</code> value, which trusted static configuration can supply.
 <code>aud</code>, a string or an array, names it directly or through an
@@ -2167,28 +2172,28 @@ by order. An absent, malformed, or nonmatching audience, or an
 ambiguous alias, is refused before any decision, and a stricter
 token profile keeps its rule. The input mapping names the boundary
 identifier and no longer calls the protected resource the target of
-the action. Adds RFC 7519 as a normative reference (#853).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+the action. Adds RFC 7519 as a normative reference (#853).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Credential Authority and Current Effective Authority: a
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Credential Authority and Current Effective Authority: a
 <code>mission_resource_access</code> entry's <code>resource</code> matches the operation
 target the PEP establishes from its trusted operation contract,
 under Resource Access's Resource Matching rules; the token's
-audience remains a separate check (#1276).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Runtime Input Mapping and Mission State Sources: a state source
-reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
-and the Status List cannot provide the termination reason or its
-references (#705).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+audience remains a separate check (#1276).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Establishing Validated Credential Context: the OAuth realization of
+          <p id="appendix-A-2.4.1">Runtime Input Mapping and Mission State Sources: a state source
+reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
+and the Status List cannot provide the termination reason or its
+references (#705).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Establishing Validated Credential Context: the OAuth realization of
 the runtime core's sender-constraint requirement for high-consequence
 actions: the <code>cnf</code> binding of the validated credential context (a
 JWT's claim, or an opaque token's introspection response), with a
 proof the PEP verified; a context with no binding is a bearer token.
-Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

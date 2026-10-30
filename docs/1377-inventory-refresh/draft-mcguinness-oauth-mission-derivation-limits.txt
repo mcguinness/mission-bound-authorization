@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         29 October 2026
-Expires: 2 May 2027
+Intended status: Standards Track                         30 October 2026
+Expires: 3 May 2027
 
 
                 Mission Derivation Limits for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -351,8 +351,8 @@ Table of Contents
    access token and the refresh token is one.  A Token Exchange under
    the Mission is one derivation, whether it down-scopes a token for the
    approved agent or issues a delegated token
-   ([I-D.draft-mcguinness-oauth-mission], Section "Delegation Within a
-   Mission").
+   ([I-D.draft-mcguinness-oauth-mission], Sections "Self-Exchange Down-
+   Scoping" and "Delegation Within a Mission").
 
    The one exception is a delegation family under the Continuation
    profile's async delegation transport
@@ -606,9 +606,10 @@ Table of Contents
    Resource AS is not counted against the origin issuer's cap
    (Section 4.4), and neither are the tokens a consuming Authorization
    Server issues under the Mission Issuance Grant profile (Section 4.5).
-   The OAuth binding's composition guidance applies to the derivation
-   limit as to its other bounds ([I-D.draft-mcguinness-oauth-mission],
-   Section "Composition and the Effective Ceiling").
+   The Mission Security Model's effective-ceiling analysis applies to
+   the derivation limit as to the other bounds
+   ([I-D.draft-mcguinness-mission-security-model], Section "Adversary
+   Model and Coverage").
 
 9.5.  Audit Recomputation
 
@@ -709,6 +710,11 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
 
+   [I-D.draft-mcguinness-mission-security-model]
+              McGuinness, K., "Mission Security Model", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-security-model.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -793,6 +799,13 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -00
+
+   *  Editorial, no requirement change (#1892): Composition Across
+      Missions cites the Security Model's effective-ceiling analysis,
+      which carries the composition guidance the OAuth binding's
+      Security Considerations restated; Refresh and Token Exchange cites
+      the binding's Self-Exchange Down-Scoping, which left its
+      delegation chapter, beside Delegation Within a Mission.
 
    *  Clarification (#1661, D793): What Counts separates a Template
       Dispatch's creation, one derivation per dispatch_event_id, from

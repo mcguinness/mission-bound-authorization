@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            29 October 2026
-Expires: 2 May 2027
+Intended status: Experimental                            30 October 2026
+Expires: 3 May 2027
 
 
                   Mission Work Products for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -154,10 +154,10 @@ Table of Contents
    plane reading of a claim the issuance profile already makes on the
    credential plane: authority exists only by derivation for a Mission,
    so no possessed thing, credential or artifact, substitutes for the
-   Mission's live gate.  Alignment with a forthcoming issuance-profile
-   Security Considerations statement of this property is anticipated;
-   this document states the property for work products and imposes
-   nothing new on the issuance profile.
+   Mission's live gate.  The OAuth binding's Security Considerations
+   state the same property ([I-D.draft-mcguinness-oauth-mission],
+   Section "Authority and Propagated Information"); this document states
+   it for work products and imposes nothing new on the issuance profile.
 
    Child delegation
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]) is the
@@ -959,6 +959,10 @@ Appendix A.  Artifact-Lineage Label Persistence
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Relationship to Other Profiles cites the OAuth binding's Security
+      Considerations statement of the invariant instead of anticipating
+      one.  No requirement changed (#1892).
 
    *  Added the informative Artifact-Lineage Label Persistence appendix
       and clarified the deferred-mechanism list.  Labels use a declared
