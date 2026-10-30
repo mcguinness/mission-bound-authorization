@@ -105,7 +105,7 @@ of its rules:
 
 - the Submission envelope's optional `evidence` member, with its size
   and count bounds ({{I-D.draft-mcguinness-oauth-mission}}, Section
-  "Submission via PAR");
+  "Submitting a Mission Intent");
 - the "reject, do not ignore" and "policy input, not authority" rules
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Intent Submission
   Evidence");
@@ -205,8 +205,9 @@ client-authentication mechanism and never selects the presenter.
 ## Bounded Verification {#verification-bounds}
 
 Beyond the size and count bounds of the OAuth binding
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
-PAR"), the AS MUST bound the verification cost a submission can
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Submitting a
+Mission Intent"), the AS MUST bound the verification cost a
+submission can
 impose (for example, the number of signature verifications it
 performs), refusing a submission that exceeds the bound with the
 `invalid_request` error code.

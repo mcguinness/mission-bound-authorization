@@ -182,8 +182,9 @@ none of its rules:
 An AS that does not implement this document establishes no derivation
 limit, and its closed-top-level validation refuses a submitted
 `requested_derivation_limit` as an unknown member
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
-PAR"). Bounding aggregate consumption (calls, spend, or activity over
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Submitting a
+Mission Intent"). Bounding aggregate consumption (calls, spend, or
+activity over
 the life of a Mission) is out of scope; the metering profile defines
 it ({{I-D.draft-mcguinness-mission-metering}}).
 

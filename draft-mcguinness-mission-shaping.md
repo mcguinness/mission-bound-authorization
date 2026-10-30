@@ -353,7 +353,8 @@ The Mission Shaper MUST NOT issue, derive, or certify authority of any
 kind. It produces a shaped proposal, which is untrusted client input
 under the issuance profile until the Mission Issuer validates and
 narrows it and binds authority at the approval event
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via PAR").
+({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Submitting a Mission Intent").
 Nothing in this document changes that treatment, and a shaper
 SHOULD NOT structure its output to imply otherwise.
 
@@ -377,8 +378,8 @@ Three consequences follow:
    Section "Mission Record"). The issuance profile rejects a Mission
    Intent that carries an unrecognized top-level member, including any
    such issuer-output member, with the `invalid_request` error code
-   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
-   PAR").
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section
+   "Submitting a Mission Intent").
 
 3. It does not cross the trust boundary. Admitting input across the
    boundary is a Mission Issuer action. The shaper does not initiate
@@ -1034,9 +1035,9 @@ commitment the Mission record cites.
 The issuance profile defines a `mission_intent` parameter carried in a
 Pushed Authorization Request (PAR) {{RFC9126}}, whose value is the
 Submission envelope ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Submission via PAR"). The Mission Intent proposal is the envelope's
-`intent` member, and an Authority Proposal is the value of the
-`authorization_details` parameter in the same request.
+"Submitting a Mission Intent"). The Mission Intent proposal is the
+envelope's `intent` member, and an Authority Proposal is the value of
+the `authorization_details` parameter in the same request.
 
 Intent-bound evidence in the envelope's `evidence` array names the
 exact `intent_hash` of the submitted Intent. Intent-bound evidence

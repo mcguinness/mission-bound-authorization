@@ -98,8 +98,8 @@ client: the client makes a direct request to the authorization server
 (AS), and the user authorizes on a separate device. The OAuth binding
 admits a Mission Intent on another request only under a profile that
 explicitly defines that carriage
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
-PAR").
+({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Submitting a Mission Intent").
 
 This document is that profile for the device authorization grant.
 The client sends the Submission envelope and any authority proposal
@@ -134,7 +134,7 @@ codes. It uses three seams the OAuth binding defines
 ({{I-D.draft-mcguinness-oauth-mission}}):
 
 - an alternative back-channel carriage of the Submission envelope
-  (Section "Submission via PAR");
+  (Section "Submitting a Mission Intent");
 - relocation of the approval event relative to code issuance (Section
   "Extensibility"), which Mission Deferred Approval
   {{I-D.draft-mcguinness-oauth-mission-approval}} also uses; and
@@ -196,7 +196,7 @@ The client sends a device authorization request
 `mission_intent`:
 : REQUIRED. The Submission envelope, encoded as the OAuth binding
   encodes it for PAR ({{I-D.draft-mcguinness-oauth-mission}}, Section
-  "Submission via PAR").
+  "Submitting a Mission Intent").
 
 `authorization_details`:
 : OPTIONAL. An authority proposal
@@ -219,7 +219,7 @@ authorization request carrying `mission_intent` entirely under this
 document or refuse it; it never ignores `mission_intent` or a member
 of the Submission envelope, and never answers such a request with an
 ordinary device authorization session. It applies the OAuth
-binding's Submission via PAR rules for the envelope's structure,
+binding's submission rules for the envelope's structure,
 closed top levels, and size bounds, and its Authority Proposal rules,
 reading "the same pushed request" as this request.
 
