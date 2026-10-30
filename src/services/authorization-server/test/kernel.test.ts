@@ -542,6 +542,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
           ...record,
           id: newMissionId(),
           approval_event_id: "apev-funnel-2",
+          approval_basis: { ...(record.approval_basis as ApprovalBasisDirect), activation: { approval_event_id: "apev-funnel-2" } },
           expires_at: "2026-07-01T02:00:00Z",
         },
         undefined,
@@ -559,7 +560,12 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
       clientId: "ap-agent",
       approvalEventId: "apev-audiences-1",
     });
-    const derived = { ...record, id: newMissionId(), approval_event_id: "apev-audiences-2" };
+    const derived = {
+      ...record,
+      id: newMissionId(),
+      approval_event_id: "apev-audiences-2",
+      approval_basis: { ...(record.approval_basis as ApprovalBasisDirect), activation: { approval_event_id: "apev-audiences-2" } },
+    };
     const source = { inherited: k.committedSourceBinding(record.id) };
     expect(() => k.insertRecord(derived, undefined, { source, audiences: { inherited: [] } })).toThrow(
       /inherited audiences are not aligned with its Authority Set/,
@@ -587,6 +593,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
         ...record,
         id: newMissionId(),
         approval_event_id: "apev-atomic-2",
+        approval_basis: { ...(record.approval_basis as ApprovalBasisDirect), activation: { approval_event_id: "apev-atomic-2" } },
         created_at: "2026-07-01T01:00:00Z",
         },
         undefined,

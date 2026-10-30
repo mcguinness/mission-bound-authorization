@@ -16,6 +16,7 @@ import { type Database, openStore, withTransaction } from "@mission/store";
 import { generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  type ApprovalBasisDirect,
   buildAuthorizationServer,
   composeTombstoneRetentionSeconds,
   DEFAULT_AUDIT_RETENTION_S,
@@ -39,6 +40,23 @@ let statusKey: CryptoKey;
 beforeAll(async () => {
   statusKey = (await generateKeyPair("ES256")).privateKey;
 });
+
+/**
+ * A copy of an approved direct record under another approval event. Its
+ * explicit activation names that event, the value the member implies
+ * (@spec mission#record-principal-members), so the creation funnel reaches
+ * the check each test exercises.
+ */
+function underEvent<R extends ReturnType<MissionKernel["approve"]>>(record: R, approvalEventId: string): R {
+  return {
+    ...record,
+    approval_event_id: approvalEventId,
+    approval_basis: {
+      ...(record.approval_basis as ApprovalBasisDirect),
+      activation: { approval_event_id: approvalEventId },
+    },
+  };
+}
 
 const tempDirs: string[] = [];
 function tempStoreFile(name: string): string {
@@ -651,7 +669,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       kernel.db.prepare("DELETE FROM missions").run();
       expect(kernel.get(record.id)).toBeUndefined();
       expect(() =>
-        kernel.insertRecord({ ...record, approval_event_id: "second-approval" }, undefined, {
+        kernel.insertRecord(underEvent(record, "second-approval"), undefined, {
           source: { inherited: kernel.committedSourceBinding(record.id) },
           audiences: "fresh",
         }),
@@ -667,7 +685,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(pruned?.finalVersion).toBeUndefined();
       expect(kernel.tombstones.exists(ISSUER, record.id)).toBe(true);
       expect(() =>
-        kernel.insertRecord({ ...record, approval_event_id: "third-approval" }, undefined, {
+        kernel.insertRecord(underEvent(record, "third-approval"), undefined, {
           source: { inherited: kernel.committedSourceBinding(record.id) },
           audiences: "fresh",
         }),
@@ -723,7 +741,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(kernel.tombstones.find(ISSUER, record.id)?.terminalState).toBeUndefined();
       expect(kernel.tombstones.exists(ISSUER, record.id)).toBe(true);
       expect(() =>
-        kernel.insertRecord({ ...record, approval_event_id: "after-prune" }, undefined, {
+        kernel.insertRecord(underEvent(record, "after-prune"), undefined, {
           source: { inherited: kernel.committedSourceBinding(record.id) },
           audiences: "fresh",
         }),
@@ -773,7 +791,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(b.kernel.tombstones.exists("https://issuer-b.test", record.id)).toBe(false);
       const bRecord = b.approve({ approvalEventId: "b-approval" });
       b.kernel.insertRecord(
-        { ...bRecord, id: record.id, approval_event_id: "b-second", status_list_idx: null },
+        { ...underEvent(bRecord, "b-second"), id: record.id, status_list_idx: null },
         undefined,
         { source: { inherited: b.kernel.committedSourceBinding(bRecord.id) }, audiences: "fresh" },
       );
