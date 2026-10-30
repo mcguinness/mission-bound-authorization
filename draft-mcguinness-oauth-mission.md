@@ -434,6 +434,36 @@ the other terms:
       v
 ~~~
 
+1. **Submit.** The client pushes a Mission Intent describing the
+   task, optionally with proposed `authorization_details`
+   ({{submission-via-par}}). The AS derives the Authority Set, the
+   concrete authority the task needs ({{authorization-derivation}}).
+2. **Approve and commit.** The Approver consents to that Authority
+   Set itself, not to the task description alone ({{approval-event}}).
+   The AS records the active Mission, commits the Intent as
+   `intent_hash` and the approved Authority Set as `authority_hash`
+   ({{integrity-anchors}}), and binds the grant the approval produces
+   to the Mission server-side. Any grant lineage bound to a Mission
+   resolves to exactly that Mission, and no client input chooses it
+   ({{grant-binding}}).
+3. **Issue.** At each token request the AS checks that the Mission is
+   `active` and derives authority no broader than the approved
+   Authority Set ({{issuance-gating}}, {{subset}}). The access token
+   carries the derived authorization details and a `mission` claim
+   identifying the Mission ({{mission-claim}}), and a resource server
+   enforces statelessly from the token ({{rs-enforcement}}).
+
+Each later issuance from that grant lineage, such as a refresh, is a
+derivation under the same checks, and a token derived by Token
+Exchange carries the same `mission` claim ({{self-exchange}},
+{{delegated-exchange}}). Revoking or expiring the Mission stops
+further issuance and refresh, including from any grant lineage bound
+to it ({{grant-binding-state}}); an access token already issued
+remains valid until it expires ({{revocation}}). A user thus approves
+a task's authority once, and that approval bounds every token the
+agent derives. {{first-mission}} walks through these steps with
+concrete values.
+
 ## Introductory Example {#first-mission}
 
 In the examples in this document, each service's operation contract
