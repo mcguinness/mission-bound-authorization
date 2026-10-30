@@ -7084,16 +7084,22 @@
     "normative": "where a submission presented evidence that verified, the approval rendering presents its normalized verified facts with the Intent and the Authority Set, and a change to those facts between rendering and decision is rendered again and approved over the changed context before a Mission is created"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/submission-envelope.test.ts",
      "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > PAR-submitted evidence is verified, RENDERED to the Approver, and landed request-derived on submission_evidence — outside all anchors",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > a change to the verified facts alone between rendering and decision creates no Mission and asks for review again; the page rendered again shows the changed facts and approves them; unchanged facts approve (@spec mission#submission-processing, mission#approval-context-changes, #1897, D1031)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#1892 ruling 6 (row debt). Facet: the provenance part of step 8; the Intent and Authority Set parts are rowed under approval-context-changes and approval-preparation. Partial: the witness asserts the page's 'Verified intent provenance' section and a verified fact value (admission.example). No test changes the verified facts between rendering and decision. The re-render clause applies (#1892 ruling 6, D1031): the reference's approval context omits submission_evidence, so a change to the verified facts alone is not re-rendered; #1897 tracks the fix and its witness. The cited leaf title contains a U+2014 character, written as a JSON escape here; it must match the test title exactly."
+   "notes": "#1892 ruling 6 (row debt). Facet: the provenance part of step 8; the Intent and Authority Set parts are rowed under approval-context-changes and approval-preparation. Tested (#1897): the first witness renders the verified facts; the #1897 witness changes the verified facts alone between rendering and decision: the stale decision is refused approval_context_changed, naming submission_evidence, with no Mission created; the page rendered again shows the changed facts with the Intent and the Authority Set, and its approval records them; unchanged facts approve on the first rendering. Proved by mutation (2026-10-29): an approval context that commits no verified facts approves the stale decision. The cited leaf title contains a U+2014 character, written as a JSON escape here; it must match the test title exactly."
   },
   {
    "id": "core.submission.rendered-surface-covers-provenance",
@@ -7114,9 +7120,16 @@
     "normative": "where a deployment commits the rendered approval surface of a submission that presented evidence, the commitment covers the normalized verified facts, at least as a digest over their canonical submission_evidence representation, so the committed surface cannot stand for the same approval with different provenance facts"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. #1892 ruling 6 (D1031): the reference's render revision commits the rendered approval surface (the context a rendering showed, which the decision is bound to), so this MUST applies to it; its context omits the provenance facts, a gap #1897 tracks. The row stays todo until a witness shows a change to the verified facts alone keeps a stale approval from proceeding, with an unchanged-facts control; it is not inapplicable."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > a change to the verified facts alone between rendering and decision creates no Mission and asks for review again; the page rendered again shows the changed facts and approves them; unchanged facts approve (@spec mission#submission-processing, mission#approval-context-changes, #1897, D1031)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. #1892 ruling 6 (D1031): the reference's render revision commits the rendered approval surface (the context a rendering showed, which the decision is bound to), so this MUST applies to it; its context omits the provenance facts, a gap #1897 tracks. #1897: the render revision commits the normalized verified facts (each fact's type, artifact_hash and facts) as a digest, and a change to them alone keeps the stale approval from proceeding, with an unchanged-facts control. Proved by mutation (2026-10-29): committing no facts approves the stale decision; committing each fact's verified_at too refuses the unchanged-facts control. Partial: the commitment omits each verification's verified_at, which differs between the rendering's and the decision's verification by construction, so it is not a digest of the full canonical submission_evidence representation the MUST names as its floor. Whether verified_at belongs to the normalized provenance facts is a reading for the owner."
   },
   {
    "id": "core.submission-evidence.structural-entry-refusal",
