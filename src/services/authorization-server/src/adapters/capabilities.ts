@@ -99,7 +99,11 @@ export const ALL_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
   "token-revocation",
 ];
 
-/** The token-exchange profiles; the exchange grant is registered when any is on. */
+/**
+ * The token-exchange profiles; the exchange grant is registered when any is on.
+ * Self-exchange (ledger `core.self-exchange`) has no capability of its own: it
+ * is served wherever the exchange grant is registered.
+ */
 export const TOKEN_EXCHANGE_CAPABILITIES: readonly ProviderCapability[] = [
   "async-delegation",
   "child-delegation",

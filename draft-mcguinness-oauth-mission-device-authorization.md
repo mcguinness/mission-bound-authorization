@@ -392,7 +392,7 @@ sense, and the refresh-token family its redemption emits inherits
 that binding atomically with its issuance. Issuance gating applies to
 the first redemption as to any later derivation. The OAuth binding's
 token rules apply unchanged ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Mission-Bound Access Tokens"); they require a public client's
+Section "Mission-Bound Token Issuance"); they require a public client's
 Mission-bound refresh token to be sender-constrained or rotated. A
 client can sender-constrain the issued tokens with DPoP {{RFC9449}}
 on the device access token request.
@@ -584,6 +584,10 @@ A further request presenting the same `device_code` receives
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- The token-rules citation names the OAuth binding's Mission-Bound
+  Token Issuance chapter, the retitled Mission-Bound Access Tokens. No
+  requirement changed (#1892).
 
 - Initial version (#1202). Carries the Submission envelope and
   authority proposal on the RFC 8628 device authorization request

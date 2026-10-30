@@ -1,5 +1,5 @@
 /**
- * @spec mission#derivation-policy, mission#common-constraints (issue #784)
+ * @spec mission#subset, mission#authority-proposal, mission#common-constraints (issue #784)
  *
  * `intersect`'s fixed four-key rebuild (`derive.ts`) silently dropped any
  * `constraints` member outside {`max_amount`, `vendors`,
