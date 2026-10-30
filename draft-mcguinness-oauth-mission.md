@@ -4863,7 +4863,8 @@ following remain stable across revisions of this document:
 {{standing-consent-bases}} states the contract for an approval basis
 other than `direct`, and {{commitment-mechanisms}} the contract for a
 commitment another specification defines. Their requirements bind a
-specification or profile that uses them and an AS that implements it;
+specification or profile that uses them and each party that
+implements it;
 this document's own commitments also follow {{commitment-mechanisms}}.
 
 ## Extension Points {#extension-points}
@@ -5162,8 +5163,8 @@ commitment classifies it as one of them:
 
 The prefix and agility rules of {{digest-algorithm}} bind all three
 species. Its I-JSON rule binds the two JSON species. The envelope and
-`typ` discipline of {{integrity-anchors}} binds envelope anchors
-alone. The rules of {{digest-algorithm}} bind a prefixed digest of any
+`typ` discipline of {{integrity-anchors}}, with the `typ` naming rule
+below, binds envelope anchors alone. The rules of {{digest-algorithm}} bind a prefixed digest of any
 species when its defining specification classifies it under this
 taxonomy and imports this section normatively; this document so
 classifies every anchor it defines.
