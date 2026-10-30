@@ -687,8 +687,9 @@ A client whose Mission Intent was produced by a Mission Shaper
 ({{I-D.draft-mcguinness-mission-shaping}}) MAY send the
 `mission_shaping_evidence_hash` request parameter in the pushed
 authorization request {{RFC9126}} that carries `mission_intent`
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission via
-PAR"). Its value is the `shaping_evidence_hash` that Shaping defines
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Submitting a
+Mission Intent"). Its value is the `shaping_evidence_hash` that
+Shaping defines
 ({{I-D.draft-mcguinness-mission-shaping}}, Section "Integrity and the
 Evidence Hash"), computed with `iss` set to this AS's issuer
 identifier.
