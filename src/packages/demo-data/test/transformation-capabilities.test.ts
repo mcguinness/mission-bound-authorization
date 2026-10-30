@@ -33,7 +33,7 @@ function load(narrowing: unknown, docs: Record<string, unknown> = { [DOMAIN_PATH
 }
 
 describe("the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing)", () => {
-  it("declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, and nothing else", () => {
+  it("declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, delegation and projection as true, and nothing else", () => {
     expect(Object.keys(TRANSFORMATION_CAPABILITIES.declared)).toEqual(["mission_resource_access"]);
     expect(
       Object.keys(TRANSFORMATION_CAPABILITIES.declared.mission_resource_access ?? {}).sort(),

@@ -71963,13 +71963,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
-     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, and nothing it does not declare",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare",
      "level": "endpoint",
      "surface": "deployment-documentation"
     },
     {
      "file": "src/packages/demo-data/test/transformation-capabilities.test.ts",
-     "name": "the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing) > declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, and nothing else",
+     "name": "the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing) > declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, delegation and projection as true, and nothing else",
      "level": "unit",
      "surface": "deployment-documentation"
     },
@@ -72024,7 +72024,7 @@
     },
     {
      "file": "src/packages/demo-data/test/transformation-capabilities.test.ts",
-     "name": "the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing) > declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, and nothing else",
+     "name": "the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing) > declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, delegation and projection as true, and nothing else",
      "level": "unit",
      "surface": "deployment-documentation"
     }
