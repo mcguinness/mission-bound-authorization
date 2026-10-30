@@ -1256,7 +1256,7 @@ The AS processes a submission in the following order. Steps 1 to 6
 run when the submission arrives; step 7 can run provisionally then
 and is complete before the approval rendering
 ({{derivation-modes}}); step 8 belongs to the approval event, and
-step 9 to activation. {{commitment-mechanisms}} states how JSON destined
+step 9 to activation. {{digest-algorithm}} states how JSON destined
 for commitment is parsed, including the rejection of duplicate member
 names.
 
@@ -2488,7 +2488,8 @@ This section defines how the anchors the Approver consents to at the
 approval event ({{approval-event}}) are constructed, canonicalized,
 and bound. The Mission Record ({{mission-record}}) records them, and
 the test vectors ({{test-vectors}}) pin the construction
-byte-for-byte.
+byte-for-byte. {{commitment-mechanisms}} classifies these anchors and
+states the contract for commitments other specifications define.
 
 ### Integrity Anchors {#integrity-anchors}
 
@@ -2532,10 +2533,10 @@ The `typ` field domain-separates the anchors so a digest of one
 object cannot be mistaken for another's. The `iss` binding prevents
 a committed object from being transplanted across authorization
 servers. The `sha-256:` prefix is the algorithm-agility mechanism
-({{commitment-mechanisms}}).
+({{digest-algorithm}}).
 
 The anchors this section lists, and the Authority Set entry
-commitment below, bind the AS issuer. The `digest` of an
+commitment ({{entry-commitment}}), bind the AS issuer. The `digest` of an
 `authority_source.policy` reference ({{record-principal-members}}) is
 not one of them: it uses the issuer the policy's format defines, for a
 governed organizational policy its governing authority. That binding
@@ -2550,42 +2551,11 @@ auditable through `policy_version` where the Mission records it
 ({{authorization-derivation}}), not a cryptographic relation between
 the anchors: neither anchor proves anything about the other's object.
 
-The `typ` value space is an extension point ({{extensibility}}):
-additional committed objects use this same envelope with a new `typ`
-and the canonicalization below.
+The `typ` value space is an extension point
+({{commitment-mechanisms}}): additional committed objects use this
+same envelope with a new `typ` and the canonicalization below.
 
-This document defines no registry of `typ` values; each committing
-specification defines its own and relies on the `typ` domain
-separation. To keep that domain separation safe without a registry, a
-new `typ` value MUST be a collision-resistant name (for example, a
-short name prefixed within a namespace the defining profile controls,
-following the Collision-Resistant Name guidance of
-{{Section 2 of RFC7519}}). `mission-` prefixed values, used by this
-document and the profiles that extend it, form a namespace
-coordinated through this document's change controller.
-
-This document also defines the **Authority Set entry commitment**, the
-envelope above with `typ` `mission-authority-entry`, `iss` the
-Mission `issuer`, and `value` a single Authority Set entry object
-exactly as recorded ({{test-vectors}}). A companion that cites an
-entry by digest (a decision record naming the entry it evaluated,
-containment or completion state keyed to an entry) computes it this
-way.
-
-Entries whose canonical commitment envelopes are identical produce
-the same digest, and within one Mission Record every recorded entry
-resolving to the same digest forms one selector equivalence class;
-the class is defined by the canonical bytes, not by pre-canonical
-source text the record does not preserve.
-
-The commitment is not a globally unique entry identifier: the
-envelope binds the issuer, not the Mission, so a protocol that uses
-it to select or cite an entry MUST bind it to the Mission `issuer`
-and Mission Identifier whose recorded Authority Set is searched,
-directly or through an enclosing object whose integrity protection
-binds them.
-
-`authority_hash` likewise commits an Authority Set, not a Mission:
+`authority_hash` commits an Authority Set, not a Mission:
 two Missions that approve byte-identical authority share it, and a
 consumer MUST NOT use it as a Mission Identifier or as a replay or
 idempotency key for a Mission.
@@ -2602,7 +2572,7 @@ to computing an anchor and to comparing committed values:
   for `authority_hash`. An auditor reproduces a digest from the
   record alone.
 - Duplicate member names are rejected at parse time
-  ({{commitment-mechanisms}}).
+  ({{digest-algorithm}}).
 - JCS does not reorder array elements, and this document defines no
   element sorting, so array order is significant. The AS MUST present
   each committed array in its recorded order wherever it emits the
@@ -2618,35 +2588,7 @@ to computing an anchor and to comparing committed values:
   remains an exact match, and anchor computation is always byte-exact
   over the recorded values.
 
-### Commitment Mechanisms {#commitment-mechanisms}
-
-This document's default prefixed construction commits to bytes in
-three forms, called species, and a specification defining a prefixed
-commitment classifies it as one of them:
-
-- **Envelope anchor**: the domain-separated, issuer-bound envelope of
-  {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
-  `authority_hash`, an activation policy reference's `digest`, and
-  commitments produced with companion-defined `typ` values).
-- **Canonical-object digest**: `sha-256:` over the JCS serialization
-  of a normalized JSON object without the envelope, where protocol
-  context already fixes what is committed (for example, a runtime
-  parameter digest).
-- **Raw-octet digest**: `sha-256:` over an exact,
-  specification-defined octet sequence, with no canonicalization: a
-  whole artifact as exchanged, or the UTF-8 encoding of a defined
-  scalar value (for example, a work-product artifact digest).
-
-The prefix and agility rules below bind all three species. The
-I-JSON rule binds the two JSON species. The envelope and `typ`
-discipline of {{integrity-anchors}} binds envelope anchors alone.
-
-This section instantiates the default commitment construction of
-{{I-D.draft-mcguinness-mission-substrate}}. A commitment outside this
-construction (a native content address, a member-named digest whose
-member name fixes the algorithm) is permitted; its defining
-specification states its own algorithm identification and agility
-behavior.
+### Digest Input and Algorithm {#digest-algorithm}
 
 Every committed JSON value and its envelope are I-JSON {{RFC7493}}
 data, as {{Section 3.1 of RFC8785}} requires. Strengthening
@@ -2677,23 +2619,7 @@ negotiation.
 
 A verifier MUST reject a digest whose algorithm prefix it does not
 recognize, so an algorithm added later cannot be exploited as a
-downgrade. These rules bind a prefixed digest of any species when its
-defining specification classifies it under this taxonomy and imports
-this section normatively; this document so classifies every anchor it
-defines.
-
-This document defines no transition mechanism: every commitment a
-current carrier defines is a single prefixed string, and no carrier
-defines a location for a second one. A specification that introduces
-a new prefix MUST define:
-
-1. the carrier and schema of any parallel commitment;
-2. the binding that proves the old and new values commit to the same
-   object;
-3. producer behavior during the transition;
-4. verifier selection and downgrade behavior when recognition sets
-   differ; and
-5. the transition procedure itself.
+downgrade.
 
 ## Binding the Mission to the Grant {#grant-binding}
 
@@ -4972,8 +4898,10 @@ following remain stable across revisions of this document:
 - the `act` delegation chain ({{delegated-exchange}}).
 
 {{standing-consent-bases}} states the contract for an approval basis
-other than `direct`. Its requirements bind a profile that defines such
-a basis and an AS that implements that profile.
+other than `direct`, and {{commitment-mechanisms}} the contract for a
+commitment another specification defines. Their requirements bind a
+specification or profile that uses them and an AS that implements it;
+this document's own commitments also follow {{commitment-mechanisms}}.
 
 ## Extension Points {#extension-points}
 
@@ -5022,11 +4950,13 @@ This document's extension points are:
   not make an AS implement, recognize, or trust any member.
 - **Integrity anchors.** Additional committed objects use the same
   domain-separated, issuer-bound envelope with a new `typ`
-  ({{integrity-anchors}}). A consent-disclosure commitment, an
-  instruction-text attestation, or a delegation receipt can be
-  committed this way without changing this document. A profile that
+  ({{integrity-anchors}}, {{commitment-mechanisms}}). A
+  consent-disclosure commitment, an instruction-text attestation, or a
+  delegation receipt can be committed this way without changing this
+  document. A profile that
   commits an evidence or disclosure object MUST commit it with this
-  envelope and a `typ` that meets {{integrity-anchors}}, not by
+  envelope and a `typ` that meets {{integrity-anchors}} and
+  {{commitment-mechanisms}}, not by
   hashing the bare object, so the domain separation and issuer binding
   hold uniformly. A `mission` descriptor embedded in such an object
   uses the `mission` claim shape ({{mission-claim}}), optionally
@@ -5247,6 +5177,88 @@ older than the ceiling. Where ceilings are declared:
   policy that `policy_version` identifies, or to a separately
   versioned declaration retained with it, so an auditor can
   reproduce the eligibility decision.
+
+## Commitment Mechanisms {#commitment-mechanisms}
+
+This document's default prefixed construction commits to bytes in
+three forms, called species, and a specification defining a prefixed
+commitment classifies it as one of them:
+
+- **Envelope anchor**: the domain-separated, issuer-bound envelope of
+  {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
+  `authority_hash`, an activation policy reference's `digest`, and
+  commitments produced with companion-defined `typ` values).
+- **Canonical-object digest**: `sha-256:` over the JCS serialization
+  of a normalized JSON object without the envelope, where protocol
+  context already fixes what is committed (for example, a runtime
+  parameter digest).
+- **Raw-octet digest**: `sha-256:` over an exact,
+  specification-defined octet sequence, with no canonicalization: a
+  whole artifact as exchanged, or the UTF-8 encoding of a defined
+  scalar value (for example, a work-product artifact digest).
+
+The prefix and agility rules of {{digest-algorithm}} bind all three
+species. Its I-JSON rule binds the two JSON species. The envelope and
+`typ` discipline of {{integrity-anchors}} binds envelope anchors
+alone. The rules of {{digest-algorithm}} bind a prefixed digest of any
+species when its defining specification classifies it under this
+taxonomy and imports this section normatively; this document so
+classifies every anchor it defines.
+
+This document's anchors and digest rules ({{integrity-anchors}},
+{{digest-algorithm}}), with this taxonomy, instantiate the default
+commitment construction of {{I-D.draft-mcguinness-mission-substrate}}.
+A commitment outside this construction (a native content address, a
+member-named digest whose member name fixes the algorithm) is
+permitted; its defining specification states its own algorithm
+identification and agility behavior.
+
+This document defines no registry of `typ` values; each committing
+specification defines its own and relies on the `typ` domain
+separation. To keep that domain separation safe without a registry, a
+new `typ` value MUST be a collision-resistant name (for example, a
+short name prefixed within a namespace the defining profile controls,
+following the Collision-Resistant Name guidance of
+{{Section 2 of RFC7519}}). `mission-` prefixed values, used by this
+document and the profiles that extend it, form a namespace
+coordinated through this document's change controller.
+
+This document defines no transition mechanism: every commitment a
+current carrier defines is a single prefixed string, and no carrier
+defines a location for a second one. A specification that introduces
+a new prefix MUST define:
+
+1. the carrier and schema of any parallel commitment;
+2. the binding that proves the old and new values commit to the same
+   object;
+3. producer behavior during the transition;
+4. verifier selection and downgrade behavior when recognition sets
+   differ; and
+5. the transition procedure itself.
+
+### Authority Set Entry Commitment {#entry-commitment}
+
+This document also defines the **Authority Set entry commitment**, the
+envelope of {{integrity-anchors}} with `typ`
+`mission-authority-entry`, `iss` the Mission `issuer`, and `value` a
+single Authority Set entry object exactly as recorded
+({{test-vectors}}). A companion that cites an
+entry by digest (a decision record naming the entry it evaluated,
+containment or completion state keyed to an entry) computes it this
+way.
+
+Entries whose canonical commitment envelopes are identical produce
+the same digest, and within one Mission Record every recorded entry
+resolving to the same digest forms one selector equivalence class;
+the class is defined by the canonical bytes, not by pre-canonical
+source text the record does not preserve.
+
+The commitment is not a globally unique entry identifier: the
+envelope binds the issuer, not the Mission, so a protocol that uses
+it to select or cite an entry MUST bind it to the Mission `issuer`
+and Mission Identifier whose recorded Authority Set is searched,
+directly or through an enclosing object whose integrity protection
+binds them.
 
 # Conformance {#conformance}
 
@@ -6847,7 +6859,7 @@ resource_access"}]}
 proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
 ~~~
 
-The last vector is the entry commitment ({{integrity-anchors}}),
+The last vector is the entry commitment ({{entry-commitment}}),
 computed over one immutable Mission-record Authority Set entry, not
 an issued or narrowed token projection.
 
