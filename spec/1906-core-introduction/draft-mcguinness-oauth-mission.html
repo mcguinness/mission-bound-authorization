@@ -1717,57 +1717,28 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
 <p id="section-1-1">This document defines a <strong>Mission</strong>: a durable authorization object
 that binds a disclosed task to an explicitly approved Authority Set
 and governs the lifecycle of the authority derived from that
-approval. The authorization server (AS) issues tokens under a Mission
-only while it is <code>active</code>, each bounded by the approved Authority
-Set, and resource servers enforce the resulting credentials. Revoking
-or expiring a Mission stops further issuance and refresh but does
-not, by itself, invalidate an already-issued access token, which
-remains valid until it expires (<a href="#revocation" class="auto internal xref">Section 10.2</a>).<a href="#section-1-1" class="pilcrow">¶</a></p>
+approval.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">Agent-identity work such as <span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>
 establishes how an AI agent authenticates and how a user delegates
-authority to it: the agent is an OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> client
-identified by <code>client_id</code>, and the delegating user is the access
-token's <code>sub</code>. It leaves out of scope how the agent's task is
+authority to it. It leaves out of scope how the agent's task is
 translated into authorization, how the user's approval of that task
-is captured as a durable artifact, and how later token issuance stays
-bound to what the user approved. OAuth defines no task record that
-links approval of a task to every grant obtained for it, so
-withdrawing that approval need not stop issuance under those grants.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">No existing OAuth object fills that role
-(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>, Section "Relationship
-to Existing OAuth Objects"): an <code>authorization_details</code> entry
-(<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), for example, expresses authority but not the task it
-serves, and has no lifecycle of its own. A Mission, held by the AS
-beside the grant, commits the disclosed task with its approved
-authority and has an identifier and a lifecycle independent of any
-grant. It can be revoked by that identifier, through an authenticated
-means independent of possession of any token (<a href="#revocation" class="auto internal xref">Section 10.2</a>), and a
-token derived from it by Token Exchange identifies the same Mission
-(<a href="#grant-binding" class="auto internal xref">Section 6.5</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">A client submits a <strong>Mission Intent</strong> describing the task, optionally
-proposing <code>authorization_details</code> (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). The AS derives the
-<strong>Authority Set</strong>, the concrete authority the task needs, and the
-Approver consents to that Authority Set itself, not to the task
-description alone (<a href="#approval-event" class="auto internal xref">Section 6.1</a>). The AS records the Mission,
-committing the Intent as <code>intent_hash</code> and the approved Authority Set
-as <code>authority_hash</code> (<a href="#integrity-anchors" class="auto internal xref">Section 6.4.1</a>), and binds the resulting
-grant to it server-side; any grant lineage bound to a Mission
-resolves to exactly that Mission, which the client never selects or
-reassigns (<a href="#grant-binding" class="auto internal xref">Section 6.5</a>). Every access token the agent obtains
-under the Mission carries the derived authorization details and a
-<code>mission</code> claim identifying that Mission, and a resource server
-enforces statelessly from the token (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>). A user thus
-approves the authority for a task once, and that approval, not a
-per-request scope grant, bounds and outlives every token the agent
-derives.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5"><a href="#protocol-flow" class="auto internal xref">Section 2.1</a> shows this flow, <a href="#first-mission" class="auto internal xref">Section 2.2</a> walks through an
-example, and <a href="#conformance" class="auto internal xref">Section 15</a> states the requirements that realize
-these properties. A deployment can use Missions for issuance alone
-(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>, Section "The
-Issuance-Only Deployment"); a separately specified runtime layer adds
-a per-action check for the action classes whose consequence needs one
-(<a href="#runtime-boundary" class="auto internal xref">Section 16.3.1</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
-<p id="section-1-6">The sections follow this flow. <a href="#mission-intent" class="auto internal xref">Section 4</a> and
+is captured, and how later token issuance stays bound to that
+approval. OAuth itself defines no task record that links approval of
+a task to the grants obtained for it: an <code>authorization_details</code>
+entry (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>) expresses authority, but not the task it serves
+or a lifecycle of its own, so withdrawing approval of a task need not
+stop issuance under its grants.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">A Mission fills that gap. A client submits a Mission Intent
+describing the task, the authorization server (AS) derives the
+Authority Set the task needs, and an Approver consents to that
+Authority Set. The AS records the Mission and binds the resulting
+grant to it. It then issues tokens under the Mission only while the
+Mission is <code>active</code>, each bounded by the approved Authority Set, and
+resource servers enforce the resulting tokens. Revoking or expiring a
+Mission stops further issuance and refresh, but does not by itself
+invalidate an already-issued access token (<a href="#revocation" class="auto internal xref">Section 10.2</a>).
+<a href="#overview" class="auto internal xref">Section 2</a> shows the protocol flow and an example.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">The sections follow this flow. <a href="#mission-intent" class="auto internal xref">Section 4</a> and
 <a href="#authorization-derivation" class="auto internal xref">Section 5</a> define what a client submits and what the
 AS derives from it; <a href="#mission-creation" class="auto internal xref">Section 6</a> the approval, the record, and
 the grant binding; <a href="#mission-bound-tokens" class="auto internal xref">Section 7</a> issuance on every path;
@@ -1777,7 +1748,7 @@ the Mission's state and its termination. <a href="#error-mapping" class="auto in
 <a href="#discovery" class="auto internal xref">Section 12</a>, <a href="#protected-resource-metadata" class="auto internal xref">Section 13</a>, and <a href="#extensibility" class="auto internal xref">Section 14</a>
 are reference sections; <a href="#conformance" class="auto internal xref">Section 15</a> defines the conformance roles;
 and <a href="#deployment-choices" class="auto internal xref">Appendix B</a> lists what a deployment decides and how each
-party learns it.<a href="#section-1-6" class="pilcrow">¶</a></p>
+party learns it.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <div id="applicability">
 <section id="section-1.1">
         <h3 id="name-applicability">
@@ -8251,8 +8222,11 @@ use;<a href="#section-16.3.1-2.1.1" class="pilcrow">¶</a></p>
 ambient authority for individual consequential actions. Short token
 lifetimes and narrow authority bound this exposure but do not
 eliminate it.<a href="#section-16.3.1-3" class="pilcrow">¶</a></p>
-<p id="section-16.3.1-4">A runtime layer (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), out of
-scope for this document, evaluates each consequential action against
+<p id="section-16.3.1-4">A deployment can use Missions for issuance alone
+(<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>, Section "The
+Issuance-Only Deployment"). A runtime layer
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), out of scope for this
+document, evaluates each consequential action against
 the Mission, with parameter binding, and records evidence for the
 actions it covers. A deployment adds one for an action class that needs
 any of the following, which issuance-time bounds alone do not provide:<a href="#section-16.3.1-4" class="pilcrow">¶</a></p>
@@ -10390,13 +10364,14 @@ resolve before interoperating.<a href="#appendix-D-36" class="pilcrow">¶</a></p
 <p id="appendix-E-2">-02<a href="#appendix-E-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-E-3.1">
-          <p id="appendix-E-3.1.1">Editorial, no requirement change: the Introduction no longer
+          <p id="appendix-E-3.1.1">Editorial, no requirement change: the Introduction states the
+problem and the approach and points to the Overview; it no longer
 restates the flow that Protocol Flow and the Introductory Example
-show. Its six-step chain becomes one paragraph stating what the flow
-provides, the gap agent-identity work leaves is stated once, and the
-commitment-recomputation and Approved-Set Verification sentences,
-which Consent Binding and Resource Server Enforcement carry, are
-removed (#1906, D1039).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
+show, or details stated in their own sections (consent to the
+Authority Set, the commitments, grant binding, revocation by
+identifier, the <code>mission</code> claim and resource-server enforcement).
+The issuance-only deployment pointer moves to Issuance Scope and
+Runtime Enforcement (#1906, D1039).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-E-3.2">
           <p id="appendix-E-3.2.1">Editorial, no requirement change: the back matter that describes
