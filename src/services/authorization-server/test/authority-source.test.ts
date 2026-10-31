@@ -1,4 +1,4 @@
-import { approvalContextManifest } from "@mission/core";
+import { approvalContextManifest, authorityHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1310,12 +1310,22 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         }),
       /is not the source its approval resolved/,
     );
+    // The wider set carries its own anchor and root (#1917, D1061: a
+    // recorded anchor always commits the record's set), so the source check
+    // is what refuses it.
+    const wider = [grant(READS, "globex")];
     refusedWith(
       () =>
-        kernel.insertRecord({ ...forged, authority_set: [grant(READS, "globex")] } as never, undefined, {
-          source: resolved,
-          audiences: "fresh",
-        }),
+        kernel.insertRecord(
+          {
+            ...forged,
+            authority_set: wider,
+            authority_hash: authorityHash(ISS, wider as never),
+            approval_basis: { ...forged.approval_basis, root_commitment: authorityHash(ISS, wider as never) },
+          } as never,
+          undefined,
+          { source: resolved, audiences: "fresh" },
+        ),
       /exceeds the authority of the user_delegated source 'alice-delegated'/,
     );
     expect(kernel.allMissions()).toHaveLength(1);

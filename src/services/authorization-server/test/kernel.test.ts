@@ -673,10 +673,17 @@ describe("approval basis (@spec mission#record-principal-members)", () => {
   // an implied value; a present one MUST match it, and the implied values
   // are semantic defaults a reader never inserts before hashing or committing.
   const BOB = { iss: ISS, sub: "bob" };
+  // The record omits authority_hash (#1917, D1061): root_commitment's
+  // implied value is the anchor over `authority_set`, read through
+  // resolvedAnchors.
+  const HAND_SET = [{ type: "payment_initiation", resource: RESOURCE, actions: ["read"] }] as never as MissionRecord["authority_set"];
+  const HAND_AUTHORITY_HASH = authorityHash(ISS, HAND_SET as never);
   const handBuiltDirect = (basis: Partial<ApprovalBasisDirect> = {}): DirectBasisRecord => ({
     approval_basis: { type: "direct", consent_principal: BOB, ...basis },
     approval_event_id: "apev-hand-1912",
-    authority_hash: "sha-256:hand-built-authority-hash",
+    issuer: ISS,
+    intent: validateMissionIntent(intent()),
+    authority_set: HAND_SET,
   });
 
   it("reads the implied activation, activation_actor and root_commitment of a direct basis that omits them", () => {
@@ -685,7 +692,7 @@ describe("approval basis (@spec mission#record-principal-members)", () => {
     expect(members.activation).toEqual({ approval_event_id: record.approval_event_id });
     expect(record.approval_event_id).toBe("apev-hand-1912");
     expect(members.activation_actor).toEqual(record.approval_basis.consent_principal);
-    expect(members.root_commitment).toBe(record.authority_hash);
+    expect(members.root_commitment).toBe(HAND_AUTHORITY_HASH);
     // Reading inserts nothing: the basis still omits all three.
     expect(record.approval_basis).toStrictEqual({ type: "direct", consent_principal: BOB });
     // The implied values are exactly what kernel.approve() records explicitly.
@@ -731,7 +738,7 @@ describe("approval basis (@spec mission#record-principal-members)", () => {
     const full = {
       activation: { approval_event_id: "apev-hand-1912" },
       activation_actor: { iss: ISS, sub: "bob" },
-      root_commitment: "sha-256:hand-built-authority-hash",
+      root_commitment: HAND_AUTHORITY_HASH,
     };
     expect(() => assertDirectBasisConsistent(handBuiltDirect(full))).not.toThrow();
     for (const omitted of ["activation", "activation_actor", "root_commitment"] as const) {

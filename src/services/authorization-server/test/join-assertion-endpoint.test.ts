@@ -19,6 +19,7 @@
 
 import type { Server } from "node:http";
 import { createHash } from "node:crypto";
+import { authorityHash } from "@mission/core";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   createLocalJWKSet,
@@ -582,8 +583,12 @@ function heldService(kernel: MissionKernel, hooks: Hooks, enrolled: (clientId: s
   const held = {
     currentRecord: (id: string) => {
       const record = kernel.currentRecord(id);
-      const hash = hooks.hash?.();
-      return record && hash !== undefined ? { ...record, authority_hash: hash } : record;
+      // An authority change: another Authority Set with its own anchor. A
+      // recorded anchor always commits the record's set (#1917, D1061), so
+      // the set is what changes, and the anchor with it.
+      if (!record || hooks.hash?.() === undefined) return record;
+      const authority_set = [...record.authority_set, ...record.authority_set];
+      return { ...record, authority_set, authority_hash: authorityHash(record.issuer, authority_set as never) };
     },
     get: (id: string) => kernel.get(id),
     nowDate: () => kernel.nowDate(),

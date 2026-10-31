@@ -183,6 +183,7 @@ import {
   witnessSharesStoreTree,
 } from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
+import { resolvedAnchors } from "./anchors.js";
 import {
   assertDirectAdjudicationHuman,
   assertDirectBasisConsistent,
@@ -303,9 +304,9 @@ CREATE TABLE IF NOT EXISTS missions (
   intent_json TEXT NOT NULL,
   proposed_authority_json TEXT,
   authority_set_json TEXT NOT NULL,
-  intent_hash TEXT NOT NULL,
+  intent_hash TEXT,
   proposal_hash TEXT,
-  authority_hash TEXT NOT NULL,
+  authority_hash TEXT,
   subject_iss TEXT NOT NULL,
   subject_sub TEXT NOT NULL,
   approver_iss TEXT NOT NULL,
@@ -488,6 +489,77 @@ function migrateMissions(db: Database): void {
   // it reads back with none.
   if (!columns.has("extensions_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN extensions_json TEXT");
+  }
+  // @spec mission#record-content-members, mission#integrity-anchors (#1917,
+  // D1061): after every additive step, so the rebuilt table has every column.
+  rebuildMissionsWithNullableAnchors(db);
+}
+
+/** The anchor columns that a store created before #1917 declares NOT NULL. */
+const NULLABLE_ANCHOR_COLUMNS = ["intent_hash", "authority_hash"] as const;
+
+type ColumnInfo = { cid: number; name: string; type: string; notnull: number; dflt_value: unknown; pk: number };
+
+/**
+ * @spec mission#record-content-members, mission#integrity-anchors (#1917,
+ * D1061): the anchors are OPTIONAL record members, so a deployment that does
+ * not retain them stores NULL. SQLite cannot drop a NOT NULL constraint in
+ * place, so a store created with the earlier schema is rebuilt once, inside
+ * one transaction: create the new table, copy every row with its rowid, drop
+ * the old table, rename the new one, recreate the old table's indexes and
+ * triggers. The new table's DDL is the stored DDL with only the two NOT NULL
+ * clauses removed, so every other column, the PRIMARY KEY, both UNIQUE
+ * constraints, the defaults, any foreign key and STRICT are kept exactly;
+ * the rebuilt column list is checked against the old one before the commit.
+ * Guarded by `PRAGMA table_info`: a store whose `intent_hash` is already
+ * nullable (a new store, or a second open) is left as it is. Every stored
+ * value, the anchors included, is copied unchanged.
+ */
+function rebuildMissionsWithNullableAnchors(db: Database): void {
+  const before = db.prepare("PRAGMA table_info(missions)").all() as ColumnInfo[];
+  if (before.find((c) => c.name === "intent_hash")?.notnull !== 1) return;
+  const stored = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'missions'").get() as
+    | { sql: string }
+    | undefined;
+  if (!stored) throw new Error("the missions table has no stored definition to rebuild from");
+  let ddl = stored.sql.replace(/^CREATE TABLE\s+("?)missions\1\s*\(/i, "CREATE TABLE missions_rebuild (");
+  if (ddl === stored.sql) throw new Error("the missions table definition is not in the expected form");
+  for (const column of NULLABLE_ANCHOR_COLUMNS) {
+    if (before.find((c) => c.name === column)?.notnull !== 1) continue;
+    const clause = new RegExp(`(\\b${column}\\s+TEXT)\\s+NOT\\s+NULL\\b`, "i");
+    if (!clause.test(ddl)) throw new Error(`the missions table definition declares ${column} in an unexpected form`);
+    ddl = ddl.replace(clause, "$1");
+  }
+  // Every index and trigger on the table (an automatic index has no SQL: the
+  // table's own PRIMARY KEY and UNIQUE constraints recreate it).
+  const dependents = db
+    .prepare("SELECT type, name, sql FROM sqlite_master WHERE tbl_name = 'missions' AND type IN ('index', 'trigger') AND sql IS NOT NULL")
+    .all() as Array<{ type: string; name: string; sql: string }>;
+  const columnList = before.map((c) => `"${c.name.replaceAll('"', '""')}"`).join(", ");
+  // Foreign key enforcement cannot change inside a transaction; it is off for
+  // the rebuild, checked before the commit, and restored afterwards.
+  const foreignKeys = db.pragma("foreign_keys", { simple: true }) === 1;
+  if (foreignKeys) db.pragma("foreign_keys = OFF");
+  try {
+    withTransaction(db, () => {
+      db.exec(ddl);
+      db.exec(`INSERT INTO missions_rebuild (rowid, ${columnList}) SELECT rowid, ${columnList} FROM missions`);
+      db.exec("DROP TABLE missions");
+      db.exec("ALTER TABLE missions_rebuild RENAME TO missions");
+      for (const dependent of dependents) db.exec(dependent.sql);
+      const after = db.prepare("PRAGMA table_info(missions)").all() as ColumnInfo[];
+      const expected = before.map((c) =>
+        (NULLABLE_ANCHOR_COLUMNS as readonly string[]).includes(c.name) ? { ...c, notnull: 0 } : c,
+      );
+      if (JSON.stringify(after) !== JSON.stringify(expected)) {
+        throw new Error("the rebuilt missions table does not match the original apart from the anchor columns");
+      }
+      if (foreignKeys && (db.prepare("PRAGMA foreign_key_check").all() as unknown[]).length > 0) {
+        throw new Error("the missions rebuild would leave a foreign key violation");
+      }
+    });
+  } finally {
+    if (foreignKeys) db.pragma("foreign_keys = ON");
   }
 }
 
@@ -1005,6 +1077,17 @@ export interface KernelOptions {
    * for a narrower delivery window.
    */
   strictObservationWatermark?: boolean;
+  /**
+   * @spec mission#record-content-members, mission#integrity-anchors (#1917,
+   * D1061): whether the creation funnel persists the three integrity anchors
+   * on the record. Default `true`. With `false`, {@link MissionKernel.insertRecord}
+   * persists NULL for `intent_hash`, `authority_hash` and `proposal_hash`,
+   * so the stored record omits them and every reader resolves their implied
+   * values (`resolvedAnchors`). Every ceremony and artifact that needs an
+   * anchor at approval still computes it then; only its retention on the
+   * record changes.
+   */
+  recordAnchors?: boolean;
 }
 
 /**
@@ -1611,12 +1694,16 @@ export class MissionKernel {
    */
   approvalContextInput(record: MissionRecord): ApprovalContextManifestInput {
     const fresh = this.applyExpiry(record);
+    // @spec mission#integrity-anchors (#1917, D1061): each anchor recorded or
+    // implied, so a Mission that omits them builds the same manifest; a
+    // recorded anchor that differs from its implied value refuses here.
+    const anchors = resolvedAnchors(fresh);
     return {
       issuer: fresh.issuer,
       id: fresh.id,
-      intent_hash: fresh.intent_hash,
-      ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
-      authority_hash: fresh.authority_hash,
+      intent_hash: anchors.intent_hash,
+      ...(anchors.proposal_hash !== undefined ? { proposal_hash: anchors.proposal_hash } : {}),
+      authority_hash: anchors.authority_hash,
       ...(fresh.ceiling_hash ? { ceiling_hash: fresh.ceiling_hash } : {}),
       subject: fresh.subject,
       // @spec approval-governance#approval-context-manifest (#705): the
@@ -1632,6 +1719,39 @@ export class MissionKernel {
       policy_version: fresh.policy_version,
       approval_event_id: fresh.approval_event_id,
     };
+  }
+
+  /**
+   * @spec approved-set-verification#retrieval, mission#integrity-anchors
+   * (#1917, D1061): the body of an authenticated complete-set retrieval for
+   * Approved-Set Verification Tier 1: the Mission's complete approved
+   * Authority Set as served ({@link approvedSetProjection}), and the
+   * `authority_hash` a verifier recomputes it against. The anchor is the
+   * stored record's, recorded or implied (`resolvedAnchors`), never one
+   * computed over the set being served, so a served set that differs from
+   * the approved one fails the verifier's recomputation. A kernel read with
+   * no HTTP route and no disclosure gate of its own: a deployment that
+   * provisions a retrieval surface adds the gate
+   * (@spec approved-set-verification#retrieval-surface). Undefined for an
+   * unknown Mission.
+   */
+  approvedSetRetrieval(id: string): { issuer: string; authority_set: AuthorityEntry[]; authority_hash: string } | undefined {
+    const record = this.get(id);
+    if (!record) return undefined;
+    return {
+      issuer: record.issuer,
+      authority_set: this.approvedSetProjection(record),
+      authority_hash: resolvedAnchors(record).authority_hash,
+    };
+  }
+
+  /**
+   * @spec approved-set-verification#retrieval: the complete approved Authority
+   * Set a retrieval serves: the record's `authority_set` exactly as stored,
+   * never the effective set (containment and discharge narrow that one).
+   */
+  approvedSetProjection(record: MissionRecord): AuthorityEntry[] {
+    return record.authority_set;
   }
 
   /**
@@ -2162,7 +2282,7 @@ export class MissionKernel {
       signed: signApprovalGovernanceRecord(unsigned, this.statusSigner()),
       inputs: {
         approval_event_id: record.approval_event_id,
-        intent_hash: record.intent_hash,
+        intent_hash: resolvedAnchors(record).intent_hash,
         authority: record.authority_set,
         adjudication,
         consent,
@@ -2185,7 +2305,7 @@ export class MissionKernel {
     }
     const inputs: DirectApprovalInputs = {
       approval_event_id: record.approval_event_id,
-      intent_hash: record.intent_hash,
+      intent_hash: resolvedAnchors(record).intent_hash,
       approver: input.approver,
       subject: record.subject,
       source_root: sourceRoot,
@@ -2280,6 +2400,13 @@ export class MissionKernel {
       assertDirectBasisConsistent(record);
       assertDirectAdjudicationHuman(record);
     }
+    // @spec mission#integrity-anchors (#1917, D1061): every anchor the
+    // creating body computed must be the anchor over the object it commits;
+    // a contradicting one is refused here, before any write. Where the
+    // deployment does not persist anchors, the record commits without them
+    // (NULL columns, absent members), and readers resolve the implied values.
+    const anchors = resolvedAnchors(record);
+    const persistAnchors = this.opts.recordAnchors !== false;
     const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
@@ -2387,9 +2514,12 @@ export class MissionKernel {
           // recorded (null when none: template mode), with its commitment.
           record.proposed_authority ? JSON.stringify(record.proposed_authority) : null,
           JSON.stringify(record.authority_set),
-          record.intent_hash,
-          record.proposal_hash ?? null,
-          record.authority_hash,
+          // @spec mission#integrity-anchors (#1917, D1061): the resolved
+          // anchors, or NULL for each when the deployment does not retain
+          // them. Never a sentinel: a stored hash is retention.
+          persistAnchors ? anchors.intent_hash : null,
+          persistAnchors ? (anchors.proposal_hash ?? null) : null,
+          persistAnchors ? anchors.authority_hash : null,
           record.subject.iss,
           record.subject.sub,
           // @spec mission#record-principal-members: the NOT NULL `approver_*` columns
@@ -2503,6 +2633,15 @@ export class MissionKernel {
       const inserted = this.get(record.id);
       if (inserted) this.emitCommit(inserted);
     });
+    // @spec mission#integrity-anchors (#1917, D1061): the record the creating
+    // body holds is the record committed, so a Mission whose anchors are not
+    // retained carries none in memory either (the `approved_audiences`
+    // treatment above), and its approval event bytes are the stored record's.
+    if (!persistAnchors) {
+      delete record.intent_hash;
+      delete record.authority_hash;
+      delete record.proposal_hash;
+    }
   }
 
   /**
@@ -3312,7 +3451,7 @@ export class MissionKernel {
     const prior = record.containment;
     const nowIso = this.now().toISOString();
     const evidenceBase = {
-      mission: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
+      mission: { id: record.id, issuer: record.issuer, authority_hash: resolvedAnchors(record).authority_hash },
       event: input.event,
       // @spec containment#containment-policy — the ContainmentPolicy rule_id that
       // fired (from containOnEvent), or "manual" for the break-glass remove[] path.
@@ -4907,9 +5046,10 @@ export class MissionKernel {
    */
   introspectionMission(record: MissionRecord): Record<string, unknown> {
     const fresh = this.applyExpiry(record);
+    const anchors = resolvedAnchors(fresh);
     return {
       ...this.missionClaim(fresh),
-      authority_hash: fresh.authority_hash,
+      authority_hash: anchors.authority_hash,
       approval_basis: { type: fresh.approval_basis.type },
       // @spec mission#authority-sources — an ungated issuer view withholds
       // nothing: the source rides beside `approval_basis`.
@@ -4923,7 +5063,7 @@ export class MissionKernel {
       // Mission records an authority proposal, its `proposal_hash` is surfaced
       // for audit. Approval-time provenance, never carried on the `mission`
       // token claim (missionClaim above deliberately omits it).
-      ...(fresh.proposal_hash ? { proposal_hash: fresh.proposal_hash } : {}),
+      ...(anchors.proposal_hash !== undefined ? { proposal_hash: anchors.proposal_hash } : {}),
       // Absent means no containment was ever applied (absent-means-none).
       ...(fresh.containment ? { containment_version: fresh.containment.containment_version } : {}),
       ...this.statusListRef(fresh),
@@ -4967,6 +5107,12 @@ export class MissionKernel {
   ): Record<string, unknown> {
     const fresh = this.applyExpiry(record);
     const nowS = Math.floor(this.now().getTime() / 1000);
+    // @spec mission#integrity-anchors (#1917, D1061): the member-scoped
+    // disclosure emits the record's anchors, recorded or implied, and only
+    // to a caller holding "provenance"; a recorded anchor that differs from
+    // its implied value refuses the projection rather than emitting a fresh
+    // value.
+    const anchors = caller.disclose.has("provenance") ? resolvedAnchors(fresh) : undefined;
     return {
       ...this.missionClaim(fresh),
       state: fresh.state,
@@ -4980,17 +5126,15 @@ export class MissionKernel {
       ...(caller.disclose.has("budget") && fresh.derivation_limit !== null
         ? { derivations_remaining: Math.max(0, fresh.derivation_limit - fresh.derivation_count) }
         : {}),
-      ...(caller.disclose.has("provenance") && fresh.proposal_hash
-        ? { proposal_hash: fresh.proposal_hash }
-        : {}),
+      ...(anchors?.proposal_hash !== undefined ? { proposal_hash: anchors.proposal_hash } : {}),
       // @spec mission#caller-authorization-and-minimization (#702) —
       // `authority_hash` and `approval_basis` moved off the baseline claim;
       // introspection discloses them to a caller holding the deployment's
       // audit-and-correlation disclosure privilege, reusing the same
       // "provenance" grant `proposal_hash` above already gates on.
-      ...(caller.disclose.has("provenance")
+      ...(anchors
         ? {
-            authority_hash: fresh.authority_hash,
+            authority_hash: anchors.authority_hash,
             approval_basis: { type: fresh.approval_basis.type },
             // @spec mission#authority-sources, mission#introspection — the
             // source rides the SAME audit-and-correlation privilege
@@ -5121,7 +5265,7 @@ export class MissionKernel {
         // disclosed only to a caller the AS authorizes for audit or
         // correlation use, on the issuance profile's introspection
         // disclosure footing.
-        ...(opts.discloseProvenance ? { authority_hash: record.authority_hash } : {}),
+        ...(opts.discloseProvenance ? { authority_hash: resolvedAnchors(record).authority_hash } : {}),
         state: record.state,
         // @spec status#mission-status-response: CONDITIONAL `termination`,
         // present exactly when `state` is `terminated`: its `reason`,
@@ -5757,8 +5901,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     // @spec mission#transformation-capabilities (#1503 finding 7): absent
     // when the row retains none or it cannot be read; never re-derived.
     ...approvedAudiencesMemberOf(row.approved_audiences_json),
-    intent_hash: row.intent_hash as string,
-    ...(row.proposal_hash ? { proposal_hash: row.proposal_hash as string } : {}),
+    // @spec mission#integrity-anchors (#1917, D1061): a NULL anchor column is
+    // an absent member, whose implied value readers resolve; a stored value
+    // is the member, held to its implied value by `resolvedAnchors`.
+    ...anchorMemberOf("intent_hash", row.intent_hash),
+    ...anchorMemberOf("proposal_hash", row.proposal_hash),
     ...(row.submission_evidence_json
       ? {
           submission_evidence: JSON.parse(
@@ -5766,7 +5913,7 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
           ) as IntentSubmissionEvidenceFact[],
         }
       : {}),
-    authority_hash: row.authority_hash as string,
+    ...anchorMemberOf("authority_hash", row.authority_hash),
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approval_basis: JSON.parse(row.approval_basis_json as string) as ApprovalBasis,
     // @spec mission#mission-record (#1503): a stored row carrying an
@@ -5812,6 +5959,20 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     // @spec progressive#progressive-authorization: absent means no ceiling.
     ...ceilingMembersOf(row.ceiling_json),
   };
+}
+
+/**
+ * @spec mission#integrity-anchors (#1917, D1061): a stored anchor column as
+ * the record member, or no member for NULL. Any stored value becomes the
+ * member as read, so `resolvedAnchors` compares it rather than a reader
+ * silently treating it as omitted.
+ */
+function anchorMemberOf<K extends "intent_hash" | "authority_hash" | "proposal_hash">(
+  member: K,
+  value: unknown,
+): Partial<Record<K, string>> {
+  if (value === null || value === undefined) return {};
+  return { [member]: value as string } as Partial<Record<K, string>>;
 }
 
 /**

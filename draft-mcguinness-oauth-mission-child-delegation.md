@@ -1119,11 +1119,8 @@ The Child Mission record MUST contain:
 - the `parent` object;
 - the child actor;
 - the child Authority Set;
-- the child `authority_hash`;
-- the child Mission Intent's `intent_hash`
-  ({{I-D.draft-mcguinness-oauth-mission}});
 - where the child-creation exchange carried an authority proposal,
-  the recorded `proposed_authority` and its `proposal_hash`;
+  the recorded `proposed_authority`;
 - the delegation event identifier;
 - the cascade mode; and
 - the fan-out policy result.
@@ -2471,6 +2468,11 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission Record Requirements no longer list the child's integrity
+  anchors, which the OAuth binding makes implied members; the
+  delegation event still computes them, and `parent.authority_hash`
+  is unchanged (#1917).
 
 - The `policy_drawdown` basis meets Approval Governance's Approval
   Basis Contract, and the `child_creation_policy` reference and its

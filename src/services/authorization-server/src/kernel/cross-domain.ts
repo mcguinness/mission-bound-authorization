@@ -14,6 +14,7 @@ import type { ActObject } from "@mission/actor-chain";
 import { SignJWT, type CryptoKey, type JWTPayload } from "jose";
 import { isSubsetEntry, isSubsetSetUnderIgnoringCapabilitySources, narrowingPermits } from "@mission/core";
 import type { DelegateCandidate } from "./delegate-matcher.js";
+import { resolvedAnchors } from "./anchors.js";
 import { type OriginProjection, projectThroughEffective } from "./derive.js";
 import { combineOrigins, type DelegationCandidate, retainedOrigins } from "./eligibility-provenance.js";
 import type { MissionKernel } from "./kernel.js";
@@ -407,7 +408,8 @@ async function signAdmittedGrant(
     mission: {
       id: record.id,
       issuer: record.issuer,
-      authority_hash: record.authority_hash,
+      // @spec mission#integrity-anchors (#1917, D1061): recorded or implied.
+      authority_hash: resolvedAnchors(record).authority_hash,
       // @spec cross-domain#cross-domain-grant (#1630, D751): the Mission's
       // `expires_at`, unchanged and never the grant's own `exp`, so a Resource
       // AS issuing further credentials from its local token keeps the Mission's

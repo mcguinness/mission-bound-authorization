@@ -733,6 +733,14 @@ export {
   type RegisteredDirectApprovalRule,
 } from "./kernel/direct-approval-record.js";
 export {
+  type AnchoredRecord,
+  type AnchorMember,
+  AnchorMismatchError,
+  approvalEventPreimage,
+  type ResolvedAnchors,
+  resolvedAnchors,
+} from "./kernel/anchors.js";
+export {
   assertDirectAdjudicationHuman,
   assertDirectBasisConsistent,
   DirectAdjudicationError,

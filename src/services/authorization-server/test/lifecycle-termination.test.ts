@@ -20,6 +20,7 @@ import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { gateErrorToMissionError } from "../src/adapters/provider.js";
 import {
+  AnchorMismatchError,
   type AuthorityEntry,
   createChildMission,
   createExpansion,
@@ -655,7 +656,18 @@ describe("the Approval Context Manifest keeps its digest (#705 witness 10)", () 
       grant_id: null,
       status_list_idx: null,
     } as unknown as MissionRecord;
-    const manifest = approvalContextManifest(kernel.approvalContextInput(record));
+    // #1917 (D1061): the kernel refuses a recorded anchor that is not the
+    // anchor over its object, and this fixture's are placeholders. The digest
+    // stays pinned over the same manifest: the fixture's anchor strings, and
+    // every other member from the kernel's input for the record.
+    expect(() => kernel.approvalContextInput(record)).toThrow(AnchorMismatchError);
+    const { intent_hash, authority_hash, proposal_hash, ...unanchored } = record;
+    const manifest = approvalContextManifest({
+      ...kernel.approvalContextInput(unanchored as MissionRecord),
+      intent_hash: intent_hash as string,
+      authority_hash: authority_hash as string,
+      proposal_hash: proposal_hash as string,
+    });
     expect(manifest.approver).toEqual(principal);
     // Computed at bc6287cc, before the alias was removed, over the same record
     // carrying `approver` == consent_principal.

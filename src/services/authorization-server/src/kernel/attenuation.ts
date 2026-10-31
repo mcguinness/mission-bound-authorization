@@ -51,6 +51,7 @@ import {
 } from "@mission/core";
 import { type CryptoKey, decodeJwt, exportJWK, type JWK, SignJWT } from "jose";
 import type { DerivationReservationResult } from "./derivation-reservations.js";
+import { resolvedAnchors } from "./anchors.js";
 import type { MissionKernel } from "./kernel.js";
 import { assertNotStandingPaymentLineage } from "./standing-payment.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
@@ -461,7 +462,8 @@ async function mintAttenuationRoot(
   if (!(exp > nowS)) throw new Error("attenuation: the Mission expires before a root could be used");
 
   const root = await new SignJWT({
-    mission: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
+    // @spec mission#integrity-anchors (#1917, D1061): recorded or implied.
+    mission: { id: record.id, issuer: record.issuer, authority_hash: resolvedAnchors(record).authority_hash },
     cnf: { jwk: input.cnfJwk },
     sub: record.subject.sub,
     client_id: input.clientId,
@@ -729,7 +731,7 @@ async function mintCrossOrgRoot(
     mission: {
       id: record.id,
       issuer: record.issuer,
-      authority_hash: record.authority_hash,
+      authority_hash: resolvedAnchors(record).authority_hash,
       subject: { iss: record.subject.iss, sub: record.subject.sub },
     },
     cnf: { jwk: input.cnfJwk },
