@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC9635:
   RFC9767:
@@ -670,17 +678,17 @@ here it is the substrate's ratified machinery, and that companion
 does not apply.
 
 **Standing basis.** A policy is not the Approver. A grant the
-authorization server would approve without interaction creates a
-Mission only where an adopted profile supplies the required
-`approval_basis` members the issuance profile defines (type, consent
-principal, root commitment, activation, and activation actor, plus
-the OPTIONAL `adjudication` where the profile populates it), tracing
-the machine-speed activation to an accountable human consent; the
-family's Mission Templates profile is that shape. The GNAP policy
-identifier and version are activation context, never the Approver.
-Absent such a profile, noninteractive processing MUST NOT create a
-Mission: baseline Mission creation under this binding is interactive
-or deferred.
+authorization server would approve without interaction creates a Mission
+only where an adopted profile supplies the required `approval_basis`
+members of a standing-consent basis under the Approval Basis Contract
+({{I-D.draft-mcguinness-mission-approval-governance}}) (type, consent
+principal, root commitment, activation, and activation actor, plus the
+OPTIONAL `adjudication` where the profile populates it), tracing the
+machine-speed activation to an accountable human consent; the family's
+Mission Templates profile is that shape. The GNAP policy identifier and
+version are activation context, never the Approver. Absent such a
+profile, noninteractive processing MUST NOT create a Mission: baseline
+Mission creation under this binding is interactive or deferred.
 
 The negotiation loop is the clarification and narrowing surface: the
 owner or the authorization server may narrow the proposal across
