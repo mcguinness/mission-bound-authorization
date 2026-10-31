@@ -28,6 +28,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC6749:
   RFC6755:
@@ -129,14 +137,6 @@ informative:
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-approval-governance:
-    title: "Mission Approval Governance"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
     author:
       -
         ins: K. McGuinness
@@ -460,17 +460,18 @@ A Mission Template is a consented object with these members:
 
 `dispatch_policy`:
 : REQUIRED. An activation policy reference, an object of `id`,
-  `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Standing-Consent Bases"), identifying the Dispatch Policy
-  under which the Mission Issuer instantiates from this template and
+  `version`, and `digest`
+  ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+  "Activation Policy Commitment"), identifying the Dispatch Policy under
+  which the Mission Issuer instantiates from this template and
   committing its content. The policy's content is deployment-defined,
   and includes the rule that selects the instance's Agent when
   `allowed_recipients` lists more than one ({{the-mission-template}}).
-  Because `template_hash` covers this member, the template commits
-  the exact policy the human consented to, and the Mission Issuer
-  verifies its `digest` before each Dispatch under that section's
-  rule, so a machine-speed dispatch decision stays auditable against
-  the policy content, not only its identifier.
+  Because `template_hash` covers this member, the template commits the
+  exact policy the human consented to, and the Mission Issuer verifies
+  its `digest` before each Dispatch under that section's rule, so a
+  machine-speed dispatch decision stays auditable against the policy
+  content, not only its identifier.
 
 `allowed_dispatchers`:
 : REQUIRED. A non-empty array of strings, each the client identifier
@@ -881,9 +882,9 @@ The Mission Issuer adjudicates a Dispatch in this order:
    principal.
 3. **Verify the Dispatch Policy.** Verify the Dispatch Policy snapshot
    the Mission Issuer will evaluate against `dispatch_policy.digest`
-   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-   Bases"). On a mismatch, refuse the Dispatch with
-   `dispatch_policy_changed` ({{denial-reasons}}).
+   ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+   "Activation Policy Commitment"). On a mismatch, refuse the Dispatch
+   with `dispatch_policy_changed` ({{denial-reasons}}).
 4. **Derive the instance Authority Set.** Derive an Authority Set from
    the dispatch intent, and from the Dispatcher's authority proposal
    where one was submitted ({{grant-type}}), and bound it by the
@@ -918,7 +919,9 @@ The Mission Issuer adjudicates a Dispatch in this order:
 
    - `approval_basis` is the authorization basis the issuance profile
      defines ({{I-D.draft-mcguinness-oauth-mission}}), with `type:
-     "template"` and:
+     "template"`, a standing-consent basis meeting the Approval Basis
+     Contract ({{I-D.draft-mcguinness-mission-approval-governance}}),
+     and:
 
      - `consent_principal`: the template's human approver, the
        accountable principal; the Dispatcher is not the approver;
@@ -936,11 +939,12 @@ The Mission Issuer adjudicates a Dispatch in this order:
        ({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals
        and Approval Basis");
      - `root_commitment`: `template_hash`; and
-     - `approved_at` (the issuance profile's standing-consent
-       requirement): the instant the consenting human approved this
-       exact `template_version`, read from the Mission Issuer's
-       retained template record at Dispatch, never from the Dispatch
-       request.
+     - `approved_at` (the standing-consent requirement of the Approval
+       Basis Contract,
+       {{I-D.draft-mcguinness-mission-approval-governance}}): the
+       instant the consenting human approved this exact
+       `template_version`, read from the Mission Issuer's retained
+       template record at Dispatch, never from the Dispatch request.
 
      The `template` lineage member ({{template-member}}), present on
      every dispatched Mission and absent on an ordinarily approved one,
@@ -1873,6 +1877,12 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The `template` basis meets Approval Governance's Approval Basis
+  Contract, and the Dispatch Policy reference, its verification and
+  `approved_at` cite that contract, which states the same requirements
+  the OAuth binding does. Approval Governance becomes a normative
+  reference. No requirement changed (#1915).
 
 - Adjudication cites the OAuth binding's Principals and Approval Basis
   section for the roles `activation_actor` stays distinct from, since

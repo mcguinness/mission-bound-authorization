@@ -28,6 +28,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -123,14 +131,6 @@ informative:
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-approval-governance:
-    title: "Mission Approval Governance"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
     author:
       -
         ins: K. McGuinness
@@ -376,20 +376,19 @@ drawdown policy, recorded as these Mission members:
 
 `drawdown_policy`:
 : An activation policy reference, an object of `id`, `version`, and
-  `digest` ({{I-D.draft-mcguinness-oauth-mission}}, Section
-  "Standing-Consent Bases"). It identifies the policy under which the
-  Mission Issuer MAY adjudicate an in-ceiling expansion by policy
-  rather than by a fresh human approval, and commits its content. The
-  policy's content is deployment-defined.
+  `digest` ({{I-D.draft-mcguinness-mission-approval-governance}},
+  Section "Activation Policy Commitment"). It identifies the policy
+  under which the Mission Issuer MAY adjudicate an in-ceiling expansion
+  by policy rather than by a fresh human approval, and commits its
+  content. The policy's content is deployment-defined.
 
-Where present, `authority_ceiling` and `drawdown_policy` are recorded
-on the Mission and committed by a `ceiling_hash`. Because
-`ceiling_hash` covers `drawdown_policy`, the ceiling commits the exact
-policy the human consented to, and the Mission Issuer verifies its
-`digest` before each policy-adjudicated drawdown under the issuance
-profile's activation policy commitment rule
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-Bases").
+Where present, `authority_ceiling` and `drawdown_policy` are recorded on
+the Mission and committed by a `ceiling_hash`. Because `ceiling_hash`
+covers `drawdown_policy`, the ceiling commits the exact policy the human
+consented to, and the Mission Issuer verifies its `digest` before each
+policy-adjudicated drawdown under the activation policy commitment rule
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Activation Policy Commitment").
 
 The `ceiling_hash` is computed with the issuance profile's
 integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}}):
@@ -845,8 +844,9 @@ clears none of them.
 A policy-adjudicated in-ceiling successor is rooted in a
 standing-consent `approval_basis`, under the issuance profile's open
 `type` set ({{I-D.draft-mcguinness-oauth-mission}}), with `type`
-`ceiling_drawdown`, defined and owned by this profile. Its members
-are:
+`ceiling_drawdown`, defined and owned by this profile. It meets the
+Approval Basis Contract
+({{I-D.draft-mcguinness-mission-approval-governance}}). Its members are:
 
 - `consent_principal`: the Approver who consented the ceiling;
 - `activation`: an object with exactly two members, `policy_id` (the
@@ -1021,10 +1021,11 @@ the request falls back to a fresh human approval, exactly as a request
 the drawdown policy does not authorize does ({{policy-adjudication}}).
 
 The cadence is a recency ceiling on the `ceiling_drawdown` approval
-basis's `approved_at`, the kind of declared maximum standing-consent
-age the issuance profile permits a deployment to declare
-({{I-D.draft-mcguinness-oauth-mission}}); this profile makes
-publishing one mandatory rather than optional.
+basis's `approved_at`, the kind of declared maximum standing-consent age
+the Approval Basis Contract permits a deployment to declare
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Standing-Consent Recency"); this profile makes publishing one mandatory
+rather than optional.
 
 The cadence is part of the drawdown policy's own versioned content: a
 deployment's drawdown policy document MUST state the cadence effective
@@ -1395,6 +1396,12 @@ Denial Reasons Registry"):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The `ceiling_drawdown` basis meets Approval Governance's Approval
+  Basis Contract, and the drawdown policy reference, its verification
+  and the ceiling review cadence cite that contract, which states the
+  same requirements the OAuth binding does. Approval Governance becomes
+  a normative reference. No requirement changed (#1915).
 
 -01
 

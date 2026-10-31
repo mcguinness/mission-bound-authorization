@@ -3874,12 +3874,12 @@ evaluate together ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Consent Binding").
 
 Optional companions can reduce repeated approvals through standing
-consent ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Standing-Consent Bases"; {{standing-agent}}): for example, a
-template, an authority ceiling, or a policy that a human approved
-once governs later Missions. The template, ceiling, or policy still
-needs a meaningful human approval, and no such mechanism removes its
-profile's human-approval requirement for high-consequence authority.
+consent ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Standing-Consent Bases"; {{standing-agent}}): for example, a template,
+an authority ceiling, or a policy that a human approved once governs
+later Missions. The template, ceiling, or policy still needs a
+meaningful human approval, and no such mechanism removes its profile's
+human-approval requirement for high-consequence authority.
 
 The unit of governance is the action, not the content. A Mission
 bounds where an agent may act (resources, actions) and how much
@@ -5108,6 +5108,9 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Standing consent is cited from Approval Governance's Approval Basis
+  Contract. No requirement changed (#1915).
 
 - Gains, from the OAuth binding, Approval Role Mapping beside Mission
   Creation Paths: how each creation scenario assigns the three
