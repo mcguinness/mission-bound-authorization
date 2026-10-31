@@ -93,7 +93,7 @@ import {
   type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
 import { requestsDeferral } from "./deferred-mission-approval.js";
-import { reconciliationStatusFor } from "../kernel/expansion.js";
+import { reconciliationStatusFor, successorAuthority } from "../kernel/expansion.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
 import {
   ChildDelegationError,
@@ -2921,10 +2921,27 @@ export async function handleExpansionExchange(
   // drawdown's preserved set, carrying the ceiling's reference, never one
   // assembled afresh. Only a predecessor without one decides on the assembled
   // derivation; the fresh-approval fallback assembles at its own decision.
-  const requested =
-    opts.progressive && active.authority_ceiling
-      ? drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling)
-      : opts.kernel.derive(intent, proposedAuthority);
+  // @spec expansion#denial-reasons, resource-access#resource-contract (#1827,
+  // D949): an Intent the AS can parse but cannot derive a valid Authority Set
+  // from is refused `invalid_authorization_details` where a proposal
+  // accompanies it, otherwise `invalid_request`, before anything is opened or
+  // reserved. A required reference with no current version is one such case:
+  // no new approval references a version that is not current.
+  const refuseUnderivable = (e: IntentError): void =>
+    txError(ctx, 400, proposedAuthority?.length ? "invalid_authorization_details" : "invalid_request", e.message);
+  let requested: AuthorityEntry[];
+  try {
+    requested =
+      opts.progressive && active.authority_ceiling
+        ? drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling)
+        : opts.kernel.derive(intent, proposedAuthority);
+  } catch (e) {
+    if (e instanceof IntentError) {
+      refuseUnderivable(e);
+      return;
+    }
+    throw e;
+  }
   const effective = opts.kernel.issuableAuthoritySet(active);
   if (isSubsetSetIgnoringCapabilitySources(requested, effective)) {
     ctx.status = 400;
@@ -3008,6 +3025,20 @@ export async function handleExpansionExchange(
   const store = opts.expansionDeferrals;
   if (!store) {
     throw new errors.InvalidRequest("deferred expansion approval is not configured");
+  }
+  // @spec resource-access#resource-contract (#1827, D949): the fresh approval
+  // assembles the successor's references from configuration
+  // (successorAuthority), so a request it cannot assemble opens no deferral
+  // that could never be approved. The decision assembles again, so a
+  // configuration change during the deferred window is still refused there.
+  try {
+    successorAuthority(opts.kernel, intent, proposedAuthority?.length ? proposedAuthority : undefined, active);
+  } catch (e) {
+    if (e instanceof IntentError) {
+      refuseUnderivable(e);
+      return;
+    }
+    throw e;
   }
   let pending: ReturnType<typeof store.open>;
   try {
