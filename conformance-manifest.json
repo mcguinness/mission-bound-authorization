@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "434fb8da5f4c437e17ef28c9c2d129035a04d05e",
-    "content_sha256": "386689aef2e78bf1450883cda337a813be4893e439e361b3cd0a7234c64a7c5c"
+    "revision": "0d7c3a8b072908096a72dcaa5585abcf83b67a39",
+    "content_sha256": "c01aec972d2fd3bedcc63798b86a11480085618e52618622bfbda2c1b4a1eb51"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -7836,7 +7836,7 @@
   },
   {
    "id": "core.approval-basis.approved-at-standing-consent",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "The activating issuer MUST verify `approved_at` against its retained, authenticated record of that standing consent for that exact version",
    "role": "AS",
@@ -7894,11 +7894,11 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-recency",
    "text": "the activating issuer MUST refuse to activate an instance whose `approved_at` is older than the ceiling",
    "role": "AS",
@@ -7945,7 +7945,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records."
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.adjudication-direct-human",
@@ -7973,8 +7973,8 @@
   },
   {
    "id": "core.approval-basis.adjudication-standing-consent-policy",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "policy-adjudication",
    "text": "Where a companion profile defining a standing-consent `type` populates `adjudication`, `kind` MUST be `policy`, naming the identity and version of the policy or workflow that adjudicated the instance",
    "role": "AS",
    "strength": "MUST",
@@ -8002,12 +8002,12 @@
      "surface": "derivation"
     }
    ],
-   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor."
+   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.standing-consent.activation-policy-reference",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "activation-policy-commitment",
    "text": "the object the accountable human consented to MUST carry that policy as an activation policy reference",
    "role": "AS",
    "strength": "MUST",
@@ -8047,12 +8047,12 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.standing-consent.activation-policy-verify",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "activation-policy-commitment",
    "text": "Before each activation, the activating issuer MUST compute `digest` over the exact snapshot it evaluates, and MUST NOT activate the instance under that policy when the result differs",
    "role": "AS",
    "strength": "MUST",
@@ -8128,12 +8128,12 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.standing-consent.activation-policy-retain",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "activation-policy-commitment",
    "text": "The issuer MUST retain each snapshot's bytes and media type for the audit horizon",
    "role": "AS",
    "strength": "MUST",
@@ -8221,11 +8221,11 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017."
+   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.standing-consent.activation-event-id",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "That value identifies this instance's approval event, never the standing approval",
    "role": "AS",
@@ -8271,7 +8271,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one."
+   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -8701,8 +8701,8 @@
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "policy-adjudication",
    "text": "the AS MUST NOT let it supply or widen authority",
    "role": "AS",
    "strength": "MUST NOT",
@@ -8730,12 +8730,12 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged."
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "policy-adjudication",
    "text": "the AS MUST NOT let it supply or widen authority",
    "role": "AS",
    "strength": "MUST NOT",
@@ -8760,7 +8760,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged."
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
@@ -8828,7 +8828,7 @@
    "id": "core.approval-basis.type-direct",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-principal-members",
-   "text": "REQUIRED. A string: `direct`, or a standing-consent value that a companion profile defines ({{standing-consent-bases}}).",
+   "text": "REQUIRED. A string: `direct`, or a standing-consent value that a companion profile defines ({{mission-creating-paths}}).",
    "facet": "direct-basis",
    "role": "AS",
    "strength": "MUST",
@@ -9140,7 +9140,7 @@
   },
   {
    "id": "core.approval-basis.standing-consent-activation-required",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "REQUIRED for every standing-consent `type`. An object naming what activated this Mission instance, in the shape that the basis's companion profile defines.",
    "role": "AS",
@@ -9180,11 +9180,11 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.standing-consent-activation-actor-required",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "REQUIRED for every standing-consent `type`. An object with `iss` and `sub`. Who or what triggered this instance: a dispatching or requesting party distinct from the consenting human.",
    "role": "AS",
@@ -9230,11 +9230,11 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.standing-consent-root-commitment-required",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "REQUIRED for every standing-consent `type`. A string. The commitment to the consented root",
    "role": "AS",
@@ -9274,7 +9274,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.approved-at-absent-direct",
@@ -11503,7 +11503,7 @@
    "id": "core.mission-record.policy-version-required-where-used",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-provenance-members",
-   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{standing-consent-recency}}).",
+   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Standing-Consent Recency\").",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -83305,7 +83305,7 @@
    "id": "core.other-types.derived-mission-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "transformation-capabilities",
-   "text": "A Mission created from earlier authority, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a standing consent ({{standing-consent-bases}}), does not reassign the original approved audience of an entry it inherits: the entry keeps that of the authority it derives from",
+   "text": "A Mission created from earlier authority, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a standing consent ({{mission-creating-paths}}), does not reassign the original approved audience of an entry it inherits: the entry keeps that of the authority it derives from",
    "role": "AS",
    "strength": "stated",
    "applicability": {
