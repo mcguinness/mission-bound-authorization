@@ -719,26 +719,82 @@ describe("ceiling consent under a configuration requiring a contract reference (
     expectSuccessorPinned(body, consented);
   });
 
+  /** The shipped declaration with every version superseded within its retention: no current version. */
+  function noCurrentVersion(): ResourceContractDeclarations {
+    const retainedUntil = new Date(asContract.kernel.nowDate().getTime() + 365 * 86_400_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    return new ResourceContractDeclarations(
+      SHIPPED_REQUIRED.declarations.map((d) => ({
+        resource: d.resource,
+        resource_match: d.resource_match,
+        id: d.id,
+        requires_reference: ["payments:invoice.read"],
+        versions: d.versions
+          .filter((v) => v.document !== undefined)
+          .map((v) => ({ version: v.version, digest: v.digest, document: v.document, state: "superseded", retained_until: retainedUntil })),
+      })),
+    );
+  }
+
   // Preservation-only throughout: with no current version to assemble, the
   // wire decision and the creation carry the consented reference.
   it("an in-ceiling drawdown completes once the consented version is superseded within its retention, with no current version", async () => {
-    const retainedUntil = new Date(asContract.kernel.nowDate().getTime() + 365 * 86_400_000).toISOString().replace(/\.\d{3}Z$/, "Z");
-    const { consented, res, body } = await pinnedDrawdown(
-      () =>
-        new ResourceContractDeclarations(
-          SHIPPED_REQUIRED.declarations.map((d) => ({
-            resource: d.resource,
-            resource_match: d.resource_match,
-            id: d.id,
-            requires_reference: ["payments:invoice.read"],
-            versions: d.versions
-              .filter((v) => v.document !== undefined)
-              .map((v) => ({ version: v.version, digest: v.digest, document: v.document, state: "superseded", retained_until: retainedUntil })),
-          })),
-        ),
-    );
+    const { consented, res, body } = await pinnedDrawdown(noCurrentVersion);
     expect(res.status, JSON.stringify(body)).toBe(200);
     expectSuccessorPinned(body, consented);
+  });
+
+  /**
+   * An Expansion of `predecessor` requesting `actions` under a configuration
+   * with no current version, `withProposal` or with its authority derived from
+   * the Intent: the response, and whether a deferral opened or an operation
+   * was reserved.
+   */
+  async function expandWithNoCurrentVersion(accessToken: string, actions: string[], withProposal: boolean) {
+    const crid = crypto.randomUUID();
+    const params = expansionParams(accessToken, crid, actions);
+    if (!withProposal) delete params.authorization_details;
+    const swapped = vi.spyOn(asContract.kernel, "resourceContracts").mockReturnValue(noCurrentVersion());
+    const opened = vi.spyOn(asContract.expansionDeferrals, "open");
+    try {
+      const res = await tokenRequest(params, apContract, CONTRACT_ISSUER);
+      const body = (await res.json()) as { error?: string; deferral_code?: string };
+      return { res, body, opened: opened.mock.calls.length, reserved: asContract.creationIdempotency.find("ap-agent", crid) };
+    } finally {
+      opened.mockRestore();
+      swapped.mockRestore();
+    }
+  }
+
+  describe("an Expansion that needs a fresh approval when a required reference has no current version is refused 400, opening and reserving nothing (@spec expansion#denial-reasons, resource-access#resource-contract, #1827, D949)", () => {
+    it("without a consented ceiling, a request with a proposal is refused invalid_authorization_details", async () => {
+      const m = await issueMission(READ, undefined, { client: apContract, issuer: CONTRACT_ISSUER });
+      const { res, body, opened, reserved } = await expandWithNoCurrentVersion(m.accessToken, READ_LIST, true);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.deferral_code).toBeUndefined();
+      expect(opened).toBe(0);
+      expect(reserved).toBeUndefined();
+    });
+
+    it("without a consented ceiling, a request whose authority the Intent derives is refused invalid_request", async () => {
+      const m = await issueMission(READ, undefined, { client: apContract, issuer: CONTRACT_ISSUER });
+      const { res, body, opened, reserved } = await expandWithNoCurrentVersion(m.accessToken, READ_LIST, false);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(opened).toBe(0);
+      expect(reserved).toBeUndefined();
+    });
+
+    it("a ceiling chain's request beyond the ceiling, which falls back to a fresh approval, is refused before any deferral opens", async () => {
+      const decided = assembledCeilingOffer(ceilingOf("drawdown-std", READ_CEILING), SHIPPED_REQUIRED) as CeilingDecision;
+      const m = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING), { client: apContract, issuer: CONTRACT_ISSUER, decided });
+      const { res, body, opened, reserved } = await expandWithNoCurrentVersion(m.accessToken, BEYOND, true);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.deferral_code).toBeUndefined();
+      expect(opened).toBe(0);
+      expect(reserved).toBeUndefined();
+    });
   });
 });
 
