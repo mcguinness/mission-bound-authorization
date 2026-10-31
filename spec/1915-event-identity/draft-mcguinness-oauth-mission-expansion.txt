@@ -2582,11 +2582,11 @@ Table of Contents
 17.2.  Informative References
 
    [I-D.draft-ietf-oauth-deferred-token-response]
-              Jacobsen, F. K., de Oliveira Niero, G., and M. Gerber,
-              "Deferred Token Response", Work in Progress, Internet-
-              Draft, draft-ietf-oauth-deferred-token-response-00, 16
-              September 2026, <https://datatracker.ietf.org/doc/html/
-              draft-ietf-oauth-deferred-token-response-00>.
+              de Oliveira Niero, G. and D. Liu, "Deferred Token
+              Response", Work in Progress, Internet-Draft, draft-ietf-
+              oauth-deferred-token-response-01, 31 October 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              deferred-token-response-01>.
 
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", 2026,
@@ -2726,7 +2726,7 @@ Appendix B.  Document History
       that a later change to the published horizon never shortens it for
       a recorded identifier, and that a reservation still pending when
       the horizon ends survives until its operation ends; a reuse after
-      the horizon receives a new approval_event_id (#1915).
+      the tombstone expires receives a new approval_event_id (#1915).
 
    *  Completion Modes says where any grant binding a successor carries
       comes from in each mode, and that a deferred completion or

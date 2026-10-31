@@ -8324,10 +8324,12 @@ retention contract: when the retry horizon starts and ends; that a
 reservation whose operation is still pending when the horizon ends
 is retained until that operation ends; that a published horizon is
 never shortened for a key already recorded; and that a reuse of the
-key after the horizon is a new operation, which meets every check a
-new request meets, including authorization, policy, ceiling, expiry
-and accounting, and receives a new <code>approval_event_id</code>. Expiry of a
-key never lets an earlier decision create another Mission.<a href="#section-16.1-4" class="pilcrow">¶</a></p>
+key after its reservation has expired under that contract, never
+while its operation is pending, is a new operation, which meets
+every check a new request meets, including authorization, policy,
+ceiling, expiry and accounting, and receives a new
+<code>approval_event_id</code>. Expiry of a key never lets an earlier decision
+create another Mission.<a href="#section-16.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="audit-horizon">
@@ -10715,7 +10717,8 @@ AS allocates <code>approval_event_id</code> and never derives it from a
 reusable client value, binds the direct path's identifier to the
 authorization interaction, refuses a decision delivered after the
 lifetime of what it decides, and requires a profile with a request
-key to state its retention contract (#1915).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
+key to state its retention contract, under which a reuse after the
+reservation expires is a new operation (#1915).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-E-3.2">
           <p id="appendix-E-3.2.1">Mission Creation states the direct creation path, with the Mission

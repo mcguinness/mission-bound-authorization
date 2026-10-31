@@ -1844,7 +1844,7 @@ decision (<a href="#interactive-handoff" class="auto internal xref">Section 5.3<
 <a href="#example" class="auto internal xref">Appendix A</a>, with client authentication omitted (line breaks for
 display purposes only). The client also opts in to deferred completion
 with the deferred token response's <code>completion_mode</code> parameter
-(<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00#section-4.1" class="relref">Section 4.1</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>):<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-01#section-4.1" class="relref">Section 4.1</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>):<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 <span id="name-expansion-request"></span><div id="fig-request">
 <figure id="figure-2">
           <div class="lang-http sourcecode" id="section-4.1-6.1">
@@ -2232,7 +2232,7 @@ Cache-Control: no-store
           </figcaption></figure>
 </div>
 <p id="section-5.2-13">The following is an example of the client's poll with the deferred grant
-type (<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00#section-5.5" class="relref">Section 5.5</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>)
+type (<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-01#section-5.5" class="relref">Section 5.5</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>)
 and a DPoP proof, with client authentication omitted (line breaks for
 display purposes only):<a href="#section-5.2-13" class="pilcrow">¶</a></p>
 <span id="name-deferred-poll"></span><div id="fig-poll">
@@ -4544,7 +4544,7 @@ Error Registry" (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-11.4"
 <dl class="references">
 <dt id="I-D.draft-ietf-oauth-deferred-token-response">[I-D.draft-ietf-oauth-deferred-token-response]</dt>
         <dd>
-<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-deferred-token-response-00</span>, <time datetime="2026-09-16" class="refDate">16 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
+<span class="refAuthor">de Oliveira Niero, G.</span> and <span class="refAuthor">D. Liu</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-deferred-token-response-01</span>, <time datetime="2026-10-31" class="refDate">31 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-01">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
@@ -4684,7 +4684,7 @@ approved, not the predecessor's authority plus a delta.<a href="#appendix-A-3" c
 that a later change to the published horizon never shortens it for
 a recorded identifier, and that a reservation still pending when
 the horizon ends survives until its operation ends; a reuse after
-the horizon receives a new <code>approval_event_id</code> (#1915).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+the tombstone expires receives a new <code>approval_event_id</code> (#1915).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
           <p id="appendix-B-2.2.1">Completion Modes says where any grant binding a successor carries
