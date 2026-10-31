@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "434fb8da5f4c437e17ef28c9c2d129035a04d05e",
-    "content_sha256": "386689aef2e78bf1450883cda337a813be4893e439e361b3cd0a7234c64a7c5c"
+    "revision": "40581d0510e646bee5cc6f95c09be9d9f0c261fc",
+    "content_sha256": "5cc8d44be1e1575ba8875f144ae5f24834d5b84ccc51b16fa97984dd6baa4d87"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -107,8 +107,8 @@
     "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "7199d23e51d257369b3a89ea2eed4e8cd6f541a2",
-    "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
+    "revision": "40581d0510e646bee5cc6f95c09be9d9f0c261fc",
+    "content_sha256": "ba06da001ebff932f96ffda83ef63447fda4653d205833ac88b7df1cbe03b70d"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
     "revision": "a6567f6935140f2b1b04e1f1d819ce14dbbc341f",
@@ -11484,8 +11484,142 @@
    "surface": "approval-ceremony",
    "assertion": "replay",
    "observation": {
-    "normative": "a repeated delivery of a committed approval decision, under the same `approval_event_id`, creates no second Mission: the AS holds exactly one Mission for that `approval_event_id`, the duplicate delivery causes no version change, and the repeated decision completes with the committed Mission; a retried standing-consent activation likewise resolves to the instance its first delivery committed",
+    "normative": "a repeated delivery of a committed approval decision, under the same `approval_event_id`, creates no second Mission: the AS holds exactly one Mission for that `approval_event_id`; on the direct path the duplicate delivery causes no version change and the repeated decision completes with the committed Mission; a retried standing-consent activation likewise resolves to the instance its first delivery committed; on other paths the path's own response applies, and none creates a Mission",
     "local": "the approval decision derives `approval_event_id` from the interaction (`apev_<uid>`), so a double-submitted decision on one interaction carries the same identifier; it completes like the first, and its code redeems to the committed Mission"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval event as the idempotency key (@spec mission#mission-record, #1608) > a repeated delivery of the same approval decision creates no second Mission: it completes with the committed Mission, the only one for its approval_event_id, at an unchanged version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "direct approval: one approval_event_id never yields a second Mission (@spec mission#approval-idempotency, #1915) > a decision replayed past every request-key horizon, after its Mission was revoked, returns that Mission and creates none (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Deferred Mission Approval: the pending approval's event yields one Mission after any horizon (@spec mission#approval-idempotency, #1915) > a policy-completed approval, completed again, approved directly, or re-activated under its event past the pending lifetime and every request-key horizon, yields its one Mission (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Deferred Mission Approval: the pending approval's event yields one Mission after any horizon (@spec mission#approval-idempotency, #1915) > a directly approved pending approval admits no second approval or policy completion past the horizon (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): an approval event replayed into another Mission (@spec mission#approval-idempotency, #1915) > a second deferral approved under an approval_event_id that already created a successor creates no second Mission under it (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation. #1912 (D1047): the rule moved, with its wording and keyword, to Implementation Considerations, Approval Idempotency, naming the record's `approval_event_id` as its key; the Mission Record keeps the invariant that one approval event creates at most one Mission. Re-quoted; observation and witnesses unchanged. #1915 (D1056): each path keeps its own response to a repeated delivery. Added witnesses: a kernel decision replayed after its Mission was revoked returns that Mission; Deferred Mission Approval repeats (policy, direct, governed re-activation) yield one Mission; an expansion deferral approved under an event that created another predecessor's successor is refused access_denied (mutation: removing that check reaches the missions uniqueness and answers 500). Stays partial for the row's existing reasons."
+  },
+  {
+   "id": "core.mission-record.approval-event-id-allocation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-idempotency",
+   "text": "The AS MUST allocate `approval_event_id`, unique among its Missions, and MUST NOT derive it from a value that a client supplies and can reuse.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client-supplied request key reused after its horizon (a Dispatch's dispatch_event_id, a drawdown's or a child creation's creation_request_id) yields a Mission with an approval_event_id different from the earlier Mission's, concurrent reuses after the horizon share one new value, and a record reusing a committed approval_event_id is never inserted",
+    "local": "the request-key paths allocate 128 random bits per reservation (D297); the direct and device paths allocate apev_<uid> from the AS-allocated interaction uid, which the next row witnesses"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: the dispatch_event_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the instance and its approval_event_id) and frees it 1 ms after (a new instance, a new approval_event_id) (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: concurrent reuse of one expired dispatch_event_id (@spec mission#approval-idempotency, #1915) > two Dispatches racing on an expired key create one new instance under one new approval_event_id, and the loser recovers it (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch at the token endpoint: the dispatch_event_id horizon (@spec mission#approval-idempotency, #1915) > 1 ms before the horizon a reused dispatch_event_id with another task is refused invalid_request; four concurrent reuses after it create one instance under one new approval_event_id (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Progressive drawdown: the creation_request_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the successor and its approval_event_id) and frees it 1 ms after, when the same request is a new operation judged on current state (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Progressive drawdown: concurrent reuse of one expired creation_request_id (@spec mission#approval-idempotency, #1915) > four concurrent reuses of an expired key create one successor with one new approval_event_id, and every response names it (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Child Delegation: the creation_request_id horizon (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the child and its approval_event_id) and frees it 1 ms after (a new child, a new approval_event_id) (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Child Delegation: the creation_request_id horizon (@spec mission#approval-idempotency, #1915) > four concurrent reuses of an expired key create one child with one new approval_event_id, and every response names it (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): the horizon runs from initiation (@spec mission#approval-idempotency, #1915) > with the shipped horizon, an identical reuse after it and after the first deferral's lifetime starts a new operation: a new deferral, never the dead handle, completed under a new approval_event_id (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "direct approval: one approval_event_id never yields a second Mission (@spec mission#approval-idempotency, #1915) > a fresh record reusing a committed approval_event_id is refused by the store's uniqueness, never inserted (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1915 event identity (D1056). Mutation proof for uniqueness: the existing #1608 proof (dropping UNIQUE from the missions DDL with the lookups disabled commits a second Mission). The request-key witnesses assert a different value after a reuse of the same key, which a value derived from the key would repeat."
+  },
+  {
+   "id": "core.mission-record.approval-event-id-direct-interaction",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-idempotency",
+   "text": "At a direct approval event the AS MUST allocate it before the decision commits and bind it to the authorization interaction, never to a `request_uri` or another client-supplied value.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a decision submitted twice on one authorization interaction carries one approval_event_id, allocated from the interaction before the decision commits, and two interactions carry different values whatever request parameters they share",
+    "local": "the decision handler derives approval_event_id = apev_<uid> from the oidc-provider interaction uid (adapters/provider.ts)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -11497,7 +11631,134 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation. #1912 (D1047): the rule moved, with its wording and keyword, to Implementation Considerations, Approval Idempotency, naming the record's `approval_event_id` as its key; the Mission Record keeps the invariant that one approval event creates at most one Mission. Re-quoted; observation and witnesses unchanged."
+   "notes": "#1915 event identity (D1056). Witnessed: the double-submitted decision on one interaction. Not witnessed: two interactions for one pushed request carrying different values."
+  },
+  {
+   "id": "core.mission-record.approval-decision-late-delivery",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-idempotency",
+   "text": "A delivery of the decision after that lifetime MUST NOT create a Mission, and the AS MUST retain the identifier for at least that lifetime",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a decision delivered after the lifetime of the interaction, deferral or activation it decides creates no Mission, and the identifier of a committed decision is still found for as long as that decision could be delivered",
+    "local": "the reference never prunes Mission rows, so the identifier outlives every decision lifetime"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > creates no Mission for a decision reached after the session expired or ended",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval state, lifetime, cancellation and queue (@spec deferred-approval#state-machine, deferred-approval#pending-staleness, deferred-approval#queue-pressure) > resolves a pending approval to expired_token once its lifetime passes, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): the horizon runs from initiation (@spec mission#approval-idempotency, #1915) > with the shipped horizon, an identical reuse after it and after the first deferral's lifetime starts a new operation: a new deferral, never the dead handle, completed under a new approval_event_id (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1915 event identity (D1056). Witnessed: a device decision after the session expired; a deferred Mission approval past its lifetime; an expansion deferral polled past its lifetime. Not witnessed: a direct decision after its interaction expired, and an expansion approval recorded after the deferral's lifetime."
+  },
+  {
+   "id": "core.mission-record.request-key-retention-contract",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-idempotency",
+   "text": "The profile defining such a key MUST state its retention contract:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the reference meets the contract its profile states (Expansion's Tombstone Retention, imported by Template, Progressive, Child Delegation and Continuation): the horizon runs from the reservation through its end inclusive, is never shortened for a recorded key, and keeps a pending reservation until its operation ends; a reuse after it is a new operation that meets the current authorization, policy, ceiling, expiry and accounting checks and receives a new approval_event_id"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: the dispatch_event_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the instance and its approval_event_id) and frees it 1 ms after (a new instance, a new approval_event_id) (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: the dispatch_event_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > a horizon fixed at reservation is never shortened by a later, shorter published retention: the recorded key is still recovered past the new value (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > the pending reservation itself survives the lapsed horizon: the reuse finds the original row, its reservation instant and its deferral, not a re-made one (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: a reuse after expiry meets the current checks (@spec mission#approval-idempotency, #1915) > a review cadence that lapsed inside the window still recovers the instance; after the horizon the reuse is refused review_overdue and creates nothing (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: a reuse after expiry meets the current checks (@spec mission#approval-idempotency, #1915) > a Dispatch Policy edited after consent does not touch a retry inside the window; after the horizon the reuse is refused dispatch_policy_changed and creates nothing (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: a reuse after expiry meets the current checks (@spec mission#approval-idempotency, #1915) > a template revoked inside the window still recovers the instance; after the horizon the reuse is refused template_not_active and creates nothing (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: a reuse after expiry meets the current checks (@spec mission#approval-idempotency, #1915) > a requested Mission expiry that passed at the horizon is refused for the reuse after it, creating nothing, while the retry before it recovers (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Progressive drawdown: a reuse after expiry meets the current checks (@spec mission#approval-idempotency, #1915) > a source narrowed since consent does not touch a retry inside the window; after the horizon the reuse is refused access_denied, creating and reserving nothing, and the successor is unchanged (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Child Delegation: the creation_request_id horizon (@spec mission#approval-idempotency, #1915) > a parent whose child allowance is spent still recovers the child inside the window; after the horizon the reuse is refused on the current fan-out and creates nothing (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): the horizon runs from initiation (@spec mission#approval-idempotency, #1915) > with the shipped horizon, an identical reuse after it and after the first deferral's lifetime starts a new operation: a new deferral, never the dead handle, completed under a new approval_event_id (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1915 event identity (D1056). The contract's single statement is Expansion's Tombstone Retention (expansion.creation-retention rows). Each clause has its witness: the boundary, the fixed horizon, the pending reservation, and the current checks after the horizon (review cadence, Dispatch Policy, template revocation, expiry, a narrowed source, fan-out)."
   },
   {
    "id": "core.mission-record.policy-version-required-where-used",
@@ -88721,6 +88982,142 @@
    "coverage": "todo",
    "tests": [],
    "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.creation-retention.tombstone-survives-horizon",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-retention",
+   "text": "The idempotency tombstone, the `(client, creation_request_id)` binding with its fingerprint and its Mission or continuation reference, MUST survive at least the deployment's published retry horizon",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a request key is retained, and a retry recovers its operation, from its reservation through the reservation instant plus the horizon published at reservation, inclusive (1 ms before and exactly at the boundary), measured from the reservation and not from completion, and never shortened by a later, shorter published retention; 1 ms after it a reuse is a new operation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: the dispatch_event_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the instance and its approval_event_id) and frees it 1 ms after (a new instance, a new approval_event_id) (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: the dispatch_event_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > measures the horizon from the reservation insert, not from the completion written later in the same transaction (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: the dispatch_event_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > a horizon fixed at reservation is never shortened by a later, shorter published retention: the recorded key is still recovered past the new value (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch at the token endpoint: the dispatch_event_id horizon (@spec mission#approval-idempotency, #1915) > 1 ms before the horizon a reused dispatch_event_id with another task is refused invalid_request; four concurrent reuses after it create one instance under one new approval_event_id (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Progressive drawdown: the creation_request_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the successor and its approval_event_id) and frees it 1 ms after, when the same request is a new operation judged on current state (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Child Delegation: the creation_request_id horizon (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the child and its approval_event_id) and frees it 1 ms after (a new child, a new approval_event_id) (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): the horizon runs from initiation (@spec mission#approval-idempotency, #1915) > a key reserved at initiation and completed later keeps its initiation horizon: retained at it, free 1 ms after, when the same request is judged on current state and creates nothing (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1915 event identity (D1056). Witnessed on every path that imports the rule (Template Dispatch, Progressive drawdown, Child Delegation) and on deferred Expansion. Mutation: computing retention from the current setting instead of the expiry fixed at reservation fails the fixed-horizon witness."
+  },
+  {
+   "id": "expansion.creation-retention.pending-reservation-survives",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-retention",
+   "text": "A reservation whose operation is still pending when the horizon ends (a deferral not yet completed, denied or expired) MUST survive until that operation ends",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "with a published horizon shorter than the deferral lifetime, a deferral's reservation is still found after the horizon, with its original reservation instant and deferral, while the deferral is pending or approved and not completed; a changed request under the key is refused invalid_request, an identical one joins the deferral, no second deferral opens under the key, completion binds only the reservation its own deferral made, and the key is free once the deferral's lifetime has ended"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > the pending reservation itself survives the lapsed horizon: the reuse finds the original row, its reservation instant and its deferral, not a re-made one (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > a reuse with another task while the first deferral awaits the Approver opens no second deferral under the key (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > an identical reuse after the first deferral was approved, and before its poll completed it, opens no second deferral under the key (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > the first deferral's completion never binds its successor to a reservation a changed reuse re-made under the key (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a horizon that elapses while the operation is still pending (@spec mission#approval-idempotency, #1915) > an identical reuse while the deferral awaits the Approver joins the pending deferral and opens no second one (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a horizon that elapses while the operation is still pending (@spec mission#approval-idempotency, #1915) > whatever a key that lapsed mid-ceremony admits, approving and polling every deferral under it yields at most one successor (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > a live deferral refuses a changed request under its creation_request_id, and joins an identical one after its approval, even where no reservation stands (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > a completion binds only the reservation its own deferral made, never a row another operation holds under the key (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1915 event identity (D1056). Mutations, each caught by its own witness: purging a reserved row at the horizon whatever its operation (the reservation-survives witness); dropping the live-deferral lookup under the key (the live-holder witness); completing by key alone (the binds-own witness)."
   },
   {
    "id": "expansion.policy-probing.rate-limit",
