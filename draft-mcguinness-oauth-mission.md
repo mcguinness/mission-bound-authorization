@@ -5417,10 +5417,12 @@ retention contract: when the retry horizon starts and ends; that a
 reservation whose operation is still pending when the horizon ends
 is retained until that operation ends; that a published horizon is
 never shortened for a key already recorded; and that a reuse of the
-key after the horizon is a new operation, which meets every check a
-new request meets, including authorization, policy, ceiling, expiry
-and accounting, and receives a new `approval_event_id`. Expiry of a
-key never lets an earlier decision create another Mission.
+key after its reservation has expired under that contract, never
+while its operation is pending, is a new operation, which meets
+every check a new request meets, including authorization, policy,
+ceiling, expiry and accounting, and receives a new
+`approval_event_id`. Expiry of a key never lets an earlier decision
+create another Mission.
 
 ## Audit Horizon {#audit-horizon}
 
@@ -6922,7 +6924,8 @@ resolve before interoperating.
   reusable client value, binds the direct path's identifier to the
   authorization interaction, refuses a decision delivered after the
   lifetime of what it decides, and requires a profile with a request
-  key to state its retention contract (#1915).
+  key to state its retention contract, under which a reuse after the
+  reservation expires is a new operation (#1915).
 
 - Mission Creation states the direct creation path, with the Mission
   Approval subsections in the order of the steps they serve.

@@ -11746,7 +11746,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the reference meets the contract its profile states (Expansion's Tombstone Retention, imported by Template, Progressive, Child Delegation and Continuation): the horizon runs from the reservation through its end inclusive, is never shortened for a recorded key, and keeps a pending reservation until its operation ends; a reuse after it is a new operation that meets the current authorization, policy, ceiling, expiry and accounting checks and receives a new approval_event_id"
+    "normative": "the reference meets the contract its profile states (Expansion's Tombstone Retention, imported by Template, Progressive, Child Delegation and Continuation): the horizon runs from the reservation through its end inclusive, is never shortened for a recorded key, and keeps a pending reservation until its operation ends; a reuse after the reservation has expired under that contract, never while its operation is pending, is a new operation that meets the current authorization, policy, ceiling, expiry and accounting checks and receives a new approval_event_id"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -89064,7 +89064,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a request key is retained, and a retry recovers its operation, from its reservation through the reservation instant plus the horizon published at reservation, inclusive (1 ms before and exactly at the boundary), measured from the reservation and not from completion, and never shortened by a later, shorter published retention; 1 ms after it a reuse is a new operation"
+    "normative": "a request key is retained, and a retry recovers its operation, from its reservation through the reservation instant plus the horizon published at reservation, inclusive (1 ms before and exactly at the boundary), measured from the reservation and not from completion, and never shortened by a later, shorter published retention; 1 ms after it, with no pending operation holding the key, the tombstone has expired and a reuse is a new operation"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -89181,9 +89181,15 @@
      "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > a completion binds only the reservation its own deferral made, never a row another operation holds under the key (@spec mission#approval-idempotency, #1915)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending (@spec mission#approval-idempotency, #1915) > a reservation recorded before pending_until existed keeps its live deferral's key through the upgrade: another operation reusing the key is refused, and the original completes and binds it (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1915 event identity (D1056). Mutations, each caught by its own witness: purging a reserved row at the horizon whatever its operation (the reservation-survives witness); dropping the live-deferral lookup under the key (the live-holder witness); completing by key alone (the binds-own witness)."
+   "notes": "#1915 event identity (D1056). Mutations, each caught by its own witness: purging a reserved row at the horizon whatever its operation (the reservation-survives witness); dropping the live-deferral lookup under the key (the live-holder witness); completing by key alone (the binds-own witness). #1919 review (P2): a reservation recorded before pending_until existed keeps its live deferral's key through the upgrade (the store fills pending_until from the deferral); mutation: without the fill, a Child Delegation reuse of the key succeeds while the deferral is live."
   },
   {
    "id": "expansion.policy-probing.rate-limit",

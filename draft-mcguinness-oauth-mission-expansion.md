@@ -2480,7 +2480,7 @@ approved, not the predecessor's authority plus a delta.
   that a later change to the published horizon never shortens it for
   a recorded identifier, and that a reservation still pending when
   the horizon ends survives until its operation ends; a reuse after
-  the horizon receives a new `approval_event_id` (#1915).
+  the tombstone expires receives a new `approval_event_id` (#1915).
 
 - Completion Modes says where any grant binding a successor carries
   comes from in each mode, and that a deferred completion or
