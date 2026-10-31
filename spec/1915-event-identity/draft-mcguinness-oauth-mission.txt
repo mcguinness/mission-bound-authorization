@@ -182,10 +182,7 @@ Table of Contents
    14. Extensibility
      14.1.  Extension Points
      14.2.  Namespace Taxonomy
-     14.3.  Standing-Consent Bases
-       14.3.1.  Standing-Consent Instances
-       14.3.2.  Activation Policy Commitment
-       14.3.3.  Standing-Consent Recency
+     14.3.  Mission-Creating Paths
      14.4.  Commitment Mechanisms
        14.4.1.  Authority Set Entry Commitment
    15. Conformance
@@ -939,8 +936,8 @@ Table of Contents
    *  Authority Set derivation (Section 5);
 
    *  the approval-event rules for the Mission's approval basis
-      (Section 6.1, Section 14.3.1, with a direct approval relocated
-      only as Section 14 permits); and
+      (Section 6.1, Section 14.3, with a direct approval relocated only
+      as Section 14 permits); and
 
    *  the grant binding (Section 6.4).
 
@@ -1833,7 +1830,7 @@ Table of Contents
 
    Approval activates only authority the source already holds: the AS
    establishes the source and verifies the derived Authority Set against
-   it before approval (Section 6.1.1, Section 14.3.1).
+   it before approval (Section 6.1.1, Section 14.3).
 
    An organizational Mission's authority_source.policy reference
    (Section 6.2.3) commits to the governed policy through its digest:
@@ -2118,7 +2115,9 @@ Table of Contents
       values are semantic defaults: an omitted member has its implied
       value, and a reader does not insert it into a record before
       hashing or committing the record.  A standing-consent basis
-      requires and defines all three (Section 14.3).
+      requires and defines all three
+      ([I-D.draft-mcguinness-mission-approval-governance], Section 
+      "Standing-Consent Bases").
 
       adjudication:  OPTIONAL.  A discriminated object naming the
          decision _mechanism_ that adjudicated this instance: distinct
@@ -2127,7 +2126,8 @@ Table of Contents
          profile or deployment chooses to make the mechanism explicit;
          where absent, the mechanism is still fixed by type and the
          construction rules of this document or a companion profile
-         (below and Section 14.3).  Members, where present:
+         (below and [I-D.draft-mcguinness-mission-approval-governance],
+         Section "Policy Adjudication").  Members, where present:
 
          kind:  REQUIRED.  A string: human or policy, naming a decision
             mechanism, not a storage location for supporting evidence; a
@@ -2142,12 +2142,15 @@ Table of Contents
          For kind: human: no additional kind-specific members; the
          deciding human is consent_principal.
 
-         For kind: policy: the kind-specific members that Section 14.3
-         defines.
+         For kind: policy: the kind-specific members that the Approval
+         Basis Contract defines
+         ([I-D.draft-mcguinness-mission-approval-governance],
+         Section "Policy Adjudication").
 
       approved_at:  Absent for direct, whose approval event carries its
          own instant (Section 6.1); a standing-consent basis carries it
-         (Section 14.3).
+         ([I-D.draft-mcguinness-mission-approval-governance], Section 
+         "Standing-Consent Bases").
 
       The following rules apply to approval_basis:
 
@@ -2215,8 +2218,10 @@ Table of Contents
       event; the policy itself does not travel.  It is REQUIRED where a
       feature or profile the deployment uses depends on versioned
       derivation-policy identification, such as standing-consent recency
-      (Section 14.3.3).  A deployment using such a feature records it
-      from creation and never supplies a replacement value later.
+      ([I-D.draft-mcguinness-mission-approval-governance], Section 
+      "Standing-Consent Recency").  A deployment using such a feature
+      records it from creation and never supplies a replacement value
+      later.
 
    approval_event_id:  REQUIRED.  A string.  A unique identifier of the
       approval event, used as the approval idempotency key: one approval
@@ -2396,7 +2401,9 @@ Table of Contents
 
        *  For an activation policy reference's digest, typ is mission-
           activation-policy and value is the policy snapshot object that
-          Section 14.3.2 defines.
+          the Approval Basis Contract defines
+          ([I-D.draft-mcguinness-mission-approval-governance],
+          Section "Activation Policy Commitment").
 
    2.  Canonicalize the envelope with JCS [RFC8785].
 
@@ -5032,8 +5039,9 @@ Table of Contents
 
    *  the act delegation chain (Section 8.2).
 
-   Section 14.3 states the contract for an approval basis other than
-   direct, and Section 14.4 the contract for a commitment another
+   Section 14.3 states how a profile creates Missions on another path,
+   including the Approval Basis Contract every standing-consent basis
+   meets, and Section 14.4 the contract for a commitment another
    specification defines.  Their requirements bind a specification or
    profile that uses them and each party that implements it; this
    document's own commitments also follow Section 14.4.
@@ -5127,7 +5135,7 @@ Table of Contents
 
    *  *Approval bases.* The approval_basis.type value space
       (Section 6.2.3) is open to standing-consent bases that companion
-      profiles define under the contract of Section 14.3.
+      profiles define under Section 14.3.
 
    *  *Approval-event sequencing.* The approval-event steps, their
       order, and the atomicity of record creation with the approval
@@ -5181,146 +5189,61 @@ Table of Contents
    domain, not a representation crossing a protocol boundary, and is not
    a media type.
 
-14.3.  Standing-Consent Bases
+14.3.  Mission-Creating Paths
 
-   A companion profile can generalize approval to a named standing-
-   consent basis.  Under it, a template or policy activates Mission
-   instances against an accountable human's earlier approval, with no
-   fresh human approval per instance; each instance is still created at
-   its own approval event (Section 6.1).  The companion profile defines
-   the basis's approval_basis.type value (Section 6.2.3);
-   [I-D.draft-mcguinness-mission-architecture] (Section "Mission
-   Invariants") lists the standing-consent bases that companion profiles
-   define.  The type values form a specification-defined namespace with
-   no registry (Section 14.2): each further basis is defined by the
-   companion profile that introduces it.
+   The direct path of Section 6 is the one this document defines in
+   full.  A companion profile creates Missions on another path in one of
+   two ways, which stay distinct:
+
+   *  *Relocating the direct ceremony.* A profile that defers the
+      approval decision, or carries the submission over a back channel,
+      keeps the direct approval: the basis stays direct, and Approval-
+      event sequencing (Section 14.1) states what the relocation keeps
+      unchanged.
+
+   *  *Activating under standing consent.* A profile can define a named
+      standing-consent basis, under which a template or policy activates
+      Mission instances against an accountable human's earlier approval,
+      with no fresh human approval per instance; each instance is still
+      created at its own approval event (Section 6.1).  Any companion
+      profile that defines a standing-consent basis MUST make the basis
+      conform to the Approval Basis Contract
+      ([I-D.draft-mcguinness-mission-approval-governance],
+      Section "Approval Basis Contract"), and an issuer that activates a
+      Mission under such a basis MUST conform to the Contract for it.
+      Neither requirement binds a deployment that creates Missions only
+      on the direct path.  The basis's approval_basis.type values form a
+      specification-defined namespace with no registry (Section 14.2).
+
+   When a human approves a standing consent's consented root (the
+   template version, the ceiling, or the activation policy), the issuer
+   that records that approval MUST:
+
+   *  authenticate the consenting principal (step 1 of Section 6.1.1);
+
+   *  establish that principal's authorization over the root's permitted
+      Subjects and authority sources (steps 2 and 3);
+
+   *  obtain that principal's consent to the root's authority, its
+      limits, and its activation policy (step 5); and
+
+   *  record that principal as the consent_principal of every instance
+      the root activates.
+
+   A future instance's Subject need not be known when the root is
+   approved; each instance falls within what the root authorized.  An
+   already approved parent's delegation authority can supply the root,
+   with no fresh human ceremony for each activation.
+
+   Each instance's creation still meets the rules of this document that
+   bind it: the Subject is never taken from unauthenticated client input
+   and is mapped injectively (step 2, Section 6.1.3); the authority
+   source and its ceiling (Section 6.1.4); the effective expiry and its
+   creation-commit check (steps 4 and 7); the integrity anchors (step
+   6); and atomic creation, deduplicated as Section 16.1 states.
 
    An unrecognized type or adjudication.kind is handled as Section 6.2.3
    states for every record consumer.
-
-   A companion profile defining a standing-consent type MUST make its
-   consent_principal and root_commitment trace to an accountable human's
-   approval of the named standing consent, with no fresh human approval
-   per instance, MUST carry that approval's instant as approved_at, and
-   MUST state what the record's approval_event_id carries for an
-   instance it activates.  That value identifies this instance's
-   approval event, never the standing approval, so a retried activation
-   deduplicates and each distinct activation creates its own Mission.
-
-   A standing-consent basis carries the following approval_basis members
-   (Section 6.2.3):
-
-   activation:  REQUIRED for every standing-consent type.  An object
-      naming what activated this Mission instance, in the shape that the
-      basis's companion profile defines.
-
-   activation_actor:  REQUIRED for every standing-consent type.  An
-      object with iss and sub.  Who or what triggered this instance: a
-      dispatching or requesting party distinct from the consenting
-      human.
-
-   root_commitment:  REQUIRED for every standing-consent type.  A
-      string.  The commitment to the consented root: an integrity anchor
-      where the root is a committed object, otherwise the committed
-      reference that identifies it.
-
-   approved_at:  REQUIRED for every standing-consent type.  An RFC 3339
-      date-time: the instant the accountable human approved the exact
-      consented root that root_commitment commits (the template version,
-      the drawdown policy version), not the instant this Mission
-      instance was activated.  The activating issuer MUST verify
-      approved_at against its retained, authenticated record of that
-      standing consent for that exact version; it MUST NOT accept the
-      value as the activating request's own uncorroborated assertion.
-
-   The adjudication member (Section 6.2.3), where present, follows the
-   basis.  Where a companion profile defining a standing-consent type
-   populates adjudication, kind MUST be policy, naming the identity and
-   version of the policy or workflow that adjudicated the instance.  A
-   companion profile MUST NOT flatten a policy's or an Approval
-   Governance Record's assertion set into a single principal member.
-
-   For kind: policy, adjudication carries policy, a REQUIRED object with
-   id and version identifying the deciding policy or workflow.  It
-   decides deterministically over recorded inputs, so re-evaluating that
-   version over them re-checks the decision.  A model's output can be
-   one such input, recorded with the model's identifier and version: it
-   can refuse an activation or narrow the authority it activates, and
-   the AS MUST NOT let it supply or widen authority.  A model is never
-   itself the deciding policy or workflow.
-
-14.3.1.  Standing-Consent Instances
-
-   Under a standing-consent basis (Section 14.3), the standing consent
-   and the instance's adjudication supply the human decision that a
-   direct approval event makes in Section 6.1.1: the Approver's
-   authentication (step 1), the Approver's authorization for the Subject
-   and the authority source (steps 2 and 3), and the consent rendering
-   (step 5).  The other creation rules still bind the instance's
-   approval event wherever they apply:
-
-   *  the Subject is never taken from unauthenticated client input and
-      is mapped injectively (step 2, Section 6.1.3);
-
-   *  the authority source and its ceiling (Section 6.1.4);
-
-   *  the effective expiry and its creation-commit check (steps 4 and
-      7);
-
-   *  the integrity anchors (step 6); and
-
-   *  atomic creation deduplicated on approval_event_id (Section 6.2).
-
-14.3.2.  Activation Policy Commitment
-
-   Where a standing-consent basis lets a separate policy artifact
-   adjudicate activation (a dispatch, drawdown, or child-creation
-   policy, rather than the consented object itself), the object the
-   accountable human consented to MUST carry that policy as an
-   activation policy reference: an object of id (a string), version (a
-   string), and digest.  The digest is an integrity anchor
-   (Section 6.3.1) whose typ is mission-activation-policy, whose iss is
-   the activating issuer, and whose value is an object of content_type,
-   the media type of the policy snapshot, and content, the base64url,
-   no-padding [RFC4648] encoding of the snapshot's exact bytes.  Before
-   each activation, the activating issuer MUST compute digest over the
-   exact snapshot it evaluates, and MUST NOT activate the instance under
-   that policy when the result differs; the companion profile fixes what
-   follows, as it does for an activation the policy does not authorize.
-   The issuer MUST retain each snapshot's bytes and media type for the
-   audit horizon (Section 16.2) of every Mission it activates under that
-   snapshot, so an auditor can reproduce the digest.  Where no separate
-   policy artifact exists, as when child creation is adjudicated against
-   the approved delegation entry itself, this rule does not apply.
-
-14.3.3.  Standing-Consent Recency
-
-   A deployment can declare a maximum standing-consent age (a recency
-   ceiling), overall or per consequence class.  Where a declared ceiling
-   applies, the activating issuer MUST refuse to activate an instance
-   whose approved_at is older than the ceiling.  Where ceilings are
-   declared:
-
-   *  The evaluation instant is the atomic Mission-creation commit
-      (Section 6.1), including the creation commit of a deferred or
-      relocated flow.  Recency is issuance-time eligibility only: a
-      later change to a ceiling, or the passage of time past one, does
-      not terminate an active Mission (Section 10.2).
-
-   *  The activating issuer MUST refuse an approved_at later than the
-      evaluation instant by more than the deployment's declared, bounded
-      clock-skew allowance.
-
-   *  Where ceilings are declared per consequence class, the issuer MUST
-      classify the committed Mission from the derived Authority Set and
-      from any consumption bound the Mission Intent carries (for
-      example, [I-D.draft-mcguinness-mission-metering]), and MUST apply
-      the strictest ceiling across every class present.
-
-   *  The ceilings and the skew allowance belong to the versioned policy
-      that policy_version identifies, or to a separately versioned
-      declaration retained with it, so an auditor can reproduce the
-      eligibility decision.
 
 14.4.  Commitment Mechanisms
 
@@ -6518,6 +6441,11 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
               rar-metadata-remediation-00>.
 
+   [I-D.draft-mcguinness-mission-approval-governance]
+              McGuinness, K., "Mission Approval Governance", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-approval-governance.html>.
+
    [I-D.draft-mcguinness-oauth-actor-profile]
               McGuinness, K., "OAuth Actor Profile for Delegation", Work
               in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
@@ -6708,11 +6636,6 @@ Table of Contents
               ietf-wimse-arch-08, 6 July 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
               arch-08>.
-
-   [I-D.draft-mcguinness-mission-approval-governance]
-              McGuinness, K., "Mission Approval Governance", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-approval-governance.html>.
 
    [I-D.draft-mcguinness-mission-architecture]
               McGuinness, K., "An Architecture for Mission-Bound
@@ -7686,6 +7609,19 @@ Appendix E.  Document History
    [[ To be removed from the final specification ]]
 
    -02
+
+   *  Mission-Creating Paths replaces Standing-Consent Bases and its
+      three subsections.  It keeps relocating the direct ceremony
+      distinct from activating under standing consent.  A companion
+      profile defining a standing-consent basis makes it conform to
+      Approval Governance's Approval Basis Contract, which states those
+      subsections' requirements unchanged, and an issuer activating
+      under one conforms to it; the normative reference binds no direct-
+      only deployment.  Approval of a standing consent's consented root
+      carries explicit MUSTs: authenticate the consenting principal,
+      establish their authorization over the root's permitted Subjects
+      and authority sources, and obtain their consent to the root's
+      authority, limits and activation policy (#1915).
 
    *  Approval Idempotency states what every creation path shares: the
       AS allocates approval_event_id and never derives it from a

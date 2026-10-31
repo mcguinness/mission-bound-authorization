@@ -146,8 +146,8 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission], Section "Mission
       Approval"), and of a standing consent's per-Mission limit rule at
       that consent's human approval
-      ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
-      Bases").
+      ([I-D.draft-mcguinness-mission-approval-governance], Section 
+      "Standing-Consent Bases").
 
    An AS that does not implement this document establishes no derivation
    limit, and its closed-top-level validation refuses a submitted
@@ -268,16 +268,17 @@ Table of Contents
    approval and each distinct Template dispatch establish theirs afresh.
 
    A Mission created under a standing-consent basis
-   ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
-   Bases") is also bounded by the maximum rendered at that standing
-   consent's human approval (Section 7).  Where that maximum is finite,
-   the AS MUST NOT establish a derivation_limit above it, nor leave
-   derivation_limit absent, for such a Mission.  A stricter applicable
-   policy or requested limit narrows the Mission's limit, but no change
-   of policy raises or removes the maximum; only a fresh human approval
-   of the standing consent replaces it.  The maximum caps each Mission's
-   own limit and is not a count those Missions share: establishment and
-   counting otherwise follow the rules above, including both exceptions.
+   ([I-D.draft-mcguinness-mission-approval-governance], Section 
+   "Standing-Consent Bases") is also bounded by the maximum rendered at
+   that standing consent's human approval (Section 7).  Where that
+   maximum is finite, the AS MUST NOT establish a derivation_limit above
+   it, nor leave derivation_limit absent, for such a Mission.  A
+   stricter applicable policy or requested limit narrows the Mission's
+   limit, but no change of policy raises or removes the maximum; only a
+   fresh human approval of the standing consent replaces it.  The
+   maximum caps each Mission's own limit and is not a count those
+   Missions share: establishment and counting otherwise follow the rules
+   above, including both exceptions.
 
 3.3.  Mission Record Member
 
@@ -494,17 +495,17 @@ Table of Contents
    (Section 4.5).
 
    A Mission created under a standing-consent basis
-   ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
-   Bases") has no human approval, and so no consent rendering, of its
-   own.  At the human approval of a standing consent under which policy
-   can create Missions, the AS MUST render the rule that establishes
-   each such Mission's derivation_limit, and either the rule's maximum
-   or that no finite maximum is guaranteed.  The rule and maximum are
-   those of the exact version consented to and of the policy state it
-   commits, which the AS retains; Section 3.2 bounds each Mission by
-   them.  The async delegation family and Mission Issuance Grant
-   statements above, where they apply, are part of this rendering, and
-   the rendering MUST also state that the maximum is local to each
+   ([I-D.draft-mcguinness-mission-approval-governance], Section 
+   "Standing-Consent Bases") has no human approval, and so no consent
+   rendering, of its own.  At the human approval of a standing consent
+   under which policy can create Missions, the AS MUST render the rule
+   that establishes each such Mission's derivation_limit, and either the
+   rule's maximum or that no finite maximum is guaranteed.  The rule and
+   maximum are those of the exact version consented to and of the policy
+   state it commits, which the AS retains; Section 3.2 bounds each
+   Mission by them.  The async delegation family and Mission Issuance
+   Grant statements above, where they apply, are part of this rendering,
+   and the rendering MUST also state that the maximum is local to each
    Mission, as Section 3.2 counts it, and is not a budget across the
    Missions the consent admits, their descendants, or their lifetimes
    (Section 9.4).
@@ -670,6 +671,11 @@ Table of Contents
 
 12.1.  Normative References
 
+   [I-D.draft-mcguinness-mission-approval-governance]
+              McGuinness, K., "Mission Approval Governance", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-approval-governance.html>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -797,6 +803,11 @@ Appendix A.  Integrity Anchor Test Vector
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Standing-consent bases are cited from Approval Governance's
+      Approval Basis Contract, which states the same requirements the
+      OAuth binding does; Approval Governance becomes a normative
+      reference.  No requirement changed (#1915).
 
    -00
 

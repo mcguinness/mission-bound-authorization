@@ -1544,18 +1544,17 @@ happens, never what is recorded about it.<a href="#section-4.5-1" class="pilcrow
         </h3>
 <p id="section-4.6-1">A pending approval can also complete under the <code>governed_policy</code>
 standing-consent basis
-(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>, Section
-"Governed Policy Approval"). The Mission Issuer selects a configured
-governed policy whose consented root admits the pending proposal, and
-the policy decides it; no reviewer acts. This is not a relocated
-human decision, so step 3 of <a href="#deferred-sequencing" class="auto internal xref">Section 4.1</a> does not apply:
-as under any standing-consent basis, the standing consent and the
-policy's adjudication supply the Approver's authentication,
-authorization, and consent (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Standing-Consent Instances"). The creation commit of
-step 4 runs at the policy's decision, under that basis's activation
-checks and with its Approval Governance Record, and keeps the
-effective-expiry recheck.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>, Section "Governed
+Policy Approval"). The Mission Issuer selects a configured governed
+policy whose consented root admits the pending proposal, and the policy
+decides it; no reviewer acts. This is not a relocated human decision, so
+step 3 of <a href="#deferred-sequencing" class="auto internal xref">Section 4.1</a> does not apply: as under any
+standing-consent basis, the standing consent and the policy's
+adjudication supply the Approver's authentication, authorization, and
+consent (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>, Section
+"Standing-Consent Instances"). The creation commit of step 4 runs at the
+policy's decision, under that basis's activation checks and with its
+Approval Governance Record, and keeps the effective-expiry recheck.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
 <p id="section-4.6-2">Nothing else about the deferral changes. Polling, cancellation,
 client binding, and token delivery follow the deferred substrate and
 this profile, and a completed activation moves the pending approval
@@ -1884,19 +1883,24 @@ the deferred grant type are registered by the deferred substrate
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The Approval Governance Record is recorded for a deferred approval
-where a profile that adopts Mission Approval Governance's recording
-triggers applies and a trigger holds, matching that document's rule
-that the triggers bind only under an adopting profile (#1436).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">A policy-decided deferral cites Approval Governance's Approval Basis
+Contract for what a standing consent supplies, which states the same
+rule the OAuth binding does. No requirement changed (#1915).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Policy Completion: a pending approval can complete under Mission
+          <p id="appendix-A-2.2.1">The Approval Governance Record is recorded for a deferred approval
+where a profile that adopts Mission Approval Governance's recording
+triggers applies and a trigger holds, matching that document's rule
+that the triggers bind only under an adopting profile (#1436).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Policy Completion: a pending approval can complete under Mission
 Approval Governance's <code>governed_policy</code> basis, with the deferral's
 polling, cancellation, client binding, and token delivery unchanged
 and no client-selected approval basis. A policy evaluation that does
 not authorize activation leaves the request for a full <code>direct</code>
 human approval or <code>denied</code>, never a <code>governed_policy</code> activation
-(#1185).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+(#1185).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

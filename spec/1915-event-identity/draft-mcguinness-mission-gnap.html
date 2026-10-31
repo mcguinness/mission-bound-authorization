@@ -1788,17 +1788,17 @@ companion for (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" cla
 here it is the substrate's ratified machinery, and that companion
 does not apply.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
 <p id="section-7.1-4"><strong>Standing basis.</strong> A policy is not the Approver. A grant the
-authorization server would approve without interaction creates a
-Mission only where an adopted profile supplies the required
-<code>approval_basis</code> members the issuance profile defines (type, consent
-principal, root commitment, activation, and activation actor, plus
-the <span class="bcp14">OPTIONAL</span> <code>adjudication</code> where the profile populates it), tracing
-the machine-speed activation to an accountable human consent; the
-family's Mission Templates profile is that shape. The GNAP policy
-identifier and version are activation context, never the Approver.
-Absent such a profile, noninteractive processing <span class="bcp14">MUST NOT</span> create a
-Mission: baseline Mission creation under this binding is interactive
-or deferred.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+authorization server would approve without interaction creates a Mission
+only where an adopted profile supplies the required <code>approval_basis</code>
+members of a standing-consent basis under the Approval Basis Contract
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) (type, consent
+principal, root commitment, activation, and activation actor, plus the
+<span class="bcp14">OPTIONAL</span> <code>adjudication</code> where the profile populates it), tracing the
+machine-speed activation to an accountable human consent; the family's
+Mission Templates profile is that shape. The GNAP policy identifier and
+version are activation context, never the Approver. Absent such a
+profile, noninteractive processing <span class="bcp14">MUST NOT</span> create a Mission: baseline
+Mission creation under this binding is interactive or deferred.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <p id="section-7.1-5">The negotiation loop is the clarification and narrowing surface: the
 owner or the authorization server may narrow the proposal across
 interaction rounds while the grant rests in <em>pending</em>, and a denial
@@ -2829,6 +2829,10 @@ claim is registered by the issuance profile.<a href="#section-16-8" class="pilcr
 <a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Approval Governance"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-substrate">[I-D.draft-mcguinness-mission-substrate]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Substrate Requirements"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html</a>&gt;</span>. </dd>
