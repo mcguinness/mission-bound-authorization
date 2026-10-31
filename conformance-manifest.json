@@ -11519,9 +11519,51 @@
      "name": "Expansion (deferred): an approval event replayed into another Mission (@spec mission#approval-idempotency, #1915) > a second deferral approved under an approval_event_id that already created a successor creates no second Mission under it (@spec mission#approval-idempotency, #1915)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Mission Device Authorization (@spec mission#approval-idempotency, #1915) > two concurrent decisions on one device session (@spec mission#approval-idempotency, #1915) > a second verification user agent entering a user_code already confirmed is refused at the code entry and starts no interaction (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Mission Device Authorization (@spec mission#approval-idempotency, #1915) > two concurrent decisions on one device session (@spec mission#approval-idempotency, #1915) > where a second interaction does exist over one device session (the provider's in-flight mark cleared in its store), deciding both while the first commits creates one Mission, and the second decision is refused while the session is claimed (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Mission Device Authorization (@spec mission#approval-idempotency, #1915) > two concurrent decisions on one device session (@spec mission#approval-idempotency, #1915) > two tabs deciding one interaction while the first commits create one Mission; the second is refused while the session is claimed (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "token endpoint: the Expansion poll race and Child Delegation's event allocation (@spec mission#approval-idempotency, #1915) > two polls completing one approved expansion deferral, the second arriving while the first is delivering, create one successor: the first is answered with it and the second is refused invalid_grant (single-use) (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "direct approval: the missions.approval_event_id uniqueness across two store instances (@spec mission#approval-idempotency, #1915) > a second kernel over the same database, sharing no per-event queue or approval reservation with the first, meets the uniqueness on the event the first committed and resolves to that Mission (@spec mission#approval-idempotency, #1915)",
+     "level": "concurrency",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Deferred Mission Approval: approveDirect delivered twice for one pending approval (@spec mission#approval-idempotency, #1915) > the second delivery is refused not_pending, through the same store, a second store instance or for another Approver, and the pending approval's one event names one Mission (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Child Mission Carryover: a replayed completion and the child approval event (@spec mission#approval-idempotency, #1915) > a completion replayed after release is refused invalid_grant, and one replayed in the window before release recovers the same successor and replacement; one replacement exists, under the one deterministic child event (@spec mission#approval-idempotency, #1915)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation. #1912 (D1047): the rule moved, with its wording and keyword, to Implementation Considerations, Approval Idempotency, naming the record's `approval_event_id` as its key; the Mission Record keeps the invariant that one approval event creates at most one Mission. Re-quoted; observation and witnesses unchanged. #1915 (D1056): each path keeps its own response to a repeated delivery. Added witnesses: a kernel decision replayed after its Mission was revoked returns that Mission; Deferred Mission Approval repeats (policy, direct, governed re-activation) yield one Mission; an expansion deferral approved under an event that created another predecessor's successor is refused access_denied (mutation: removing that check reaches the missions uniqueness and answers 500). Stays partial for the row's existing reasons."
+   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation. #1912 (D1047): the rule moved, with its wording and keyword, to Implementation Considerations, Approval Idempotency, naming the record's `approval_event_id` as its key; the Mission Record keeps the invariant that one approval event creates at most one Mission. Re-quoted; observation and witnesses unchanged. #1915 (D1056): each path keeps its own response to a repeated delivery. Added witnesses: a kernel decision replayed after its Mission was revoked returns that Mission; Deferred Mission Approval repeats (policy, direct, governed re-activation) yield one Mission; an expansion deferral approved under an event that created another predecessor's successor is refused access_denied (mutation: removing that check reaches the missions uniqueness and answers 500). Stays partial for the row's existing reasons. #1915 gap witnesses (event-identity-gaps.test.ts), each mutation-proven except the library-held device re-entry guard: concurrent device decisions on one session (the session claim refuses the second); two polls completing one expansion deferral (the second is invalid_grant); a second kernel over one database (the missions uniqueness resolves to the first Mission); approveDirect delivered twice (not_pending); a carryover completion replayed in the release window (same successor and replacement)."
   },
   {
    "id": "core.mission-record.approval-event-id-allocation",
@@ -11598,9 +11640,21 @@
      "name": "direct approval: one approval_event_id never yields a second Mission (@spec mission#approval-idempotency, #1915) > a fresh record reusing a committed approval_event_id is refused by the store's uniqueness, never inserted (@spec mission#approval-idempotency, #1915)",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Mission Device Authorization (@spec mission#approval-idempotency, #1915) > distinct decisions, distinct approval events (@spec mission#approval-idempotency, #1915) > two device sessions, each approved, carry two different approval_event_id values the AS minted from their own interactions (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "token endpoint: the Expansion poll race and Child Delegation's event allocation (@spec mission#approval-idempotency, #1915) > two child creations under one parent with different creation_request_id values carry two different approval_event_id values the AS minted; a retry of either keeps its own (@spec mission#approval-idempotency, #1915)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1915 event identity (D1056). Mutation proof for uniqueness: the existing #1608 proof (dropping UNIQUE from the missions DDL with the lookups disabled commits a second Mission). The request-key witnesses assert a different value after a reuse of the same key, which a value derived from the key would repeat."
+   "notes": "#1915 event identity (D1056). Mutation proof for uniqueness: the existing #1608 proof (dropping UNIQUE from the missions DDL with the lookups disabled commits a second Mission). The request-key witnesses assert a different value after a reuse of the same key, which a value derived from the key would repeat. #1915 gap witnesses: two device sessions get distinct apev_<uid> values and two child creations distinct dlg_ values (mutation: a constant identifier refuses the second device decision 403 and fails the second child creation)."
   },
   {
    "id": "core.mission-record.approval-event-id-direct-interaction",
@@ -79496,9 +79550,21 @@
      "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > completes a widening expansion by carrying the child and returns the authenticated batch map on the completion response",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Child Mission Carryover: a replayed completion and the child approval event (@spec mission#approval-idempotency, #1915) > a manifest naming any child approval event but the deterministic one is refused manifest_mismatch at the batch, even with its hash recomputed, creating nothing (@spec mission#approval-idempotency, #1915)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-gaps.test.ts",
+     "name": "Child Mission Carryover: a replayed completion and the child approval event (@spec mission#approval-idempotency, #1915) > through completion, a stored manifest relabelled the same way is refused access_denied and creates nothing (@spec mission#approval-idempotency, #1915)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "A NEW record per replacement with `approval_basis.type` `direct`, the expansion Approver as `consent_principal` and `direct` activation actor, its deterministic child-specific `approval_event_id` on activation, and `root_commitment` equal to its own `authority_hash`. The old child's `parent` and immutable approval anchors are untouched. `related_to` and `carried_to` are bare same-issuer strings, interpreted in the issuing namespace. Source ACTIVATION and source CEILING both re-run for the rendered `authority_source`, with a no-substitution check against the record the manifest says the source came from."
+   "notes": "A NEW record per replacement with `approval_basis.type` `direct`, the expansion Approver as `consent_principal` and `direct` activation actor, its deterministic child-specific `approval_event_id` on activation, and `root_commitment` equal to its own `authority_hash`. The old child's `parent` and immutable approval anchors are untouched. `related_to` and `carried_to` are bare same-issuer strings, interpreted in the issuing namespace. Source ACTIVATION and source CEILING both re-run for the rendered `authority_source`, with a no-substitution check against the record the manifest says the source came from. #1915 gap witnesses: a manifest naming any child approval event but the deterministic one is refused manifest_mismatch, and through completion access_denied, creating nothing (mutation: removing the check creates a replacement under the forged event)."
   },
   {
    "id": "child-delegation.carryover.atomic-records-map-outbox",
