@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC6838:
   RFC7519:
@@ -1150,8 +1158,9 @@ profile's approval-event requirements in full, and
   for an ordinary Mission.
 
 Where creation is adjudicated by policy with no human interaction
-({{child-client-identity}}), `approval_basis.type` is
-`policy_drawdown`:
+({{child-client-identity}}), `approval_basis.type` is `policy_drawdown`,
+a standing-consent basis meeting the Approval Basis Contract
+({{I-D.draft-mcguinness-mission-approval-governance}}):
 
 - `consent_principal` is the Parent Mission's own
   `approval_basis.consent_principal`, the accountable human standing
@@ -1176,22 +1185,20 @@ derived, not a root a human approved verbatim. The trace then runs
 through the Parent's own `approval_basis` (`consent_principal`,
 `root_commitment`, `approved_at`) to the human-consented root.
 
-Where the entry carries a
-`child_creation_policy`, `activation` carries that policy's `id`,
-`version`, and `digest` as `policy_id`, `policy_version`, and
-`policy_digest`, and this creation's own delegation event identifier
-(above) as `activation_event_id`. A policy snapshot that
-does not match `digest` denies child creation with `policy_denied`
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-Bases"). Where the entry carries no `child_creation_policy`, the
-drawdown is against the parent's approved delegation entry itself,
-not a separate policy
-artifact: `activation` omits `policy_id` and carries only the
-delegation event identifier as `activation_event_id`. In both forms
-the record's `approval_event_id` is that `activation_event_id`, never
-the Parent Mission's approval event. The record's
-`approval_basis.consent_principal` is the Parent Mission's human
-Approver, never the policy and never the requesting agent.
+Where the entry carries a `child_creation_policy`, `activation` carries
+that policy's `id`, `version`, and `digest` as `policy_id`,
+`policy_version`, and `policy_digest`, and this creation's own
+delegation event identifier (above) as `activation_event_id`. A policy
+snapshot that does not match `digest` denies child creation with
+`policy_denied` ({{I-D.draft-mcguinness-mission-approval-governance}},
+Section "Activation Policy Commitment"). Where the entry carries no
+`child_creation_policy`, the drawdown is against the parent's approved
+delegation entry itself, not a separate policy artifact: `activation`
+omits `policy_id` and carries only the delegation event identifier as
+`activation_event_id`. In both forms the record's `approval_event_id` is
+that `activation_event_id`, never the Parent Mission's approval event.
+The record's `approval_basis.consent_principal` is the Parent Mission's
+human Approver, never the policy and never the requesting agent.
 
 `approved_at` (the issuance profile's standing-consent requirement)
 is the human approval instant of the consented root that
@@ -1445,9 +1452,10 @@ not implement this profile refuses an entry carrying it.
 
   `child_creation_policy`:
   : OPTIONAL. An activation policy reference, an object of `id`,
-    `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
-    Section "Standing-Consent Bases"), identifying the policy
-    evaluated before each child creation and committing its content.
+    `version`, and `digest`
+    ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+    "Activation Policy Commitment"), identifying the policy evaluated
+    before each child creation and committing its content.
 
 `children` carries only the four members above. An authorization server
 MUST refuse an entry whose `children` carries any other member, whatever
@@ -2463,6 +2471,12 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The `policy_drawdown` basis meets Approval Governance's Approval
+  Basis Contract, and the `child_creation_policy` reference and its
+  `policy_denied` check cite that contract, which states the same
+  requirements the OAuth binding does. Approval Governance becomes a
+  normative reference. No requirement changed (#1915).
 
 - Security Considerations' "Possession Proof and Parent Credentials
   at Rest" (formerly "the Eliminated Parent-Grant-at-Rest Concern")

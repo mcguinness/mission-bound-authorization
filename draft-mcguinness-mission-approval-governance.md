@@ -36,6 +36,7 @@ normative:
         name: Karl McGuinness
     date: 2026
   RFC3339:
+  RFC4648:
   RFC6838:
   RFC7515:
   RFC8259:
@@ -50,6 +51,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC8792:
   RFC9396:
   I-D.draft-mcguinness-oauth-mission-progressive:
@@ -195,9 +204,11 @@ The record has two phases:
 
 This document is optional. A deployment that records nothing beyond the
 Mission Record's accountable `approval_basis.consent_principal` is fully
-conformant to its Mission binding and unaffected by this document. A
-profile can require the record; {{triggers}} defines the conditions
-under which one does.
+conformant to its Mission binding and unaffected by this document,
+except that a deployment activating Missions under a standing-consent
+basis meets the Approval Basis Contract ({{approval-basis-contract}}),
+which records nothing. A profile can require the record; {{triggers}}
+defines the conditions under which one does.
 
 The record is independent of the approval ceremony. It applies alike to
 synchronous approval, to deferred approval
@@ -922,10 +933,9 @@ only decides which assertion kind MUST be present.
 by extension, a standing-consent Mission whose `approval_basis` record
 stands in for that assertion ({{accountable-assertion}}).
 
-The issuance profile's standing-consent bases carry their own
-human-approval instant in `approval_basis.approved_at`, traced through
-`consent_principal` and a commitment
-({{I-D.draft-mcguinness-oauth-mission}}). The template profile's
+Standing-consent bases carry their own human-approval instant in
+`approval_basis.approved_at`, traced through `consent_principal` and a
+commitment ({{standing-consent-bases}}). The template profile's
 `template` basis and the progressive profile's `ceiling_drawdown` basis
 both populate it, and each profile declares its own maximum age against
 it: `review_cadence` for template, and the ceiling review cadence for
@@ -1088,8 +1098,7 @@ re-checked ({{conformance}}). The re-check has these steps:
 3. Where that snapshot commits a separate evaluator that decides, as a
    `governed_policy` root can ({{governed-policy-root}}), obtain the
    retained snapshot of that evaluator and recompute its activation
-   policy reference digest ({{I-D.draft-mcguinness-oauth-mission}},
-   Section "Activation Policy Commitment").
+   policy reference digest ({{activation-policy-commitment}}).
 4. Obtain the inputs the deciding policy or evaluator evaluated, as the
    issuer recorded them ({{I-D.draft-mcguinness-oauth-mission}}, Section
    "Principals and Approval Basis"). These include each model output in
@@ -1253,12 +1262,175 @@ deployment's policy:
   the successor does not become the approver of the original approval
   event.
 
+# Approval Basis Contract {#approval-basis-contract}
+
+This section is the contract every standing-consent approval basis
+meets: the bases themselves, their instances, the activation policy
+commitment, standing-consent recency, and policy adjudication. A
+profile that defines a standing-consent basis for the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) conforms to it, and so does an
+issuer that activates a Mission under such a basis ({{conformance}}).
+It is adoptable on its own: it neither requires nor implies recording
+an Approval Governance Record, and none of its requirements depends on
+one.
+
+## Standing-Consent Bases {#standing-consent-bases}
+
+A companion profile can generalize approval to a named standing-consent
+basis. Under it, a template or policy activates Mission instances
+against an accountable human's earlier approval, with no fresh human
+approval per instance; each instance is still created at its own
+approval event ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Approval"). The companion profile defines the basis's
+`approval_basis.type` value ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Principals and Approval Basis");
+{{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
+Invariants") lists the standing-consent bases that companion profiles
+define. The `type` values form a specification-defined namespace with no
+registry ({{I-D.draft-mcguinness-oauth-mission}}, Section "Namespace
+Taxonomy"): each further basis is defined by the companion profile that
+introduces it.
+
+An unrecognized `type` or `adjudication.kind` is handled as
+{{I-D.draft-mcguinness-oauth-mission}} (Section "Principals and Approval
+Basis") states for every record consumer.
+
+A companion profile defining a standing-consent `type` MUST make its
+`consent_principal` and `root_commitment` trace to an accountable
+human's approval of the named standing consent, with no fresh human
+approval per instance, MUST carry that approval's instant as
+`approved_at`, and MUST state what the record's `approval_event_id`
+carries for an instance it activates. That value identifies this
+instance's approval event, never the standing approval, so a retried
+activation deduplicates and each distinct activation creates its own
+Mission.
+
+A standing-consent basis carries the following `approval_basis` members
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis"):
+
+`activation`:
+: REQUIRED for every standing-consent `type`. An object naming what
+  activated this Mission instance, in the shape that the basis's
+  companion profile defines.
+
+`activation_actor`:
+: REQUIRED for every standing-consent `type`. An object with `iss`
+  and `sub`. Who or what triggered this instance: a dispatching or
+  requesting party distinct from the consenting human.
+
+`root_commitment`:
+: REQUIRED for every standing-consent `type`. A string. The
+  commitment to the consented root: an integrity anchor where the
+  root is a committed object, otherwise the committed reference that
+  identifies it.
+
+`approved_at`:
+: REQUIRED for every standing-consent `type`. An RFC 3339 date-time:
+  the instant the accountable human approved the exact consented root
+  that `root_commitment` commits (the template version, the drawdown
+  policy version), not the instant this Mission instance was
+  activated. The activating issuer MUST verify `approved_at` against
+  its retained, authenticated record of that standing consent for
+  that exact version; it MUST NOT accept the value as the activating
+  request's own uncorroborated assertion.
+
+## Standing-Consent Instances {#standing-consent-instances}
+
+Under a standing-consent basis ({{standing-consent-bases}}), the
+standing consent and the instance's adjudication supply the human
+decision that a direct approval event makes in
+{{I-D.draft-mcguinness-oauth-mission}} (Section "Direct Approval
+Steps"): the Approver's authentication (step 1), the Approver's
+authorization for the Subject and the authority source (steps 2 and 3),
+and the consent rendering (step 5). The other creation rules still bind
+the instance's approval event wherever they apply:
+
+- the Subject is never taken from unauthenticated client input and is
+  mapped injectively (step 2; {{I-D.draft-mcguinness-oauth-mission}},
+  Section "Subject Establishment");
+- the authority source and its ceiling
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority Sources");
+- the effective expiry and its creation-commit check (steps 4 and 7);
+- the integrity anchors (step 6); and
+- atomic creation deduplicated on `approval_event_id`
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record").
+
+## Activation Policy Commitment {#activation-policy-commitment}
+
+Where a standing-consent basis lets a separate policy artifact
+adjudicate activation (a dispatch, drawdown, or child-creation policy,
+rather than the consented object itself), the object the accountable
+human consented to MUST carry that policy as an activation policy
+reference: an object of `id` (a string), `version` (a string), and
+`digest`. The `digest` is an integrity anchor
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Integrity Anchors")
+whose `typ` is `mission-activation-policy`, whose `iss` is the
+activating issuer, and whose `value` is an object of `content_type`, the
+media type of the policy snapshot, and `content`, the base64url,
+no-padding {{RFC4648}} encoding of the snapshot's exact bytes. Before
+each activation, the activating issuer MUST compute `digest` over the
+exact snapshot it evaluates, and MUST NOT activate the instance under
+that policy when the result differs; the companion profile fixes what
+follows, as it does for an activation the policy does not authorize. The
+issuer MUST retain each snapshot's bytes and media type for the audit
+horizon ({{I-D.draft-mcguinness-oauth-mission}}, Section "Audit
+Horizon") of every Mission it activates under that snapshot, so an
+auditor can reproduce the digest. Where no separate policy artifact
+exists, as when child creation is adjudicated against the approved
+delegation entry itself, this rule does not apply.
+
+## Standing-Consent Recency {#standing-consent-recency}
+
+A deployment can declare a maximum
+standing-consent age (a recency ceiling), overall or per
+consequence class. Where a declared ceiling applies, the activating
+issuer MUST refuse to activate an instance whose `approved_at` is
+older than the ceiling. Where ceilings are declared:
+
+- The evaluation instant is the atomic Mission-creation commit
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval"),
+  including the creation commit of a deferred or relocated flow. Recency
+  is issuance-time eligibility only: a later change to a ceiling, or the
+  passage of time past one, does not terminate an active Mission
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation").
+- The activating issuer MUST refuse an `approved_at` later than
+  the evaluation instant by more than the deployment's declared,
+  bounded clock-skew allowance.
+- Where ceilings are declared per consequence class, the issuer
+  MUST classify the committed Mission from the derived Authority
+  Set and from any consumption bound the Mission Intent carries
+  (for example, {{I-D.draft-mcguinness-mission-metering}}), and
+  MUST apply the strictest ceiling across every class present.
+- The ceilings and the skew allowance belong to the versioned
+  policy that `policy_version` identifies, or to a separately
+  versioned declaration retained with it, so an auditor can
+  reproduce the eligibility decision.
+
+## Policy Adjudication {#policy-adjudication}
+
+The `adjudication` member ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Principals and Approval Basis"), where present, follows the
+basis. Where a companion profile defining a standing-consent `type`
+populates `adjudication`, `kind` MUST be `policy`, naming the identity
+and version of the policy or workflow that adjudicated the instance. A
+companion profile MUST NOT flatten a policy's or an Approval Governance
+Record's assertion set into a single principal member.
+
+For `kind: policy`, `adjudication` carries `policy`, a REQUIRED object
+with `id` and `version` identifying the deciding policy or workflow.
+It decides deterministically over recorded inputs, so re-evaluating
+that `version` over them re-checks the decision. A model's output can
+be one such input, recorded with the model's identifier and version:
+it can refuse an activation or narrow the authority it activates, and
+the AS MUST NOT let it supply or widen authority. A model is never
+itself the deciding policy or workflow.
+
 # Governed Policy Approval {#governed-policy}
 
-This document defines the `governed_policy` standing-consent basis on
-the issuance profile's extension point for named standing-consent
-bases ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Standing-Consent Bases"). An accountable human approves a bounded
+This document defines the `governed_policy` standing-consent basis,
+which meets the Approval Basis Contract ({{approval-basis-contract}}).
+An accountable human approves a bounded
 policy version once; that policy then activates eligible Mission
 proposals with no fresh human decision per instance. Every activation
 under this basis MUST record an Approval Governance Record, committed
@@ -1277,8 +1449,7 @@ human approved ({{approval-policy}}). It commits:
 - the recency ceilings, the clock-skew allowance, and any class-named
   exceptions of {{policy-approval-recency}}; and
 - where a separate policy artifact decides instances, that artifact's
-  activation policy reference ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Activation Policy Commitment").
+  activation policy reference ({{activation-policy-commitment}}).
 
 The root decides whether an instance activates. It is distinct from
 an `organizational` authority source's `authority_source.policy`,
@@ -1362,8 +1533,7 @@ MUST, before it creates the Mission `active`:
    `approval_policy.digest` over the retained snapshot.
 3. Where the root commits a separate evaluator, recompute that
    evaluator's digest over the exact snapshot evaluated
-   ({{I-D.draft-mcguinness-oauth-mission}}, Section
-   "Activation Policy Commitment").
+   ({{activation-policy-commitment}}).
 4. Establish the Subject and the authority source as the issuance
    profile requires, and verify that the requesting client, the
    Subject, and the source are ones the root admits.
@@ -1767,6 +1937,12 @@ A Recording Issuer MUST:
   committed record immutable ({{atomic-commitment}}, {{envelope}}); and
 - retain the record and the referenced policy for the Mission's
   audit horizon ({{I-D.draft-mcguinness-oauth-mission}}).
+
+A profile that defines a standing-consent basis, and an issuer that
+activates a Mission under one, conform to the Approval Basis Contract
+({{approval-basis-contract}}). That conformance is independent of the
+Recording Issuer and Relying Auditor roles: it neither requires nor
+implies recording an Approval Governance Record.
 
 A Relying Auditor MUST verify the envelope by byte equality, MUST
 validate the mission binding, and MUST obtain the retained policy
@@ -2288,6 +2464,14 @@ disclosed mismatch is definitive.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Approval Basis Contract states the contract every
+  standing-consent approval basis meets (Standing-Consent Bases,
+  Standing-Consent Instances, Activation Policy Commitment,
+  Standing-Consent Recency and Policy Adjudication), as the OAuth
+  binding states them, with its own conformance class independent of
+  the Recording Issuer and Relying Auditor roles and of recording any
+  record. The `governed_policy` basis meets it (#1915).
 
 - Relationship to the Issuance Profile states how an artifact refers
   to the record, that the record binds a governance evaluation to the
