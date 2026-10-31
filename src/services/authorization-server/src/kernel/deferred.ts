@@ -29,6 +29,7 @@ import {
 } from "./carryover.js";
 import type { AudienceReference } from "./approved-audience.js";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
+import { DEFERRAL_EXPIRES_IN } from "./deferral-lifetime.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
 import { authorityHash, type ContainmentSelector, isSubsetSetUnderIgnoringCapabilitySources, type JsonValue } from "@mission/core";
@@ -83,8 +84,7 @@ CREATE TABLE deferrals (
 ) STRICT;
 `;
 
-/** Deferral lifetime (seconds): the advertised expires_in; a poll after this is expired_token. */
-export const DEFERRAL_EXPIRES_IN = 600;
+export { DEFERRAL_EXPIRES_IN };
 /** Advertised poll cadence (seconds); RFC 8628: a poll faster than this is slow_down. */
 export const DEFERRAL_INTERVAL = 5;
 
@@ -610,7 +610,11 @@ export interface ExpansionDeferredResult {
  */
 export class ExpansionDeferralError extends Error {
   constructor(
-    readonly code: "predecessor_not_active" | "carryover_plan_too_large" | "carryover_disabled",
+    readonly code:
+      | "predecessor_not_active"
+      | "carryover_plan_too_large"
+      | "carryover_disabled"
+      | "creation_request_mismatch",
     message: string,
   ) {
     super(message);
@@ -756,7 +760,10 @@ export class ExpansionDeferralStore {
     drawdownFallback?: string;
     /** @spec discovery#adjudication (#1469 stage 1): the encounter this fresh approval decides. */
     encounter?: EncounterFacts;
-  }): DeferralPending {
+  }): DeferralPending & {
+    /** The instant (ms) the deferral stops being pending: its lifetime, which no poll extends. */
+    pendingUntil: number;
+  } {
     const predecessor = this.kernel.get(input.predecessorId);
     if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
       throw new ExpansionDeferralError("predecessor_not_active", "predecessor mission is not active");
@@ -777,12 +784,38 @@ export class ExpansionDeferralStore {
       ...(proposal ? { pr: proposal } : {}),
       ...(input.creationRequestId ? { crid: input.creationRequestId } : {}),
     });
-    const existing = this.db
-      .prepare(
-        "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ? AND client_id = ?",
-      )
-      .get(key, input.clientId) as { deferral_code: string } | undefined;
+    // @spec mission#approval-idempotency (#1915, D1056): only a LIVE deferral,
+    // within its lifetime, coalesces a repetition; past it the deferral can no
+    // longer complete, so a repetition is a new operation. One
+    // creation_request_id names one live operation: a live deferral under it
+    // that is pending or approved and not yet completed is that operation, and
+    // a different request under the identifier is refused, never opened beside
+    // it.
+    const liveSince = this.now().getTime() - DEFERRAL_EXPIRES_IN * 1000;
+    const holder = input.creationRequestId
+      ? (this.db
+          .prepare(
+            "SELECT deferral_code, created_at, intent_json FROM expansion_deferrals WHERE client_id = ? AND creation_request_id = ? AND redeemed = 0 AND state IN ('authorization_pending', 'approved') AND created_at >= ?",
+          )
+          .get(input.clientId, input.creationRequestId, liveSince) as
+          | { deferral_code: string; created_at: number; intent_json: string }
+          | undefined)
+      : undefined;
+    if (holder && holder.intent_json !== key) {
+      throw new ExpansionDeferralError(
+        "creation_request_mismatch",
+        "creation_request_id was already used for a different creation request",
+      );
+    }
+    const existing =
+      holder ??
+      (this.db
+        .prepare(
+          "SELECT deferral_code, created_at FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ? AND client_id = ? AND created_at >= ?",
+        )
+        .get(key, input.clientId, liveSince) as { deferral_code: string; created_at: number } | undefined);
     const code = existing?.deferral_code ?? `${EXPANSION_DEFERRAL_PREFIX}${randomBytes(18).toString("base64url")}`;
+    const createdAt = existing?.created_at ?? this.now().getTime();
     if (!existing) {
       // @spec child-delegation#carryover-manifest — PREPARATION: render the
       // plan read-only and RESERVE the proposed successor and replacement
@@ -825,7 +858,7 @@ export class ExpansionDeferralStore {
           plan ? JSON.stringify(plan) : null,
           input.drawdownFallback ?? null,
           input.encounter ? JSON.stringify(input.encounter) : null,
-          this.now().getTime(),
+          createdAt,
         );
     }
     return {
@@ -833,6 +866,7 @@ export class ExpansionDeferralStore {
       deferral_code: code,
       expires_in: DEFERRAL_EXPIRES_IN,
       interval: DEFERRAL_INTERVAL,
+      pendingUntil: createdAt + DEFERRAL_EXPIRES_IN * 1000,
     };
   }
 
@@ -1391,6 +1425,14 @@ export class ExpansionDeferralStore {
       return { error: "access_denied", ...(status ? { status } : {}) };
     };
 
+    // @spec mission#approval-idempotency (#1915, D1056): an approval event
+    // that already created a Mission never authorizes another. This
+    // operation's own successor was recovered above, so a Mission under the
+    // event here belongs to another operation, and the completion is refused.
+    if (typeof row.approval_event_id === "string" && this.kernel.findByApprovalEvent(row.approval_event_id)) {
+      return refuse();
+    }
+
     // @spec expansion#deferred-window check (a): re-verify predecessor STATE at
     // completion. A predecessor terminated/superseded during the window fails.
     const predecessor = this.kernel.get(row.predecessor_id as string);
@@ -1568,6 +1610,7 @@ export class ExpansionDeferralStore {
           row.client_id as string,
           creationRequestId,
           res.successor.id,
+          row.deferral_code as string,
         );
       }
       // @spec child-delegation#carryover-commit — the whole batch runs in THIS
