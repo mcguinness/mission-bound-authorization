@@ -29,6 +29,7 @@ import {
 } from "./carryover.js";
 import type { AudienceReference } from "./approved-audience.js";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
+import { DEFERRAL_EXPIRES_IN } from "./deferral-lifetime.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
 import { authorityHash, type ContainmentSelector, isSubsetSetUnderIgnoringCapabilitySources, type JsonValue } from "@mission/core";
@@ -83,8 +84,7 @@ CREATE TABLE deferrals (
 ) STRICT;
 `;
 
-/** Deferral lifetime (seconds): the advertised expires_in; a poll after this is expired_token. */
-export const DEFERRAL_EXPIRES_IN = 600;
+export { DEFERRAL_EXPIRES_IN };
 /** Advertised poll cadence (seconds); RFC 8628: a poll faster than this is slow_down. */
 export const DEFERRAL_INTERVAL = 5;
 

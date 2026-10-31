@@ -1398,6 +1398,36 @@ describe(`Expansion (deferred): a lapsed horizon never starts a second operation
     expect(row?.mission_id).toBeNull();
   });
 
+  it(`a reservation recorded before pending_until existed keeps its live deferral's key through the upgrade: another operation reusing the key is refused, and the original completes and binds it ${TAG}`, async () => {
+    const root = await issueMission(READ, undefined);
+    const crid = crypto.randomUUID();
+    pinned = Date.now();
+    const code = await openDeferral(root.accessToken, crid);
+    const reservedAt = reservation(crid)?.createdAt as number;
+    // The schema before the column existed, under a 60 s horizon.
+    as.kernel.db
+      .prepare("UPDATE creation_idempotency SET expires_at = ? WHERE client_id = ? AND creation_request_id = ?")
+      .run(reservedAt + 60_000, ap.id, crid);
+    as.kernel.db.exec("ALTER TABLE creation_idempotency DROP COLUMN pending_until");
+    // The upgrade: the store's migration adds the column and fills it from the deferral.
+    const upgraded = new CreationIdempotencyStore(as.kernel);
+    pinned = reservedAt + 60_001;
+    expect(upgraded.find(ap.id, crid)?.delivery?.deferral_code).toBe(code);
+    const pendingUntil = as.kernel.db
+      .prepare("SELECT pending_until FROM creation_idempotency WHERE client_id = ? AND creation_request_id = ?")
+      .get(ap.id, crid) as { pending_until: number | null };
+    expect(pendingUntil.pending_until).toBe(reservedAt + 600_000);
+    const before = as.kernel.allMissions().length;
+    const other = await send(childParams(root.accessToken, crid));
+    expect(other.status, JSON.stringify(other.body)).toBe(400);
+    expect(other.body.error).toBe("invalid_request");
+    expect(as.kernel.allMissions().length).toBe(before);
+    expect(approveDeferral(code)).toBe(true);
+    const done = await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    expect(done.status, JSON.stringify(done.body)).toBe(200);
+    expect(reservationRow(as.kernel.db, ap.id, crid)?.mission_id).toBe(done.body.mission_id);
+  });
+
   it(`the first deferral's completion never binds its successor to a reservation a changed reuse re-made under the key ${TAG}`, async () => {
     const root = await issueMission(READ, undefined);
     const crid = crypto.randomUUID();

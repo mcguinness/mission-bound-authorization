@@ -55,6 +55,7 @@ import {
   MISSION_CREATION_FINGERPRINT_TYP,
 } from "@mission/core";
 import { UniqueViolationError, withTransaction, type Database } from "@mission/store";
+import { DEFERRAL_EXPIRES_IN } from "./deferral-lifetime.js";
 import type { MissionKernel } from "./kernel.js";
 import type { AuthorityEntry, IntentSubmissionEvidenceEntry, MissionIntent } from "./types.js";
 
@@ -316,6 +317,28 @@ export interface CreationOperation {
   expiresAt: number;
 }
 
+/**
+ * @spec expansion#creation-retention (#1915 review): a deferred Expansion
+ * reserved before `pending_until` existed keeps its key while its deferral
+ * lives. Its `pending_until` is filled from the deferral it names (created_at
+ * plus the deferral lifetime), so an upgrade never frees the key of a live
+ * operation. Idempotent: only a `reserved` row with no `pending_until` that
+ * names a deferral is touched, and only where the deferral table exists.
+ */
+function backfillPendingUntil(db: Database): void {
+  const deferrals = db
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'expansion_deferrals'")
+    .get();
+  if (!deferrals) return;
+  db.prepare(
+    `UPDATE creation_idempotency SET pending_until = (
+       SELECT d.created_at + ? FROM expansion_deferrals d
+       WHERE d.deferral_code = json_extract(creation_idempotency.delivery_json, '$.deferral_code'))
+     WHERE state = 'reserved' AND pending_until IS NULL
+       AND json_extract(delivery_json, '$.deferral_code') IS NOT NULL`,
+  ).run(DEFERRAL_EXPIRES_IN * 1000);
+}
+
 export class CreationIdempotencyStore {
   private readonly db: Database;
   private readonly now: () => Date;
@@ -332,6 +355,7 @@ export class CreationIdempotencyStore {
       (this.db.prepare("PRAGMA table_info(creation_idempotency)").all() as Array<{ name: string }>).map((c) => c.name),
     );
     if (!columns.has("pending_until")) this.db.exec("ALTER TABLE creation_idempotency ADD COLUMN pending_until INTEGER");
+    backfillPendingUntil(this.db);
     this.now = options.now ?? (() => kernel.nowDate());
     this.retentionMs = (options.retentionSeconds ?? DEFAULT_CREATION_TOMBSTONE_TTL_S) * 1000;
   }
