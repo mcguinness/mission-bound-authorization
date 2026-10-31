@@ -115,7 +115,7 @@ export interface MissionTemplate {
    */
   ceiling_audiences?: string[][];
   /**
-   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * @spec mission-template#the-mission-template, approval-governance#activation-policy-commitment
    * — the Dispatch Policy as an activation policy reference (`id`, `version`,
    * `digest`), inside `template_hash`; Dispatch verifies `digest` first.
    */

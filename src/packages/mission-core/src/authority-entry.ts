@@ -35,7 +35,7 @@ export type ChildFanoutControls = {
   /** Which actors / actor classes may receive a Child Mission from this entry. */
   allowed_child_actors?: DelegateMatcher[];
   /**
-   * @spec child-delegation#fanout, mission#standing-consent-bases — the
+   * @spec child-delegation#fanout, approval-governance#activation-policy-commitment — the
    * activation policy reference (`id`, `version`, `digest`) of the policy
    * evaluated before each child creation. When carried, its `digest` is the
    * `root_commitment` of a policy-adjudicated child's approval basis (see

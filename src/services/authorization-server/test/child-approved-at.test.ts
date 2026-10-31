@@ -22,7 +22,7 @@ import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 /**
- * @spec child-delegation#record-requirements, mission#standing-consent-bases
+ * @spec child-delegation#record-requirements, approval-governance#standing-consent-bases
  * (#1514): a `policy_drawdown` child's `approved_at` is the human approval
  * instant of the root its authority traces to. A `direct` Parent's approval
  * event was that approval; a standing-consent Parent's was an activation, so

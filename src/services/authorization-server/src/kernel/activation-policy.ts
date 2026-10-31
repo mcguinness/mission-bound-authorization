@@ -1,5 +1,5 @@
 /**
- * @spec mission#standing-consent-bases — the activation policy registry: the
+ * @spec approval-governance#activation-policy-commitment — the activation policy registry: the
  * policies this Mission Issuer evaluates to adjudicate a standing-consent
  * activation (a template Dispatch, a policy-adjudicated child creation), each
  * with the exact snapshot it evaluates.
@@ -46,7 +46,7 @@ export function mintActivationPolicyRef(
 }
 
 /**
- * @spec mission#standing-consent-bases — before an activation, recompute the
+ * @spec approval-governance#activation-policy-commitment — before an activation, recompute the
  * digest over the snapshot this issuer would evaluate for `ref.id`. True only
  * when that snapshot exists at `ref.version` and its digest equals
  * `ref.digest`; an unregistered policy, a changed version, or changed content
@@ -61,7 +61,7 @@ export function activationPolicyMatches(
 }
 
 /**
- * @spec mission#standing-consent-bases: the activation gate's form of
+ * @spec approval-governance#activation-policy-commitment: the activation gate's form of
  * {@link activationPolicyMatches}: the held snapshot this issuer evaluates for
  * `ref`, when it matches the committed `digest`, else undefined. The caller
  * hands the returned snapshot to the record funnel

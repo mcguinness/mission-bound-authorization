@@ -2272,7 +2272,7 @@ export interface DemoTemplateInput {
   issuer: string;
   approver: { iss: string; sub: string };
   ceiling: CeilingEntry[];
-  /** The Dispatch Policy the human consents to, by `id` and `version` (@spec mission#standing-consent-bases). */
+  /** The Dispatch Policy the human consents to, by `id` and `version` (@spec approval-governance#activation-policy-commitment). */
   dispatch_policy: { id: string; version: string };
   dispatchers: string[];
   /** `allowed_recipients`: independent Subject and Agent lists. */
@@ -2408,7 +2408,7 @@ export function aamReconciliationTemplate(
 }
 
 /**
- * @spec mission#standing-consent-bases — the demo deployment's Dispatch
+ * @spec approval-governance#activation-policy-commitment — the demo deployment's Dispatch
  * Policies: the exact snapshot the Mission Issuer holds and evaluates for each,
  * by policy id. A template commits the named policy's `digest` at consent, and
  * Dispatch refuses once the snapshot no longer matches it. Each policy here

@@ -641,7 +641,7 @@ export {
   type RegisteredActivationPolicy,
   verifiedActivationPolicy,
 } from "./kernel/activation-policy.js";
-// @spec mission#standing-consent-bases: the retained activation policy
+// @spec approval-governance#activation-policy-commitment: the retained activation policy
 // snapshots (MissionKernel.activationPolicySnapshots) and the audit check
 // MissionKernel.verifyActivationPolicyCommitment returns.
 export {
@@ -1121,7 +1121,7 @@ export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
   /**
-   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * @spec mission-template#the-mission-template, approval-governance#activation-policy-commitment
    * — the deployment's Dispatch Policies, keyed by `dispatch_policy.id`: each
    * policy's version and the exact snapshot the issuer evaluates, whose JSON
    * `select_agent` member is the Agent selection rule for a template that
@@ -1156,7 +1156,7 @@ export async function buildAuthorizationServer(opts: {
    */
   enforcementScopeStatement?: unknown;
   /**
-   * @spec mission#standing-consent-bases — the activation policies the kernel
+   * @spec approval-governance#activation-policy-commitment — the activation policies the kernel
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`.
    * An Authority Set entry's `child_creation_policy` is verified against them
    * before each child creation. Absent, none is configured.

@@ -157,7 +157,7 @@ describe("the shared delegate-matcher rule (@spec resource-access#matching-allow
 });
 
 describe("child_creation_policy in the lineage and ceiling comparison (#787)", () => {
-  // @spec mission#standing-consent-bases — an activation policy reference.
+  // @spec approval-governance#activation-policy-commitment — an activation policy reference.
   const POLICY = {
     id: "urn:policy:child-drawdown",
     version: "1",

@@ -199,7 +199,7 @@ async function dispatch(params: {
   );
 }
 
-/** A held Dispatch Policy snapshot; `select_agent` is its Agent selection rule (@spec mission#standing-consent-bases). */
+/** A held Dispatch Policy snapshot; `select_agent` is its Agent selection rule (@spec approval-governance#activation-policy-commitment). */
 const heldPolicy = (id: string, rule: { select_agent?: string; derivation_limit_ceiling?: number | null } = {}) => ({
   version: "1",
   content_type: "application/json",
@@ -238,7 +238,7 @@ beforeAll(async () => {
         authorization_details_types: ["mission_resource_access"],
       },
     ],
-    // @spec mission-template#the-mission-template, mission#standing-consent-bases
+    // @spec mission-template#the-mission-template, approval-governance#activation-policy-commitment
     // — deployment Dispatch Policies: each held snapshot (whose digest a
     // template commits) and, for multi-Agent templates, an Agent selection rule.
     dispatchPolicies: {
@@ -710,7 +710,7 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
   });
 
   it("agent_not_selected: several listed Agents and no Dispatch Policy rule refuses the Dispatch with access_denied", async () => {
-    // @spec mission#standing-consent-bases — template consent naming a policy
+    // @spec approval-governance#activation-policy-commitment — template consent naming a policy
     // the issuer does not hold is refused: it cannot commit unheld content.
     const unheld = await createTemplateAdmin({
       ...readOnlyTemplateBody(),

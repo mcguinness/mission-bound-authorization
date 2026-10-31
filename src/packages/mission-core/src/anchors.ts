@@ -85,7 +85,7 @@ export const MISSION_INTENT_EVIDENCE_TYP = "mission-intent-evidence";
 export const GOVERNED_POLICY_TYP = "mission-governed-policy";
 
 /**
- * @spec mission#standing-consent-bases — the integrity-anchor `typ` for an
+ * @spec approval-governance#activation-policy-commitment — the integrity-anchor `typ` for an
  * activation policy reference's `digest`: the content of a separate policy
  * artifact (a dispatch, drawdown, or child-creation policy) that adjudicates a
  * standing-consent activation. `iss` is the activating issuer.
@@ -93,7 +93,7 @@ export const GOVERNED_POLICY_TYP = "mission-governed-policy";
 export const ACTIVATION_POLICY_TYP = "mission-activation-policy";
 
 /**
- * @spec mission#standing-consent-bases — an activation policy reference: the
+ * @spec approval-governance#activation-policy-commitment — an activation policy reference: the
  * policy's `id` and `version`, and the `digest` that commits its content.
  */
 export interface ActivationPolicyRef {
@@ -133,7 +133,7 @@ function snapshotAnchor(typ: string, iss: string, snapshot: ActivationPolicySnap
 }
 
 /**
- * @spec mission#standing-consent-bases: the activation policy `digest`: the
+ * @spec approval-governance#activation-policy-commitment: the activation policy `digest`: the
  * integrity anchor with `typ` `mission-activation-policy`, `iss` the activating
  * issuer, and `value` an object of `content_type` and `content` (the
  * base64url, no-padding encoding of the snapshot's exact bytes).

@@ -16,7 +16,7 @@
  * manifest input keep the basis exactly as recorded.
  *
  * A standing-consent basis REQUIRES and defines all three members
- * (@spec mission#standing-consent-bases), so these functions accept a
+ * (@spec approval-governance#standing-consent-bases), so these functions accept a
  * `direct` basis only.
  */
 

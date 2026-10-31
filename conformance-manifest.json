@@ -7859,13 +7859,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8042,7 +8042,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "commitment"
     },
@@ -8093,31 +8093,31 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8162,61 +8162,61 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retains the verified Dispatch Policy snapshot under (issuer, id, version, digest) with its exact bytes and media type, and the instance's committed digest recomputes from it",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > retains the verified Dispatch Policy snapshot under (issuer, id, version, digest) with its exact bytes and media type, and the instance's committed digest recomputes from it",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > a later activation under the same snapshot extends its horizon, and no write shrinks the horizon or rewrites the bytes",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > a later activation under the same snapshot extends its horizon, and no write shrinks the horizon or rewrites the bytes",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > an unretained commitment verifies as unavailable, a tampered row as a mismatch, and a Mission that commits no activation policy as not_applicable",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > an unretained commitment verifies as unavailable, a tampered row as a mismatch, and a Mission that commits no activation policy as not_applicable",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > a Dispatch whose snapshot cannot be retained commits no instance, no dispatch row and no reservation",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > a Dispatch whose snapshot cannot be retained commits no instance, no dispatch row and no reservation",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > a child creation whose snapshot cannot be retained commits no child",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > a child creation whose snapshot cannot be retained commits no child",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retained snapshots survive a restart on the file-backed kernel store and are pruned at boot only past their audit horizon",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > retained snapshots survive a restart on the file-backed kernel store and are pruned at boot only past their audit horizon",
      "level": "unit",
      "surface": "governance-record"
     },
@@ -8254,25 +8254,25 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -8893,7 +8893,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8911,7 +8911,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8935,19 +8935,19 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9231,7 +9231,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     }
@@ -9539,13 +9539,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9583,13 +9583,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9633,13 +9633,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9677,7 +9677,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9695,7 +9695,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9769,7 +9769,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9813,13 +9813,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9881,7 +9881,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
      "level": "endpoint",
      "surface": "derivation"
     }
@@ -57223,7 +57223,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered",
      "level": "unit",
      "surface": "token-endpoint"
     }
@@ -57548,25 +57548,25 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > another permitted Dispatcher reusing the same dispatch_event_id gets its own instance, never the first Dispatcher's",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > another permitted Dispatcher reusing the same dispatch_event_id gets its own instance, never the first Dispatcher's",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a dispatch_event_id reused after its tombstone expires creates a new instance with a new approval_event_id",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > a dispatch_event_id reused after its tombstone expires creates a new instance with a new approval_event_id",
      "level": "unit",
      "surface": "token-endpoint"
     }
@@ -61501,13 +61501,13 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -61567,43 +61567,43 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > the same creation_request_id with a changed body is refused invalid_request, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > the same creation_request_id with a changed body is refused invalid_request, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > another client's identical creation_request_id is its own reservation, with its own successor and approval_event_id",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > another client's identical creation_request_id is its own reservation, with its own successor and approval_event_id",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a creation_request_id reused after its tombstone expires is a new drawdown under a new approval_event_id",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a creation_request_id reused after its tombstone expires is a new drawdown under a new approval_event_id",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -61733,7 +61733,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
      "level": "concurrency",
      "surface": "token-endpoint"
     }
@@ -61835,7 +61835,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -61871,7 +61871,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -62208,7 +62208,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -62244,7 +62244,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -62874,7 +62874,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -63477,13 +63477,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "governance-record"
     },
@@ -63519,13 +63519,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -63579,7 +63579,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "governance-record"
     },
@@ -80434,13 +80434,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "token-endpoint"
     }
