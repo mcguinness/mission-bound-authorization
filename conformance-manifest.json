@@ -8008,7 +8008,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2: the local note named only the governed path; ceiling_drawdown also populates adjudication (kind policy), and its endpoint test is cited."
+   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2: the local note named only the governed path; ceiling_drawdown also populates adjudication (kind policy), and its endpoint test is cited. #1915 stage 2 mutation proof: recording the governed_policy adjudication kind as human fails \"records every governed_policy approval_basis member\"."
   },
   {
    "id": "core.standing-consent.activation-policy-reference",
@@ -8053,7 +8053,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: leaving dispatch_policy out of the template_hash body fails \"commits the Dispatch Policy's content digest in template_hash\"."
   },
   {
    "id": "core.standing-consent.activation-policy-verify",
@@ -8134,7 +8134,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: dropping the digest comparison in verifiedActivationPolicy fails six cited tests across all three arms."
   },
   {
    "id": "core.standing-consent.activation-policy-retain",
@@ -8277,7 +8277,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: giving each instance the template's approval_event_id fails \"two Dispatches under one template consent create two Missions\"."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -8337,7 +8337,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 mutation proof: disabling the direct gate's kind-equality check (direct-approval-record.ts:285) fails \"a kind that is not adjudication.kind\". Gap found by the stage 2 mutation run (not fixed in this no-behavior-change stage): the governed_policy record gate does not compare adjudication.kind with the accountable assertion's kind; a record mutated to kind human still committed, and only the governed test's exact-equality assertion caught it."
   },
   {
    "id": "approval-governance.triggers.required-under-adopting-profile",
@@ -8736,7 +8736,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that appends a model output's add entries fails \"never widen it\" (the governed-policy-approval.ts:1268 backstop alone is unreachable)."
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
@@ -8766,7 +8766,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that takes a model output's supplied authority fails \"never widen it\"."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
@@ -9261,7 +9261,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Witnessed for template, ceiling_drawdown, governed_policy and a child of a direct parent. A child of a standing-consent parent inherits it in code, untested."
+   "notes": "#1915 stage 2 (D1056). Witnessed for template, ceiling_drawdown, governed_policy and a child of a direct parent. A child of a standing-consent parent inherits it in code, untested. #1915 stage 2 mutation proof: recording the requesting client as a drawdown successor's consent_principal fails \"completes in the token-exchange response\" and both ceiling re-consent tests."
   },
   {
    "id": "core.approval-basis.consent-principal-required",
@@ -9581,7 +9581,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation` rename, re-run per builder at 68f30fd4, fails \"records a template basis\", \"records a policy_drawdown basis\" and \"completes in the token-exchange response\" respectively."
   },
   {
    "id": "core.approval-basis.standing-consent-activation-actor-required",
@@ -9631,7 +9631,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation_actor` rename, re-run per builder at 68f30fd4, fails each builder's witness, the governed_policy one included."
   },
   {
    "id": "core.approval-basis.standing-consent-root-commitment-required",
@@ -9675,7 +9675,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `root_commitment` rename, re-run per builder at 68f30fd4, fails each builder's witness."
   },
   {
    "id": "core.approval-basis.standing-consent-trace-to-human",
@@ -9743,7 +9743,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Witnessed on all four bases the reference implements (template, policy_drawdown, ceiling_drawdown, governed_policy). Gap outside the observation: a child of a standing-consent parent inherits consent_principal in code, and only its approved_at is asserted."
+   "notes": "#1915 stage 2 (D1056). Witnessed on all four bases the reference implements (template, policy_drawdown, ceiling_drawdown, governed_policy). Gap outside the observation: a child of a standing-consent parent inherits consent_principal in code, and only its approved_at is asserted. #1915 stage 2 mutation proof: recording the Dispatcher as a template instance's consent_principal fails \"records the TEMPLATE approver as the human of record\" and \"records a template basis\"."
   },
   {
    "id": "core.approval-basis.standing-consent-approval-instant",
@@ -9811,7 +9811,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). The child tests distinguish the consent instant from the activation instant on every basis, through two generations."
+   "notes": "#1915 stage 2 (D1056). The child tests distinguish the consent instant from the activation instant on every basis, through two generations. #1915 stage 2 mutation proof: setting a child's approved_at to its Parent's created_at fails four child-approved-at cases (ceiling_drawdown, direct Parent, governed_policy, template)."
   },
   {
    "id": "core.approval-basis.standing-consent-approved-at-required",
@@ -9861,7 +9861,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Sibling of the activation, activation_actor and root_commitment REQUIRED rows. The member's verify sentence stays core.approval-basis.approved-at-standing-consent (partial)."
+   "notes": "#1915 stage 2 (D1056). Sibling of the activation, activation_actor and root_commitment REQUIRED rows. The member's verify sentence stays core.approval-basis.approved-at-standing-consent (partial). #1915 stage 2 mutation proof: renaming the template basis's approved_at key fails \"records a template basis\"."
   },
   {
    "id": "core.approval-basis.policy-adjudication-policy-required",
@@ -9911,7 +9911,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Two bases populate adjudication (governed_policy, ceiling_drawdown); with a separate evaluator, the policy is the evaluator, not the root."
+   "notes": "#1915 stage 2 (D1056). Two bases populate adjudication (governed_policy, ceiling_drawdown); with a separate evaluator, the policy is the evaluator, not the root. #1915 stage 2 mutation proof: dropping version from the ceiling_drawdown adjudication.policy fails \"completes in the token-exchange response\" and \"drawdown_count counts committed policy-adjudicated drawdowns\"."
   },
   {
    "id": "core.approval-basis.recency-evaluation-instant",
