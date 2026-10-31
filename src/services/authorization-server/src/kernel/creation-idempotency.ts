@@ -38,9 +38,15 @@
  * Retention (two tiers): the delivery ARTIFACT (the child grant / access token)
  * expires on its own short lifetime; the idempotency TOMBSTONE (this row)
  * outlives it — `retentionSeconds`, default {@link DEFAULT_CREATION_TOMBSTONE_TTL_S},
- * the deployment's published retry horizon. A reuse of the identifier after
- * tombstone expiry is out of contract: the expired row is purged and the
- * identifier admits a fresh reservation.
+ * the deployment's published retry horizon.
+ * @spec mission#approval-idempotency (#1915, D1056): the horizon starts when the
+ * key is reserved (`created_at`) and the key is retained through `expires_at`
+ * inclusive, fixed at reservation, so a later retention change never shortens
+ * it. A `reserved` operation still pending at that boundary keeps its key until
+ * it ends (`pending_until`, a deferral's own lifetime), so a lapsed horizon
+ * never frees the key of a live operation. A reuse after both is a NEW
+ * operation: the expired row is purged and the identifier admits a fresh
+ * reservation, judged on current state.
  */
 
 import {
@@ -67,9 +73,16 @@ CREATE TABLE IF NOT EXISTS creation_idempotency (
   created_at INTEGER NOT NULL,
   completed_at INTEGER,
   expires_at INTEGER NOT NULL,
+  pending_until INTEGER,
   PRIMARY KEY (client_id, creation_request_id)
 ) STRICT;
 `;
+
+/**
+ * A row is retained (found, and never purged) through its horizon, and while a
+ * `reserved` operation it names is still pending. Both bounds are inclusive.
+ */
+const RETAINED = "(expires_at >= ? OR (state = 'reserved' AND pending_until IS NOT NULL AND pending_until >= ?))";
 
 /**
  * Tombstone retention default (seconds): the published retry horizon. It
@@ -273,6 +286,12 @@ export interface CreationReservation {
   sourceMissionId: string;
   /** Initial delivery metadata (e.g. the deferral handle), when known at reserve time. */
   delivery?: Record<string, unknown>;
+  /**
+   * The instant (ms) a reserved operation that completes later stops being
+   * pending (a deferral's lifetime): the key stays bound to it until then,
+   * whatever the horizon.
+   */
+  pendingUntil?: number;
 }
 
 /** A recorded failure outcome, replayed verbatim on a matching retry. */
@@ -309,26 +328,25 @@ export class CreationIdempotencyStore {
     // The KERNEL's database: reservation + Mission INSERT share one transaction.
     this.db = kernel.db;
     this.db.exec(SCHEMA);
+    const columns = new Set(
+      (this.db.prepare("PRAGMA table_info(creation_idempotency)").all() as Array<{ name: string }>).map((c) => c.name),
+    );
+    if (!columns.has("pending_until")) this.db.exec("ALTER TABLE creation_idempotency ADD COLUMN pending_until INTEGER");
     this.now = options.now ?? (() => kernel.nowDate());
     this.retentionMs = (options.retentionSeconds ?? DEFAULT_CREATION_TOMBSTONE_TTL_S) * 1000;
   }
 
   /**
-   * Look up the operation bound to `(clientId, creationRequestId)`. A row past
-   * its tombstone expiry is out of contract: it is treated as absent (and
-   * purged), so the identifier admits a fresh reservation.
+   * Look up the operation bound to `(clientId, creationRequestId)`. A row no
+   * longer retained ({@link RETAINED}) is treated as absent (and purged), so
+   * the identifier admits a fresh reservation.
    */
   find(clientId: string, creationRequestId: string): CreationOperation | undefined {
     const row = this.db
       .prepare("SELECT * FROM creation_idempotency WHERE client_id = ? AND creation_request_id = ?")
       .get(clientId, creationRequestId) as Record<string, unknown> | undefined;
     if (!row) return undefined;
-    if (this.now().getTime() > (row.expires_at as number)) {
-      this.db
-        .prepare("DELETE FROM creation_idempotency WHERE client_id = ? AND creation_request_id = ?")
-        .run(clientId, creationRequestId);
-      return undefined;
-    }
+    if (this.purgeLapsed(clientId, creationRequestId)) return undefined;
     return {
       clientId: row.client_id as string,
       creationRequestId: row.creation_request_id as string,
@@ -364,19 +382,28 @@ export class CreationIdempotencyStore {
     return rows.map((r) => ({ clientId: r.client_id, parentId: r.source_mission_id, childId: r.mission_id }));
   }
 
-  /** Bare INSERT (state as given); the caller controls the transaction. An
-   *  expired tombstone under the same key is purged first (reuse after the
-   *  horizon is out of contract, so the identifier is simply free again). */
+  /** Delete the row under the key when it is no longer retained; true when one was deleted. */
+  private purgeLapsed(clientId: string, creationRequestId: string): boolean {
+    const nowMs = this.now().getTime();
+    return (
+      this.db
+        .prepare(`DELETE FROM creation_idempotency WHERE client_id = ? AND creation_request_id = ? AND NOT ${RETAINED}`)
+        .run(clientId, creationRequestId, nowMs, nowMs).changes > 0
+    );
+  }
+
+  /** Bare INSERT (state as given); the caller controls the transaction. A
+   *  lapsed tombstone under the same key is purged first (a reuse after it is
+   *  a new operation); a retained one makes the INSERT a uniqueness violation. */
   private insertRow(res: CreationReservation, state: "reserved" | "failed", failure?: CreationFailure): void {
     const nowMs = this.now().getTime();
-    this.db
-      .prepare("DELETE FROM creation_idempotency WHERE client_id = ? AND creation_request_id = ? AND expires_at < ?")
-      .run(res.clientId, res.creationRequestId, nowMs);
+    this.purgeLapsed(res.clientId, res.creationRequestId);
     this.db
       .prepare(
         `INSERT INTO creation_idempotency (client_id, creation_request_id, op, state, fingerprint,
-         cnf_jkt, source_mission_id, mission_id, delivery_json, failure_json, created_at, completed_at, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, ?)`,
+         cnf_jkt, source_mission_id, mission_id, delivery_json, failure_json, created_at, completed_at, expires_at,
+         pending_until)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, ?, ?)`,
       )
       .run(
         res.clientId,
@@ -390,6 +417,7 @@ export class CreationIdempotencyStore {
         failure ? JSON.stringify(failure) : null,
         nowMs,
         nowMs + this.retentionMs,
+        res.pendingUntil ?? null,
       );
   }
 
@@ -493,13 +521,20 @@ export class CreationIdempotencyStore {
    * TRANSACTION: the caller MUST run this inside the same `withTransaction`
    * (on the kernel database) that inserts the Mission, so reservation state and
    * Mission creation commit atomically.
+   * @spec mission#approval-idempotency (#1915, D1056): only the reservation the
+   * completing operation made is completed, the one still `reserved` under the
+   * key and, for a deferral, naming its handle. A row another operation holds
+   * under the key is never bound to this Mission.
    */
-  completeInCallerTx(clientId: string, creationRequestId: string, missionId: string): void {
+  completeInCallerTx(clientId: string, creationRequestId: string, missionId: string, deferralCode?: string): void {
     this.db
       .prepare(
-        "UPDATE creation_idempotency SET state = 'completed', mission_id = ?, completed_at = ? WHERE client_id = ? AND creation_request_id = ?",
+        `UPDATE creation_idempotency SET state = 'completed', mission_id = ?, completed_at = ?
+         WHERE client_id = ? AND creation_request_id = ? AND state = 'reserved'${
+           deferralCode === undefined ? "" : " AND json_extract(delivery_json, '$.deferral_code') = ?"
+         }`,
       )
-      .run(missionId, this.now().getTime(), clientId, creationRequestId);
+      .run(missionId, this.now().getTime(), clientId, creationRequestId, ...(deferralCode === undefined ? [] : [deferralCode]));
   }
 
   /**

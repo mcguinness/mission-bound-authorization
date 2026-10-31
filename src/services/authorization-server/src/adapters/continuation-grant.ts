@@ -3036,6 +3036,12 @@ export async function handleExpansionExchange(
         ctx.set("cache-control", "no-store");
         return;
       }
+      // @spec mission#approval-idempotency (#1915, D1056): a live deferral
+      // already holds this creation_request_id for a different request.
+      if (e.code === "creation_request_mismatch") {
+        txError(ctx, 400, "invalid_request", e.message);
+        return;
+      }
       txError(ctx, 400, "invalid_grant", e.message);
       return;
     }
@@ -3055,6 +3061,9 @@ export async function handleExpansionExchange(
       cnfJkt: resolved.jkt,
       sourceMissionId: active.id,
       delivery: { mode: "deferred", deferral_code: pending.deferral_code },
+      // @spec mission#approval-idempotency (#1915, D1056): the key stays bound
+      // to the deferral while it is pending, whatever the horizon.
+      pendingUntil: pending.pendingUntil,
     });
   } catch (e) {
     if (e instanceof UniqueViolationError) {

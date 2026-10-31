@@ -1113,7 +1113,7 @@ describe(`Expansion (deferred): the horizon runs from initiation ${TAG}`, () => 
     expect(deferralsUnder(crid)).toHaveLength(1);
   });
 
-  it(`with the shipped horizon, an identical reuse after it is handed the first deferral, long past its lifetime, rather than a new operation; nothing is created ${TAG}`, async () => {
+  it(`with the shipped horizon, an identical reuse after it and after the first deferral's lifetime starts a new operation: a new deferral, never the dead handle, completed under a new approval_event_id ${TAG}`, async () => {
     const root = await issueMission(READ, undefined);
     const crid = crypto.randomUUID();
     const t = Date.now();
@@ -1124,13 +1124,18 @@ describe(`Expansion (deferred): the horizon runs from initiation ${TAG}`, () => 
     const reused = await send(expansionParams(root.accessToken, crid, READ_LIST));
     expect(reused.status, JSON.stringify(reused.body)).toBe(400);
     expect(reused.body.error).toBe("authorization_pending");
-    // Observed: the coalescing lookup in ExpansionDeferralStore.open ignores
-    // the deferral lifetime, so the reuse is answered with the dead handle.
-    expect(reused.body.deferral_code).toBe(code);
-    const poll = await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
-    expect(poll.body.error).toBe("expired_token");
+    const fresh = reused.body.deferral_code as string;
+    expect(fresh).not.toBe(code);
+    expect(reservation(crid)?.createdAt).toBe(t + R + 1);
     expect(as.kernel.allMissions().length).toBe(before);
-    expect(deferralsUnder(crid)).toHaveLength(1);
+    expect((await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code })).body.error).toBe("expired_token");
+    const event = `apev-${crypto.randomUUID()}`;
+    expect(approveDeferral(fresh, event)).toBe(true);
+    const done = await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: fresh });
+    expect(done.status, JSON.stringify(done.body)).toBe(200);
+    expect(as.kernel.get(done.body.mission_id as string)?.approval_event_id).toBe(event);
+    expect(as.kernel.allMissions().length).toBe(before + 1);
+    expect(reservation(crid)?.missionId).toBe(done.body.mission_id);
   });
 });
 
@@ -1270,10 +1275,12 @@ describe(`Expansion (deferred): an approval event replayed into another Mission 
     const before = as.kernel.allMissions().length;
     approveDeferral(d2, event);
     const r2 = await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: d2 });
-    // Observed: the missions table's approval_event_id uniqueness refuses the
-    // insert and the poll answers 500 server_error; nothing is delivered.
-    expect(r2.status, JSON.stringify(r2.body)).not.toBe(200);
+    // The decision already created a Mission, so this completion is refused
+    // definitively, before any write, and every later poll repeats it.
+    expect(r2.status, JSON.stringify(r2.body)).toBe(400);
+    expect(r2.body.error).toBe("access_denied");
     expect(r2.body.access_token).toBeUndefined();
+    expect((await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: d2 })).body.error).toBe("access_denied");
     expect(as.kernel.allMissions().length).toBe(before);
     expect(as.kernel.allMissions().filter((m) => m.approval_event_id === event)).toHaveLength(1);
     expect(as.kernel.allMissions().filter((m) => m.predecessor === second.missionId)).toHaveLength(0);
@@ -1281,7 +1288,7 @@ describe(`Expansion (deferred): an approval event replayed into another Mission 
   });
 });
 
-describe(`Expansion (deferred): a lapsed key never starts a second operation while the first is pending (expected to fail today) ${TAG}`, () => {
+describe(`Expansion (deferred): a lapsed horizon never starts a second operation while the first is pending ${TAG}`, () => {
   /** A deployment whose published horizon (60 s) is shorter than the deferral lifetime (600 s): the key lapses mid-ceremony. */
   const lapseKey = (crid: string): void => {
     const createdAt = reservation(crid)?.createdAt as number;
@@ -1314,6 +1321,65 @@ describe(`Expansion (deferred): a lapsed key never starts a second operation whi
     const reused = await send(expansionParams(root.accessToken, crid, READ_LIST));
     expect(reused.body.deferral_code === undefined || reused.body.deferral_code === code, JSON.stringify(reused.body)).toBe(true);
     expect(deferralsUnder(crid)).toHaveLength(1);
+  });
+
+  it(`the pending reservation itself survives the lapsed horizon: the reuse finds the original row, its reservation instant and its deferral, not a re-made one ${TAG}`, async () => {
+    const root = await issueMission(READ, undefined);
+    const crid = crypto.randomUUID();
+    pinned = Date.now();
+    const code = await openDeferral(root.accessToken, crid);
+    const reservedAt = reservation(crid)?.createdAt as number;
+    lapseKey(crid);
+    const refused = await send(expansionParams(root.accessToken, crid, READ_LIST, "A different expansion"));
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_request");
+    const kept = reservation(crid);
+    expect(kept?.state).toBe("reserved");
+    expect(kept?.createdAt).toBe(reservedAt);
+    expect(kept?.delivery?.deferral_code).toBe(code);
+    // Once the deferral's own lifetime has ended, the lapsed key is free.
+    pinned = reservedAt + 600_000;
+    expect(reservation(crid)?.createdAt).toBe(reservedAt);
+    pinned = reservedAt + 600_001;
+    expect(reservation(crid)).toBeUndefined();
+  });
+
+  it(`a live deferral refuses a changed request under its creation_request_id, and joins an identical one after its approval, even where no reservation stands ${TAG}`, async () => {
+    const root = await issueMission(READ, undefined);
+    const crid = crypto.randomUUID();
+    pinned = Date.now();
+    const code = await openDeferral(root.accessToken, crid);
+    // As for a concurrent request that read the key before the first reserved it.
+    const dropReservation = () =>
+      as.kernel.db.prepare("DELETE FROM creation_idempotency WHERE client_id = ? AND creation_request_id = ?").run(ap.id, crid);
+    dropReservation();
+    const refused = await send(expansionParams(root.accessToken, crid, READ_LIST, "A different expansion"));
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_request");
+    expect(refused.body.error_description).toBe("creation_request_id was already used for a different creation request");
+    expect(deferralsUnder(crid)).toHaveLength(1);
+    expect(approveDeferral(code)).toBe(true);
+    dropReservation();
+    const joined = await send(expansionParams(root.accessToken, crid, READ_LIST));
+    expect(joined.body.deferral_code, JSON.stringify(joined.body)).toBe(code);
+    expect(deferralsUnder(crid)).toHaveLength(1);
+  });
+
+  it(`a completion binds only the reservation its own deferral made, never a row another operation holds under the key ${TAG}`, async () => {
+    const root = await issueMission(READ, undefined);
+    const crid = crypto.randomUUID();
+    pinned = Date.now();
+    const code = await openDeferral(root.accessToken, crid);
+    // Another operation's reservation under the same key.
+    as.kernel.db
+      .prepare("UPDATE creation_idempotency SET delivery_json = ? WHERE client_id = ? AND creation_request_id = ?")
+      .run(JSON.stringify({ mode: "deferred", deferral_code: "xdfr_another" }), ap.id, crid);
+    expect(approveDeferral(code)).toBe(true);
+    const done = await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    expect(done.status, JSON.stringify(done.body)).toBe(200);
+    const row = reservationRow(as.kernel.db, ap.id, crid);
+    expect(row?.state).toBe("reserved");
+    expect(row?.mission_id).toBeNull();
   });
 
   it(`the first deferral's completion never binds its successor to a reservation a changed reuse re-made under the key ${TAG}`, async () => {
