@@ -1280,3 +1280,56 @@ describe(`Expansion (deferred): an approval event replayed into another Mission 
     expect(as.kernel.get(second.missionId)?.state).toBe("active");
   });
 });
+
+describe(`Expansion (deferred): a lapsed key never starts a second operation while the first is pending (expected to fail today) ${TAG}`, () => {
+  /** A deployment whose published horizon (60 s) is shorter than the deferral lifetime (600 s): the key lapses mid-ceremony. */
+  const lapseKey = (crid: string): void => {
+    const createdAt = reservation(crid)?.createdAt as number;
+    as.kernel.db
+      .prepare("UPDATE creation_idempotency SET expires_at = ? WHERE client_id = ? AND creation_request_id = ?")
+      .run(createdAt + 60_000, ap.id, crid);
+    pinned = createdAt + 60_001;
+  };
+
+  it(`a reuse with another task while the first deferral awaits the Approver opens no second deferral under the key ${TAG}`, async () => {
+    const root = await issueMission(READ, undefined);
+    const crid = crypto.randomUUID();
+    pinned = Date.now();
+    const code = await openDeferral(root.accessToken, crid);
+    lapseKey(crid);
+    const reused = await send(expansionParams(root.accessToken, crid, READ_LIST, "A different expansion"));
+    // The pending operation still owns the key: the changed request is
+    // refused as a mismatch, or at most joins the pending deferral.
+    expect(reused.body.deferral_code === undefined || reused.body.deferral_code === code, JSON.stringify(reused.body)).toBe(true);
+    expect(deferralsUnder(crid)).toHaveLength(1);
+  });
+
+  it(`an identical reuse after the first deferral was approved, and before its poll completed it, opens no second deferral under the key ${TAG}`, async () => {
+    const root = await issueMission(READ, undefined);
+    const crid = crypto.randomUUID();
+    pinned = Date.now();
+    const code = await openDeferral(root.accessToken, crid);
+    expect(approveDeferral(code)).toBe(true);
+    lapseKey(crid);
+    const reused = await send(expansionParams(root.accessToken, crid, READ_LIST));
+    expect(reused.body.deferral_code === undefined || reused.body.deferral_code === code, JSON.stringify(reused.body)).toBe(true);
+    expect(deferralsUnder(crid)).toHaveLength(1);
+  });
+
+  it(`the first deferral's completion never binds its successor to a reservation a changed reuse re-made under the key ${TAG}`, async () => {
+    const root = await issueMission(READ, undefined);
+    const crid = crypto.randomUUID();
+    pinned = Date.now();
+    const code = await openDeferral(root.accessToken, crid);
+    lapseKey(crid);
+    const changed = expansionParams(root.accessToken, crid, READ_LIST, "A different expansion");
+    await send(changed);
+    expect(approveDeferral(code)).toBe(true);
+    const done = await send({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    expect(done.status, JSON.stringify(done.body)).toBe(200);
+    // A retry of the changed request must not be handed the successor the
+    // first request's approval created.
+    const retry = await send(changed);
+    expect(retry.body.mission_id, JSON.stringify(retry.body)).not.toBe(done.body.mission_id);
+  });
+});
