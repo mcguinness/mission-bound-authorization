@@ -10,7 +10,14 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { type AuthorityEntry, createExpansion, DEFERRED_GRANT_TYPE, successorWidensOnly, validateMissionIntent } from "@mission/authorization-server";
+import {
+  type AuthorityEntry,
+  createExpansion,
+  DEFERRED_GRANT_TYPE,
+  resolvedAnchors,
+  successorWidensOnly,
+  validateMissionIntent,
+} from "@mission/authorization-server";
 import { buildScopeStatement, EgressGate, type MissionState, scopeDigest } from "@mission/agent";
 import {
   aamReconciliationCeiling,
@@ -592,7 +599,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     subject: dispatchedRecord.subject,
     approver: dispatchedRecord.approval_basis.consent_principal,
     template: dispatchedRecord.template,
-    authority_hash: dispatchedRecord.authority_hash,
+    authority_hash: resolvedAnchors(dispatchedRecord).authority_hash,
     expires_at: dispatchedRecord.expires_at,
   });
   const dispClaims = decodeClaims(dispatchedAccessToken);
@@ -840,7 +847,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     // The OBSERVED state: a Mission past its `expires_at` reads `terminated`
     // whether or not its expiry has been persisted (@spec mission#lifecycle).
     readState: async (id) => stack.kernel.observedRecord(id)?.state as MissionState | undefined,
-    authorityHash: dispatchedRecord.authority_hash,
+    authorityHash: resolvedAnchors(dispatchedRecord).authority_hash,
     evidence: stack.egressEvidence,
     emitterId: "aam-egress-gate",
     instanceEpoch: "demo-epoch",
@@ -886,7 +893,7 @@ async function runAamSection(stack: DemoStack, as: AuthServerExtras, asUrl: stri
     approver: humanRecord.approval_basis.consent_principal,
     approval_basis: humanRecord.approval_basis,
     template: humanRecord.template,
-    authority_hash: humanRecord.authority_hash,
+    authority_hash: resolvedAnchors(humanRecord).authority_hash,
   });
   note(
     `approval_basis.type == "${humanRecord.approval_basis.type}" (direct, not "template"); template lineage is ` +
@@ -1247,8 +1254,8 @@ async function main() {
     subject: record.subject,
     approver: record.approval_basis.consent_principal,
     policy_version: record.policy_version,
-    intent_hash: record.intent_hash,
-    authority_hash: record.authority_hash,
+    intent_hash: resolvedAnchors(record).intent_hash,
+    authority_hash: resolvedAnchors(record).authority_hash,
     expires_at: record.expires_at,
   });
   block("derived Authority Set (bounded by the policy ceiling)", record.authority_set);
@@ -1920,7 +1927,7 @@ async function main() {
     predecessor: expansion.successor.predecessor,
     subject: expansion.successor.subject,
     approver: expansion.successor.approval_basis.consent_principal,
-    authority_hash: expansion.successor.authority_hash,
+    authority_hash: resolvedAnchors(expansion.successor).authority_hash,
     expires_at: expansion.successor.expires_at,
   });
   block("predecessor authority actions", predecessor.authority_set.flatMap((e) => e.actions));

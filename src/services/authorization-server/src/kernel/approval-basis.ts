@@ -7,7 +7,8 @@
  *   `approval_event_id`;
  * - `activation_actor`: the basis's `consent_principal` (the Approver
  *   triggers their own approval);
- * - `root_commitment`: the record's own `authority_hash`.
+ * - `root_commitment`: the record's own `authority_hash`, itself recorded or
+ *   implied (#1917, D1061), read through `resolvedAnchors`.
  *
  * When present for `direct`, each MUST match its implied value. The implied
  * values are semantic defaults: these functions read them, and nothing here
@@ -20,10 +21,15 @@
  * `direct` basis only.
  */
 
+import { type AnchoredRecord, resolvedAnchors } from "./anchors.js";
 import type { ApprovalBasisDirect, MissionRecord } from "./types.js";
 
-/** The record members the three implied values are drawn from. */
-export type DirectBasisRecord = Pick<MissionRecord, "approval_basis" | "approval_event_id" | "authority_hash">;
+/**
+ * The record members the three implied values are drawn from: the
+ * `authority_hash` behind `root_commitment` is the record's resolved anchor
+ * (recorded or implied, #1917), so the members it is computed from come too.
+ */
+export type DirectBasisRecord = Pick<MissionRecord, "approval_basis" | "approval_event_id"> & AnchoredRecord;
 
 /** The three members of a `direct` basis, each explicit or implied. */
 export interface DirectBasisMembers {
@@ -60,7 +66,10 @@ export function impliedDirectBasisMembers(record: DirectBasisRecord): DirectBasi
   return {
     activation: { approval_event_id: record.approval_event_id },
     activation_actor: basis.consent_principal,
-    root_commitment: record.authority_hash,
+    // @spec mission#integrity-anchors (#1917, D1061): the record's own
+    // authority_hash, recorded or implied; a recorded value that differs
+    // from the anchor over `authority_set` is refused, never replaced.
+    root_commitment: resolvedAnchors(record).authority_hash,
   };
 }
 

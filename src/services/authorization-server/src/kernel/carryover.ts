@@ -55,6 +55,7 @@ import { type ChildActorParent, childActorRefusal, inheritChildActorOrigins } fr
 import type { DelegateCandidate } from "./delegate-matcher.js";
 import { entryDigest } from "./discharge.js";
 import { isSubsetSet } from "./derive.js";
+import { resolvedAnchors } from "./anchors.js";
 import { inheritOrigins } from "./eligibility-provenance.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -1041,6 +1042,9 @@ export function prepareCarryover(
     const oldChildCarried = kernel.effectiveEntriesWithOrigin(child).map((e) => kernel.issuable(e));
     const oldChildIssuable = oldChildEffective.filter((_, i) => oldChildCarried[i]);
     const external = externalStateFor(child, input.config);
+    // @spec mission#integrity-anchors (#1917, D1061): the old child's
+    // anchors, recorded or implied, over its immutable approved record.
+    const childAnchors = resolvedAnchors(child);
     const base: Omit<CarryoverEntry, "outcome"> = {
       child_id: child.id,
       issuer: child.issuer,
@@ -1048,8 +1052,8 @@ export function prepareCarryover(
       child_actor: { sub: child.client_id },
       state: child.state,
       version: child.version,
-      authority_hash: child.authority_hash,
-      intent_hash: child.intent_hash,
+      authority_hash: childAnchors.authority_hash,
+      intent_hash: childAnchors.intent_hash,
       effective_authority_hash: authorityHash(issuer, oldChildEffective as never),
       containment_version: child.containment?.containment_version ?? 0,
       discharged_digests: kernel.dischargedEntryDigests(child),
@@ -1119,7 +1123,7 @@ export function prepareCarryover(
       outcome: "carry",
       replacement: {
         replacement_id: replacementId,
-        intent_hash: child.intent_hash,
+        intent_hash: childAnchors.intent_hash,
         authority_hash: authorityHash(issuer, candidateAuthority as never),
         actor: { sub: child.client_id },
         parent: { issuer, mission_id: newParentId },
@@ -1289,10 +1293,13 @@ export function applyCarryoverInCallerTx(
   if (carryoverManifestHash(issuer, manifest) !== input.manifestHash) {
     throw new CarryoverError("manifest_mismatch", "carryover manifest hash does not match the approved commitment");
   }
+  // @spec mission#integrity-anchors (#1917, D1061): the created successor's
+  // anchors, recorded or implied.
+  const successorAnchors = resolvedAnchors(successor);
   if (
     successor.id !== manifest.successor.mission_id ||
-    successor.intent_hash !== manifest.successor_intent_hash ||
-    successor.authority_hash !== manifest.successor_authority_hash
+    successorAnchors.intent_hash !== manifest.successor_intent_hash ||
+    successorAnchors.authority_hash !== manifest.successor_authority_hash
   ) {
     throw new CarryoverError(
       "manifest_mismatch",
@@ -1459,20 +1466,21 @@ export function applyCarryoverInCallerTx(
     (e) => e.outcome === "carry" && e.replacement && !excluded.has(e.child_id),
   );
   for (const entry of carryEntries) {
-    const changed = kernel.db
-      .prepare(
-        `UPDATE missions SET version = version
-           WHERE id = ? AND version = ? AND state = ? AND authority_hash = ? AND derivation_count = ?
-             AND expires_at = ?`,
-      )
-      .run(
-        entry.child_id,
-        entry.version,
-        entry.state,
-        entry.authority_hash,
-        entry.derivation_count,
-        entry.expires_at,
-      );
+    // @spec mission#integrity-anchors (#1917, D1061): the rendered
+    // authority_hash is checked against the stored record's anchor, recorded
+    // or implied, never against the column (NULL where anchors are not
+    // retained); the remaining inputs keep their compare-and-touch.
+    const stored = kernel.get(entry.child_id);
+    const anchorHeld = stored !== undefined && resolvedAnchors(stored).authority_hash === entry.authority_hash;
+    const changed = anchorHeld
+      ? kernel.db
+          .prepare(
+            `UPDATE missions SET version = version
+               WHERE id = ? AND version = ? AND state = ? AND derivation_count = ?
+                 AND expires_at = ?`,
+          )
+          .run(entry.child_id, entry.version, entry.state, entry.derivation_count, entry.expires_at)
+      : { changes: 0 };
     if (changed.changes !== 1) {
       throw new CarryoverError(
         "snapshot_moved",
@@ -1664,7 +1672,9 @@ export function applyCarryoverInCallerTx(
     const parentRef: ParentRef = {
       id: newParent.id,
       issuer,
-      authority_hash: newParent.authority_hash,
+      // @spec child-delegation#parent-member, mission#integrity-anchors
+      // (#1917): the new parent's anchor, recorded or implied.
+      authority_hash: resolvedAnchors(newParent).authority_hash,
       depth,
       cascade_mode: "immediate",
       created_at: createdAt,
@@ -1677,7 +1687,9 @@ export function applyCarryoverInCallerTx(
       authority_set: authority,
       eligibility_provenance: replacementProvenance,
       child_actor_provenance: replacementChildActorProvenance,
-      intent_hash: oldChild.intent_hash,
+      // The replacement carries the old child's intent, so its intent anchor
+      // is the old child's, recorded or implied (#1917).
+      intent_hash: resolvedAnchors(oldChild).intent_hash,
       authority_hash: replacementAuthorityHash,
       subject: oldChild.subject,
       approval_basis: approvalBasis,
@@ -1750,8 +1762,8 @@ export function applyCarryoverInCallerTx(
     carriedTo.set(entry.child_id, inserted.id);
     const evidence: ChildEvidence = {
       evidence_id: `chd_${randomBytes(9).toString("base64url")}`,
-      parent: { id: newParent.id, issuer, authority_hash: newParent.authority_hash },
-      child: { id: inserted.id, issuer, authority_hash: inserted.authority_hash },
+      parent: { id: newParent.id, issuer, authority_hash: resolvedAnchors(newParent).authority_hash },
+      child: { id: inserted.id, issuer, authority_hash: resolvedAnchors(inserted).authority_hash },
       child_actor: { sub: proposal.actor.sub },
       attenuation: { result: "strict_subset" },
       fanout: { active_children: primaryOccupancy(kernel, newParent, authority) },
