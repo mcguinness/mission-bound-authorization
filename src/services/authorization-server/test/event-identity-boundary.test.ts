@@ -258,6 +258,22 @@ describe(`Template Dispatch: the dispatch_event_id horizon at its boundary ${TAG
     expect((row?.completed_at as number) > (row?.created_at as number)).toBe(true);
     expect(row?.expires_at).toBe((row?.created_at as number) + 60_000);
   });
+
+  it(`a horizon fixed at reservation is never shortened by a later, shorter published retention: the recorded key is still recovered past the new value ${TAG}`, () => {
+    const t = mkTemplate();
+    const first = kDispatch(t.id, "evt-published", new CreationIdempotencyStore(kernel)).mission;
+    // The deployment republishes a 60 s horizon; the store is rebuilt with it.
+    const shorter = new CreationIdempotencyStore(kernel, { retentionSeconds: 60 });
+    kClock = T0 + 60_001;
+    const op = shorter.find("orchestrator", "evt-published");
+    expect(op?.missionId).toBe(first.id);
+    expect(op?.expiresAt).toBe(T0 + R);
+    const retry = kDispatch(t.id, "evt-published", shorter).mission;
+    expect(retry.id).toBe(first.id);
+    // A key recorded after the change runs on the new value.
+    kDispatch(t.id, "evt-after-change", shorter);
+    expect(shorter.find("orchestrator", "evt-after-change")?.expiresAt).toBe(T0 + 60_001 + 60_000);
+  });
 });
 
 describe(`Template Dispatch: concurrent reuse of one expired dispatch_event_id ${TAG}`, () => {
