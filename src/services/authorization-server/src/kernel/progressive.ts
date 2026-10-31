@@ -1398,7 +1398,7 @@ export function gatherDrawdownInputs(
   const effective = kernel.effectiveAuthoritySet(predecessor);
   const requested = [...input.requested];
   const ref = predecessor.drawdown_policy;
-  // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion: a
+  // @spec approval-governance#activation-policy-commitment, progressive#in-ceiling-expansion: a
   // snapshot that does not match the committed digest authorizes nothing.
   const snapshot = ref ? verifiedActivationPolicy(predecessor.issuer, kernel.activationPolicies(), ref) : undefined;
   const rules = snapshot ? drawdownRulesOf(snapshot) : undefined;
@@ -1647,7 +1647,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     createdAt,
     ceilings: { predecessor: predecessor.expires_at },
   });
-  // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion:
+  // @spec approval-governance#standing-consent-bases, progressive#in-ceiling-expansion:
   // one value per reservation, never derived from creation_request_id, so a
   // key reused after its tombstone expires creates a new event.
   const approvalEventId = `cdd_${randomBytes(16).toString("base64url")}`;
@@ -1757,7 +1757,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   }
   kernel.insertRecord(record, undefined, {
     source: { inherited: root },
-    // @spec mission#standing-consent-bases: the drawdown policy snapshot this
+    // @spec approval-governance#activation-policy-commitment: the drawdown policy snapshot this
     // adjudication verified, retained for the successor's audit horizon.
     activationPolicies: [{ ref: input.policy.ref, snapshot: input.policy.snapshot }],
     audiences: { inherited: successorAudiences },

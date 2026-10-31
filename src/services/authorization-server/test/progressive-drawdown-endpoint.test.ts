@@ -1,7 +1,7 @@
 /**
  * @spec draft-mcguinness-oauth-mission-progressive (#progressive-authorization,
  * #in-ceiling-expansion, #ceiling-review, #audit-linkage),
- * expansion#creation-request-id, mission#standing-consent-bases
+ * expansion#creation-request-id, approval-governance#standing-consent-bases
  *
  * Progressive authorization on the real OAuth surface (#1017). The Approver
  * consents an authority ceiling and a drawdown policy on the approval surface
@@ -1028,7 +1028,7 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
   });
 });
 
-describe("approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases)", () => {
+describe("approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases)", () => {
   it("each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant", async () => {
     const root = await issueMission(READ, ceilingOf());
     const rootRecord = as.kernel.get(root.missionId) as MissionRecord;

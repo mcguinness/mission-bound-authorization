@@ -815,7 +815,7 @@ function narrowChildren(
   if (!ceiling) return undefined; // GRANT flip: no children on-switch in the ceiling
   if (!proposal) return structuredClone(ceiling); // inherit the ceiling's children
   const out: JsonObject = {};
-  // @spec child-delegation#fanout, mission#standing-consent-bases: the
+  // @spec child-delegation#fanout, approval-governance#activation-policy-commitment: the
   // ceiling's `child_creation_policy` reference is carried, never taken from
   // the proposal.
   if (ceiling.child_creation_policy !== undefined) {
@@ -896,7 +896,7 @@ function intersectMatchers(
 function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined): JsonObject | undefined {
   if (!a || !b) return undefined;
   const out: JsonObject = {};
-  // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
+  // @spec child-delegation#fanout, approval-governance#activation-policy-commitment (#1119): the
   // `child_creation_policy` reference is compared for identity, never
   // intersected. It is carried where both sides commit the same reference, so
   // a token projected from an entry that commits one still carries the

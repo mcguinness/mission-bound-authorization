@@ -30,7 +30,7 @@ import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 /**
- * @spec mission#standing-consent-bases, mission#mission-record: activation
+ * @spec approval-governance#activation-policy-commitment, mission#mission-record: activation
  * policy snapshot retention. Every successful Template Dispatch and
  * policy-adjudicated child creation retains the exact snapshot its gate
  * verified, keyed by (issuer, policy id, version, digest), for the audit
@@ -154,7 +154,7 @@ const refusedWith = (fn: () => unknown, reason: string) => {
   }
 };
 
-describe("activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases)", () => {
+describe("activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment)", () => {
   it("retains the verified Dispatch Policy snapshot under (issuer, id, version, digest) with its exact bytes and media type, and the instance's committed digest recomputes from it", () => {
     const kernel = templateKernel();
     const store = new TemplateStore(now);
@@ -415,7 +415,7 @@ const createChild = (kernel: MissionKernel, parentId: string) =>
     childActor: { sub: "basis-child", sub_profile: "ai_agent" },
   }).child;
 
-describe("activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases)", () => {
+describe("activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment)", () => {
   it("retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired", () => {
     const registry: Record<string, RegisteredActivationPolicy> = { [CHILD_POLICY_ID]: CHILD_V1, [SECOND_POLICY_ID]: SECOND_V1 };
     const kernel = childKernel(registry);

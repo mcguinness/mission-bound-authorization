@@ -566,7 +566,7 @@ describe("template dispatch inherits the ceiling's recorded bindings", () => {
     },
   ];
 
-  // @spec mission#standing-consent-bases — the Dispatch Policy snapshot held.
+  // @spec approval-governance#activation-policy-commitment — the Dispatch Policy snapshot held.
   const CAP_POLICIES = { "capability-binding-test": { version: "1", content_type: "application/json", content: '{"id":"capability-binding-test"}' } };
   let store: TemplateStore;
   let templateId: string;

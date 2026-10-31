@@ -959,7 +959,7 @@ describe("child derivation cap is independent of the parent's (@spec child-deleg
   });
 });
 
-describe("approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation)", () => {
+describe("approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation)", () => {
   it("records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)", () => {
     const parent = approveParent();
     const { child } = createChild(parent.id, ["payments:invoice.read"]);
@@ -1083,7 +1083,7 @@ describe("approval basis (@spec mission#standing-consent-bases, child-delegation
     expect(persisted?.approval_event_id).toBe(policyActivationEventId);
     expect(persisted?.approval_event_id).not.toBe(parent.approval_event_id);
 
-    // @spec mission#standing-consent-bases, child-delegation#child-creation —
+    // @spec approval-governance#activation-policy-commitment, child-delegation#child-creation —
     // the held snapshot no longer matching the committed digest (content
     // edited under the same version, a new version, or no snapshot held)
     // denies child creation with policy_denied, committing nothing.

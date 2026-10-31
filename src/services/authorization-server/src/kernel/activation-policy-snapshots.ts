@@ -1,5 +1,5 @@
 /**
- * @spec mission#standing-consent-bases, mission#mission-record: the retained
+ * @spec approval-governance#activation-policy-commitment, mission#mission-record: the retained
  * activation policy snapshots. For every activation policy `digest` this
  * issuer activated a Mission under, the exact bytes and media type behind it,
  * kept for that Mission's audit horizon so an auditor can recompute the
@@ -196,7 +196,7 @@ export class ActivationPolicySnapshotStore {
   }
 
   /**
-   * @spec mission#standing-consent-bases: recompute a committed reference's
+   * @spec approval-governance#activation-policy-commitment: recompute a committed reference's
    * digest from the snapshot retained under its identity, as an auditor would.
    */
   verify(issuer: string, ref: ActivationPolicyRef): ActivationPolicyCommitmentCheck {
