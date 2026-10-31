@@ -23,8 +23,8 @@
     "content_sha256": "6d637c5754f09965a3ef291909a7c48609de6b3fac2e82c66db364c9ade2a025"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "4af5bf54f153576708077ade84f8f8648aa445b5",
-    "content_sha256": "49b65b4cc89ccb1aaf406b04873d381d9ea89916618296deb0987d5e54a5d8b3"
+    "revision": "17aeff2c579d01ed39438755cc0ee516d9620af1",
+    "content_sha256": "c9d988510b5c264c8aee0e95ce5bf9df1128060ecb7592d76ff078fb9f02e2ea"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "4ef21e0287517ff120065a38aa08f87c507dabb3",
-    "content_sha256": "d2c10cb5d3c40ab192d53d9dc9bfcc4919b8ceff33b8b00b7aadd6ad54dd1a36"
+    "revision": "434fb8da5f4c437e17ef28c9c2d129035a04d05e",
+    "content_sha256": "386689aef2e78bf1450883cda337a813be4893e439e361b3cd0a7234c64a7c5c"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -99,8 +99,8 @@
     "content_sha256": "f42a2713d042528189015f468361a76676417bc6dd2355b7562980a7289f5c13"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "4ef21e0287517ff120065a38aa08f87c507dabb3",
-    "content_sha256": "f6fff368122ed7ef2336f00ce79a5ebe9d455703832afa947148103c7f70b943"
+    "revision": "72701791348ec7381c3a3e710fdec2f0d0b4a0bb",
+    "content_sha256": "7a18327709de17b4d8a290513147544381734b4a735387ba7e50300837d889fd"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -119,12 +119,12 @@
     "content_sha256": "a5433af4785d90e2b2d91d00823e0522f524656304b16e93cf2d1f62c0d20635"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
-    "revision": "526fc49618b12e5b97562465a6bb1b88d2cb6546",
-    "content_sha256": "0cf8e2d58c15528519fac2be96750514bd07b045ac6a19549dfefbedd5443133"
+    "revision": "253f85b35fbb86c4939a117b3f9c1a00ea2483b4",
+    "content_sha256": "5dc873c8d3d4a4fce5e511e12f80b0cc33af434add509d8f5f5528b8fde74757"
    },
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
-    "revision": "8517c163cac31656010c1c267ca3c604f6bdcef8",
-    "content_sha256": "a4ca4e6b26331e088e69b8c2b76fa0af0c703ac0314570c39edf5ae71aeb1498"
+    "revision": "253f85b35fbb86c4939a117b3f9c1a00ea2483b4",
+    "content_sha256": "304a0b321defc5907bed9769afc8f5a7fb0a8ec1cc70466cabf72a0f9c3c15ee"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
     "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
@@ -7650,7 +7650,7 @@
   {
    "id": "core.commitment.duplicate-members",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "commitment-mechanisms",
+   "anchor": "digest-algorithm",
    "text": "an object carrying duplicate member names is rejected at parse time, before the parsed data model exists",
    "role": "AS",
    "strength": "MUST",
@@ -7699,7 +7699,7 @@
   {
    "id": "core.commitment.unknown-prefix",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "commitment-mechanisms",
+   "anchor": "digest-algorithm",
    "text": "A verifier MUST reject a digest whose algorithm prefix it does not recognize",
    "role": "verifier",
    "strength": "MUST",
@@ -19710,8 +19710,8 @@
   {
    "id": "core.anchors.entry-commitment",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "integrity-anchors",
-   "text": "the **Authority Set entry commitment**, the envelope above with `typ` `mission-authority-entry`, `iss` the Mission `issuer`, and `value` a single Authority Set entry object exactly as recorded",
+   "anchor": "entry-commitment",
+   "text": "the **Authority Set entry commitment**, the envelope of {{integrity-anchors}} with `typ` `mission-authority-entry`, `iss` the Mission `issuer`, and `value` a single Authority Set entry object exactly as recorded",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -19731,13 +19731,13 @@
    "tests": [
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > reproduces the core test vector exactly",
+     "name": "Authority Set entry commitment (@spec mission#entry-commitment) > reproduces the core test vector exactly",
      "level": "unit",
      "surface": "verification"
     },
     {
      "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "Authority Set entry commitment (@spec mission#integrity-anchors) > resolves different member insertion order to the same digest",
+     "name": "Authority Set entry commitment (@spec mission#entry-commitment) > resolves different member insertion order to the same digest",
      "level": "unit",
      "surface": "verification"
     }

@@ -386,7 +386,7 @@ A concrete proof type would need to:
 2. authenticate its own proof root as the Mission's approval-time
    commitment, under a collision-resistant `typ` distinct from that
    of `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}},
-   Section "Integrity Anchors");
+   Section "Commitment Mechanisms");
 3. define the verifier's processing, so that a party lacking the
    proof type's software cannot misread it as a plain digest;
 4. reject an unrecognized proof `typ` rather than skip verification;

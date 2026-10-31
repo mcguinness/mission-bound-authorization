@@ -138,8 +138,8 @@ Evidence type:
 Each entry is a JSON object with a REQUIRED `type` member: a string
 naming the evidence type as a collision-resistant name, under the
 same guidance as anchor `typ` values
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Integrity
-Anchors"). The specification that owns a `type` defines the entry's
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Commitment
+Mechanisms"). The specification that owns a `type` defines the entry's
 remaining members as a closed schema, the artifact format, the
 verification procedure, and the verified output facts that
 verification yields.

@@ -330,6 +330,16 @@ this record exists:
   ({{assertion-requirements}}), that assertion's own `kind` MUST equal
   `adjudication.kind`.
 
+An artifact that refers to the record does so by its record digest
+({{envelope}}). The record binds a governance evaluation to the
+Mission's approval event. It does not, by itself, establish a separate
+business decision for each subsequent action.
+
+Authenticating approval evidence does not, by itself, establish that
+conditions governing later reliance remain satisfied. Whether
+subsequent changes to an Approver's role, a delegation, or governing
+policy affect an existing Mission depends on the deployment's policy.
+
 # Recording Triggers {#triggers}
 
 A profile MAY require this record; the Enterprise Mission Authority
@@ -2279,6 +2289,11 @@ disclosed mismatch is definitive.
 
 \[\[ To be removed from the final specification ]]
 
+- Relationship to the Issuance Profile states how an artifact refers
+  to the record, that the record binds a governance evaluation to the
+  approval event rather than to each later action, and that later
+  reliance depends on deployment policy, moved here from the OAuth
+  binding unchanged. No requirement changed (#1914).
 - Relationship to the Issuance Profile defines the `governance_record`
   member of `approval_basis.adjudication`, which the OAuth binding no
   longer defines; its definition and its alignment with the

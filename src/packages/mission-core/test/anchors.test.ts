@@ -143,7 +143,7 @@ const ENTRY_COMMITMENT_V1 = {
   },
 };
 
-describe("Authority Set entry commitment (@spec mission#integrity-anchors)", () => {
+describe("Authority Set entry commitment (@spec mission#entry-commitment)", () => {
   it("reproduces the core test vector exactly", () => {
     expect(computeAnchor(AUTHORITY_ENTRY_TYP, ISS, ENTRY_COMMITMENT_V1)).toBe(
       "sha-256:OUrwTnuirT29YxQmMSyiJce8W1PfGryvrVViQ1lJCqQ",

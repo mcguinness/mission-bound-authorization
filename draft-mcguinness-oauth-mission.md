@@ -1256,7 +1256,7 @@ The AS processes a submission in the following order. Steps 1 to 6
 run when the submission arrives; step 7 can run provisionally then
 and is complete before the approval rendering
 ({{derivation-modes}}); step 8 belongs to the approval event, and
-step 9 to activation. {{commitment-mechanisms}} states how JSON destined
+step 9 to activation. {{digest-algorithm}} states how JSON destined
 for commitment is parsed, including the rejection of duplicate member
 names.
 
@@ -1631,12 +1631,18 @@ requires and no local policy under which the AS refuses one.
 
 # Mission Creation {#mission-creation}
 
-Approval creates a Mission. {{approval-event}} states the direct
-approval event, {{standing-consent-bases}} the extension point for
-other approval bases, {{mission-record}} the record the AS keeps,
-{{integrity-and-commitments}} the commitments to its approved content,
-and {{grant-binding}} how the grant the AS issues is bound to the
-Mission.
+Approval creates a Mission. This section defines the direct creation
+path: the approval event and its steps ({{approval-event}}), the
+record the AS keeps ({{mission-record}}), the commitments to its
+approved content ({{integrity-and-commitments}}), and how the grant
+the AS issues is bound to the Mission ({{grant-binding}}).
+
+A companion profile can modify that path. A standing-consent basis
+activates Mission instances under an accountable human's earlier
+approval ({{standing-consent-bases}}), and a profile can relocate the
+approval event or carry the submission over a back channel
+({{extension-points}}). An AS that implements such a profile also
+meets the sections that profile relies on.
 
 ## Mission Approval {#approval-event}
 
@@ -1653,25 +1659,6 @@ at that event or an earlier standing consent authorizes the instance:
 - Under a standing-consent basis ({{standing-consent-bases}}), the
   instance is decided under an accountable human's earlier approval,
   with no fresh human approval.
-
-### Authorization Code Protection {#approval-code-protection}
-
-The direct realization runs as an OAuth 2.0 {{RFC6749}}
-authorization-code flow initiated from the PAR-issued `request_uri`
-({{submission-par-carriage}}). Because the authorization code is the
-artifact the Mission grant binds to ({{grant-binding-resolution}})
-and it passes through the front channel, the AS MUST bind the code
-to the requesting client with PKCE ({{RFC7636}}, `S256` challenge
-method) or, equivalently, issue a DPoP-bound authorization code
-({{RFC9449}}). Redemption is then verified as
-{{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
-This prevents authorization-code injection from yielding the Mission
-grant. Issuance at the code's redemption applies the issuance procedure of
-{{issuance-gating}} as it states for code redemption.
-
-The AS SHOULD include the `iss` authorization-response parameter
-({{RFC9207}}) on the authorization response, so the client can detect
-a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 ### Direct Approval Steps {#direct-approval-steps}
 
@@ -1807,6 +1794,80 @@ cryptographic digest, exactly the authority the Approver approved.
 duplicate delivery of the same approval decision on
 `approval_event_id`.
 
+### Approver Authentication Strength {#approval-authentication}
+
+A deployment MUST publish a statement declaring the minimum
+approval-authentication strength (the approval-authentication floor)
+it enforces for Missions whose derived Authority Set carries high-risk
+authority, and the deployment scope it applies to. This document
+requires no particular serialization.
+
+High-risk authority means irreversible, external-commitment, or
+privileged-administration actions under the deployment's
+classification, or a consumption bound
+({{I-D.draft-mcguinness-mission-metering}}).
+
+The authentication actually achieved for the approval event (`acr`,
+`amr`, and `auth_time`, in the sense {{RFC9470}} and {{OpenID.Core}}
+define them) is approval-time provenance, not requested Intent. This
+document never records it as a Mission Intent member, and an AS
+MUST NOT read it back from a Mission Intent member.
+
+Where a deployment records Consent Evidence, the achieved values
+belong in its `authentication_context` member
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). This
+document defines no Mission Record member for them.
+
+#### Requested Strength {#approval-requested-strength}
+
+For the direct flow, a client MAY additionally request an
+approval-authentication strength on the authorization request using
+the `acr_values` and `max_age` parameters defined in Section 3.1.2.1
+of {{OpenID.Core}}.
+
+In a Mission approval interaction, these parameters describe the
+requested authentication of the **Approver**, not of the token's
+Subject, who can be a different principal ({{subject-establishment}}).
+Requesting them implies nothing about the authentication claims of an
+issued token: those claims describe the token's Subject, not the
+Approver ({{token-authentication-lifetime}}). When the Approver is the
+Subject, one authentication event can back both.
+
+The Approver's authentication satisfies `acr_values` when it matches
+any one listed value under the deployment's own policy mapping. This
+document defines no global ordering of `acr` values. The `max_age`
+parameter bounds the elapsed time since that authentication.
+
+Approval authentication for a high-risk Mission MUST satisfy both the
+published floor and, where the client requested one, the
+`acr_values`/`max_age` carriage above; the floor is never relaxed by
+a narrower or absent client request.
+
+#### OpenID Connect Requests {#approval-openid-connect}
+
+This document does not require an AS to support OpenID Connect
+{{OpenID.Core}}.
+
+An authorization request whose `scope` includes `openid` asks for an
+ID Token about the End-User the approval interaction authenticates,
+who is the Approver. When the Approver is not the Subject established
+at step 2 of {{direct-approval-steps}}, the AS MUST refuse such a
+request, without creating the Mission, with the `invalid_scope` error
+code ({{Section 4.1.2.1 of RFC6749}}).
+
+When the Approver is not the Subject, whether or not `openid` was
+requested, the AS MUST NOT issue an ID Token, serve UserInfo, or
+establish an authentication session for the Subject solely as a
+result of the Approver's authentication or approval.
+
+When the Approver is the Subject, the `openid` scope value and the
+`acr_values` and `max_age` parameters keep their {{OpenID.Core}}
+meaning, which then describes the same authentication this document
+requires.
+
+In every approval interaction, the `prompt`, `login_hint`, and
+`id_token_hint` parameters concern the Approver.
+
 ### Subject Establishment {#subject-establishment}
 
 These rules apply at step 2 of the direct approval steps
@@ -1827,69 +1888,6 @@ These rules apply at step 2 of the direct approval steps
   same local `sub`). A derived token's (`iss`, `sub`) pair then
   denotes exactly one Subject. Adopting the external `sub` verbatim
   is valid only where it collides with no other principal's `sub`.
-
-### Rendering Safeguards {#rendering-safeguards}
-
-The consent rendering is hardened against client text:
-
-- Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as
-  inert text and MUST NOT be interpreted as markup.
-- The AS SHOULD mitigate Unicode direction-override and
-  confusable-character presentation in them.
-- The rendering MUST visually distinguish the AS-derived Authority
-  Set from client-supplied text and attribute that text to the client,
-  identified from client identity information the AS trusts
-  ({{approval-preparation}}), so crafted client text cannot pass as
-  derived authority or as a statement of the AS.
-
-The rendering presents `goal` and `task_bounds` as recorded, without
-truncation: the Intent is recorded verbatim and committed by
-`intent_hash` ({{integrity-anchors}}), so a truncated rendering would
-show the Approver less than the record holds.
-
-Rendering a bound is not the same as enforcing it: a deployment MUST
-NOT present a rendered bound as enforced when no party enforces it.
-Which party enforces each bound, and what holds when that party is
-absent, follows from Enforcement Requirements ({{rs-requirements}})
-and, for a resource server that enforces only `scope`, from Scope
-Projection ({{scope-projection}}).
-An AS SHOULD make clear to the Approver which rendered bounds its
-deployment actually enforces, so consent is not given to a limit that
-binds nowhere.
-
-### Changes Before the Decision {#approval-context-changes}
-
-If any of the following changes between approval rendering and the
-approval decision, the AS MUST recompute the affected values and the
-anchors the Mission records, and MUST NOT create the Mission without
-the Approver's consent to the changed context:
-
-- the task or the authority proposal;
-- the derived Authority Set;
-- the established authority source ({{authority-sources}});
-- the effective `expires_at`; or
-- a policy input establishing any of them.
-
-Each anchor (`intent_hash`, `authority_hash`, and `proposal_hash` where
-a proposal was submitted) is computed over the approved context. Because
-the proposal is committed separately, a proposal swapped between
-rendering and decision changes `proposal_hash` even where `intent_hash`
-is unchanged.
-
-### Approval Comprehension {#approval-comprehension}
-
-The approval event commits the Mission Intent and Authority Set the
-AS records as approved. Those commitments establish neither that the
-AS rendered them faithfully nor that the Approver understood them
-({{consent-binding}}). Step 5 of {{direct-approval-steps}} requires
-human-meaningful rendering; comprehension cannot be inferred from an
-approval or its integrity anchors.
-
-Mission Consent Evidence
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
-layered rendering of a committed disclosure, including what its first
-layer carries and practices for a large or varied Authority Set, and
-lets the Approver ask the basis for an entry before deciding.
 
 ### Authority Sources {#authority-sources}
 
@@ -1943,81 +1941,78 @@ The subject-representation discipline is the same in every source:
   that requested it ({{token-claims}}), and delegates are carried in
   the `act` chain ({{delegation}}).
 
-### Approver Authentication Strength {#approval-authentication}
+### Rendering Safeguards {#rendering-safeguards}
 
-A deployment MUST publish a statement declaring the minimum
-approval-authentication strength (the approval-authentication floor)
-it enforces for Missions whose derived Authority Set carries high-risk
-authority, and the deployment scope it applies to. This document
-requires no particular serialization.
+The consent rendering is hardened against client text:
 
-High-risk authority means irreversible, external-commitment, or
-privileged-administration actions under the deployment's
-classification, or a consumption bound
-({{I-D.draft-mcguinness-mission-metering}}).
+- Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as
+  inert text and MUST NOT be interpreted as markup.
+- The AS SHOULD mitigate Unicode direction-override and
+  confusable-character presentation in them.
+- The rendering MUST visually distinguish the AS-derived Authority
+  Set from client-supplied text and attribute that text to the client,
+  identified from client identity information the AS trusts
+  ({{approval-preparation}}), so crafted client text cannot pass as
+  derived authority or as a statement of the AS.
 
-#### Requested Strength {#approval-requested-strength}
+The rendering presents `goal` and `task_bounds` as recorded, without
+truncation: the Intent is recorded verbatim and committed by
+`intent_hash` ({{integrity-anchors}}), so a truncated rendering would
+show the Approver less than the record holds.
 
-For the direct flow, a client MAY additionally request an
-approval-authentication strength on the authorization request using
-the `acr_values` and `max_age` parameters defined in Section 3.1.2.1
-of {{OpenID.Core}}.
+Rendering a bound is not the same as enforcing it: a deployment MUST
+NOT present a rendered bound as enforced when no party enforces it.
+Which party enforces each bound, and what holds when that party is
+absent, follows from Enforcement Requirements ({{rs-requirements}})
+and, for a resource server that enforces only `scope`, from Scope
+Projection ({{scope-projection}}).
+An AS SHOULD make clear to the Approver which rendered bounds its
+deployment actually enforces, so consent is not given to a limit that
+binds nowhere.
 
-In a Mission approval interaction, these parameters describe the
-requested authentication of the **Approver**, not of the token's
-Subject, who can be a different principal ({{subject-establishment}}).
-Requesting them implies nothing about the authentication claims of an
-issued token: those claims describe the token's Subject, not the
-Approver ({{token-authentication-lifetime}}). When the Approver is the
-Subject, one authentication event can back both.
+Mission Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
+layered rendering of a committed disclosure, including what its first
+layer carries and practices for a large or varied Authority Set, and
+lets the Approver ask the basis for an entry before deciding.
 
-The Approver's authentication satisfies `acr_values` when it matches
-any one listed value under the deployment's own policy mapping. This
-document defines no global ordering of `acr` values. The `max_age`
-parameter bounds the elapsed time since that authentication.
+### Changes Before the Decision {#approval-context-changes}
 
-Approval authentication for a high-risk Mission MUST satisfy both the
-published floor and, where the client requested one, the
-`acr_values`/`max_age` carriage above; the floor is never relaxed by
-a narrower or absent client request.
+If any of the following changes between approval rendering and the
+approval decision, the AS MUST recompute the affected values and the
+anchors the Mission records, and MUST NOT create the Mission without
+the Approver's consent to the changed context:
 
-#### OpenID Connect Requests {#approval-openid-connect}
+- the task or the authority proposal;
+- the derived Authority Set;
+- the established authority source ({{authority-sources}});
+- the effective `expires_at`; or
+- a policy input establishing any of them.
 
-This document does not require an AS to support OpenID Connect
-{{OpenID.Core}}.
+Each anchor (`intent_hash`, `authority_hash`, and `proposal_hash` where
+a proposal was submitted) is computed over the approved context. Because
+the proposal is committed separately, a proposal swapped between
+rendering and decision changes `proposal_hash` even where `intent_hash`
+is unchanged.
 
-An authorization request whose `scope` includes `openid` asks for an
-ID Token about the End-User the approval interaction authenticates,
-who is the Approver. When the Approver is not the Subject established
-at step 2 of {{direct-approval-steps}}, the AS MUST refuse such a
-request, without creating the Mission, with the `invalid_scope` error
-code ({{Section 4.1.2.1 of RFC6749}}).
+### Authorization Code Protection {#approval-code-protection}
 
-When the Approver is not the Subject, whether or not `openid` was
-requested, the AS MUST NOT issue an ID Token, serve UserInfo, or
-establish an authentication session for the Subject solely as a
-result of the Approver's authentication or approval.
+The direct realization runs as an OAuth 2.0 {{RFC6749}}
+authorization-code flow initiated from the PAR-issued `request_uri`
+({{submission-par-carriage}}). Because the authorization code is the
+artifact the Mission grant binds to ({{grant-binding-resolution}})
+and it passes through the front channel, the AS MUST bind the code
+to the requesting client with PKCE ({{RFC7636}}, `S256` challenge
+method) or, equivalently, issue a DPoP-bound authorization code
+({{RFC9449}}). Redemption is then verified as
+{{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
+This prevents authorization-code injection from yielding the Mission
+grant. Issuance at the code's redemption applies the issuance procedure of
+{{issuance-gating}} as it states for code redemption.
 
-When the Approver is the Subject, the `openid` scope value and the
-`acr_values` and `max_age` parameters keep their {{OpenID.Core}}
-meaning, which then describes the same authentication this document
-requires.
-
-In every approval interaction, the `prompt`, `login_hint`, and
-`id_token_hint` parameters concern the Approver.
-
-#### Achieved Authentication {#approval-achieved-authentication}
-
-The authentication actually achieved for the approval event (`acr`,
-`amr`, and `auth_time`, in the sense {{RFC9470}} and {{OpenID.Core}}
-define them) is approval-time provenance, not requested Intent. This
-document never records it as a Mission Intent member, and an AS
-MUST NOT read it back from a Mission Intent member.
-
-Where a deployment records Consent Evidence, the achieved values
-belong in its `authentication_context` member
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). This
-document defines no Mission Record member for them.
+The AS SHOULD include the `iss` authorization-response parameter
+({{RFC9207}}) on the authorization response, so the client can detect
+a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 ### Single Accountable Approver {#multi-party-approval}
 
@@ -2043,167 +2038,13 @@ Where a deployment needs either, the Approval Governance Record
 and Consent Evidence can carry a partial presentation of that record
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
-The `adjudication.governance_record` member ({{mission-record}})
-marks an approval such a record backs, and
+Approval Governance defines the `adjudication.governance_record`
+member that marks an approval such a record backs
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Relationship to the Issuance Profile"), and
 {{I-D.draft-mcguinness-mission-architecture}} (Section "Approval Role
 Mapping") shows how the common creation scenarios assign the three
 `approval_basis` roles.
-
-The issuer retains the Approval Governance Record, and this document
-defines no surface that discloses it. An artifact that refers to it
-does so by its record digest
-({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-"Conventions and Definitions"). The record binds a governance
-evaluation to the Mission's approval event. It does not, by itself,
-establish a separate business decision for each subsequent action.
-
-Authenticating approval evidence does not, by itself, establish that
-conditions governing later reliance remain satisfied. Whether
-subsequent changes to an Approver's role, a delegation, or governing
-policy affect an existing Mission depends on the deployment's policy.
-
-## Standing-Consent Bases {#standing-consent-bases}
-
-A companion profile can generalize approval to a named
-standing-consent basis. Under it, a template or policy activates
-Mission instances against an accountable human's earlier approval,
-with no fresh human approval per instance; each instance is still
-created at its own approval event ({{approval-event}}). The companion
-profile defines the basis's `approval_basis.type` value
-({{record-principal-members}});
-{{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
-Invariants") lists the standing-consent bases that companion profiles
-define. The `type` values form a specification-defined namespace with
-no registry ({{namespace-taxonomy}}): each further basis is defined by
-the companion profile that introduces it.
-
-An unrecognized `type` or `adjudication.kind` is handled as
-{{record-principal-members}} states for every record consumer.
-
-A companion profile defining a standing-consent `type` MUST make its
-`consent_principal` and `root_commitment` trace to an accountable
-human's approval of the named standing consent, with no fresh human
-approval per instance, MUST carry that approval's instant as
-`approved_at`, and MUST state what the record's `approval_event_id`
-carries for an instance it activates. That value identifies this
-instance's approval event, never the standing approval, so a retried
-activation deduplicates and each distinct activation creates its own
-Mission.
-
-A standing-consent basis carries the following `approval_basis`
-members ({{record-principal-members}}):
-
-`activation`:
-: REQUIRED for every standing-consent `type`. An object naming what
-  activated this Mission instance, in the shape that the basis's
-  companion profile defines.
-
-`activation_actor`:
-: REQUIRED for every standing-consent `type`. An object with `iss`
-  and `sub`. Who or what triggered this instance: a dispatching or
-  requesting party distinct from the consenting human.
-
-`root_commitment`:
-: REQUIRED for every standing-consent `type`. A string. The
-  commitment to the consented root: an integrity anchor where the
-  root is a committed object, otherwise the committed reference that
-  identifies it.
-
-`approved_at`:
-: REQUIRED for every standing-consent `type`. An RFC 3339 date-time:
-  the instant the accountable human approved the exact consented root
-  that `root_commitment` commits (the template version, the drawdown
-  policy version), not the instant this Mission instance was
-  activated. The activating issuer MUST verify `approved_at` against
-  its retained, authenticated record of that standing consent for
-  that exact version; it MUST NOT accept the value as the activating
-  request's own uncorroborated assertion.
-
-The `adjudication` member ({{record-principal-members}}), where
-present, follows the basis. Where a companion profile defining a
-standing-consent `type` populates `adjudication`, `kind` MUST be
-`policy`, naming the identity and version of the policy or workflow
-that adjudicated the instance. A companion profile MUST NOT flatten a
-policy's or an Approval Governance Record's assertion set into a
-single principal member.
-
-For `kind: policy`, `adjudication` carries `policy`, a REQUIRED object
-with `id` and `version` identifying the deciding policy or workflow.
-It decides deterministically over recorded inputs, so re-evaluating
-that `version` over them re-checks the decision. A model's output can
-be one such input, recorded with the model's identifier and version:
-it can refuse an activation or narrow the authority it activates, and
-the AS MUST NOT let it supply or widen authority. A model is never
-itself the deciding policy or workflow.
-
-### Standing-Consent Instances {#standing-consent-instances}
-
-Under a standing-consent basis ({{standing-consent-bases}}), the
-standing consent and the instance's adjudication supply the human
-decision that a direct approval event makes in
-{{direct-approval-steps}}: the Approver's authentication (step 1),
-the Approver's authorization for the Subject and the authority source
-(steps 2 and 3), and the consent rendering (step 5). The other
-creation rules still bind the instance's approval event wherever they
-apply:
-
-- the Subject is never taken from unauthenticated client input and
-  is mapped injectively (step 2, {{subject-establishment}});
-- the authority source and its ceiling ({{authority-sources}});
-- the effective expiry and its creation-commit check (steps 4 and 7);
-- the integrity anchors (step 6); and
-- atomic creation deduplicated on `approval_event_id`
-  ({{mission-record}}).
-
-### Activation Policy Commitment {#activation-policy-commitment}
-
-Where a standing-consent basis lets
-a separate policy artifact adjudicate activation (a dispatch,
-drawdown, or child-creation policy, rather than the consented object
-itself), the object the accountable human consented to MUST carry
-that policy as an activation policy reference: an object of `id` (a
-string), `version` (a string), and `digest`.
-The `digest` is an integrity anchor ({{integrity-anchors}}) whose
-`typ` is `mission-activation-policy`, whose `iss` is the activating
-issuer, and whose `value` is an object of `content_type`, the media
-type of the policy snapshot, and `content`, the base64url, no-padding
-{{RFC4648}} encoding of the snapshot's exact bytes. Before each
-activation, the activating issuer MUST compute `digest` over the exact
-snapshot it evaluates, and MUST NOT activate the instance under that
-policy when the result differs; the companion profile fixes what
-follows, as it does for an activation the policy does not authorize.
-The issuer MUST retain each snapshot's bytes and media type for the
-audit horizon ({{audit-horizon}}) of every Mission it activates under
-that snapshot, so an auditor can reproduce the digest.
-Where no separate policy artifact exists, as when child creation is
-adjudicated against the approved delegation entry itself, this rule
-does not apply.
-
-### Standing-Consent Recency {#standing-consent-recency}
-
-A deployment can declare a maximum
-standing-consent age (a recency ceiling), overall or per
-consequence class. Where a declared ceiling applies, the activating
-issuer MUST refuse to activate an instance whose `approved_at` is
-older than the ceiling. Where ceilings are declared:
-
-- The evaluation instant is the atomic Mission-creation commit
-  ({{approval-event}}), including the creation commit of a
-  deferred or relocated flow. Recency is issuance-time eligibility
-  only: a later change to a ceiling, or the passage of time past
-  one, does not terminate an active Mission ({{revocation}}).
-- The activating issuer MUST refuse an `approved_at` later than
-  the evaluation instant by more than the deployment's declared,
-  bounded clock-skew allowance.
-- Where ceilings are declared per consequence class, the issuer
-  MUST classify the committed Mission from the derived Authority
-  Set and from any consumption bound the Mission Intent carries
-  (for example, {{I-D.draft-mcguinness-mission-metering}}), and
-  MUST apply the strictest ceiling across every class present.
-- The ceilings and the skew allowance belong to the versioned
-  policy that `policy_version` identifies, or to a separately
-  versioned declaration retained with it, so an auditor can
-  reproduce the eligibility decision.
 
 ## Mission Record {#mission-record}
 
@@ -2625,7 +2466,8 @@ This section defines how the anchors the Approver consents to at the
 approval event ({{approval-event}}) are constructed, canonicalized,
 and bound. The Mission Record ({{mission-record}}) records them, and
 the test vectors ({{test-vectors}}) pin the construction
-byte-for-byte.
+byte-for-byte. {{commitment-mechanisms}} classifies these anchors and
+states the contract for commitments other specifications define.
 
 ### Integrity Anchors {#integrity-anchors}
 
@@ -2669,10 +2511,10 @@ The `typ` field domain-separates the anchors so a digest of one
 object cannot be mistaken for another's. The `iss` binding prevents
 a committed object from being transplanted across authorization
 servers. The `sha-256:` prefix is the algorithm-agility mechanism
-({{commitment-mechanisms}}).
+({{digest-algorithm}}).
 
 The anchors this section lists, and the Authority Set entry
-commitment below, bind the AS issuer. The `digest` of an
+commitment ({{entry-commitment}}), bind the AS issuer. The `digest` of an
 `authority_source.policy` reference ({{record-principal-members}}) is
 not one of them: it uses the issuer the policy's format defines, for a
 governed organizational policy its governing authority. That binding
@@ -2687,42 +2529,11 @@ auditable through `policy_version` where the Mission records it
 ({{authorization-derivation}}), not a cryptographic relation between
 the anchors: neither anchor proves anything about the other's object.
 
-The `typ` value space is an extension point ({{extensibility}}):
-additional committed objects use this same envelope with a new `typ`
-and the canonicalization below.
+The `typ` value space is an extension point
+({{commitment-mechanisms}}): additional committed objects use this
+same envelope with a new `typ` and the canonicalization below.
 
-This document defines no registry of `typ` values; each committing
-specification defines its own and relies on the `typ` domain
-separation. To keep that domain separation safe without a registry, a
-new `typ` value MUST be a collision-resistant name (for example, a
-short name prefixed within a namespace the defining profile controls,
-following the Collision-Resistant Name guidance of
-{{Section 2 of RFC7519}}). `mission-` prefixed values, used by this
-document and the profiles that extend it, form a namespace
-coordinated through this document's change controller.
-
-This document also defines the **Authority Set entry commitment**, the
-envelope above with `typ` `mission-authority-entry`, `iss` the
-Mission `issuer`, and `value` a single Authority Set entry object
-exactly as recorded ({{test-vectors}}). A companion that cites an
-entry by digest (a decision record naming the entry it evaluated,
-containment or completion state keyed to an entry) computes it this
-way.
-
-Entries whose canonical commitment envelopes are identical produce
-the same digest, and within one Mission Record every recorded entry
-resolving to the same digest forms one selector equivalence class;
-the class is defined by the canonical bytes, not by pre-canonical
-source text the record does not preserve.
-
-The commitment is not a globally unique entry identifier: the
-envelope binds the issuer, not the Mission, so a protocol that uses
-it to select or cite an entry MUST bind it to the Mission `issuer`
-and Mission Identifier whose recorded Authority Set is searched,
-directly or through an enclosing object whose integrity protection
-binds them.
-
-`authority_hash` likewise commits an Authority Set, not a Mission:
+`authority_hash` commits an Authority Set, not a Mission:
 two Missions that approve byte-identical authority share it, and a
 consumer MUST NOT use it as a Mission Identifier or as a replay or
 idempotency key for a Mission.
@@ -2739,7 +2550,7 @@ to computing an anchor and to comparing committed values:
   for `authority_hash`. An auditor reproduces a digest from the
   record alone.
 - Duplicate member names are rejected at parse time
-  ({{commitment-mechanisms}}).
+  ({{digest-algorithm}}).
 - JCS does not reorder array elements, and this document defines no
   element sorting, so array order is significant. The AS MUST present
   each committed array in its recorded order wherever it emits the
@@ -2755,35 +2566,7 @@ to computing an anchor and to comparing committed values:
   remains an exact match, and anchor computation is always byte-exact
   over the recorded values.
 
-### Commitment Mechanisms {#commitment-mechanisms}
-
-This document's default prefixed construction commits to bytes in
-three forms, called species, and a specification defining a prefixed
-commitment classifies it as one of them:
-
-- **Envelope anchor**: the domain-separated, issuer-bound envelope of
-  {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
-  `authority_hash`, an activation policy reference's `digest`, and
-  commitments produced with companion-defined `typ` values).
-- **Canonical-object digest**: `sha-256:` over the JCS serialization
-  of a normalized JSON object without the envelope, where protocol
-  context already fixes what is committed (for example, a runtime
-  parameter digest).
-- **Raw-octet digest**: `sha-256:` over an exact,
-  specification-defined octet sequence, with no canonicalization: a
-  whole artifact as exchanged, or the UTF-8 encoding of a defined
-  scalar value (for example, a work-product artifact digest).
-
-The prefix and agility rules below bind all three species. The
-I-JSON rule binds the two JSON species. The envelope and `typ`
-discipline of {{integrity-anchors}} binds envelope anchors alone.
-
-This section instantiates the default commitment construction of
-{{I-D.draft-mcguinness-mission-substrate}}. A commitment outside this
-construction (a native content address, a member-named digest whose
-member name fixes the algorithm) is permitted; its defining
-specification states its own algorithm identification and agility
-behavior.
+### Digest Input and Algorithm {#digest-algorithm}
 
 Every committed JSON value and its envelope are I-JSON {{RFC7493}}
 data, as {{Section 3.1 of RFC8785}} requires. Strengthening
@@ -2814,23 +2597,7 @@ negotiation.
 
 A verifier MUST reject a digest whose algorithm prefix it does not
 recognize, so an algorithm added later cannot be exploited as a
-downgrade. These rules bind a prefixed digest of any species when its
-defining specification classifies it under this taxonomy and imports
-this section normatively; this document so classifies every anchor it
-defines.
-
-This document defines no transition mechanism: every commitment a
-current carrier defines is a single prefixed string, and no carrier
-defines a location for a second one. A specification that introduces
-a new prefix MUST define:
-
-1. the carrier and schema of any parallel commitment;
-2. the binding that proves the old and new values commit to the same
-   object;
-3. producer behavior during the transition;
-4. verifier selection and downgrade behavior when recognition sets
-   differ; and
-5. the transition procedure itself.
+downgrade.
 
 ## Binding the Mission to the Grant {#grant-binding}
 
@@ -2940,24 +2707,16 @@ The grant binding relates to other mechanisms as follows:
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor. Redeeming the
-  Template profile's handoff grant
-  ({{I-D.draft-mcguinness-oauth-mission-template}}) issues a derived
-  token and creates or extends no grant binding. In the continuation
-  profile's Identity Continuation Transport
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), redeeming a
-  root or onward Identity Assertion JWT Authorization Grant (ID-JAG)
-  at a Resource AS produces a local derived access token. A Resource
-  AS holds a destination-side grant binding only where it separately
-  establishes a redeemable grant lineage mapped to the Mission, such
-  as a refresh-token family.
+  grant, and expansion, which creates a successor.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
   cross-domain grant, and the local access token it mints there is a
   derived token: it identifies the one originating Mission
   (`mission.id`, `mission.issuer`) but is not backed by a persistent
-  local lineage.
+  local lineage. A Resource AS holds a destination-side grant binding
+  only where it separately establishes a redeemable grant lineage
+  mapped to the Mission, such as a refresh-token family.
 - **Child Missions and successors.** A Child Mission
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an
   expansion successor
@@ -2982,13 +2741,6 @@ OAuth grant the same client or subject holds outside any Mission
 binding, and it does not recall an access token already issued before
 its `exp` absent a runtime state check the token's consumer performs
 ({{revocation}}, {{introspection}}).
-
-An issuer that needs to cascade a lifecycle operation, or to
-enumerate a Mission's bound grant lineages and credentials, maintains
-its own issuer-side index from the Mission to each binding; a Mission
-Management companion
-({{I-D.draft-mcguinness-oauth-mission-management}}) can standardize
-that index's wire surface.
 
 When the authorization code expires unredeemed, no derivation is
 possible under the Mission regardless of which lifecycle outcome
@@ -3496,7 +3248,7 @@ that Subject.
 
 These claims neither establish approval nor expand Mission authority;
 the Approver's approval-time authentication remains provenance
-({{approval-achieved-authentication}}). Where no authentication of the
+({{approval-authentication}}). Where no authentication of the
 Subject applies, as when a human approves a Mission for another
 principal or for a workload, the claims are absent, and their absence is
 not an authentication downgrade.
@@ -5108,6 +4860,13 @@ following remain stable across revisions of this document:
   discipline ({{other-types}}, {{subset}}); and
 - the `act` delegation chain ({{delegated-exchange}}).
 
+{{standing-consent-bases}} states the contract for an approval basis
+other than `direct`, and {{commitment-mechanisms}} the contract for a
+commitment another specification defines. Their requirements bind a
+specification or profile that uses them and each party that
+implements it;
+this document's own commitments also follow {{commitment-mechanisms}}.
+
 ## Extension Points {#extension-points}
 
 This document's extension points are:
@@ -5155,11 +4914,13 @@ This document's extension points are:
   not make an AS implement, recognize, or trust any member.
 - **Integrity anchors.** Additional committed objects use the same
   domain-separated, issuer-bound envelope with a new `typ`
-  ({{integrity-anchors}}). A consent-disclosure commitment, an
-  instruction-text attestation, or a delegation receipt can be
-  committed this way without changing this document. A profile that
+  ({{integrity-anchors}}, {{commitment-mechanisms}}). A
+  consent-disclosure commitment, an instruction-text attestation, or a
+  delegation receipt can be committed this way without changing this
+  document. A profile that
   commits an evidence or disclosure object MUST commit it with this
-  envelope and a `typ` that meets {{integrity-anchors}}, not by
+  envelope and a `typ` that meets {{integrity-anchors}} and
+  {{commitment-mechanisms}}, not by
   hashing the bare object, so the domain separation and issuer binding
   hold uniformly. A `mission` descriptor embedded in such an object
   uses the `mission` claim shape ({{mission-claim}}), optionally
@@ -5183,6 +4944,10 @@ This document's extension points are:
   registry ({{iana-termination-reasons}}). Under the
   forward-compatibility rule of {{lifecycle}}, only `active` permits
   issuance.
+- **Approval bases.** The `approval_basis.type` value space
+  ({{record-principal-members}}) is open to standing-consent bases
+  that companion profiles define under the contract of
+  {{standing-consent-bases}}.
 - **Approval-event sequencing.** The approval-event steps, their
   order, and the atomicity of record creation with the approval decision
   are fixed by {{direct-approval-steps}}; the coupling of that
@@ -5233,6 +4998,231 @@ This document's extensible namespaces follow one of three postures:
 A `typ` inside a JCS commitment envelope ({{integrity-anchors}}) names
 a hash domain, not a representation crossing a protocol boundary, and
 is not a media type.
+
+## Standing-Consent Bases {#standing-consent-bases}
+
+A companion profile can generalize approval to a named
+standing-consent basis. Under it, a template or policy activates
+Mission instances against an accountable human's earlier approval,
+with no fresh human approval per instance; each instance is still
+created at its own approval event ({{approval-event}}). The companion
+profile defines the basis's `approval_basis.type` value
+({{record-principal-members}});
+{{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
+Invariants") lists the standing-consent bases that companion profiles
+define. The `type` values form a specification-defined namespace with
+no registry ({{namespace-taxonomy}}): each further basis is defined by
+the companion profile that introduces it.
+
+An unrecognized `type` or `adjudication.kind` is handled as
+{{record-principal-members}} states for every record consumer.
+
+A companion profile defining a standing-consent `type` MUST make its
+`consent_principal` and `root_commitment` trace to an accountable
+human's approval of the named standing consent, with no fresh human
+approval per instance, MUST carry that approval's instant as
+`approved_at`, and MUST state what the record's `approval_event_id`
+carries for an instance it activates. That value identifies this
+instance's approval event, never the standing approval, so a retried
+activation deduplicates and each distinct activation creates its own
+Mission.
+
+A standing-consent basis carries the following `approval_basis`
+members ({{record-principal-members}}):
+
+`activation`:
+: REQUIRED for every standing-consent `type`. An object naming what
+  activated this Mission instance, in the shape that the basis's
+  companion profile defines.
+
+`activation_actor`:
+: REQUIRED for every standing-consent `type`. An object with `iss`
+  and `sub`. Who or what triggered this instance: a dispatching or
+  requesting party distinct from the consenting human.
+
+`root_commitment`:
+: REQUIRED for every standing-consent `type`. A string. The
+  commitment to the consented root: an integrity anchor where the
+  root is a committed object, otherwise the committed reference that
+  identifies it.
+
+`approved_at`:
+: REQUIRED for every standing-consent `type`. An RFC 3339 date-time:
+  the instant the accountable human approved the exact consented root
+  that `root_commitment` commits (the template version, the drawdown
+  policy version), not the instant this Mission instance was
+  activated. The activating issuer MUST verify `approved_at` against
+  its retained, authenticated record of that standing consent for
+  that exact version; it MUST NOT accept the value as the activating
+  request's own uncorroborated assertion.
+
+The `adjudication` member ({{record-principal-members}}), where
+present, follows the basis. Where a companion profile defining a
+standing-consent `type` populates `adjudication`, `kind` MUST be
+`policy`, naming the identity and version of the policy or workflow
+that adjudicated the instance. A companion profile MUST NOT flatten a
+policy's or an Approval Governance Record's assertion set into a
+single principal member.
+
+For `kind: policy`, `adjudication` carries `policy`, a REQUIRED object
+with `id` and `version` identifying the deciding policy or workflow.
+It decides deterministically over recorded inputs, so re-evaluating
+that `version` over them re-checks the decision. A model's output can
+be one such input, recorded with the model's identifier and version:
+it can refuse an activation or narrow the authority it activates, and
+the AS MUST NOT let it supply or widen authority. A model is never
+itself the deciding policy or workflow.
+
+### Standing-Consent Instances {#standing-consent-instances}
+
+Under a standing-consent basis ({{standing-consent-bases}}), the
+standing consent and the instance's adjudication supply the human
+decision that a direct approval event makes in
+{{direct-approval-steps}}: the Approver's authentication (step 1),
+the Approver's authorization for the Subject and the authority source
+(steps 2 and 3), and the consent rendering (step 5). The other
+creation rules still bind the instance's approval event wherever they
+apply:
+
+- the Subject is never taken from unauthenticated client input and
+  is mapped injectively (step 2, {{subject-establishment}});
+- the authority source and its ceiling ({{authority-sources}});
+- the effective expiry and its creation-commit check (steps 4 and 7);
+- the integrity anchors (step 6); and
+- atomic creation deduplicated on `approval_event_id`
+  ({{mission-record}}).
+
+### Activation Policy Commitment {#activation-policy-commitment}
+
+Where a standing-consent basis lets
+a separate policy artifact adjudicate activation (a dispatch,
+drawdown, or child-creation policy, rather than the consented object
+itself), the object the accountable human consented to MUST carry
+that policy as an activation policy reference: an object of `id` (a
+string), `version` (a string), and `digest`.
+The `digest` is an integrity anchor ({{integrity-anchors}}) whose
+`typ` is `mission-activation-policy`, whose `iss` is the activating
+issuer, and whose `value` is an object of `content_type`, the media
+type of the policy snapshot, and `content`, the base64url, no-padding
+{{RFC4648}} encoding of the snapshot's exact bytes. Before each
+activation, the activating issuer MUST compute `digest` over the exact
+snapshot it evaluates, and MUST NOT activate the instance under that
+policy when the result differs; the companion profile fixes what
+follows, as it does for an activation the policy does not authorize.
+The issuer MUST retain each snapshot's bytes and media type for the
+audit horizon ({{audit-horizon}}) of every Mission it activates under
+that snapshot, so an auditor can reproduce the digest.
+Where no separate policy artifact exists, as when child creation is
+adjudicated against the approved delegation entry itself, this rule
+does not apply.
+
+### Standing-Consent Recency {#standing-consent-recency}
+
+A deployment can declare a maximum
+standing-consent age (a recency ceiling), overall or per
+consequence class. Where a declared ceiling applies, the activating
+issuer MUST refuse to activate an instance whose `approved_at` is
+older than the ceiling. Where ceilings are declared:
+
+- The evaluation instant is the atomic Mission-creation commit
+  ({{approval-event}}), including the creation commit of a
+  deferred or relocated flow. Recency is issuance-time eligibility
+  only: a later change to a ceiling, or the passage of time past
+  one, does not terminate an active Mission ({{revocation}}).
+- The activating issuer MUST refuse an `approved_at` later than
+  the evaluation instant by more than the deployment's declared,
+  bounded clock-skew allowance.
+- Where ceilings are declared per consequence class, the issuer
+  MUST classify the committed Mission from the derived Authority
+  Set and from any consumption bound the Mission Intent carries
+  (for example, {{I-D.draft-mcguinness-mission-metering}}), and
+  MUST apply the strictest ceiling across every class present.
+- The ceilings and the skew allowance belong to the versioned
+  policy that `policy_version` identifies, or to a separately
+  versioned declaration retained with it, so an auditor can
+  reproduce the eligibility decision.
+
+## Commitment Mechanisms {#commitment-mechanisms}
+
+This document's default prefixed construction commits to bytes in
+three forms, called species, and a specification defining a prefixed
+commitment classifies it as one of them:
+
+- **Envelope anchor**: the domain-separated, issuer-bound envelope of
+  {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
+  `authority_hash`, an activation policy reference's `digest`, and
+  commitments produced with companion-defined `typ` values).
+- **Canonical-object digest**: `sha-256:` over the JCS serialization
+  of a normalized JSON object without the envelope, where protocol
+  context already fixes what is committed (for example, a runtime
+  parameter digest).
+- **Raw-octet digest**: `sha-256:` over an exact,
+  specification-defined octet sequence, with no canonicalization: a
+  whole artifact as exchanged, or the UTF-8 encoding of a defined
+  scalar value (for example, a work-product artifact digest).
+
+The prefix and agility rules of {{digest-algorithm}} bind all three
+species. Its I-JSON rule binds the two JSON species. The envelope and
+`typ` discipline of {{integrity-anchors}}, with the `typ` naming rule
+below, binds envelope anchors alone. The rules of {{digest-algorithm}} bind a prefixed digest of any
+species when its defining specification classifies it under this
+taxonomy and imports this section normatively; this document so
+classifies every anchor it defines.
+
+This document's anchors and digest rules ({{integrity-anchors}},
+{{digest-algorithm}}), with this taxonomy, instantiate the default
+commitment construction of {{I-D.draft-mcguinness-mission-substrate}}.
+A commitment outside this construction (a native content address, a
+member-named digest whose member name fixes the algorithm) is
+permitted; its defining specification states its own algorithm
+identification and agility behavior.
+
+This document defines no registry of `typ` values; each committing
+specification defines its own and relies on the `typ` domain
+separation. To keep that domain separation safe without a registry, a
+new `typ` value MUST be a collision-resistant name (for example, a
+short name prefixed within a namespace the defining profile controls,
+following the Collision-Resistant Name guidance of
+{{Section 2 of RFC7519}}). `mission-` prefixed values, used by this
+document and the profiles that extend it, form a namespace
+coordinated through this document's change controller.
+
+This document defines no transition mechanism: every commitment a
+current carrier defines is a single prefixed string, and no carrier
+defines a location for a second one. A specification that introduces
+a new prefix MUST define:
+
+1. the carrier and schema of any parallel commitment;
+2. the binding that proves the old and new values commit to the same
+   object;
+3. producer behavior during the transition;
+4. verifier selection and downgrade behavior when recognition sets
+   differ; and
+5. the transition procedure itself.
+
+### Authority Set Entry Commitment {#entry-commitment}
+
+This document also defines the **Authority Set entry commitment**, the
+envelope of {{integrity-anchors}} with `typ`
+`mission-authority-entry`, `iss` the Mission `issuer`, and `value` a
+single Authority Set entry object exactly as recorded
+({{test-vectors}}). A companion that cites an
+entry by digest (a decision record naming the entry it evaluated,
+containment or completion state keyed to an entry) computes it this
+way.
+
+Entries whose canonical commitment envelopes are identical produce
+the same digest, and within one Mission Record every recorded entry
+resolving to the same digest forms one selector equivalence class;
+the class is defined by the canonical bytes, not by pre-canonical
+source text the record does not preserve.
+
+The commitment is not a globally unique entry identifier: the
+envelope binds the issuer, not the Mission, so a protocol that uses
+it to select or cite an entry MUST bind it to the Mission `issuer`
+and Mission Identifier whose recorded Authority Set is searched,
+directly or through an enclosing object whose integrity protection
+binds them.
 
 # Conformance {#conformance}
 
@@ -5393,8 +5383,9 @@ no requirement from the substrate contract
 
 # Implementation Considerations {#implementation-considerations}
 
-This section states two requirements: approval idempotency and the
-retention of the Mission Record.
+This section states two requirements, approval idempotency and the
+retention of the Mission Record, and how an issuer locates a
+Mission's grant bindings.
 
 ## Approval Idempotency {#approval-idempotency}
 
@@ -5410,6 +5401,15 @@ The **audit horizon** is the deployment-declared retention window for
 the Mission Record and its evidence: at least the Mission's lifetime
 plus a declared post-expiry period. A deployment retains a
 `terminated` Mission's record for its audit horizon.
+
+## Binding Index {#binding-index}
+
+An issuer that needs to cascade a lifecycle operation, or to
+enumerate a Mission's bound grant lineages and credentials, maintains
+its own issuer-side index from the Mission to each binding; a Mission
+Management companion
+({{I-D.draft-mcguinness-oauth-mission-management}}) can standardize
+that index's wire surface.
 
 # Security Considerations {#security-considerations}
 
@@ -5470,6 +5470,13 @@ binds the locale, disclosure-template version, or material notices the
 Approver was shown. A buggy or malicious rendering layer could
 therefore show a narrower or different task than the committed
 Authority Set without a committed trace.
+
+The approval event commits the Mission Intent and Authority Set the
+AS records as approved. Those commitments establish neither that the
+AS rendered them faithfully nor that the Approver understood them.
+Step 5 of {{direct-approval-steps}} requires human-meaningful
+rendering; comprehension cannot be inferred from an approval or its
+integrity anchors.
 
 A deployment whose Missions carry high-risk authority can retain
 presentation-level audit evidence from which the disclosure shown can
@@ -6833,7 +6840,7 @@ resource_access"}]}
 proposal_hash = sha-256:udzftXYQy0pvYNxz4KgtmyL_EV8ry4DhIbBFfwILEBA
 ~~~
 
-The last vector is the entry commitment ({{integrity-anchors}}),
+The last vector is the entry commitment ({{entry-commitment}}),
 computed over one immutable Mission-record Authority Set entry, not
 an issued or narrowed token projection.
 
@@ -6883,6 +6890,19 @@ resolve before interoperating.
 
 -02
 
+- Mission Creation states the direct creation path, with the Mission
+  Approval subsections in the order of the steps they serve.
+  Standing-Consent Bases and Commitment Mechanisms move to
+  Extensibility, which lists approval bases as an extension point.
+  Commitment Mechanisms imports the digest rules that stay in Digest
+  Input and Algorithm, and the Authority Set entry commitment is its
+  own subsection. Approval Comprehension folds into Consent Binding
+  and Rendering Safeguards, Achieved Authentication into Approver
+  Authentication Strength, and the binding index into Implementation
+  Considerations. Grant Bindings and Related Mechanisms drops what
+  Template and Continuation state, and Approval Governance holds the
+  record-digest, per-action and later-reliance points. No requirement
+  changed (#1914).
 - Mission Record names its required members, and every other member
   is optional or defined by the profile that uses it. `activation`,
   `activation_actor`, and `root_commitment` are optional for `direct`,

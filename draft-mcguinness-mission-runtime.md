@@ -49,6 +49,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-orchestration:
     title: "Mission Orchestration and Unwinding"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-orchestration.html
@@ -1058,9 +1066,9 @@ external authority remaining effective: an entitlement, a delegation,
 the approving principal's continuing role, an accountable owner's
 sponsorship, or a governing policy. Approval evidence does not by
 itself establish that such a condition still holds
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Single Accountable
-Approver"), and whether a later change affects an existing Mission is
-the deployment's policy. The agent-registry evaluation of
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Relationship to the Issuance Profile"), and whether a later change
+affects an existing Mission is the deployment's policy. The agent-registry evaluation of
 {{input-actor}} is one such dependency.
 
 A deployment that declares an authority dependency MUST state in its
