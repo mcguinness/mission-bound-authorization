@@ -14964,6 +14964,55 @@
    "notes": "#1721 item 1 (D845). Proved by mutation: making the decision's refusal mapping return the error's own code (invalid_request) fails both browser tests on the error parameter; removing the commit guard (created_at < expires_at) fails the race test, which then completes with a code; throwing an untyped invalid_request from the decision's re-validation fails the late-decision test alone; making the device decision record invalid_request for a refusal fails the device test. The device test passes whatever the browser mapping returns, so it witnesses only the back-channel arm. The approval render of an expired request still answers 400 invalid_request to the Approver's user agent: a render completes nothing."
   },
   {
+   "id": "core.approval-commit.anchors-computed-at-approval",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-commit",
+   "text": "The AS computes them here whether or not the record carries them, and every artifact bound at the approval event carries the values computed here.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with the anchors not retained on the record, the Approval Governance Record, the consent rendering's approval context and render revision, the approval context manifest and a child's parent.authority_hash carry the anchors computed at approval, and each verifies against the Mission"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "creation-time binding with anchors not retained (@spec mission#approval-commit, #1917) > the Approval Governance Record carries the anchors computed at approval and verifies against the omitted-anchor Mission",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "creation-time binding with anchors not retained (@spec mission#approval-commit, #1917) > the consent rendering's approval context and render revision carry the anchors computed at approval, and the decision's recomputation verifies",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "creation-time binding with anchors not retained (@spec mission#approval-commit, #1917) > the approval context manifest carries the anchors computed at approval",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "creation-time binding with anchors not retained (@spec mission#approval-commit, #1917) > Child Delegation's parent.authority_hash equals the parent's resolved authority_hash",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). Witnessed at kernel level: buildAuthorizationServer has no recordAnchors option, so the render-revision case runs at kernel and approvalContext level, not over HTTP. No separate mutation: each witness compares an artifact bound at approval with the resolved value of an omitted-anchor record."
+  },
+  {
    "id": "core.approval-event.ordered-procedure",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "direct-approval-steps",
@@ -21017,9 +21066,15 @@
      "name": "Local Approved-Set Verification — Tier 1 (@spec mission#lasv-retrieval) > rejects a carried entry against a DIFFERENT audience's resource (not_subset), never trusting commitment match alone",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "authoritative inputs (@spec mission#integrity-anchors, #1917) > Approved-Set Verification Tier 1: a retrieval whose served set differs from the approved one fails closed against the stored record's anchor",
+     "level": "unit",
+     "surface": "commitment"
     }
    ],
-   "notes": "review #725 P1-3: reference implementation is verifyLocalApprovedSet() (packages/mission-core/src/local-approved-set-verification.ts). No party in this repo currently CALLS it in production (no Resource Server or PDP here claims this OPTIONAL capability), so coverage is the unit-level function contract, not an integration wiring; that is the honest ceiling for a capability this repo does not itself deploy."
+   "notes": "review #725 P1-3: reference implementation is verifyLocalApprovedSet() (packages/mission-core/src/local-approved-set-verification.ts). No party in this repo currently CALLS it in production (no Resource Server or PDP here claims this OPTIONAL capability), so coverage is the unit-level function contract, not an integration wiring; that is the honest ceiling for a capability this repo does not itself deploy. #1917 (D1061): the issuer's expected anchor comes from the stored record; the served-set mutation witness (kernel-level approvedSetRetrieval, no route) fails closed against it."
   },
   {
    "id": "approved-set-verification.pinning.tier2-independent-pinning",
@@ -76213,6 +76268,47 @@
    "notes": "#705 acceptance item 13, its approval-context half (D359: no new `typ`, a digest-equivalence regression witness). Its Mandate `approver` claim half has no implementation: src/ mints no Mandate. Fault injection by test double (no source edit): sourcing `approver` from `subject` fails the test."
   },
   {
+   "id": "approval-context.manifest.anchors-recorded-or-implied",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "`intent_hash`, `authority_hash`, and `proposal_hash` take the Mission Record's integrity anchor of the same name, recorded or implied",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a manifest built for a Mission that omits its anchors is byte-identical to the same Mission with them recorded, with and without a proposal; proposal_hash is present exactly when the record carries proposed_authority; the v1 vectors are unchanged"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "Approval Context Manifest v1 unchanged (@spec mission#integrity-anchors, #1917) > a manifest built for a Mission that omits its anchors is byte-identical to the same Mission with them recorded, with a proposal",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "Approval Context Manifest v1 unchanged (@spec mission#integrity-anchors, #1917) > a manifest built for a Mission that omits its anchors is byte-identical to the same Mission with them recorded, without a proposal",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "creation-time binding with anchors not retained (@spec mission#approval-commit, #1917) > the approval context manifest carries the anchors computed at approval",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). The mission-core v1 vectors (approvalContext.test.ts) are unchanged and pass. The #705 regression digest in lifecycle-termination.test.ts stays pinned: the kernel now refuses that fixture's placeholder anchors, so the test takes every other member from the kernel's input and supplies the fixture's anchor strings itself."
+  },
+  {
    "id": "approval-context.construction.envelope-anchor",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "approval-context-construction",
@@ -96056,6 +96152,328 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1892 ruling 6 (row debt). Restates the rendering-safeguards rules for prose in any language or script; no test renders non-Latin or bidirectional goal or task_bounds text."
+  },
+  {
+   "id": "core.mission-record.anchor-recorded-equals-implied",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-content-members",
+   "text": "A recorded anchor MUST equal its implied value.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a record that carries intent_hash, authority_hash or proposal_hash carries each at the anchor over its retained object with the record's issuer; a recorded value that differs, or a proposal_hash on a record with no proposed_authority, is refused wherever it is read",
+    "local": "the reference resolves every anchor read through resolvedAnchors (kernel/anchors.ts); KernelOptions.recordAnchors (default true) controls only whether insertRecord persists the three anchors, and false persists NULL"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded anchor that equals its implied value resolves to itself",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded intent_hash altered in storage is refused, and the stored value is never replaced",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded authority_hash altered in storage is refused, and the stored value is never replaced",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded proposal_hash altered in storage is refused, and the stored value is never replaced",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded proposal_hash on a record without proposed_authority has no implied value and is refused",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). Mutation proof: disabling the comparison in resolvedAnchors fails the three altered-in-storage witnesses."
+  },
+  {
+   "id": "core.mission-record.anchor-mismatch-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-content-members",
+   "text": "A party that finds one that differs MUST refuse the operation that relies on it and MUST NOT substitute the implied value.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a read of a mismatching recorded anchor refuses (AnchorMismatchError), leaves the stored value unchanged, and every path that emits the anchor (introspection, the ungated view, the manifest input, Status, the approved-set retrieval) refuses rather than emitting a fresh value",
+    "local": "the reference resolves every anchor read through resolvedAnchors (kernel/anchors.ts); KernelOptions.recordAnchors (default true) controls only whether insertRecord persists the three anchors, and false persists NULL"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded intent_hash altered in storage is refused, and the stored value is never replaced",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded authority_hash altered in storage is refused, and the stored value is never replaced",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded proposal_hash altered in storage is refused, and the stored value is never replaced",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a path that emits an anchor refuses a mismatching recorded one rather than emitting a fresh value",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). Mutation proof: disabling the comparison in resolvedAnchors fails the altered-in-storage witnesses, which also assert the stored value is unchanged."
+  },
+  {
+   "id": "core.mission-record.anchor-implied-not-inserted",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-content-members",
+   "text": "an omitted anchor has its implied value, a reader does not insert it into a record before hashing or committing the record, and an issuer does not remove an anchor a record carries",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a record that omits its anchors resolves each to its implied value while the stored row, the record read back, the Approval Context Manifest and the approval event's canonical bytes keep the members exactly as recorded; a record that carries them keeps them, through storage, the schema rebuild and resolution",
+    "local": "the reference resolves every anchor read through resolvedAnchors (kernel/anchors.ts); KernelOptions.recordAnchors (default true) controls only whether insertRecord persists the three anchors, and false persists NULL"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "genuine omission (@spec mission#record-content-members, #1917) > a recordAnchors: false kernel stores NULL for all three anchors, reads the record back without them, and resolves each to the anchor over the stored object",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "record bytes (@spec mission#record-content-members, #1917) > approvalEventPreimage keeps each record's members as recorded, and resolving anchors changes neither preimage",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "migration: nullable anchor columns (@spec mission#record-content-members, #1917) > rebuilds a store whose anchor columns are NOT NULL once, keeping every record byte-identical with its anchors present",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "migration: nullable anchor columns (@spec mission#record-content-members, #1917) > a second open is a no-op",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "Approval Context Manifest v1 unchanged (@spec mission#integrity-anchors, #1917) > a manifest built for a Mission that omits its anchors is byte-identical to the same Mission with them recorded, with a proposal",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "Approval Context Manifest v1 unchanged (@spec mission#integrity-anchors, #1917) > a manifest built for a Mission that omits its anchors is byte-identical to the same Mission with them recorded, without a proposal",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). Mutation proofs: inserting resolved anchors into approvalEventPreimage fails the record-bytes witness; persisting anchors regardless of recordAnchors fails the genuine-omission witness; removing the rebuild's guard fails the second-open witness. The Audit sentence (approval-event bytes as recorded) is witnessed by the record-bytes test; Mission Audit has no ledger rows."
+  },
+  {
+   "id": "core.mission-record.anchor-proposal-hash-conditional",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-content-members",
+   "text": "OPTIONAL when `proposed_authority` is present, absent otherwise.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "proposal_hash resolves exactly when the record carries proposed_authority, to the same value recorded or omitted; without a proposal it is absent from the record and from the resolver, and a recorded one there is refused"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "proposal_hash present exactly with proposed_authority (@spec mission#integrity-anchors, #1917) > with a proposal, proposal_hash resolves both recorded and omitted, to the same value",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "proposal_hash present exactly with proposed_authority (@spec mission#integrity-anchors, #1917) > without a proposal, proposal_hash is absent from the record and from the resolver, recorded or omitted",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a recorded proposal_hash on a record without proposed_authority has no implied value and is refused",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). The clause's text recurs on other conditional members; the anchor scopes it to proposal_hash."
+  },
+  {
+   "id": "core.integrity-anchors.implied-construction",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "integrity-anchors",
+   "text": "An implied anchor ({{record-content-members}}) is this section's `sha-256` construction over the retained record: the record's `intent`, `authority_set`, or `proposed_authority`, each array in its recorded order, with `iss` the record's `issuer`, whatever algorithm the issuer uses for new commitments.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each implied value equals the sha-256 anchor, computed independently with the fixed typ values, over the stored intent, authority_set or proposed_authority with the record's issuer, and reordering a stored array changes it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "stable construction (@spec mission#integrity-anchors, #1917) > each implied value equals an independent sha-256 reference over the same object with the fixed typ values",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "authoritative inputs (@spec mission#integrity-anchors, #1917) > reordering the stored authority_set changes the implied value: array order is kept",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "genuine omission (@spec mission#record-content-members, #1917) > a recordAnchors: false kernel stores NULL for all three anchors, reads the record back without them, and resolves each to the anchor over the stored object",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). The independent reference (sorted-key JSON, createHash, literal typ strings) would diverge from a resolver that took its construction from configuration."
+  },
+  {
+   "id": "core.integrity-anchors.compute-from-retained-record",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "integrity-anchors",
+   "text": "An issuer MUST compute an anchor it emits or verifies from that retained record, never from a token's carried subset, a projection or response it serves, or authority a companion narrows after approval.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a contained Mission resolves authority_hash over its approved authority_set, the creation-time value, never its effective set; an approved-set retrieval whose served set differs from the approved one fails closed against the anchor of the stored record",
+    "local": "the reference resolves every anchor read through resolvedAnchors (kernel/anchors.ts); KernelOptions.recordAnchors (default true) controls only whether insertRecord persists the three anchors, and false persists NULL"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "authoritative inputs (@spec mission#integrity-anchors, #1917) > a contained Mission resolves authority_hash over its approved authority_set, the creation-time value, never its effective set",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "authoritative inputs (@spec mission#integrity-anchors, #1917) > Approved-Set Verification Tier 1: a retrieval whose served set differs from the approved one fails closed against the stored record's anchor",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a path that emits an anchor refuses a mismatching recorded one rather than emitting a fresh value",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1917 (D1061). Mutation proofs: computing authority_hash over effectiveAuthoritySet fails the contained-Mission witness; deriving the retrieval's expected anchor from the served projection fails the Tier 1 witness. The approved-set retrieval is kernel-level (approvedSetRetrieval, approvedSetProjection): the AS has no retrieval route, as approved-set-verification.surface.retrieval-transport-and-disclosure-gate records."
+  },
+  {
+   "id": "core.commitment-mechanisms.new-algorithm-preserves-commitments",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "commitment-mechanisms",
+   "text": "Such a specification MUST NOT change a commitment already made, including the implied value of an anchor a Mission Record omits, which stays the `sha-256` construction of {{integrity-anchors}}.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a specification that introduces a new digest prefix leaves every existing commitment, and every omitted anchor's implied sha-256 value, unchanged"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1917 (D1061). A duty on a future specification's text, which no runtime test witnesses. core.integrity-anchors.implied-construction witnesses that the reference's implied value is the fixed sha-256 construction."
   },
   {
    "id": "discovery.mission-substrate.only-active-rule",
