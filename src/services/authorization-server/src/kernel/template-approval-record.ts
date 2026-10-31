@@ -52,6 +52,7 @@ import {
   type UsdAmount,
 } from "./standing-payment.js";
 import type { ApprovalBasisTemplate, AuthorityEntry, MissionRecord } from "./types.js";
+import { resolvedAnchors } from "./anchors.js";
 
 /** The identifier of the standing-payment template recording rule. */
 export const TEMPLATE_RECORDING_RULE_ID = "urn:mission:template-standing-payment-recording-rule";
@@ -294,13 +295,12 @@ export function buildTemplateRecord(
       approved_at: basis.approved_at,
     },
   };
+  // @spec mission#integrity-anchors (#1917, D1061): the Mission's anchors,
+  // recorded or implied, computed at approval whether or not retained.
+  const { intent_hash, authority_hash } = resolvedAnchors(mission);
   return {
     approval_event_id: mission.approval_event_id,
-    mission: {
-      issuer: mission.issuer,
-      intent_hash: mission.intent_hash,
-      authority_hash: mission.authority_hash,
-    },
+    mission: { issuer: mission.issuer, intent_hash, authority_hash },
     approval_policy: ruleRef,
     assertions: [assertion],
     evaluation: {
@@ -559,7 +559,7 @@ export function recheckTemplateApprovalRecord(
     retained.approval_event_id !== record.approval_event_id ||
     inputs.approval_event_id !== record.approval_event_id ||
     inputs.intent_hash !== record.mission.intent_hash ||
-    authorityHash(mission.issuer, inputs.authority as never) !== mission.authority_hash ||
+    authorityHash(mission.issuer, inputs.authority as never) !== resolvedAnchors(mission).authority_hash ||
     !sameJson(inputs.consumption_bound, mission.intent.max_budget ?? null)
   ) {
     return no(

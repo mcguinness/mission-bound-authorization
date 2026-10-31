@@ -22,6 +22,7 @@ import type { ActivationPolicyRef } from "@mission/core";
 import { canonicalize, type JsonValue } from "@mission/core";
 import type { Database } from "@mission/store";
 import type { ApprovalBasis, ApprovalBasisGovernedPolicy, MissionRecord } from "./types.js";
+import { resolvedAnchors } from "./anchors.js";
 
 /**
  * @spec approval-governance#envelope: the JWS protected `typ` the issuer
@@ -224,11 +225,15 @@ function authenticateApprovalGovernanceEnvelope(
  * `intent_hash`, `authority_hash`) each equal the committed Mission's.
  */
 export function assertMissionBinding(record: UnsignedApprovalGovernanceRecord, mission: MissionRecord): void {
+  // @spec mission#integrity-anchors (#1917, D1061): the Mission's anchors,
+  // recorded or implied; a recorded one that differs from its implied value
+  // refuses (AnchorMismatchError) before any comparison.
+  const anchors = resolvedAnchors(mission);
   if (
     record.approval_event_id !== mission.approval_event_id ||
     record.mission.issuer !== mission.issuer ||
-    record.mission.intent_hash !== mission.intent_hash ||
-    record.mission.authority_hash !== mission.authority_hash
+    record.mission.intent_hash !== anchors.intent_hash ||
+    record.mission.authority_hash !== anchors.authority_hash
   ) {
     throw new ApprovalGovernanceError("record mission binding does not match the Mission record");
   }

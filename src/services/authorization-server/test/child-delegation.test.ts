@@ -758,15 +758,14 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       // derivation would have retained: both entries derive from a ceiling
       // entry whose `children` names its actors, so each list decides.
       child_actor_provenance: ["list", "list"],
-      intent_hash: "sha-256:d-intent",
-      authority_hash: "sha-256:d-authority",
+      // The anchors and root_commitment are omitted, so each is implied by
+      // the object it commits (#1912, #1917).
       subject: { iss: ISS, sub: "alice" },
       approval_basis: {
         type: "direct",
         consent_principal: { iss: ISS, sub: "bob" },
         activation: { approval_event_id: dApprovalEventId },
         activation_actor: { iss: ISS, sub: "bob" },
-        root_commitment: "sha-256:d-authority",
       },
       // @spec mission#authority-sources — REQUIRED and immutable; the source
       // this kernel's catalog declares, which is what a real approval would

@@ -668,13 +668,28 @@ export interface MissionRecord {
    * carries the record's entries.
    */
   approved_audiences?: string[][];
-  intent_hash: string;
-  authority_hash: string;
+  /**
+   * @spec mission#record-content-members, mission#integrity-anchors (#1917,
+   * D1061): OPTIONAL with an implied value, the `mission-intent` anchor over
+   * the retained `intent` under `iss` = `issuer`. Absent when the deployment
+   * does not persist it (`KernelOptions.recordAnchors: false`). Read it only
+   * through `resolvedAnchors(record)`, which computes the implied value and
+   * refuses a recorded value that differs from it.
+   */
+  intent_hash?: string;
+  /**
+   * @spec mission#record-content-members, mission#integrity-anchors (#1917,
+   * D1061): OPTIONAL with an implied value, the `mission-authority-set` anchor
+   * over the retained `authority_set` in stored order. Read it only through
+   * `resolvedAnchors(record)`.
+   */
+  authority_hash?: string;
   /**
    * @spec mission#mission-record — the integrity commitment over the recorded
    * `proposed_authority` (@spec mission#integrity-anchors, typ
-   * `mission-proposed-authority`). Present iff `proposed_authority` is
-   * present. Approval-time provenance, not enforcement input: like
+   * `mission-proposed-authority`). Implied when `proposed_authority` is
+   * present and the member is not persisted (#1917, D1061); read it only
+   * through `resolvedAnchors(record)`. Approval-time provenance, not enforcement input: like
    * `approval_basis`, it is surfaced on the record and through introspection
    * and is NOT carried on the `mission` token claim.
    */
