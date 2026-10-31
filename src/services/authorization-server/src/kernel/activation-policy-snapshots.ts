@@ -106,7 +106,11 @@ export type ActivationPolicyCommitmentCheck =
   | { status: "verified"; ref: ActivationPolicyRef; snapshot: RetainedActivationPolicySnapshot }
   | { status: "mismatch"; ref: ActivationPolicyRef; snapshot: RetainedActivationPolicySnapshot }
   | { status: "unavailable"; ref: ActivationPolicyRef }
-  | { status: "not_applicable" };
+  | { status: "not_applicable" }
+  // @spec mission#record-principal-members (#1923): the record's basis type
+  // is one this issuer does not define, so whether an activation policy
+  // governs it is unknown; nothing is verified and nothing is inferred.
+  | { status: "unrecognized_basis"; type: unknown };
 
 /** Raised when a snapshot cannot be retained under the identity it claims; the activation does not commit. */
 export class ActivationPolicyRetentionError extends Error {}

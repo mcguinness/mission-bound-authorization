@@ -22,7 +22,29 @@
  */
 
 import { type AnchoredRecord, resolvedAnchors } from "./anchors.js";
-import type { ApprovalBasisDirect, MissionRecord } from "./types.js";
+import type { ApprovalBasis, ApprovalBasisDirect, MissionRecord } from "./types.js";
+
+/**
+ * @spec mission#record-principal-members: the `approval_basis.type` values
+ * this issuer defines. A `Record` over the union, so a basis type added to
+ * {@link ApprovalBasis} without being listed here fails to compile.
+ */
+const RECOGNIZED_BASIS_TYPES: Record<ApprovalBasis["type"], true> = {
+  direct: true,
+  template: true,
+  policy_drawdown: true,
+  ceiling_drawdown: true,
+  governed_policy: true,
+};
+
+/**
+ * @spec mission#record-principal-members (#1923): whether this issuer defines
+ * the basis `type`. An unrecognized value stays on the record as opaque
+ * provenance; only an operation that needs the basis's semantics refuses it.
+ */
+export function isRecognizedApprovalBasisType(type: unknown): type is ApprovalBasis["type"] {
+  return typeof type === "string" && Object.hasOwn(RECOGNIZED_BASIS_TYPES, type);
+}
 
 /**
  * The record members the three implied values are drawn from: the
@@ -131,6 +153,40 @@ export function assertDirectBasisConsistent(record: DirectBasisRecord): void {
     throw new DirectBasisMismatchError(
       "root_commitment",
       "approval_basis.root_commitment is not the record's authority_hash",
+    );
+  }
+}
+
+/** A `direct` basis carrying `adjudication` whose `kind` is not `human`. */
+export class DirectAdjudicationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DirectAdjudicationError";
+  }
+}
+
+/**
+ * @spec mission#record-principal-members (#1923): where `adjudication` is
+ * present for `direct`, `kind` MUST be `human`, with or without
+ * `governance_record`; a policy decides an instance only under a
+ * standing-consent basis. An omitted `adjudication` passes: the mechanism is
+ * still fixed by the basis type. Members of `adjudication` other than `kind`
+ * are not interpreted.
+ *
+ * `MissionKernel.insertRecord` calls it for every `direct` record before any
+ * write, beside {@link assertDirectBasisConsistent}.
+ */
+export function assertDirectAdjudicationHuman(record: Pick<MissionRecord, "approval_basis">): void {
+  const basis = record.approval_basis;
+  if (basis.type !== "direct") {
+    throw new TypeError(`approval_basis.type is '${basis.type}', not 'direct'`);
+  }
+  // Read as stored, not as typed: a stored basis can carry any JSON value.
+  const adjudication = (basis as { adjudication?: unknown }).adjudication;
+  if (adjudication === undefined) return;
+  if (!(isObject(adjudication) && adjudication.kind === "human")) {
+    throw new DirectAdjudicationError(
+      "approval_basis.adjudication.kind is not 'human': a direct approval is a human approval event",
     );
   }
 }

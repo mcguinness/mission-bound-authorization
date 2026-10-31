@@ -177,6 +177,12 @@ describe("a voluntary direct approval record (@spec approval-governance#triggers
     const kernel = makeKernel();
     const mission = approve(kernel);
     expect(mission.approval_basis).toMatchObject({ type: "direct", adjudication: { kind: "human", governance_record: true } });
+    // @spec mission#record-principal-members (#1923): exactly `kind: human`
+    // with `governance_record`, naming no principal beyond consent_principal.
+    expect((mission.approval_basis as { adjudication?: unknown }).adjudication).toStrictEqual({
+      kind: "human",
+      governance_record: true,
+    });
     const record = kernel.governanceRecords.forMission(mission.id) as ApprovalGovernanceRecord;
     expect(() => verifyApprovalGovernanceRecord(record, { resolveKey: resolveKey(kernel), mission })).not.toThrow();
     expect(record.approval_event_id).toBe(mission.approval_event_id);

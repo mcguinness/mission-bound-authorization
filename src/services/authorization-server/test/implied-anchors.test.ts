@@ -501,7 +501,8 @@ CREATE TABLE IF NOT EXISTS missions (
   schedule_json TEXT,
   eligibility_provenance_json TEXT,
   child_actor_provenance_json TEXT,
-  approved_audiences_json TEXT
+  approved_audiences_json TEXT,
+  extensions_json TEXT
 ) STRICT;
 `;
 

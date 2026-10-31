@@ -741,14 +741,22 @@ export {
   resolvedAnchors,
 } from "./kernel/anchors.js";
 export {
+  assertDirectAdjudicationHuman,
   assertDirectBasisConsistent,
+  DirectAdjudicationError,
   type DirectBasisMember,
   type DirectBasisMembers,
   DirectBasisMismatchError,
   type DirectBasisRecord,
   directBasisMembers,
   impliedDirectBasisMembers,
+  isRecognizedApprovalBasisType,
 } from "./kernel/approval-basis.js";
+export {
+  RECOGNIZED_RECORD_MEMBERS,
+  recordExtensionsJson,
+  storedExtensionMembers,
+} from "./kernel/record-extensions.js";
 export {
   assertDrawdownRecord,
   consentProvenanceOf,
