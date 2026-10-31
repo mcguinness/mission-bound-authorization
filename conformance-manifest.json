@@ -7967,9 +7967,76 @@
     "normative": "where a directly approved Mission populates approval_basis.adjudication, kind is human, naming no principal beyond consent_principal, whether or not governance_record is true; a direct Mission never reports kind: policy"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "New member (#701, revised per #716 review): now OPTIONAL, not REQUIRED, since no implementation yet emits approval_basis.adjudication and the family's standing-consent constructors (Template dispatch, Child Delegation, Ceiling drawdown) do not populate it in this revision. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human. #1185 (D387): the governance_record override that let a direct approval report kind: policy is removed; a policy decides an instance only under a standing-consent basis such as governed_policy."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > refuses a direct record whose adjudication has kind policy, committing no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > refuses a direct record whose adjudication has kind policy with governance_record, committing no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > refuses a direct record whose adjudication has kind service, committing no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > refuses a direct record whose adjudication has an unrecognized kind, committing no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > refuses a direct record whose adjudication has no kind, committing no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > refuses a direct record whose adjudication has a non-object, committing no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > stores a direct record whose adjudication is omitted, exactly as submitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > stores a direct record whose adjudication is kind human, exactly as submitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "direct adjudication at record creation (@spec mission#record-principal-members, #1923) > stores a direct record whose adjudication is kind human with governance_record, exactly as submitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > records nothing by default: a direct approval carries no adjudication and commits no record",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > commits one signed record with the Mission when configured: the Approver's human assertion under the direct approval rule",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "New member (#701, revised per #716 review): now OPTIONAL, not REQUIRED, since no implementation yet emits approval_basis.adjudication and the family's standing-consent constructors (Template dispatch, Child Delegation, Ceiling drawdown) do not populate it in this revision. Round-trips without a redundant authority-bearing field: kind: human carries no further members since consent_principal already names the deciding human. #1185 (D387): the governance_record override that let a direct approval report kind: policy is removed; a policy decides an instance only under a standing-consent basis such as governed_policy. #1923 (D1059): insertRecord, the creation funnel, refuses a direct basis whose adjudication is present with a kind other than human (DirectAdjudicationError) before any write, so no Mission is committed or findable by its approval event; an omitted adjudication and kind human, with or without governance_record, are stored exactly as submitted. The reference's own direct producer emits exactly {kind: human, governance_record: true}, naming no principal beyond consent_principal, and nothing when no direct approval rule is configured. Mutation-checked: removing the guard, or admitting an adjudication without kind, fails a witness; applying the guard to every basis fails the unrecognized-discriminator storage witness."
   },
   {
    "id": "core.approval-basis.adjudication-standing-consent-policy",
@@ -8788,9 +8855,28 @@
     "normative": "an unrecognized approval_basis.type or adjudication.kind is preserved unchanged as opaque provenance on an otherwise valid Mission record; it does not by itself invalidate or deactivate the Mission, unlike an unrecognized Mission Lifecycle state, and a consumer refuses only the specific profile operation that needs recognized adjudication semantics"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. #1912 (D1047) states the rule once, at the end of Principals and Approval Basis, for approval_basis.type, adjudication.kind and authority_source.type. This row stays scoped to the two adjudication discriminators; the authority_source.type facet, with its source-semantics refusal, is core.mission-record.authority-source-type-unrecognized (tested)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "unrecognized approval basis discriminators (@spec mission#record-principal-members, #1923) > stores, reads and returns them unchanged through a reopen, and the Mission stays active and derivable",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "unrecognized approval basis discriminators (@spec mission#record-principal-members, #1923) > reports an activation policy commitment it cannot judge as unrecognized, never not_applicable",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "unrecognized approval basis discriminators (@spec mission#record-principal-members, #1923) > refuses a Child Mission whose parent's basis it does not recognize, creating nothing and leaving the parent active",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. #1912 (D1047) states the rule once, at the end of Principals and Approval Basis, for approval_basis.type, adjudication.kind and authority_source.type. This row stays scoped to the two adjudication discriminators; the authority_source.type facet, with its source-semantics refusal, is core.mission-record.authority-source-type-unrecognized (tested). #1923 (D1059): partial. Witnessed: an unrecognized approval_basis.type with an unrecognized adjudication.kind is stored, read and returned unchanged through a reopen; the Mission stays active, derivable and introspectable; the direct-creation guard does not apply to it; and two operations that needed the basis's semantics and used to infer them now refuse: child delegation (delegation_not_permitted, nothing created, parent active) and the activation policy audit check (unrecognized_basis, never not_applicable). Gaps: (1) an unrecognized adjudication.kind on a recognized standing-consent basis is not refused where the kind's meaning is read: the governed_policy record gate and re-check (#1921) and the ceiling_drawdown re-check, which reads adjudication.policy without checking kind; (2) carryover (approval_basis_not_direct), Deferred Approval (not_pending), governed-policy activation and the Approval Governance re-check (step 4) refuse an unrecognized type in code, with no witness here. Introspection's sender-constraint narrowing applies to the recognized template type, so an unrecognized type gets the OAuth binding's base rule, which infers no standing."
   },
   {
    "id": "core.approval-basis.required-fixed-at-approval",
@@ -11920,9 +12006,28 @@
     "normative": "a Mission Record member the consumer does not recognize is neither interpreted nor removed: a record the consumer retains, and any record it commits, keeps that member unchanged"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1912 (D1047), new sentence. Todo, with a reference gap: the kernel store is column-mapped (insertRecord writes named columns and rowToRecord rebuilds the record from them), so an unrecognized top-level record member would not survive a commit and read. approval_basis is stored as JSON and read back verbatim (core.approval-basis.direct-implied-not-inserted's commit witness), and an unrecognized authority_source keeps every member (core.mission-record.authority-source-type-unrecognized). The reference creates its own records and admits no foreign one, so no current path commits a top-level member it does not recognize."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "unrecognized top-level record members (@spec mission#mission-record, #1923) > keeps them through insertion, every lifecycle write and a store reopen, exactly as recorded",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "unrecognized top-level record members (@spec mission#mission-record, #1923) > stores only the unrecognized members, and none for a record that carries none",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/record-opaque-members.test.ts",
+     "name": "unrecognized top-level record members (@spec mission#mission-record, #1923) > never lets a stored extension overwrite or supply a recognized member, or widen authority",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1912 (D1047), new sentence. #1923 (D1059): the kernel store keeps every top-level member it does not recognize in extensions_json, written once at insertion (the store's commit of a record) and never updated, and merges it back on every read; the recognized set is a Record over keyof MissionRecord. Witnessed through insertion, derivation, suspend, resume and revoke, and a reopen; only unrecognized names are stored; a stored extension naming a recognized member neither overwrites a present one (state, authority_set) nor supplies an absent one (template), and the terminated Mission admits no derivation. Lifecycle commit events are projections, not the record, so no other surface commits it. Mutation-checked (#1923 PR): dropping the read merge, storing nothing, storing recognized names, or keeping recognized names on read each fail a witness."
   },
   {
    "id": "core.mission-record.authority-source-immutable",
