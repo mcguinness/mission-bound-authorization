@@ -1867,10 +1867,21 @@ Retention has two tiers:
   or to the deployment's audit horizon, is RECOMMENDED.
 
 The retry horizon is a published deployment bound, like the
-deployment's other operational bounds. A client MUST NOT retry a
-creation past the published horizon: reuse of an identifier after its
-tombstone expires is outside the contract and is processed as a new
-operation.
+deployment's other operational bounds. It starts when the Mission
+Issuer records the identifier's reservation, and the tombstone
+survives through the instant it ends. The horizon is the one
+published when the reservation was recorded: a later change to the
+published value never shortens it. A reservation whose operation is
+still pending when the horizon ends (a deferral not yet completed,
+denied or expired) MUST survive until that operation ends, so the
+identifier never names two operations at once.
+
+A client MUST NOT retry a creation past the published horizon: reuse
+of an identifier after its tombstone expires is outside the contract
+and is processed as a new operation. That operation meets every
+check a new request meets, and a Mission it creates has a new
+`approval_event_id` ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Approval Idempotency").
 
 # Expansion Denial Reasons {#denial-reasons}
 
@@ -2464,6 +2475,12 @@ approved, not the predecessor's authority plus a delta.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Tombstone Retention states when the retry horizon starts and ends,
+  that a later change to the published horizon never shortens it for
+  a recorded identifier, and that a reservation still pending when
+  the horizon ends survives until its operation ends; a reuse after
+  the horizon receives a new `approval_event_id` (#1915).
 
 - Completion Modes says where any grant binding a successor carries
   comes from in each mode, and that a deferred completion or

@@ -5393,7 +5393,34 @@ The record's `approval_event_id` ({{record-provenance-members}}) is
 the approval idempotency key: a retried or duplicate delivery of the
 same approval decision (a replayed callback, a double-submitted
 consent form, a retried standing-consent activation) MUST NOT create
-a second Mission, and the AS deduplicates on this identifier.
+a second Mission, and the AS deduplicates on this identifier. Each
+creation path answers such a delivery in its own way, with the
+committed Mission, a denial or a credential delivery; none creates a
+second Mission.
+
+The AS MUST allocate `approval_event_id`, unique among its Missions,
+and MUST NOT derive it from a value that a client supplies and can
+reuse. At a direct approval event the AS MUST allocate it before the
+decision commits and bind it to the authorization interaction, never
+to a `request_uri` or another client-supplied value. The identifier
+is immutable and is retained with the record ({{audit-horizon}}).
+
+Each decision is bound to the interaction, deferral or activation
+that it decides, which has its own lifetime. A delivery of the
+decision after that lifetime MUST NOT create a Mission, and the AS
+MUST retain the identifier for at least that lifetime, so a retired
+record never turns an old delivery into fresh authorization.
+
+Some creation paths recognize a retry by a request key that the
+client supplies. The profile defining such a key MUST state its
+retention contract: when the retry horizon starts and ends; that a
+reservation whose operation is still pending when the horizon ends
+is retained until that operation ends; that a published horizon is
+never shortened for a key already recorded; and that a reuse of the
+key after the horizon is a new operation, which meets every check a
+new request meets, including authorization, policy, ceiling, expiry
+and accounting, and receives a new `approval_event_id`. Expiry of a
+key never lets an earlier decision create another Mission.
 
 ## Audit Horizon {#audit-horizon}
 
@@ -6889,6 +6916,13 @@ resolve before interoperating.
 \[\[ To be removed from the final specification ]]
 
 -02
+
+- Approval Idempotency states what every creation path shares: the
+  AS allocates `approval_event_id` and never derives it from a
+  reusable client value, binds the direct path's identifier to the
+  authorization interaction, refuses a decision delivered after the
+  lifetime of what it decides, and requires a profile with a request
+  key to state its retention contract (#1915).
 
 - Mission Creation states the direct creation path, with the Mission
   Approval subsections in the order of the steps they serve.
