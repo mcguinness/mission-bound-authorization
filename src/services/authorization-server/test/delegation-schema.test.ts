@@ -50,7 +50,7 @@ describe("validateMissionResourceAccessSchema — allowed_child_actors validatio
     ).toBeUndefined();
   });
 
-  // @spec mission#standing-consent-bases — child_creation_policy is an
+  // @spec approval-governance#activation-policy-commitment — child_creation_policy is an
   // activation policy reference, never a bare string.
   it("rejects a child_creation_policy that is not an activation policy reference", () => {
     for (const child_creation_policy of ["urn:policy:child-drawdown:v1", { id: "p", version: "1" }]) {

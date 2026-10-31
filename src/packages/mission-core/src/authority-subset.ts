@@ -438,7 +438,7 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
       for (const k of ["max_children", "max_child_depth"])
         if (c[k] !== undefined && (!Number.isInteger(c[k]) || (c[k] as number) < 0)) return false;
       if (c.allowed_child_actors !== undefined && !matchers(c.allowed_child_actors)) return false;
-      // @spec child-delegation#fanout, mission#standing-consent-bases — an
+      // @spec child-delegation#fanout, approval-governance#activation-policy-commitment — an
       // activation policy reference, compared for equal presence and identity
       // of `id`, `version`, and `digest` ({@link childrenNoBroader}), never
       // intersected, substituted, or dropped to manufacture a fit.

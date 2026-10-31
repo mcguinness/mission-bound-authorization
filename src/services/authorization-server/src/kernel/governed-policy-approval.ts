@@ -329,7 +329,7 @@ export function validateGovernedPolicyApprovalConfig(config: GovernedPolicyAppro
 }
 
 /**
- * @spec approval-governance#governed-policy-activation, mission#standing-consent-bases
+ * @spec approval-governance#governed-policy-activation, approval-governance#policy-adjudication
  *: one model's output, recorded with the model's identifier and version and
  * bound to the activation it was produced for: the approval event, the Intent
  * commitment, and the commitment over the Authority Set it evaluated. It can

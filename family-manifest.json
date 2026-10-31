@@ -259,6 +259,7 @@
     }
    ],
    "references": [
+    "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-mandate",
@@ -770,6 +771,7 @@
    "summary": "Experimental sketch: the fifth binding, to the Grant Negotiation and Authorization Protocol (RFC 9635) authorization server, and the second authored against the Mission Substrate Requirements contract.",
    "pull_when": "Evaluating a GNAP deployment only.",
    "normative_references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-approved-set-verification",
@@ -818,10 +820,17 @@
      "requires": [
       "draft-mcguinness-oauth-mission-approved-set-verification"
      ]
+    },
+    {
+     "when": "a noninteractive grant creates a Mission under a standing-consent basis",
+     "requires": [
+      "draft-mcguinness-mission-approval-governance"
+     ]
     }
    ],
    "references": [
     "draft-mcguinness-mission-aauth",
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
@@ -1647,6 +1656,7 @@
    "summary": "Lets a parent Mission authorize a Child Mission for a sub-agent, with explicit parent lineage, strict-subset authority, expiry no later than the parent, fan-out controls, and cascade revocation when the parent reaches a terminal state.",
    "pull_when": "A sub-agent needs its own Mission outliving a call frame, with cascade termination.",
    "normative_references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-derivation-limits",
     "draft-mcguinness-oauth-mission-discharge",
@@ -1689,9 +1699,16 @@
      "requires": [
       "draft-mcguinness-oauth-mission-derivation-limits"
      ]
+    },
+    {
+     "when": "a Child Mission is created by policy under the policy_drawdown basis",
+     "requires": [
+      "draft-mcguinness-mission-approval-governance"
+     ]
     }
    ],
    "references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-harness",
@@ -2162,6 +2179,7 @@
    "summary": "At the initial approval the Approver also consents to an authority ceiling and a drawdown policy, letting the Mission Issuer adjudicate an in-ceiling expansion by policy instead of a fresh human approval.",
    "pull_when": "Authority cannot be enumerated up front; policy-bounded drawdown beats over-provisioning.",
    "normative_references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-derivation-limits",
@@ -2182,6 +2200,12 @@
      "when": "the deployment also adopts Mission Derivation Limits",
      "requires": [
       "draft-mcguinness-oauth-mission-derivation-limits"
+     ]
+    },
+    {
+     "when": "an in-ceiling successor is adjudicated by policy under the ceiling_drawdown basis",
+     "requires": [
+      "draft-mcguinness-mission-approval-governance"
      ]
     }
    ],
@@ -2353,6 +2377,7 @@
    "summary": "An Approver consents once to a task template (a ceiling of resources, actions, and constraints plus a dispatch policy), and each dispatch then instantiates an ordinary, independently gated Mission from it at machine speed.",
    "pull_when": "Machine-speed dispatch makes per-run approval infeasible; consent once to a ceiling.",
    "normative_references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
@@ -2362,6 +2387,7 @@
     "draft-mcguinness-oauth-mission-submission-evidence"
    ],
    "adoption_requires": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence",
@@ -2447,7 +2473,9 @@
    "pull_when": "Start here for OAuth issuance: any agent's approval must bind durably to the tokens it later uses.",
    "datatracker_url": "https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/",
    "adoption_alias": "core",
-   "normative_references": [],
+   "normative_references": [
+    "draft-mcguinness-mission-approval-governance"
+   ],
    "adoption_requires": [],
    "references": [
     "draft-mcguinness-mission-approval-governance",
@@ -2478,6 +2506,14 @@
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-template"
+   ],
+   "requires_when": [
+    {
+     "when": "a Mission is activated under a standing-consent basis",
+     "requires": [
+      "draft-mcguinness-mission-approval-governance"
+     ]
+    }
    ]
   },
   {
@@ -2495,6 +2531,7 @@
    "summary": "Bounds how many derivations the issuer performs under a Mission: an optional requested ceiling, an AS-established effective limit, atomic counting across code exchange, refresh, and Token Exchange (the refreshes of an async delegation family are not counted), refusal at the cap, and remaining-count disclosure through introspection.",
    "pull_when": "A deployment wants a cap on counted derivations under one Mission, independent of authority and lifetime; the refreshes of an async delegation family are not counted.",
    "normative_references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence"
    ],
@@ -2507,9 +2544,16 @@
      "requires": [
       "draft-mcguinness-oauth-mission-consent-evidence"
      ]
+    },
+    {
+     "when": "a Mission is created under a standing-consent basis",
+     "requires": [
+      "draft-mcguinness-mission-approval-governance"
+     ]
     }
    ],
    "references": [
+    "draft-mcguinness-mission-approval-governance",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-security-model",
     "draft-mcguinness-oauth-mission",

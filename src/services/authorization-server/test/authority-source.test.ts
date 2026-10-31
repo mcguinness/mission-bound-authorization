@@ -32,7 +32,7 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const READ_ACTIONS = ["payments:invoice.list", "payments:invoice.read"];
-/** @spec mission#standing-consent-bases — the Dispatch Policy snapshot this suite's issuer holds. */
+/** @spec approval-governance#activation-policy-commitment — the Dispatch Policy snapshot this suite's issuer holds. */
 const READ_ONLY_POLICIES = {
   "read-only": { version: "1", content_type: "application/json", content: '{"id":"read-only"}' },
 };

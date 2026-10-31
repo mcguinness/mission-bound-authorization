@@ -135,7 +135,7 @@ export class TemplateError extends Error {}
  * intersection; a policy-empty intent surfaces as {@link IntentError} instead
  * (matching `kernel.approve`), never as this reason. `dispatch_policy_changed`
  * is a Dispatch Policy whose snapshot no longer matches the `digest` the
- * template committed (@spec mission#standing-consent-bases).
+ * template committed (@spec approval-governance#activation-policy-commitment).
  */
 export type DispatchReason =
   | "template_not_active"
@@ -184,7 +184,7 @@ export interface CreateTemplateInput {
   approver: { iss: string; sub: string };
   ceiling: AuthorityEntry[];
   /**
-   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * @spec mission-template#the-mission-template, approval-governance#activation-policy-commitment
    * — the Dispatch Policy the human consents to, named by `id` and `version`.
    * The Mission Issuer commits it as an activation policy reference whose
    * `digest` it computes from the snapshot it holds; a request-body digest is
@@ -372,7 +372,7 @@ export function templateCeiling(ceiling: AuthorityEntry[], resolver?: Capability
 }
 
 /**
- * @spec mission#standing-consent-bases: the consented template commits the
+ * @spec approval-governance#activation-policy-commitment: the consented template commits the
  * Dispatch Policy's content: the issuer mints the reference from the snapshot
  * it holds for that id and version, and refuses a policy it does not hold.
  */
@@ -424,7 +424,7 @@ export function createTemplate(
     authoritySourceResolver?: AuthoritySourceResolver;
     capabilityResolver?: CapabilitySourceResolver;
     /**
-     * @spec mission#standing-consent-bases — the Dispatch Policies this issuer
+     * @spec approval-governance#activation-policy-commitment — the Dispatch Policies this issuer
      * holds; the template commits the named policy's snapshot digest.
      */
     dispatchPolicies?: DispatchPolicies;
@@ -698,7 +698,7 @@ export interface DispatchInput {
   /** The dispatching actor; MUST be in the template's `dispatchers`. */
   dispatcher: string;
   /**
-   * @spec mission-template#the-mission-template, mission#standing-consent-bases
+   * @spec mission-template#the-mission-template, approval-governance#activation-policy-commitment
    * — the deployment's held Dispatch Policy snapshots. Dispatch verifies the
    * template's committed digest against the named snapshot and reads the Agent
    * selection rule of a template that lists several Agents from that snapshot
@@ -765,7 +765,7 @@ export interface DispatchResult {
 }
 
 /**
- * @spec mission-template#the-mission-template, mission#standing-consent-bases
+ * @spec mission-template#the-mission-template, approval-governance#activation-policy-commitment
  * — a deployment Dispatch Policy: the exact snapshot the Mission Issuer holds
  * and evaluates, whose digest a template commits. The policy IS its snapshot:
  * no rule is evaluated from anywhere else, so a change to what Dispatch does
@@ -784,7 +784,7 @@ export type DispatchPolicies = Readonly<Record<string, DispatchPolicy>>;
  * template's Dispatch Policy selection rule names. `agents` is an allowlist,
  * not a selection rule, so its order is never consulted. The rule is read only
  * from the held snapshot whose digest the template committed
- * (@spec mission#standing-consent-bases): a snapshot that no longer matches
+ * (@spec approval-governance#activation-policy-commitment): a snapshot that no longer matches
  * selects nothing. The rule sees only that snapshot, never Dispatcher input.
  * Undefined when no Agent can be selected.
  */
@@ -923,7 +923,7 @@ export function dispatchFromTemplate(
   const recovered = lookup();
   if (recovered) return recovered;
 
-  // @spec mission#standing-consent-bases, mission-template#dispatch — the
+  // @spec approval-governance#standing-consent-bases, mission-template#dispatch — the
   // instance's approval_event_id identifies THIS Dispatch: allocated with the
   // reservation and retained with the instance, never derived from the
   // reusable dispatch_event_id, so a key reused after its tombstone expires
@@ -960,7 +960,7 @@ export function dispatchFromTemplate(
   if (!template.dispatchers.includes(input.dispatcher)) {
     throw new DispatchError("dispatcher_not_allowed", `dispatcher ${input.dispatcher} is not permitted`);
   }
-  // @spec mission-template#dispatch (step 3), mission#standing-consent-bases —
+  // @spec mission-template#dispatch (step 3), approval-governance#activation-policy-commitment —
   // verify the Dispatch Policy snapshot this issuer would evaluate against the
   // `digest` the template committed: a policy edited after consent, even
   // under an unchanged version, never adjudicates a Dispatch. The verified
@@ -1213,7 +1213,7 @@ export function dispatchFromTemplate(
     template_hash: template.template_hash,
     dispatch_policy: template.dispatch_policy,
   };
-  // @spec mission#standing-consent-bases, mission-template#template-lineage —
+  // @spec approval-governance#standing-consent-bases, mission-template#template-lineage —
   // standing consent to the template ceiling activates this instance:
   // consent_principal is the template's human (== approver, unchanged);
   // activation is the template lineage + this dispatch event;
@@ -1312,7 +1312,7 @@ export function dispatchFromTemplate(
           : undefined;
       kernel.insertRecord(record, undefined, {
         source: { inherited: recipientRoot },
-        // @spec mission#standing-consent-bases: the Dispatch Policy snapshot
+        // @spec approval-governance#activation-policy-commitment: the Dispatch Policy snapshot
         // verified above, retained for this instance's audit horizon.
         activationPolicies: [{ ref: template.dispatch_policy, snapshot: dispatchPolicy }],
         // @spec mission#transformation-capabilities (#1503 finding 7, D733

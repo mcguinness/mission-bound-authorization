@@ -63,8 +63,8 @@
     "content_sha256": "a975b4b5579699e3f3b5855589e2369b6bfb942e6a6aea20ffc9103b82b02420"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "443822f0e3b0715c2f9b17f166b8ee2aa08f2cb6",
-    "content_sha256": "e2b90083a5df6d0adb3cd212f1a48fbb62ae353d9f5be5ea19937b75fddbd4cd"
+    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
+    "content_sha256": "315289856b6e54c0015f1aa85dc1358d82173f23fdae76f5fa799e071b31291d"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
@@ -87,8 +87,8 @@
     "content_sha256": "466ca49adc94e89990ca4106712b27b7b917d6c425ece61b9a9984094ca4d573"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "443822f0e3b0715c2f9b17f166b8ee2aa08f2cb6",
-    "content_sha256": "c28c09703af09e7fd03362001a67590f9629113d7049c266aad5c8ce01bbe35b"
+    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
+    "content_sha256": "aa965d5cc3518be49573862bebb61794cada1d8294403ab8bec3302442f43099"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
@@ -99,8 +99,8 @@
     "content_sha256": "f42a2713d042528189015f468361a76676417bc6dd2355b7562980a7289f5c13"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "72701791348ec7381c3a3e710fdec2f0d0b4a0bb",
-    "content_sha256": "7a18327709de17b4d8a290513147544381734b4a735387ba7e50300837d889fd"
+    "revision": "13975a6202de9ad86ccd251f1c461851e9b0bcc7",
+    "content_sha256": "bea85ec762263773af7d061ba5bf485d4fe79b76ace129b0b9445a079f15a60a"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -111,12 +111,12 @@
     "content_sha256": "45746e13a29631bb82709780c5b9ae564186d92a7747a69798228401accc973b"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "a6567f6935140f2b1b04e1f1d819ce14dbbc341f",
-    "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
+    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
+    "content_sha256": "d66e8e1485f235faf2dffc9a2e7232e2918c0e54a79e5763ae96189949f0221b"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "2ae249cd813d36fe8eca463223b99179df75a26e",
-    "content_sha256": "a5433af4785d90e2b2d91d00823e0522f524656304b16e93cf2d1f62c0d20635"
+    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
+    "content_sha256": "b2e006607d309e3a8f1b1e6d034ca9bd74d5c1dbcd53e38a1677546065242060"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "253f85b35fbb86c4939a117b3f9c1a00ea2483b4",
@@ -143,8 +143,8 @@
     "content_sha256": "fc7d706b125479308170ab71672eaa8297ca93200405bef658d10eb2d41928c9"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
-    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
-    "content_sha256": "62a8d5f78cc611ecd5273218b3543dbae583b80c0f4c4af6e2f9bf303f36d0b0"
+    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
+    "content_sha256": "e3f2a69a2cbd4decd3180da69bd5d11975da2ede012fa58b36da0182945396ff"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
     "revision": "2ae249cd813d36fe8eca463223b99179df75a26e",
@@ -7836,7 +7836,7 @@
   },
   {
    "id": "core.approval-basis.approved-at-standing-consent",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "The activating issuer MUST verify `approved_at` against its retained, authenticated record of that standing consent for that exact version",
    "role": "AS",
@@ -7859,13 +7859,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -7894,11 +7894,11 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-recency",
    "text": "the activating issuer MUST refuse to activate an instance whose `approved_at` is older than the ceiling",
    "role": "AS",
@@ -7945,7 +7945,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records."
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.approval-basis.adjudication-direct-human",
@@ -7973,8 +7973,8 @@
   },
   {
    "id": "core.approval-basis.adjudication-standing-consent-policy",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "policy-adjudication",
    "text": "Where a companion profile defining a standing-consent `type` populates `adjudication`, `kind` MUST be `policy`, naming the identity and version of the policy or workflow that adjudicated the instance",
    "role": "AS",
    "strength": "MUST",
@@ -7990,7 +7990,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where a standing-consent Mission populates approval_basis.adjudication, kind is policy, naming the deciding policy or workflow's identity and version, never the activation_actor that triggered the instance",
-    "local": "Limited to the governed-policy kernel path (activateGovernedPolicy), the one path that reaches this case in the reference AS; no endpoint witness. Template dispatch and policy drawdown populate no adjudication, so the clause does not bind them."
+    "local": "Reached by two paths in the reference AS: governed-policy activation (activateGovernedPolicy, kernel) and the Progressive ceiling_drawdown successor (endpoint). Template dispatch and policy drawdown populate no adjudication, so the clause does not bind them."
    },
    "level": "unit",
    "coverage": "tested",
@@ -8000,14 +8000,20 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor."
+   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2: the local note named only the governed path; ceiling_drawdown also populates adjudication (kind policy), and its endpoint test is cited. #1915 stage 2 mutation proof: recording the governed_policy adjudication kind as human fails \"records every governed_policy approval_basis member\"."
   },
   {
    "id": "core.standing-consent.activation-policy-reference",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "activation-policy-commitment",
    "text": "the object the accountable human consented to MUST carry that policy as an activation policy reference",
    "role": "AS",
    "strength": "MUST",
@@ -8036,7 +8042,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "commitment"
     },
@@ -8047,12 +8053,12 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: leaving dispatch_policy out of the template_hash body fails \"commits the Dispatch Policy's content digest in template_hash\"."
   },
   {
    "id": "core.standing-consent.activation-policy-verify",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "activation-policy-commitment",
    "text": "Before each activation, the activating issuer MUST compute `digest` over the exact snapshot it evaluates, and MUST NOT activate the instance under that policy when the result differs",
    "role": "AS",
    "strength": "MUST",
@@ -8087,31 +8093,31 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
      "level": "unit",
      "surface": "derivation"
     },
@@ -8128,12 +8134,12 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: dropping the digest comparison in verifiedActivationPolicy fails six cited tests across all three arms."
   },
   {
    "id": "core.standing-consent.activation-policy-retain",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "activation-policy-commitment",
    "text": "The issuer MUST retain each snapshot's bytes and media type for the audit horizon",
    "role": "AS",
    "strength": "MUST",
@@ -8156,61 +8162,61 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retains the verified Dispatch Policy snapshot under (issuer, id, version, digest) with its exact bytes and media type, and the instance's committed digest recomputes from it",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > retains the verified Dispatch Policy snapshot under (issuer, id, version, digest) with its exact bytes and media type, and the instance's committed digest recomputes from it",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > a later activation under the same snapshot extends its horizon, and no write shrinks the horizon or rewrites the bytes",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > a later activation under the same snapshot extends its horizon, and no write shrinks the horizon or rewrites the bytes",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > replacement under a new version: the old instance's digest recomputes from its retained snapshot after the registry moves on, and both snapshots are retained",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > changed bytes under the same version: the Dispatch is refused, nothing is retained for the edited bytes, and the committed bytes are never overwritten",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > retirement: a retained snapshot never re-admits a retired Dispatch Policy, and retiring it erases no evidence before the audit horizon",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > an unretained commitment verifies as unavailable, a tampered row as a mismatch, and a Mission that commits no activation policy as not_applicable",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > an unretained commitment verifies as unavailable, a tampered row as a mismatch, and a Mission that commits no activation policy as not_applicable",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Template Dispatch (@spec mission#standing-consent-bases) > a Dispatch whose snapshot cannot be retained commits no instance, no dispatch row and no reservation",
+     "name": "activation policy snapshot retention: Template Dispatch (@spec approval-governance#activation-policy-commitment) > a Dispatch whose snapshot cannot be retained commits no instance, no dispatch row and no reservation",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > retains every justifying child_creation_policy snapshot, and the child's root_commitment recomputes from it after the policy is replaced, edited or retired",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > a child creation whose snapshot cannot be retained commits no child",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > a child creation whose snapshot cannot be retained commits no child",
      "level": "unit",
      "surface": "governance-record"
     },
     {
      "file": "src/services/authorization-server/test/activation-policy-snapshots.test.ts",
-     "name": "activation policy snapshot retention: Child Delegation (@spec mission#standing-consent-bases) > retained snapshots survive a restart on the file-backed kernel store and are pruned at boot only past their audit horizon",
+     "name": "activation policy snapshot retention: Child Delegation (@spec approval-governance#activation-policy-commitment) > retained snapshots survive a restart on the file-backed kernel store and are pruned at boot only past their audit horizon",
      "level": "unit",
      "surface": "governance-record"
     },
@@ -8221,11 +8227,11 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017."
+   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
   },
   {
    "id": "core.standing-consent.activation-event-id",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "That value identifies this instance's approval event, never the standing approval",
    "role": "AS",
@@ -8248,30 +8254,30 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one."
+   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: giving each instance the template's approval_event_id fails \"two Dispatches under one template consent create two Missions\"."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -8331,7 +8337,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 mutation proof: disabling the direct gate's kind-equality check (direct-approval-record.ts:285) fails \"a kind that is not adjudication.kind\". Gap found by the stage 2 mutation run (not fixed in this no-behavior-change stage): the governed_policy record gate does not compare adjudication.kind with the accountable assertion's kind; a record mutated to kind human still committed, and only the governed test's exact-equality assertion caught it."
   },
   {
    "id": "approval-governance.triggers.required-under-adopting-profile",
@@ -8701,8 +8707,8 @@
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "policy-adjudication",
    "text": "the AS MUST NOT let it supply or widen authority",
    "role": "AS",
    "strength": "MUST NOT",
@@ -8730,12 +8736,12 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged."
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that appends a model output's add entries fails \"never widen it\" (the governed-policy-approval.ts:1268 backstop alone is unreachable)."
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "standing-consent-bases",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "policy-adjudication",
    "text": "the AS MUST NOT let it supply or widen authority",
    "role": "AS",
    "strength": "MUST NOT",
@@ -8760,7 +8766,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged."
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that takes a model output's supplied authority fails \"never widen it\"."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
@@ -8828,7 +8834,7 @@
    "id": "core.approval-basis.type-direct",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-principal-members",
-   "text": "REQUIRED. A string: `direct`, or a standing-consent value that a companion profile defines ({{standing-consent-bases}}).",
+   "text": "REQUIRED. A string: `direct`, or a standing-consent value that a companion profile defines ({{mission-creating-paths}}).",
    "facet": "direct-basis",
    "role": "AS",
    "strength": "MUST",
@@ -8861,6 +8867,401 @@
     }
    ],
    "notes": "#1892 ruling 6 (row debt). Facet: the direct value; the standing-consent values are companion-defined. The kernel witness compares the whole stored basis with toEqual; the workload witness reads the record created over the approval endpoints. Mutation proof (2026-10-29): recording a type other than direct fails both witnesses on their assertions (the kernel toEqual over the stored basis; the workload step 2 type check)."
+  },
+  {
+   "id": "core.mission-creating-paths.standing-consent-profile-conforms",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-creating-paths",
+   "text": "Any companion profile that defines a standing-consent basis MUST make the basis conform to the Approval Basis Contract",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each standing-consent basis the family defines states that it meets the Approval Basis Contract: Template's `template`, Progressive's `ceiling_drawdown`, Child Delegation's `policy_drawdown` and Approval Governance's `governed_policy`"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1915 stage 2 (D1056, D1057). An obligation on a profile's text, which no runtime test witnesses; stage 1 (#1918) added the statement to each of the four bases. The activating issuer's clause is core.mission-creating-paths.standing-consent-contract."
+  },
+  {
+   "id": "core.mission-creating-paths.standing-consent-contract",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-creating-paths",
+   "text": "an issuer that activates a Mission under such a basis MUST conform to the Contract for it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each standing-consent basis the AS implements records approved_at from retained state, verifies its activation policy digest where one exists, enforces any declared recency ceiling, and gives each instance its own approval_event_id"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch once the template's approval is older than review_cadence, allows it exactly at the bound, and commits nothing on refusal",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > verifies the drawdown policy digest before activation and retains the verified snapshot with the successor",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a chain whose ceiling consent is older than the policy's review cadence falls back",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > establishes the standing consent only from retained, authenticated governance state",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a retained root whose bytes no longer reproduce the consented digest, and a forged approval instant",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses when the separate evaluator's snapshot differs from the digest the root commits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > commits one Mission and one record per approval event; retries and racing activations resolve to them, distinct activations get distinct events",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Binds only a deployment that activates under a standing-consent basis. Witnessed per basis against the contract's main rules (template, ceiling_drawdown, policy_drawdown, governed_policy). Gaps: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the contract's own partial rows carry over. D1057: the clause is scoped to the activating issuer; the profile-author clause is core.mission-creating-paths.standing-consent-profile-conforms."
+  },
+  {
+   "id": "core.mission-creating-paths.root-approval-authenticate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-creating-paths",
+   "text": "authenticate the consenting principal",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issuer recording a human's approval of a consented root authenticates that principal on every root-approval surface"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > decides only for an authenticated Approver, never one the request names, and selects no Subject; a denial creates no template",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-login.test.ts",
+     "name": "the Approver login for a template consent (@spec mission-template#template-consent, mission#approval-authentication, #1119) > login, Continue, then the page's Approve: the session cookie is scoped to the consent page, the form carries the login's CSRF secret, and the logged-in Approver is the template's approver of record",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > holds the consent to the approval-authentication floor for everything the Template Ceiling admits: high-risk authority is refused after a password-only login and through a headless approval service, creating no template, and approved after an mfa login (@spec mission#approval-authentication)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers the interaction cookie alone, with no Approver session, 401 and nothing of the request; an authorized Approver then renders and approves the same interaction",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Template consent is witnessed. Progressive ceilings and Child Delegation roots are consented on the direct approval page, which authenticates the Approver, but no render-gate case offers a ceiling or a delegating entry. governed_policy has no consent surface: recordGovernedPolicyConsent trusts its caller to have authenticated the approver (finding for the stage 2 PR)."
+  },
+  {
+   "id": "core.mission-creating-paths.root-approval-authorize",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-creating-paths",
+   "text": "establish that principal's authorization over the root's permitted Subjects and authority sources",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issuer establishes the consenting principal's authorization over the root's permitted Subjects and authority sources before recording the approval"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses an Approver not authorized to activate the template's authority source, creating no template",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver who may not activate the established source 403 before rendering, leaving the interaction pending",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver with no approve-for authority over the selected Subject 403 approval_forbidden before rendering: Alice for Bob, and Dana for Alice",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an unauthorized human: no consent from them, and no activation once their authority is revoked",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Template consent checks source activation for every recipient's root, but runs no approve-for check over the listed Subjects. Progressive and Child inherit the direct page's checks without a surface-specific case. governed_policy checks only the per-root approver list at recording; no test makes the consenting human a non-activator of an admitted source (finding for the stage 2 PR)."
+  },
+  {
+   "id": "core.mission-creating-paths.root-approval-consent",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-creating-paths",
+   "text": "obtain that principal's consent to the root's authority, its limits, and its activation policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the root-approval surface renders the root's authority, limits and activation policy, and the approval commits what was rendered"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the minimum disclosure before any template exists: the Template Ceiling as the maximum authority, machine-speed dispatch with no per-instance approval, and the high-consequence classes policy never dispatches",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the Template Ceiling with its trusted capability bindings, discarding caller-supplied ones, and the approval commits exactly the ceiling rendered (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017) > the approval page renders the offered ceiling and that in-ceiling expansion is adjudicated by its drawdown policy",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017) > a decision consenting a ceiling or drawdown policy the approval page did not render is refused invalid_request: no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > references the human-approved root as approval_policy, whose retained snapshot commits every root term",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Witnessed for template consent, the Progressive ceiling offer and the Child Delegation entry. governed_policy binds the exact root bytes but renders nothing to the human (finding for the stage 2 PR)."
+  },
+  {
+   "id": "core.mission-creating-paths.root-approval-consent-principal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-creating-paths",
+   "text": "record that principal as the `consent_principal` of every instance the root activates",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every instance a root activates records as consent_principal the principal who approved the root, never the activating party"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > an approval by the authenticated Approver creates the template, with that Approver of record and the authority source it activates retained beside the consented template_version",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-login.test.ts",
+     "name": "the Approver login for a template consent (@spec mission-template#template-consent, mission#approval-authentication, #1119) > login, Continue, then the page's Approve: the session cookie is scoped to the consent page, the form carries the login's CSRF secret, and the logged-in Approver is the template's approver of record",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > records the TEMPLATE approver as the human of record (not the dispatcher)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Witnessed for template, ceiling_drawdown, governed_policy and a child of a direct parent. A child of a standing-consent parent inherits it in code, untested. #1915 stage 2 mutation proof: recording the requesting client as a drawdown successor's consent_principal fails \"completes in the token-exchange response\" and both ceiling re-consent tests."
   },
   {
    "id": "core.approval-basis.consent-principal-required",
@@ -9140,7 +9541,7 @@
   },
   {
    "id": "core.approval-basis.standing-consent-activation-required",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "REQUIRED for every standing-consent `type`. An object naming what activated this Mission instance, in the shape that the basis's companion profile defines.",
    "role": "AS",
@@ -9163,13 +9564,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9180,11 +9581,11 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation` rename, re-run per builder at 68f30fd4, fails \"records a template basis\", \"records a policy_drawdown basis\" and \"completes in the token-exchange response\" respectively."
   },
   {
    "id": "core.approval-basis.standing-consent-activation-actor-required",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "REQUIRED for every standing-consent `type`. An object with `iss` and `sub`. Who or what triggered this instance: a dispatching or requesting party distinct from the consenting human.",
    "role": "AS",
@@ -9207,13 +9608,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9230,11 +9631,11 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation_actor` rename, re-run per builder at 68f30fd4, fails each builder's witness, the governed_policy one included."
   },
   {
    "id": "core.approval-basis.standing-consent-root-commitment-required",
-   "spec": "draft-mcguinness-oauth-mission.md",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "standing-consent-bases",
    "text": "REQUIRED for every standing-consent `type`. A string. The commitment to the consented root",
    "role": "AS",
@@ -9257,13 +9658,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9274,7 +9675,417 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `root_commitment` rename, re-run per builder at 68f30fd4, fails each builder's witness."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-trace-to-human",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "standing-consent-bases",
+   "text": "MUST make its `consent_principal` and `root_commitment` trace to an accountable human's approval of the named standing consent, with no fresh human approval per instance",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each standing-consent basis records consent_principal as the human who approved the standing consent and root_commitment as the commitment to what that human approved, and activates each instance with no per-instance human step"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > records the TEMPLATE approver as the human of record (not the dispatcher)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > an approval by the authenticated Approver creates the template, with that Approver of record and the authority source it activates retained beside the consented template_version",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Witnessed on all four bases the reference implements (template, policy_drawdown, ceiling_drawdown, governed_policy). Gap outside the observation: a child of a standing-consent parent inherits consent_principal in code, and only its approved_at is asserted. #1915 stage 2 mutation proof: recording the Dispatcher as a template instance's consent_principal fails \"records the TEMPLATE approver as the human of record\" and \"records a template basis\"."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-approval-instant",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "standing-consent-bases",
+   "text": "MUST carry that approval's instant as `approved_at`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "approved_at is the instant the human approved the standing consent, never the instance's activation instant, on every standing-consent basis"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a ceiling_drawdown successor: the child carries the ceiling consent, not the drawdown",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a direct Parent: every generation carries the Parent's approval instant, its approval event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a governed_policy activation: the child carries the root consent's approval, not the activation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a template instance: the child and its descendants carry the template's approval, not the dispatch",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). The child tests distinguish the consent instant from the activation instant on every basis, through two generations. #1915 stage 2 mutation proof: setting a child's approved_at to its Parent's created_at fails four child-approved-at cases (ceiling_drawdown, direct Parent, governed_policy, template)."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-approved-at-required",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "standing-consent-bases",
+   "text": "REQUIRED for every standing-consent `type`. An RFC 3339 date-time: the instant the accountable human approved the exact consented root",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every standing-consent record carries approved_at; its exact-equality assertions cover the whole approval_basis"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Sibling of the activation, activation_actor and root_commitment REQUIRED rows. The member's verify sentence stays core.approval-basis.approved-at-standing-consent (partial). #1915 stage 2 mutation proof: renaming the template basis's approved_at key fails \"records a template basis\"."
+  },
+  {
+   "id": "core.approval-basis.policy-adjudication-policy-required",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "policy-adjudication",
+   "text": "`adjudication` carries `policy`, a REQUIRED object with `id` and `version` identifying the deciding policy or workflow",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy-adjudicated instance records adjudication.policy with the id and version of the policy or evaluator that decided it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > decides by the root itself or by the evaluator the root commits, with that policy's typed digest",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Two bases populate adjudication (governed_policy, ceiling_drawdown); with a separate evaluator, the policy is the evaluator, not the root. #1915 stage 2 mutation proof: dropping version from the ceiling_drawdown adjudication.policy fails \"completes in the token-exchange response\" and \"drawdown_count counts committed policy-adjudicated drawdowns\"."
+  },
+  {
+   "id": "core.approval-basis.recency-evaluation-instant",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "standing-consent-recency",
+   "text": "The evaluation instant is the atomic Mission-creation commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent-recency"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "recency is measured at the atomic Mission-creation commit, including a deferred or relocated flow's, and a later ceiling change or elapsed time does not terminate an active Mission"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > measures an approval's age at the atomic-commitment instant, the Mission's creation, not at the request's start or a later clock read",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 6: re-applies recency at evaluated_at, the creation instant, including a high-risk class's committed exception",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > reads the inputs at the successor's creation instant, whatever the clock reads after it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 6: replays the eligibility gate and recency at the creation instant",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Witnessed for the creation commit (governed_policy, recorded ceiling drawdown). No witness distinguishes a deferred flow's completion commit from its start, and none shows that a later ceiling change or elapsed time leaves an active Mission active."
+  },
+  {
+   "id": "core.approval-basis.recency-skew-refusal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "standing-consent-recency",
+   "text": "The activating issuer MUST refuse an `approved_at` later than the evaluation instant by more than the deployment's declared, bounded clock-skew allowance",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent-recency"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approved_at later than the evaluation instant beyond the declared bounded skew is refused, and one within it activates"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > verifies the consent's commitment to the exact drawdown policy version, and its principal's eligibility as the consenting approval enforced it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). Both sides of the boundary are witnessed for governed_policy, the refusal for the recorded ceiling drawdown. The template standing-payment gate has the check in code with no test, and no test refuses a skew allowance above its bound."
+  },
+  {
+   "id": "core.approval-basis.recency-per-class-strictest",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "standing-consent-recency",
+   "text": "MUST classify the committed Mission from the derived Authority Set and from any consumption bound the Mission Intent carries",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent-recency"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "per-class ceilings classify the committed Mission from its derived Authority Set and any consumption bound, and the strictest ceiling of every class present applies"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an action the root does not classify instead of treating it as low-risk",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends a successor that keeps approved high-risk authority to a fresh approval, though Progressive would activate it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class when the committed policy has no class-named exception for the consumption bound, committing nothing (@spec approval-governance#recency-high-risk, #813)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > holds a Mission carrying two high-risk classes to the strictest of their maximum ages, whichever class declares it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > never lets an exception lengthen its class's recency ceiling: the smaller of the two applies",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment recency boundary (@spec approval-governance#recency-evaluation, #1546, #813) > admits a dispatch at exactly the class-named exception's maximum age of the template consent (#813)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment recency boundary (@spec approval-governance#recency-evaluation, #1546, #813) > applies the default recency ceiling where it is stricter than the exception, at both sides of the boundary (#813)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment recency boundary (@spec approval-governance#recency-evaluation, #1546, #813) > refuses dispatch_prohibited_class a dispatch one second past the class-named exception's maximum age, committing nothing (#813)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1915 stage 2 (D1056). No case makes the consumption bound's class the strictest, so none shows it takes part in the minimum. The standing-payment witnesses run only under the opt-in capability (D830)."
   },
   {
    "id": "core.approval-basis.approved-at-absent-direct",
@@ -11818,7 +12629,7 @@
    "id": "core.mission-record.policy-version-required-where-used",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-provenance-members",
-   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{standing-consent-recency}}).",
+   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Standing-Consent Recency\").",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -56752,7 +57563,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > the same Dispatcher's dispatch_event_id with a different fingerprint is refused, never recovered",
      "level": "unit",
      "surface": "token-endpoint"
     }
@@ -57077,25 +57888,25 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > a retry by the same Dispatcher recovers the committed instance and its approval_event_id",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > another permitted Dispatcher reusing the same dispatch_event_id gets its own instance, never the first Dispatcher's",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > another permitted Dispatcher reusing the same dispatch_event_id gets its own instance, never the first Dispatcher's",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases) > a dispatch_event_id reused after its tombstone expires creates a new instance with a new approval_event_id",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > a dispatch_event_id reused after its tombstone expires creates a new instance with a new approval_event_id",
      "level": "unit",
      "surface": "token-endpoint"
     }
@@ -61030,13 +61841,13 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -61096,43 +61907,43 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > the same creation_request_id with a changed body is refused invalid_request, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > the same creation_request_id with a changed body is refused invalid_request, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > another client's identical creation_request_id is its own reservation, with its own successor and approval_event_id",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > another client's identical creation_request_id is its own reservation, with its own successor and approval_event_id",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a creation_request_id reused after its tombstone expires is a new drawdown under a new approval_event_id",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a creation_request_id reused after its tombstone expires is a new drawdown under a new approval_event_id",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -61262,7 +62073,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > concurrent identical drawdowns create one successor, and every response names it",
      "level": "concurrency",
      "surface": "token-endpoint"
     }
@@ -61364,7 +62175,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -61400,7 +62211,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a failure after the commit and before delivery is recovered by the retry, which delivers the committed successor and creates nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -61737,7 +62548,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -61773,7 +62584,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -62403,7 +63214,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -63006,13 +63817,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "governance-record"
     },
@@ -63048,13 +63859,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -63108,7 +63919,7 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "governance-record"
     },
@@ -77757,9 +78568,15 @@
      "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends a successor that keeps approved high-risk authority to a fresh approval, though Progressive would activate it",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class when the committed policy has no class-named exception for the consumption bound, committing nothing (@spec approval-governance#recency-high-risk, #813)",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Rows the recency-evaluation section (#1522 review follow-up). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency). Consumption-bound source (#813 slice 3a, merged in #1712, D869): the kernel test 'refuses dispatch_prohibited_class when the committed policy has no class-named exception for the consumption bound, committing nothing (@spec approval-governance#recency-high-risk, #813)' (template-standing-payment.test.ts) exercises the classification and asserts the consumption_bound reason, but no recorded mutant removes the classification (the consumption-bound class added to templateGovernanceGate's present set), so it is not cited and the row stays partial; once that mutant is recorded the test can be cited. approval-governance.governed-policy.check-recency-high-risk keeps its gap: a governed-policy activation arrives through PAR, whose closed Intent refuses max_budget whatever the capability."
+   "notes": "Rows the recency-evaluation section (#1522 review follow-up). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency). Consumption-bound source (#813 slice 3a, merged in #1712, D869): the kernel test 'refuses dispatch_prohibited_class when the committed policy has no class-named exception for the consumption bound, committing nothing (@spec approval-governance#recency-high-risk, #813)' (template-standing-payment.test.ts) exercises the classification and asserts the consumption_bound reason, but no recorded mutant removes the classification (the consumption-bound class added to templateGovernanceGate's present set), so it is not cited and the row stays partial; once that mutant is recorded the test can be cited. approval-governance.governed-policy.check-recency-high-risk keeps its gap: a governed-policy activation arrives through PAR, whose closed Intent refuses max_budget whatever the capability. #1915: the standing-payment consumption-bound refusal witnesses classification from a consumption bound (opt-in capability, D830)."
   },
   {
    "id": "approval-governance.recency.strictest-across-classes",
@@ -79969,13 +80786,13 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
      "level": "unit",
      "surface": "token-endpoint"
     }
@@ -83632,7 +84449,7 @@
    "id": "core.other-types.derived-mission-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "transformation-capabilities",
-   "text": "A Mission created from earlier authority, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a standing consent ({{standing-consent-bases}}), does not reassign the original approved audience of an entry it inherits: the entry keeps that of the authority it derives from",
+   "text": "A Mission created from earlier authority, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a standing consent ({{mission-creating-paths}}), does not reassign the original approved audience of an entry it inherits: the entry keeps that of the authority it derives from",
    "role": "AS",
    "strength": "stated",
    "applicability": {

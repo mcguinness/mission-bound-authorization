@@ -182,7 +182,7 @@ describe("projectThroughEffective: entry-wise intersection (@spec issuance-grant
     expect(unknownMember).toEqual([]);
   });
 
-  // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
+  // @spec child-delegation#fanout, approval-governance#activation-policy-commitment (#1119): the
   // reference is compared for identity, so a token projected from an entry
   // that commits one keeps the children grant a child entry is a subset of.
   it("carries a child_creation_policy both sides commit identically, and drops the children grant where one side lacks it or they differ", () => {

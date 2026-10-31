@@ -839,7 +839,7 @@ export interface KernelOptions {
    */
   childCreationPolicy?: ChildCreationAuthorizationPolicy;
   /**
-   * @spec mission#standing-consent-bases — the activation policies this issuer
+   * @spec approval-governance#activation-policy-commitment — the activation policies this issuer
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`
    * ({@link ActivationPolicyRegistry}). An Authority Set entry's
    * `child_creation_policy` is verified against it before each child creation;
@@ -1083,7 +1083,7 @@ export class MissionKernel {
    */
   readonly tombstones: MissionTombstoneStore;
   /**
-   * @spec mission#standing-consent-bases: the retained activation policy
+   * @spec approval-governance#activation-policy-commitment: the retained activation policy
    * snapshots, on this kernel's database and written in `insertRecord`'s
    * transaction, kept for the audit horizon of every Mission activated under
    * each. An audit read only: no activation gate consults it.
@@ -1275,7 +1275,7 @@ export class MissionKernel {
       retentionSeconds: dischargeRetentionSeconds,
     });
     this.derivationReservations = new DerivationReservationStore(this.db, { now: this.now });
-    // @spec mission#standing-consent-bases, mission#mission-record: the
+    // @spec approval-governance#activation-policy-commitment, mission#mission-record: the
     // snapshot horizon is each Mission's expiry plus the SAME declared audit
     // retention the tombstones compose, so the deployment declares one audit
     // horizon, not two that can drift.
@@ -1503,7 +1503,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#standing-consent-bases — the activation policy registry
+   * @spec approval-governance#activation-policy-commitment — the activation policy registry
    * consulted before a policy-adjudicated child creation, or undefined when
    * the deployment configures none.
    */
@@ -1574,7 +1574,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec mission#standing-consent-bases: the auditor's check of a Mission's
+   * @spec approval-governance#activation-policy-commitment: the auditor's check of a Mission's
    * committed activation policy, recomputed from the retained snapshot alone.
    * Independent of the current registry: a policy since replaced or retired
    * still verifies within the audit horizon, and verifying grants nothing.
@@ -2210,7 +2210,7 @@ export class MissionKernel {
        */
       source: AuthoritySourceResolution | { inherited: AuthoritySourceBinding };
       /**
-       * @spec mission#standing-consent-bases: each activation policy this
+       * @spec approval-governance#activation-policy-commitment: each activation policy this
        * activation was adjudicated under, with the held snapshot its gate
        * verified. Retained in the record transaction, so the Mission never
        * commits without the bytes an auditor needs to recompute the digest;
@@ -2460,7 +2460,7 @@ export class MissionKernel {
           this.dischargePins.pinInCallerTx(record.id, eDigest, conditionDigest(condition), mapping);
         }
       }
-      // @spec mission#standing-consent-bases: retain every activation policy
+      // @spec approval-governance#activation-policy-commitment: retain every activation policy
       // snapshot this activation evaluated, in the SAME transaction as the
       // record, for this Mission's audit horizon.
       for (const evaluated of options.activationPolicies ?? []) {
@@ -5424,7 +5424,7 @@ export class MissionKernel {
     await this.outbox.drain();
     this.outbox.pruneSettled(this.tombstones.retentionSeconds);
     this.tombstones.pruneDetails();
-    // @spec mission#standing-consent-bases: only snapshots past their audit
+    // @spec approval-governance#activation-policy-commitment: only snapshots past their audit
     // horizon are deleted.
     this.activationPolicySnapshots.pruneExpired();
     // @spec authority-server#join-assertion-artifact (#1560): only join

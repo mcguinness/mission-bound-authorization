@@ -594,7 +594,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     }
   }
 
-  // @spec mission#standing-consent-bases, child-delegation#child-creation —
+  // @spec approval-governance#activation-policy-commitment, child-delegation#child-creation —
   // every justifying entry that carries a `child_creation_policy` names a
   // separate policy that adjudicates this creation; the snapshot this issuer
   // would evaluate MUST match the committed `digest`, else creation is denied
@@ -788,7 +788,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   const primaryChildren = childrenOf(parentEntry(primaryPi));
   const primaryPolicy = primaryChildren?.child_creation_policy;
   const approvalEventId = `dlg_${randomBytes(12).toString("base64url")}`;
-  // @spec mission#standing-consent-bases, child-delegation#child-creation — every
+  // @spec approval-governance#standing-consent-bases, child-delegation#child-creation — every
   // child creation in this reference implementation is policy-adjudicated
   // (the fan-out on-switch above), never a separate per-child human
   // approval: consent_principal is the parent's accountable human (== the
@@ -873,7 +873,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   };
   kernel.insertRecord(child, assertFanout, {
     source: { inherited: parentRoot },
-    // @spec mission#standing-consent-bases: every child creation policy that
+    // @spec approval-governance#activation-policy-commitment: every child creation policy that
     // adjudicated this creation, retained for the child's audit horizon.
     activationPolicies: evaluatedPolicies,
     // @spec mission#transformation-capabilities (#1503 finding 7, D733 ruling

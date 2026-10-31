@@ -363,18 +363,17 @@ happens, never what is recorded about it.
 
 A pending approval can also complete under the `governed_policy`
 standing-consent basis
-({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-"Governed Policy Approval"). The Mission Issuer selects a configured
-governed policy whose consented root admits the pending proposal, and
-the policy decides it; no reviewer acts. This is not a relocated
-human decision, so step 3 of {{deferred-sequencing}} does not apply:
-as under any standing-consent basis, the standing consent and the
-policy's adjudication supply the Approver's authentication,
-authorization, and consent ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Standing-Consent Instances"). The creation commit of
-step 4 runs at the policy's decision, under that basis's activation
-checks and with its Approval Governance Record, and keeps the
-effective-expiry recheck.
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section "Governed
+Policy Approval"). The Mission Issuer selects a configured governed
+policy whose consented root admits the pending proposal, and the policy
+decides it; no reviewer acts. This is not a relocated human decision, so
+step 3 of {{deferred-sequencing}} does not apply: as under any
+standing-consent basis, the standing consent and the policy's
+adjudication supply the Approver's authentication, authorization, and
+consent ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Standing-Consent Instances"). The creation commit of step 4 runs at the
+policy's decision, under that basis's activation checks and with its
+Approval Governance Record, and keeps the effective-expiry recheck.
 
 Nothing else about the deferral changes. Polling, cancellation,
 client binding, and token delivery follow the deferred substrate and
@@ -579,6 +578,10 @@ the deferred grant type are registered by the deferred substrate
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A policy-decided deferral cites Approval Governance's Approval Basis
+  Contract for what a standing consent supplies, which states the same
+  rule the OAuth binding does. No requirement changed (#1915).
 
 - The Approval Governance Record is recorded for a deferred approval
   where a profile that adopts Mission Approval Governance's recording

@@ -59,7 +59,7 @@ beforeEach(() => {
 });
 
 /**
- * @spec mission#standing-consent-bases — the Dispatch Policy snapshots this
+ * @spec approval-governance#activation-policy-commitment — the Dispatch Policy snapshots this
  * suite's issuer holds, by id. A template commits the named snapshot's digest;
  * a Dispatch evaluates the registry it is handed, and a multi-Agent template's
  * selection rule is the snapshot's own `select_agent` member.
@@ -185,7 +185,7 @@ describe("createTemplate (@spec mission-template)", () => {
     expect(again.template_hash).toBe(t.template_hash);
   });
 
-  // @spec mission#standing-consent-bases — the consented template commits the
+  // @spec approval-governance#activation-policy-commitment — the consented template commits the
   // Dispatch Policy as an activation policy reference whose digest the issuer
   // computes from the snapshot it holds.
   it("commits the Dispatch Policy's content digest in template_hash and refuses a policy the issuer does not hold", () => {
@@ -399,7 +399,7 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
   // the instance's Agent from `agents` under the Dispatch Policy, never from
   // Dispatcher input: one listed Agent directly; several through the policy's
   // selection rule, never by array position.
-  // @spec mission-template#dispatch (step 3), mission#standing-consent-bases —
+  // @spec mission-template#dispatch (step 3), approval-governance#activation-policy-commitment —
   // a Dispatch Policy whose snapshot no longer matches the committed digest
   // never adjudicates a Dispatch, even under an unchanged version.
   it("refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing", () => {
@@ -450,7 +450,7 @@ describe("dispatch gates (@spec mission-template#dispatch-refusals)", () => {
     expect(store.dispatchesSince(none.id, "1970-01-01T00:00:00.000Z")).toBe(0);
   });
 
-  // @spec mission#standing-consent-bases — the selection rule Dispatch
+  // @spec approval-governance#activation-policy-commitment — the selection rule Dispatch
   // evaluates is the committed snapshot itself: re-pointing it, even under an
   // unchanged version, is a changed policy, never a new selection.
   it("a selection rule changed after consent is dispatch_policy_changed, never a new selection", () => {
@@ -650,7 +650,7 @@ describe("instance ordinariness (@spec mission-template#dispatch)", () => {
   });
 });
 
-describe("approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage)", () => {
+describe("approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage)", () => {
   it("records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human", () => {
     const t = mkTemplate();
     const { mission } = dispatch(t.id, { dispatchEventId: "dsp-basis-1" });
@@ -828,7 +828,7 @@ describe("a Dispatch never grants a privileged-administration action (@spec miss
 /** Expect `fn` to be refused as a fingerprint mismatch (invalid_request, not a Dispatch refusal reason). */
 const expectMismatch = (fn: () => unknown) => expect(fn).toThrow(DispatchMismatchError);
 
-describe("approval_event_id per Dispatch reservation (@spec mission-template#dispatch, mission#standing-consent-bases)", () => {
+describe("approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases)", () => {
   it("two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's", () => {
     const t = mkTemplate();
     const a = dispatch(t.id, { dispatchEventId: "evt-a" }).mission;

@@ -27,6 +27,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC6749:
   RFC7662:
   RFC8693:
@@ -174,9 +182,9 @@ none of its rules:
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller
   Authorization and Minimization"); and
 - rendering of the established limit at the approval event
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-  Approval"), and of a standing consent's per-Mission limit rule at
-  that consent's human approval ({{I-D.draft-mcguinness-oauth-mission}},
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval"),
+  and of a standing consent's per-Mission limit rule at that consent's
+  human approval ({{I-D.draft-mcguinness-mission-approval-governance}},
   Section "Standing-Consent Bases").
 
 An AS that does not implement this document establishes no derivation
@@ -299,17 +307,17 @@ policy for that Mission. A successor created by a fresh human
 approval and each distinct Template dispatch establish theirs afresh.
 
 A Mission created under a standing-consent basis
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-Bases") is also bounded by the maximum rendered at that standing
-consent's human approval ({{approval-rendering}}). Where that maximum
-is finite, the AS MUST NOT establish a `derivation_limit` above it,
-nor leave `derivation_limit` absent, for such a Mission. A stricter
-applicable policy or requested limit narrows the Mission's limit, but
-no change of policy raises or removes the maximum; only a fresh human
-approval of the standing consent replaces it. The maximum caps each
-Mission's own limit and is not a count those Missions share:
-establishment and counting otherwise follow the rules above,
-including both exceptions.
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Standing-Consent Bases") is also bounded by the maximum rendered at
+that standing consent's human approval ({{approval-rendering}}). Where
+that maximum is finite, the AS MUST NOT establish a `derivation_limit`
+above it, nor leave `derivation_limit` absent, for such a Mission. A
+stricter applicable policy or requested limit narrows the Mission's
+limit, but no change of policy raises or removes the maximum; only a
+fresh human approval of the standing consent replaces it. The maximum
+caps each Mission's own limit and is not a count those Missions share:
+establishment and counting otherwise follow the rules above, including
+both exceptions.
 
 ## Mission Record Member {#record-member}
 
@@ -534,20 +542,20 @@ bounds the grants it issues, not the tokens consuming Authorization
 Servers issue from them ({{issuance-grant-counting}}).
 
 A Mission created under a standing-consent basis
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-Bases") has no human approval, and so no consent rendering, of its
-own. At the human approval of a standing consent under which policy
-can create Missions, the AS MUST render the rule that establishes
-each such Mission's `derivation_limit`, and either the rule's maximum
-or that no finite maximum is guaranteed. The rule and maximum are
-those of the exact version consented to and of the policy state it
-commits, which the AS retains; {{effective-limit}} bounds each
-Mission by them. The async delegation family and Mission Issuance
-Grant statements above, where they apply, are part of this rendering,
-and the rendering MUST also state that the maximum is local to each
-Mission, as {{effective-limit}} counts it, and is not a budget across
-the Missions the consent admits, their descendants, or their
-lifetimes ({{sec-composition}}).
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Standing-Consent Bases") has no human approval, and so no consent
+rendering, of its own. At the human approval of a standing consent under
+which policy can create Missions, the AS MUST render the rule that
+establishes each such Mission's `derivation_limit`, and either the
+rule's maximum or that no finite maximum is guaranteed. The rule and
+maximum are those of the exact version consented to and of the policy
+state it commits, which the AS retains; {{effective-limit}} bounds each
+Mission by them. The async delegation family and Mission Issuance Grant
+statements above, where they apply, are part of this rendering, and the
+rendering MUST also state that the maximum is local to each Mission, as
+{{effective-limit}} counts it, and is not a budget across the Missions
+the consent admits, their descendants, or their lifetimes
+({{sec-composition}}).
 
 Where the deployment records Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), the
@@ -744,6 +752,11 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Standing-consent bases are cited from Approval Governance's Approval
+  Basis Contract, which states the same requirements the OAuth binding
+  does; Approval Governance becomes a normative reference. No
+  requirement changed (#1915).
 
 -00
 
