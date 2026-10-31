@@ -394,6 +394,16 @@ export function assertDrawdownRecord(
     fail("the policy assertion's principal is not the ceiling consent principal");
   }
   if (auth.policy_id !== deciding.id || auth.version !== deciding.version) fail("the policy assertion does not name the deciding policy");
+  // @spec approval-governance#policy-adjudication, mission#record-principal-members (#1928):
+  // a standing-consent basis that populates `adjudication` names a policy
+  // decision, so `kind` is `policy`. Checked before `adjudication.policy` is
+  // read: no accountable assertion stands in for this basis, so the basis's
+  // own `kind` is the only check, and another or an unrecognized `kind` is
+  // never read as a policy decision. Read as stored, not as typed.
+  const adjudication = (basis as { adjudication?: unknown }).adjudication;
+  if (typeof adjudication !== "object" || adjudication === null || (adjudication as { kind?: unknown }).kind !== "policy") {
+    fail("adjudication.kind is not policy");
+  }
   if (basis.adjudication.policy.id !== deciding.id || basis.adjudication.policy.version !== deciding.version) {
     fail("the deciding policy is not the basis's adjudication policy");
   }

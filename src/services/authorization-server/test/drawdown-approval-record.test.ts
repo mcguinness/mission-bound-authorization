@@ -476,6 +476,72 @@ describe("the ceiling-drawdown record commit gate (@spec approval-governance#acc
   });
 });
 
+describe("the ceiling_drawdown adjudication.kind (@spec approval-governance#policy-adjudication, mission#record-principal-members, #1928)", () => {
+  // Each variant keeps `adjudication.policy` naming the deciding policy, so
+  // only `kind` differs: a gate that read `policy` without `kind` would pass it.
+  const KINDS: Array<[label: string, edit: (adjudication: Record<string, unknown>) => unknown]> = [
+    ["kind human", (a) => ({ ...a, kind: "human" })],
+    ["kind service", (a) => ({ ...a, kind: "service" })],
+    ["an unrecognized kind", (a) => ({ ...a, kind: "x_oracle" })],
+    ["no kind", ({ kind: _kind, ...rest }) => rest],
+  ];
+  const withKind = (basis: object, edit: (a: Record<string, unknown>) => unknown) => {
+    const b = structuredClone(basis) as { adjudication: Record<string, unknown> };
+    return { ...b, adjudication: edit(b.adjudication) };
+  };
+  const NOT_POLICY = /ceiling_drawdown record: adjudication\.kind is not policy/;
+
+  it("the commit gate admits kind policy and refuses human, service, an unrecognized kind and no kind", () => {
+    const { kernel, successor } = recorded();
+    const { envelope: _e, ...unsigned } = kernel.governanceRecords.forMission(successor.id) as ApprovalGovernanceRecord;
+    const ref = drawdownRecordingRuleRef(ISS, RULE);
+    const deciding = successor.drawdown_policy as NonNullable<MissionRecord["drawdown_policy"]>;
+    // The control: the committed basis, kind policy, passes the gate.
+    expect((successor.approval_basis as { adjudication: { kind: string } }).adjudication.kind).toBe("policy");
+    expect(assertDrawdownRecord(unsigned, successor.approval_basis as never, ref, deciding).assertion_id).toBe("ast_policy");
+    for (const [label, edit] of KINDS) {
+      expect(() => assertDrawdownRecord(unsigned, withKind(successor.approval_basis, edit) as never, ref, deciding), label).toThrow(NOT_POLICY);
+    }
+  });
+
+  it("the kernel's commit-time preparation refuses each before signing, after the same successor passes as recorded", () => {
+    const { kernel, pred, successor } = recorded();
+    const records = kernel.governanceRecords.count();
+    const missions = kernel.allMissions().length;
+    const prepare = (record: MissionRecord) =>
+      withTransaction(kernel.db, () =>
+        kernel.prepareDrawdownRecordInCallerTx({
+          record,
+          predecessor: kernel.get(pred.id) as MissionRecord,
+          deciding: successor.drawdown_policy as never,
+          options: OPTIONS,
+          isCrossDomain: () => false,
+        }),
+      );
+    // The control: the successor as committed prepares a signed record.
+    expect(prepare(successor).signed.approval_event_id).toBe(successor.approval_event_id);
+    for (const [label, edit] of KINDS) {
+      const variant = { ...successor, approval_basis: withKind(successor.approval_basis, edit) } as MissionRecord;
+      expect(() => prepare(variant), label).toThrow(NOT_POLICY);
+    }
+    // Preparing writes nothing; a refusal leaves nothing behind either.
+    expect(kernel.governanceRecords.count()).toBe(records);
+    expect(kernel.allMissions()).toHaveLength(missions);
+  });
+
+  it.each(KINDS)("the re-check refuses a stored basis with %s at step 5, and the Mission stays active", (_label, edit) => {
+    const { kernel, successor } = recorded();
+    // The control: the record as committed re-checks.
+    expect(recheck(kernel, successor.id)).toEqual({ rechecked: true });
+    kernel.db
+      .prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?")
+      .run(JSON.stringify(withKind(successor.approval_basis, edit)), successor.id);
+    expect(recheck(kernel, successor.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(NOT_POLICY) });
+    expect(kernel.get(successor.id)?.state).toBe("active");
+    expect(kernel.checkDerivation(successor.id).state).toBe("active");
+  });
+});
+
 describe("re-checking a ceiling-drawdown record (@spec approval-governance#re-check)", () => {
   it("step 2: refuses a recording rule snapshot that is missing or does not reproduce approval_policy.digest", () => {
     const altered = recorded();
