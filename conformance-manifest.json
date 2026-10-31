@@ -8869,10 +8869,35 @@
    "notes": "#1892 ruling 6 (row debt). Facet: the direct value; the standing-consent values are companion-defined. The kernel witness compares the whole stored basis with toEqual; the workload witness reads the record created over the approval endpoints. Mutation proof (2026-10-29): recording a type other than direct fails both witnesses on their assertions (the kernel toEqual over the stored basis; the workload step 2 type check)."
   },
   {
+   "id": "core.mission-creating-paths.standing-consent-profile-conforms",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-creating-paths",
+   "text": "Any companion profile that defines a standing-consent basis MUST make the basis conform to the Approval Basis Contract",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each standing-consent basis the family defines states that it meets the Approval Basis Contract: Template's `template`, Progressive's `ceiling_drawdown`, Child Delegation's `policy_drawdown` and Approval Governance's `governed_policy`"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1915 stage 2 (D1056, D1057). An obligation on a profile's text, which no runtime test witnesses; stage 1 (#1918) added the statement to each of the four bases. The activating issuer's clause is core.mission-creating-paths.standing-consent-contract."
+  },
+  {
    "id": "core.mission-creating-paths.standing-consent-contract",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-creating-paths",
-   "text": "MUST conform to the Approval Basis Contract",
+   "text": "an issuer that activates a Mission under such a basis MUST conform to the Contract for it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -8982,7 +9007,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Binds only a deployment that activates under a standing-consent basis. Witnessed per basis against the contract's main rules (template, ceiling_drawdown, policy_drawdown, governed_policy). Gaps: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the contract's own partial rows carry over."
+   "notes": "#1915 stage 2 (D1056). Binds only a deployment that activates under a standing-consent basis. Witnessed per basis against the contract's main rules (template, ceiling_drawdown, policy_drawdown, governed_policy). Gaps: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the contract's own partial rows carry over. D1057: the clause is scoped to the activating issuer; the profile-author clause is core.mission-creating-paths.standing-consent-profile-conforms."
   },
   {
    "id": "core.mission-creating-paths.root-approval-authenticate",

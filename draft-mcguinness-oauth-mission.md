@@ -5019,14 +5019,16 @@ in one of two ways, which stay distinct:
   standing-consent basis, under which a template or policy activates
   Mission instances against an accountable human's earlier approval,
   with no fresh human approval per instance; each instance is still
-  created at its own approval event ({{approval-event}}). Every
-  standing-consent basis, including one a later profile defines, MUST
-  conform to the Approval Basis Contract
+  created at its own approval event ({{approval-event}}). Any
+  companion profile that defines a standing-consent basis MUST make
+  the basis conform to the Approval Basis Contract
   ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-  "Approval Basis Contract"). This requirement binds only a deployment
-  that activates a Mission under a standing-consent basis. The basis's
-  `approval_basis.type` values form a specification-defined namespace
-  with no registry ({{namespace-taxonomy}}).
+  "Approval Basis Contract"), and an issuer that activates a Mission
+  under such a basis MUST conform to the Contract for it. Neither
+  requirement binds a deployment that creates Missions only on the
+  direct path. The basis's `approval_basis.type` values form a
+  specification-defined namespace with no registry
+  ({{namespace-taxonomy}}).
 
 When a human approves a standing consent's consented root (the
 template version, the ceiling, or the activation policy), the issuer
@@ -6803,19 +6805,20 @@ resolve before interoperating.
 
 \[\[ To be removed from the final specification ]]
 
+-02
+
 - Mission-Creating Paths replaces Standing-Consent Bases and its three
   subsections. It keeps relocating the direct ceremony distinct from
-  activating under standing consent, and requires every standing-consent
-  basis to conform to Approval Governance's Approval Basis Contract,
-  which states those subsections' requirements unchanged (a normative
-  reference that binds only a deployment activating under a
-  standing-consent basis). Approval of a standing consent's consented
-  root now carries explicit MUSTs: authenticate the consenting
-  principal, establish their authorization over the root's permitted
-  Subjects and authority sources, and obtain their consent to the root's
-  authority, limits and activation policy (#1915).
-
--02
+  activating under standing consent. A companion profile defining a
+  standing-consent basis makes it conform to Approval Governance's
+  Approval Basis Contract, which states those subsections'
+  requirements unchanged, and an issuer activating under one conforms
+  to it; the normative reference binds no direct-only deployment.
+  Approval of a standing consent's consented root carries explicit
+  MUSTs: authenticate the consenting principal, establish their
+  authorization over the root's permitted Subjects and authority
+  sources, and obtain their consent to the root's authority, limits
+  and activation policy (#1915).
 
 - Mission Creation states the direct creation path, with the Mission
   Approval subsections in the order of the steps they serve.
