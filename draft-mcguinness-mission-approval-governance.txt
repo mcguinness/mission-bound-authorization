@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         30 October 2026
-Expires: 3 May 2027
+Intended status: Standards Track                         31 October 2026
+Expires: 4 May 2027
 
 
                       Mission Approval Governance
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 May 2027.
+   This Internet-Draft will expire on 4 May 2027.
 
 Copyright Notice
 
@@ -311,6 +311,16 @@ Table of Contents
 
    *  where the record carries an accountable assertion (Section 6),
       that assertion's own kind MUST equal adjudication.kind.
+
+   An artifact that refers to the record does so by its record digest
+   (Section 9).  The record binds a governance evaluation to the
+   Mission's approval event.  It does not, by itself, establish a
+   separate business decision for each subsequent action.
+
+   Authenticating approval evidence does not, by itself, establish that
+   conditions governing later reliance remain satisfied.  Whether
+   subsequent changes to an Approver's role, a delegation, or governing
+   policy affect an existing Mission depends on the deployment's policy.
 
 4.  Recording Triggers
 
@@ -2482,6 +2492,12 @@ Appendix B.  Portable Approval-Binding Check Vectors
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Relationship to the Issuance Profile states how an artifact refers
+      to the record, that the record binds a governance evaluation to
+      the approval event rather than to each later action, and that
+      later reliance depends on deployment policy, moved here from the
+      OAuth binding unchanged.  No requirement changed (#1914).
 
    *  Relationship to the Issuance Profile defines the governance_record
       member of approval_basis.adjudication, which the OAuth binding no

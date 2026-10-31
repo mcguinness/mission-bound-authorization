@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         30 October 2026
-Expires: 3 May 2027
+Intended status: Standards Track                         31 October 2026
+Expires: 4 May 2027
 
 
             Mission Intent Submission Evidence for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 May 2027.
+   This Internet-Draft will expire on 4 May 2027.
 
 Copyright Notice
 
@@ -152,10 +152,11 @@ Table of Contents
    Each entry is a JSON object with a REQUIRED type member: a string
    naming the evidence type as a collision-resistant name, under the
    same guidance as anchor typ values
-   ([I-D.draft-mcguinness-oauth-mission], Section "Integrity Anchors").
-   The specification that owns a type defines the entry's remaining
-   members as a closed schema, the artifact format, the verification
-   procedure, and the verified output facts that verification yields.
+   ([I-D.draft-mcguinness-oauth-mission], Section "Commitment
+   Mechanisms").  The specification that owns a type defines the entry's
+   remaining members as a closed schema, the artifact format, the
+   verification procedure, and the verified output facts that
+   verification yields.
 
    This document defines no generic member other than type, and no
    evidence types; an authorization server (AS) that supports no
