@@ -31,6 +31,7 @@ import { type ActObject, ActorChainError, extendChain, validateActChain } from "
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash, resourceWithin } from "@mission/core";
 import { verifiedActivationPolicy } from "./activation-policy.js";
 import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js";
+import { isRecognizedApprovalBasisType } from "./approval-basis.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { childActorRefusal, inheritChildActorOrigins, presentedChildActorPermitted } from "./child-actor-eligibility.js";
@@ -406,6 +407,18 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // derivation cap. (Pre-attenuation: no evidence — the child is not yet known.)
   if (kernel.applyExpiry(parent).state !== "active") {
     throw new ChildDelegationError("parent_not_active", `parent mission ${parent.id} is not active`);
+  }
+  // @spec mission#record-principal-members (#1923), child-delegation#record-requirements:
+  // the child's `approved_at` is the human approval instant behind the
+  // parent's root, which only a basis type this issuer defines states. An
+  // unrecognized parent basis is opaque provenance, so no instant is inferred
+  // from it and no child is created; the parent itself is unaffected.
+  const parentBasisType: unknown = parent.approval_basis.type;
+  if (!isRecognizedApprovalBasisType(parentBasisType)) {
+    throw new ChildDelegationError(
+      "delegation_not_permitted",
+      `parent mission ${parent.id} has unrecognized approval_basis.type '${String(parentBasisType)}', so the human approval behind its root cannot be established`,
+    );
   }
   // @spec mission-template#prohibited-classes (#813, D830 ruling 3): a
   // standing-payment lineage creates no Child Mission until the budget

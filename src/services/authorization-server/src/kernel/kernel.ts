@@ -183,7 +183,12 @@ import {
   witnessSharesStoreTree,
 } from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
-import { assertDirectBasisConsistent } from "./approval-basis.js";
+import {
+  assertDirectAdjudicationHuman,
+  assertDirectBasisConsistent,
+  isRecognizedApprovalBasisType,
+} from "./approval-basis.js";
+import { recordExtensionsJson, storedExtensionMembers } from "./record-extensions.js";
 import {
   assembleResourceContracts,
   assertCarriedContractsResolvable,
@@ -334,7 +339,8 @@ CREATE TABLE IF NOT EXISTS missions (
   schedule_json TEXT,
   eligibility_provenance_json TEXT,
   child_actor_provenance_json TEXT,
-  approved_audiences_json TEXT
+  approved_audiences_json TEXT,
+  extensions_json TEXT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS approval_reservations (
   approval_event_id TEXT PRIMARY KEY,
@@ -475,6 +481,13 @@ function migrateMissions(db: Database): void {
   // from the mapping current at issuance.
   if (!columns.has("approved_audiences_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN approved_audiences_json TEXT");
+  }
+  // @spec mission#mission-record (#1923): the record's unrecognized top-level
+  // members, written once at creation and never updated. Nullable with no
+  // default and no backfill: a row that predates it kept no such member, so
+  // it reads back with none.
+  if (!columns.has("extensions_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN extensions_json TEXT");
   }
 }
 
@@ -1580,6 +1593,11 @@ export class MissionKernel {
    * still verifies within the audit horizon, and verifying grants nothing.
    */
   verifyActivationPolicyCommitment(record: MissionRecord): ActivationPolicyCommitmentCheck {
+    // @spec mission#record-principal-members (#1923): `not_applicable` is a
+    // statement about the basis, so it needs the basis's semantics. An
+    // unrecognized type is reported as such, never as `not_applicable`.
+    const type: unknown = record.approval_basis.type;
+    if (!isRecognizedApprovalBasisType(type)) return { status: "unrecognized_basis", type };
     const ref = committedActivationPolicy(record);
     if (!ref) return { status: "not_applicable" };
     return this.activationPolicySnapshots.verify(record.issuer, ref);
@@ -2254,7 +2272,14 @@ export class MissionKernel {
     // contradicting member is refused here, before any write, whatever built
     // the record. An omitted member passes and stays omitted: nothing inserts
     // its implied value into the record committed below.
-    if (record.approval_basis.type === "direct") assertDirectBasisConsistent(record);
+    // @spec mission#record-principal-members (#1923): where `adjudication` is
+    // present for `direct`, its `kind` is `human`; an omitted `adjudication`
+    // passes. Refused here too, before any write. Only a `direct` basis is
+    // checked: an unrecognized basis type is stored as opaque provenance.
+    if (record.approval_basis.type === "direct") {
+      assertDirectBasisConsistent(record);
+      assertDirectAdjudicationHuman(record);
+    }
     const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
@@ -2349,8 +2374,9 @@ export class MissionKernel {
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json, ceiling_json,
-           eligibility_provenance_json, child_actor_provenance_json, approved_audiences_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           eligibility_provenance_json, child_actor_provenance_json, approved_audiences_json,
+           extensions_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -2423,6 +2449,10 @@ export class MissionKernel {
           // original approved audiences, immutable after creation, written
           // only here.
           record.approved_audiences ? JSON.stringify(record.approved_audiences) : null,
+          // @spec mission#mission-record (#1923): every member this store
+          // does not recognize, exactly as the record carries it, written
+          // only here; no later UPDATE touches it.
+          recordExtensionsJson(record),
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -5704,6 +5734,10 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     expiresAt: row.expires_at,
   });
   return {
+    // @spec mission#mission-record (#1923): the members this store does not
+    // recognize, unchanged. Spread first and stripped of every recognized
+    // name, so none overwrites or supplies a recognized member.
+    ...storedExtensionMembers(row.extensions_json),
     id: row.id as string,
     issuer: row.issuer as string,
     state: lifecycle.state,
