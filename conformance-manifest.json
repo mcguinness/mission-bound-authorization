@@ -71913,9 +71913,27 @@
      "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an Expansion that needs a fresh approval when a required reference has no current version is refused 400, opening and reserving nothing (@spec expansion#denial-reasons, resource-access#resource-contract, #1827, D949) > without a consented ceiling, a request with a proposal is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an Expansion that needs a fresh approval when a required reference has no current version is refused 400, opening and reserving nothing (@spec expansion#denial-reasons, resource-access#resource-contract, #1827, D949) > without a consented ceiling, a request whose authority the Intent derives is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an Expansion that needs a fresh approval when a required reference has no current version is refused 400, opening and reserving nothing (@spec expansion#denial-reasons, resource-access#resource-contract, #1827, D949) > a ceiling chain's request beyond the ceiling, which falls back to a fresh approval, is refused before any deferral opens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned. A ceiling consent (#249 B.4, D875): consentCeiling, at the initial consent and at an Expansion's re-consent, refuses a ceiling configuration would now assemble differently (a reference newly required, or the rendered version superseded), never re-pinning. Proved by mutation: removing the recheck fails the witnesses."
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned. A ceiling consent (#249 B.4, D875): consentCeiling, at the initial consent and at an Expansion's re-consent, refuses a ceiling configuration would now assemble differently (a reference newly required, or the rendered version superseded), never re-pinning. Proved by mutation: removing the recheck fails the witnesses. #1827 (D949): an Expansion's fresh approval under a configuration requiring a reference whose versions are all superseded within retention is refused 400 before any deferral opens or operation is reserved, with and without a consented ceiling; the in-ceiling drawdown, preservation-only, still completes. Proved by mutation (2026-10-31): without step 7's mapping the no-ceiling requests answer 500; without the assembly before store.open the ceiling chain's request opens a deferral that could never be approved."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -90264,6 +90282,47 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.denial-reasons.underivable-intent-error",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "denial-reasons",
+   "text": "an expansion Mission Intent the Mission Issuer cannot parse fails with `invalid_request`, and one it can parse but cannot derive a valid Authority Set from fails with `invalid_authorization_details` ({{RFC9396}}) where the client submitted a proposal alongside it, or `invalid_request` ({{Section 2.2.2 of RFC8693}}) where it did not.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose Mission Intent the Mission Issuer cannot parse is refused invalid_request; one whose Intent parses but from which no valid Authority Set can be derived is refused invalid_authorization_details where a proposal accompanies it, and invalid_request where none does; neither is a denial reason, and nothing is created"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an Expansion that needs a fresh approval when a required reference has no current version is refused 400, opening and reserving nothing (@spec expansion#denial-reasons, resource-access#resource-contract, #1827, D949) > without a consented ceiling, a request with a proposal is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an Expansion that needs a fresh approval when a required reference has no current version is refused 400, opening and reserving nothing (@spec expansion#denial-reasons, resource-access#resource-contract, #1827, D949) > without a consented ceiling, a request whose authority the Intent derives is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an Expansion that needs a fresh approval when a required reference has no current version is refused 400, opening and reserving nothing (@spec expansion#denial-reasons, resource-access#resource-contract, #1827, D949) > a ceiling chain's request beyond the ceiling, which falls back to a fresh approval, is refused before any deferral opens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1827 (D949). Partial: witnessed for the derivation-failure branch, both codes, with a required reference that has no current version as the cause (no deferral opened, no operation reserved). Not cited here: an unparseable expansion Intent, and other causes of a failed derivation. Proved by mutation (2026-10-31): mapping both cases to invalid_request fails the proposal witness; without the mapping the requests answer 500."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
