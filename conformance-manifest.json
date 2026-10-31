@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
-    "content_sha256": "30660feaec4fcdb7a500b1f2302ebd70a30a5deafcfb66398948d5e44c72869d"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "4bc3eb7abad97d503099fa82f52b82923fe8e698fbca57f50bdb55a9c49229ff"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "f7db738441843285b69c35b2e12cf14195c3b02b",
@@ -63,16 +63,16 @@
     "content_sha256": "a975b4b5579699e3f3b5855589e2369b6bfb942e6a6aea20ffc9103b82b02420"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
-    "content_sha256": "315289856b6e54c0015f1aa85dc1358d82173f23fdae76f5fa799e071b31291d"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "bc3255e6e28d3c624e95084c78c7a206dc56f836c8f29d774a1bbb013417bb5e"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "d374a53ab4f4027fb50fa22d7a1290f445e10c1f",
-    "content_sha256": "22d32e2fe260226dc29916233d7b69ef8e44925a71bc80ed5b3033dab7615b74"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "f0ef94e08deabd548f2f2537e54fc53b517c9b9ab050462c86b329baad39f7c8"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -95,32 +95,32 @@
     "content_sha256": "b54570c5a1a8170b7fba90bb8e4d9b163e3603e736726d81bbbc8334f1007637"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "3a75ab4b90a356972114d858aa7e52b71c4931ef",
-    "content_sha256": "f42a2713d042528189015f468361a76676417bc6dd2355b7562980a7289f5c13"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "10029c78f26b9fd788d43b3c9dfecbf4377595d41a06f592f42bd68434aca7e6"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "13975a6202de9ad86ccd251f1c461851e9b0bcc7",
-    "content_sha256": "bea85ec762263773af7d061ba5bf485d4fe79b76ace129b0b9445a079f15a60a"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "d1026745ae8df33f3acbefeb447f1f8bce7443f3194cda0e94b856ee09e213de"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
     "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "dfdb6ca15ac2620e02e27c5d9bb18ea46a9a8646",
-    "content_sha256": "45746e13a29631bb82709780c5b9ae564186d92a7747a69798228401accc973b"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "124bbbf36e519a6c6c796cf5c3dadc855e2ddb402859a67c746451aab9cc058a"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
-    "content_sha256": "d66e8e1485f235faf2dffc9a2e7232e2918c0e54a79e5763ae96189949f0221b"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "d34986a40286f9993165ef01abb3c3a3db776711ddcca2dcc2aa174b445b49f2"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
     "content_sha256": "b2e006607d309e3a8f1b1e6d034ca9bd74d5c1dbcd53e38a1677546065242060"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
-    "revision": "253f85b35fbb86c4939a117b3f9c1a00ea2483b4",
-    "content_sha256": "5dc873c8d3d4a4fce5e511e12f80b0cc33af434add509d8f5f5528b8fde74757"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "12bfe71714cca2951f67d19e2e6b7191d2c70582283f84826e922a143865a9da"
    },
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
     "revision": "253f85b35fbb86c4939a117b3f9c1a00ea2483b4",
@@ -139,8 +139,8 @@
     "content_sha256": "3c1d883d71a887cc0643d40a023ecea1b16e272778ce9851353a3b6807b14927"
    },
    "draft-mcguinness-mission-mandate.md": {
-    "revision": "80573531f97dc8f048f60fef8cd1583ba148ec46",
-    "content_sha256": "fc7d706b125479308170ab71672eaa8297ca93200405bef658d10eb2d41928c9"
+    "revision": "65037204039a9db7a234ed095700bf63461827fd",
+    "content_sha256": "c563db78c6dc955bffc36c9f7b83406d223a38796828c5e444ea715254724782"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
     "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
@@ -9381,7 +9381,7 @@
    "id": "core.approval-basis.root-commitment-direct",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-principal-members",
-   "text": "OPTIONAL for `direct`. The commitment to the consented root; its implied value for `direct` is this Mission's own `authority_hash`.",
+   "text": "OPTIONAL for `direct`. The commitment to the consented root; its implied value for `direct` is this Mission's own `authority_hash`, recorded or implied.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -9394,7 +9394,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a direct record's approval_basis.root_commitment, where present, is a string equal to its own authority_hash; where omitted, a reader takes authority_hash as its value",
+    "normative": "a direct record's approval_basis.root_commitment, where present, is a string equal to its own authority_hash, recorded or implied; where omitted, a reader takes authority_hash as its value",
     "local": "every direct path in the reference (kernel.approve, an Expansion successor, a carryover replacement) still records all three members; directBasisMembers (kernel/approval-basis.ts) reads an omitted one's implied value without writing it into the record"
    },
    "level": "unit",
@@ -9413,7 +9413,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1898; #1912 (D1047) made the member OPTIONAL for `direct` with implied value the record's authority_hash. Facet: the direct basis; standing-consent roots are rowed under their bases and under core.approval-basis.standing-consent-root-commitment-required. The round trip fixes a present root_commitment to the record's authority_hash; proved by mutation (2026-10-30, #1898): a root_commitment other than authority_hash fails it. The omission witness reads the implied value from a direct record that omits it. Proved by mutation (2026-10-30, #1912): an implied root_commitment other than authority_hash fails it. A present value that differs is refused by core.approval-basis.direct-members-match-implied's check. Strength is stated: the clause is OPTIONAL with a defined implied value."
+   "notes": "#1898; #1912 (D1047) made the member OPTIONAL for `direct` with implied value the record's authority_hash. Facet: the direct basis; standing-consent roots are rowed under their bases and under core.approval-basis.standing-consent-root-commitment-required. The round trip fixes a present root_commitment to the record's authority_hash; proved by mutation (2026-10-30, #1898): a root_commitment other than authority_hash fails it. The omission witness reads the implied value from a direct record that omits it. Proved by mutation (2026-10-30, #1912): an implied root_commitment other than authority_hash fails it. A present value that differs is refused by core.approval-basis.direct-members-match-implied's check. Strength is stated: the clause is OPTIONAL with a defined implied value. #1917 (D1061): re-quoted after the integrity anchors became implied members."
   },
   {
    "id": "core.approval-basis.direct-members-match-implied",
@@ -11394,7 +11394,7 @@
    "id": "core.approval-event.authority-source-rerender",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",
-   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the anchors the Mission records, and MUST NOT create the Mission without the Approver's consent to the changed context",
+   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the integrity anchors, and MUST NOT create the Mission without the Approver's consent to the changed context",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11424,13 +11424,13 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half had no observable output here. #1446 (D583) makes it observable at the approval surface: Changes Before the Decision's rows (core.approval-context-changes.*) carry the endpoint witnesses, and this row stays partial on its unit witnesses to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
+   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half had no observable output here. #1446 (D583) makes it observable at the approval surface: Changes Before the Decision's rows (core.approval-context-changes.*) carry the endpoint witnesses, and this row stays partial on its unit witnesses to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446. #1917 (D1061): re-quoted after the integrity anchors became implied members."
   },
   {
    "id": "core.approval-context-changes.recompute",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-context-changes",
-   "text": "the AS MUST recompute the affected values and the anchors the Mission records",
+   "text": "the AS MUST recompute the affected values and the integrity anchors",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11460,7 +11460,7 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface. #1917 (D1061): re-quoted after the integrity anchors became implied members."
   },
   {
    "id": "core.approval-context-changes.no-create-without-consent",
@@ -11786,7 +11786,7 @@
    "id": "core.approval-context-changes.proposal-swap",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-context-changes",
-   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the anchors the Mission records",
+   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the integrity anchors",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11803,7 +11803,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446). D971 (#1723 S2, X2): the swap sentence explains a consequence, so the row points to the rules that produce it: it quotes the recomputation MUST, trigger included, applied to a changed proposal (core.approval-context-changes.recompute quotes the same duty, observed for the Authority Set, source and policy inputs), and cites Authority Proposal's commitment rule, \"The AS records the array on the Mission exactly as submitted and commits it by `proposal_hash` ..., separately from the task (`intent_hash`)\". The observation is unchanged; there were no tests to keep, and coverage stays todo for the #1446 reason stated first."
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446). D971 (#1723 S2, X2): the swap sentence explains a consequence, so the row points to the rules that produce it: it quotes the recomputation MUST, trigger included, applied to a changed proposal (core.approval-context-changes.recompute quotes the same duty, observed for the Authority Set, source and policy inputs), and cites Authority Proposal's commitment rule, \"The AS records the array on the Mission exactly as submitted and commits it by `proposal_hash` ..., separately from the task (`intent_hash`)\". The observation is unchanged; there were no tests to keep, and coverage stays todo for the #1446 reason stated first. #1917 (D1061): re-quoted after the integrity anchors became implied members."
   },
   {
    "id": "core.mission-record.authority-source-required",
@@ -75958,7 +75958,7 @@
    "id": "evidence.intent-admission.payload-cross-check",
    "spec": "draft-mcguinness-mission-evidence-envelope.md",
    "anchor": "intent-admission-payload-type",
-   "text": "a verifier holding the referenced Mission Record\nMUST confirm `payload.intent_hash` and `payload.submission_evidence`\nare byte-for-byte equal, member for member, to the Mission Record's\nown `intent_hash` and `submission_evidence`.",
+   "text": "a verifier holding the referenced Mission Record MUST confirm `payload.intent_hash` and `payload.submission_evidence` are byte-for-byte equal, member for member, to the Mission Record's `intent_hash`, recorded or implied ({{I-D.draft-mcguinness-oauth-mission}}), and its `submission_evidence`.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -75968,11 +75968,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a verifier holding the Mission Record rejects a mission-intent-admission instance whose payload.intent_hash or payload.submission_evidence diverges byte-for-byte from the Mission Record's own members"
+    "normative": "a verifier holding the Mission Record rejects a mission-intent-admission instance whose payload.intent_hash or payload.submission_evidence diverges byte-for-byte from the Mission Record's intent_hash, recorded or implied, or its submission_evidence"
    },
    "level": "cross-component",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": " #1917 (D1061): re-quoted after the integrity anchors became implied members."
   },
   {
    "id": "evidence.intent-admission.disposition-single-value",
@@ -94898,15 +94899,15 @@
    "tests": [],
    "id": "mandate.minting.claim-source",
    "anchor": "minting",
-   "text": "Each claim MUST be populated from the Mission record's committed members, except `approval_governance_digest`, which is the record digest of the committed Approval Governance Record that backs the Mission's approval event.",
+   "text": "Each claim MUST be populated from the Mission record's committed members, an integrity anchor the record omits taking its implied value ({{I-D.draft-mcguinness-oauth-mission}}), except `approval_governance_digest`, which is the record digest of the committed Approval Governance Record that backs the Mission's approval event.",
    "role": "AS",
    "strength": "MUST",
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Mandate claim equals the Mission record's committed member it names, except `approval_governance_digest`, which equals the record digest of the committed Approval Governance Record for the approval event"
+    "normative": "every Mandate claim equals the Mission record's committed member it names, an omitted integrity anchor at its implied value, except `approval_governance_digest`, which equals the record digest of the committed Approval Governance Record for the approval event"
    },
-   "notes": "#1573 (D691, D692, D696). todo: the reference implementation has no Mandate minting or verification code; the Approval Governance side of the binding check is implemented (#1572). The claim-source rule and its Conformance restatement were amended for this one claim."
+   "notes": "#1573 (D691, D692, D696). todo: the reference implementation has no Mandate minting or verification code; the Approval Governance side of the binding check is implemented (#1572). The claim-source rule and its Conformance restatement were amended for this one claim. #1917 (D1061): re-quoted after the integrity anchors became implied members."
   },
   {
    "spec": "draft-mcguinness-mission-mandate.md",
