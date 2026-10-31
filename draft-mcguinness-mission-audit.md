@@ -517,6 +517,11 @@ Mission's feed; a row registers nothing on its own.
 | Protected event receipt | Protected Event Receipt object (JCS), as the containment profile fixes | `application/mission-protected-event-receipt+json` | none | `issuer` |
 | Erasure record | {{erasure-record}} (JCS) | `application/mission-erasure-record+json` | none | producer of the erased record's type |
 
+The approval event's canonical bytes are the record's members as
+recorded: an integrity anchor the record omits
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Approved Content and
+Commitments") is not inserted, and one it carries is not removed.
+
 The table is extensible by specification: a profile MAY define an
 additional evidence type by fixing its canonical bytes, its
 `payload-preimage-content-type`, its operational `typ` together with
@@ -1647,6 +1652,10 @@ rather than registering a new identifier.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The approval event's canonical bytes are the record as recorded:
+  an integrity anchor the record omits is not inserted, and one it
+  carries is not removed (#1917).
 
 - The evidence-type table shows the Approval Governance Record's
   operational `typ` with `application/` omitted, as Mission Approval

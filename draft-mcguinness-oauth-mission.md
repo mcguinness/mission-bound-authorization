@@ -1293,9 +1293,9 @@ names.
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
    ({{approval-event}}).
-9. At activation, record the approved `intent`, `intent_hash`, the
-   Authority Set, and the verified evidence facts as
-   `submission_evidence` ({{mission-record}}).
+9. At activation, record the approved `intent`, the Authority Set,
+   and the verified evidence facts as `submission_evidence`
+   ({{mission-record}}).
 
 The AS MUST refuse a submission that fails more than one check with
 the error of the earliest failing step in this order. For example:
@@ -1769,7 +1769,9 @@ The same procedure continues from step 5:
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
    was submitted ({{authority-proposal}}), `proposal_hash` over the
-   submitted `authorization_details` array.
+   submitted `authorization_details` array. The AS computes them here
+   whether or not the record carries them, and every artifact bound
+   at the approval event carries the values computed here.
 7. **Create the Mission Record** ({{mission-record}}) in the `active`
    state atomically with the approval decision and issuance of the
    authorization code, or, under a back-channel carriage profile
@@ -1979,7 +1981,7 @@ lets the Approver ask the basis for an entry before deciding.
 
 If any of the following changes between approval rendering and the
 approval decision, the AS MUST recompute the affected values and the
-anchors the Mission records, and MUST NOT create the Mission without
+integrity anchors, and MUST NOT create the Mission without
 the Approver's consent to the changed context:
 
 - the task or the authority proposal;
@@ -2075,13 +2077,14 @@ or commits.
 
 The following subsections define the record's members. The record's
 required members are its invariants: `id`, `issuer`, `state`,
-`intent`, `authority_set`, `authority_hash`, `intent_hash`, `subject`,
-`approval_basis` and `authority_source` with the members each
-requires, `client_id`, `approval_event_id`, `created_at`, and
-`expires_at`, and, under the condition each states, `termination`,
-`proposed_authority`, `proposal_hash`, `submission_evidence`, and
-`policy_version`. Every other member is optional or defined by the
-profile that uses it.
+`intent`, `authority_set`, `subject`, `approval_basis` and
+`authority_source` with the members each requires, `client_id`,
+`approval_event_id`, `created_at`, and `expires_at`, and, under the
+condition each states, `termination`, `proposed_authority`,
+`submission_evidence`, and `policy_version`. The integrity anchors
+`intent_hash`, `authority_hash`, and `proposal_hash` are implied
+members ({{record-content-members}}). Every other member is optional
+or defined by the profile that uses it.
 
 ### Identity and Lifecycle Members {#record-identity-members}
 
@@ -2123,21 +2126,23 @@ profile that uses it.
 : REQUIRED. An array. The consented Authority Set.
 
 `authority_hash`:
-: REQUIRED. A string. The authority commitment over the Authority Set
-  ({{integrity-anchors}}). It is not carried on the baseline `mission`
-  claim ({{mission-claim}}).
+: OPTIONAL. A string. The authority commitment over the Authority Set
+  ({{integrity-anchors}}); its implied value is that anchor over the
+  record's `authority_set`. It is not carried on the baseline
+  `mission` claim ({{mission-claim}}).
 
 `intent_hash`:
-: REQUIRED. A string. The integrity commitment over the approved
-  Mission Intent ({{integrity-anchors}}), making the recorded task
-  tamper-evident.
+: OPTIONAL. A string. The integrity commitment over the approved
+  Mission Intent ({{integrity-anchors}}); its implied value is that
+  anchor over the record's `intent`.
 
 `proposal_hash`:
-: REQUIRED when `proposed_authority` is present, absent otherwise. A
+: OPTIONAL when `proposed_authority` is present, absent otherwise. A
   string. The integrity commitment over the recorded
-  `proposed_authority` ({{integrity-anchors}}). It is approval-time
-  provenance, not enforcement input, and is not carried on the
-  `mission` claim ({{mission-claim}}).
+  `proposed_authority` ({{integrity-anchors}}); its implied value is
+  that anchor over the record's `proposed_authority`. It is
+  approval-time provenance, not enforcement input, and is not carried
+  on the `mission` claim ({{mission-claim}}).
 
 `submission_evidence`:
 : REQUIRED when the approved submission carried evidence, absent
@@ -2161,6 +2166,15 @@ profile that uses it.
   : An object holding the verified output facts the type's
     specification selects for recording, nested so type-owned
     facts cannot collide with the common members.
+
+The three anchors are implied members, as the `direct` approval
+basis's members are ({{record-principal-members}}): an omitted anchor
+has its implied value, a reader does not insert it into a record
+before hashing or committing the record, and an issuer does not
+remove an anchor a record carries. A recorded anchor MUST equal its
+implied value. A party that finds one that differs MUST refuse the
+operation that relies on it and MUST NOT substitute the implied
+value.
 
 ### Principals and Approval Basis {#record-principal-members}
 
@@ -2199,7 +2213,8 @@ profile that uses it.
 
   `root_commitment`:
   : OPTIONAL for `direct`. The commitment to the consented root; its
-    implied value for `direct` is this Mission's own `authority_hash`.
+    implied value for `direct` is this Mission's own `authority_hash`,
+    recorded or implied.
 
   When present for `direct`, `activation`, `activation_actor`, and
   `root_commitment` MUST each match its implied value. The implied
@@ -2327,7 +2342,8 @@ invalidate or deactivate the Mission.
   this instance's creation, not the earlier standing approval.
 
 `created_at`:
-: REQUIRED. A string. RFC 3339 timestamp of creation.
+: REQUIRED. A string. RFC 3339 timestamp of creation: the instant of
+  the atomic creation commit ({{approval-commit}}).
 
 `expires_at`:
 : REQUIRED. A string. An RFC 3339 date-time: the AS-established
@@ -2497,7 +2513,7 @@ issuer-bound envelope:
      ({{submission-envelope}}).
    - For `proposal_hash`, `typ` is `mission-proposed-authority` and
      `value` is the submitted `authorization_details` array exactly
-     as recorded ({{proposal-derivation}}); the anchor is present
+     as recorded ({{proposal-derivation}}); the anchor is defined
      exactly when a proposal was submitted.
    - For `authority_hash`, `typ` is `mission-authority-set` and
      `value` is the Authority Set as a JSON array of entries.
@@ -2517,6 +2533,15 @@ object cannot be mistaken for another's. The `iss` binding prevents
 a committed object from being transplanted across authorization
 servers. The `sha-256:` prefix is the algorithm-agility mechanism
 ({{digest-algorithm}}).
+
+An implied anchor ({{record-content-members}}) is this section's
+`sha-256` construction over the retained record: the record's
+`intent`, `authority_set`, or `proposed_authority`, each array in its
+recorded order, with `iss` the record's `issuer`, whatever algorithm
+the issuer uses for new commitments. An issuer MUST compute an anchor
+it emits or verifies from that retained record, never from a token's
+carried subset, a projection or response it serves, or authority a
+companion narrows after approval.
 
 The anchors this section lists, and the Authority Set entry
 commitment ({{entry-commitment}}), bind the AS issuer. The `digest` of an
@@ -5117,6 +5142,10 @@ a new prefix MUST define:
    differ; and
 5. the transition procedure itself.
 
+Such a specification MUST NOT change a commitment already made,
+including the implied value of an anchor a Mission Record omits,
+which stays the `sha-256` construction of {{integrity-anchors}}.
+
 ### Authority Set Entry Commitment {#entry-commitment}
 
 This document also defines the **Authority Set entry commitment**, the
@@ -5373,9 +5402,9 @@ those of DPoP ({{Section 11 of RFC9449}}) and mutual TLS
 ### Consent Binding {#consent-binding}
 
 The security goal of this document is that a user's approval of a task
-bounds every token derived for it. The Mission records
-`authority_hash`, which commits the exact Authority Set the Approver
-consented to ({{mission-record}}). The goal rests on the AS deriving
+bounds every token derived for it. The Mission's `authority_hash`
+commits the exact Authority Set the Approver consented to
+({{mission-record}}). The goal rests on the AS deriving
 only subsets of that set and signing every token accordingly, and on
 the resource server verifying the AS's token signature and enforcing
 the carried authority, not on every token carrying the commitment
@@ -5402,8 +5431,19 @@ signing-key compromise where the original commitment is pinned outside
 the issuer.
 
 `intent_hash` extends the same protection to the task: it commits the
-approved Mission Intent, so an auditor can detect any later alteration
-of the recorded task. No anchor substitutes for another.
+approved Mission Intent, so an auditor holding a value captured at
+approval can detect a later alteration of the recorded task. No
+anchor substitutes for another.
+
+Recording an anchor is optional ({{record-content-members}}). A
+recorded anchor lets a verifier detect a later change to the
+retained `intent`, `authority_set`, or `proposed_authority` against
+the record itself, which detects only partial corruption: whoever can
+change the record can change both. An omitted anchor gives up that
+check, and detection rests on a value captured outside the record
+before the change, such as a pinned commitment, a signed carrier, or
+an audit record. Recomputing both sides from the changed record
+detects nothing.
 `authority_hash` is computed over the Authority Set alone
 ({{integrity-anchors}}), what a resource server enforces and a
 cross-domain projection carries, so it can be checked without the
@@ -6835,6 +6875,17 @@ resolve before interoperating.
 \[\[ To be removed from the final specification ]]
 
 -02
+
+- The integrity anchors `intent_hash`, `authority_hash`, and
+  `proposal_hash` are implied members: each is OPTIONAL on the record,
+  an omitted one is its `sha-256` construction over the retained
+  record, and a recorded one MUST equal it, a mismatch being refused.
+  The AS still computes them at the approval event for every artifact
+  bound there, and an issuer computes an emitted or verified anchor
+  from the retained record alone. A specification adding an algorithm
+  preserves existing commitments. Consent Binding states what optional
+  storage gives up, and `created_at` names the creation commit's
+  instant (#1917).
 
 - Mission-Creating Paths replaces Standing-Consent Bases and its three
   subsections. It keeps relocating the direct ceremony distinct from
