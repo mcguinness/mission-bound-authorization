@@ -357,11 +357,12 @@ Table of Contents
    relocated human decision, so step 3 of Section 4.1 does not apply: as
    under any standing-consent basis, the standing consent and the
    policy's adjudication supply the Approver's authentication,
-   authorization, and consent ([I-D.draft-mcguinness-oauth-mission],
-   Section "Standing-Consent Instances").  The creation commit of step 4
-   runs at the policy's decision, under that basis's activation checks
-   and with its Approval Governance Record, and keeps the effective-
-   expiry recheck.
+   authorization, and consent
+   ([I-D.draft-mcguinness-mission-approval-governance], Section 
+   "Standing-Consent Instances").  The creation commit of step 4 runs at
+   the policy's decision, under that basis's activation checks and with
+   its Approval Governance Record, and keeps the effective-expiry
+   recheck.
 
    Nothing else about the deferral changes.  Polling, cancellation,
    client binding, and token delivery follow the deferred substrate and
@@ -561,11 +562,11 @@ Table of Contents
 11.1.  Normative References
 
    [I-D.draft-ietf-oauth-deferred-token-response]
-              Jacobsen, F. K., de Oliveira Niero, G., and M. Gerber,
-              "Deferred Token Response", Work in Progress, Internet-
-              Draft, draft-ietf-oauth-deferred-token-response-00, 16
-              September 2026, <https://datatracker.ietf.org/doc/html/
-              draft-ietf-oauth-deferred-token-response-00>.
+              de Oliveira Niero, G. and D. Liu, "Deferred Token
+              Response", Work in Progress, Internet-Draft, draft-ietf-
+              oauth-deferred-token-response-01, 31 October 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              deferred-token-response-01>.
 
    [I-D.draft-mcguinness-mission-approval-governance]
               McGuinness, K., "Mission Approval Governance", 2026,
@@ -629,6 +630,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A policy-decided deferral cites Approval Governance's Approval
+      Basis Contract for what a standing consent supplies, which states
+      the same rule the OAuth binding does.  No requirement changed
+      (#1915).
 
    *  The Approval Governance Record is recorded for a deferred approval
       where a profile that adopts Mission Approval Governance's
