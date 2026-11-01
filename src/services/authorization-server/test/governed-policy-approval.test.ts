@@ -1528,8 +1528,33 @@ describe("an unrecognized stored approval basis type (@spec mission#record-princ
     expect(recheck()).toEqual({ rechecked: true });
     rewriteType(kernel, mission);
     // The record still verifies against the Mission (step 1 reads no basis);
-    // only the type stops the replay.
-    expect(recheck()).toEqual({ rechecked: false, step: 4, reason: "no recorded inputs to replay" });
+    // only the type stops the replay, and the reason names it (#1936).
+    expect(recheck()).toEqual({
+      rechecked: false,
+      step: 4,
+      reason: "approval_basis.type 'x_quorum' is not one this issuer defines; nothing is replayed",
+    });
     expect(kernel.get(mission.id)?.state).toBe("active");
+  });
+
+  it("refuses an unrecognized adjudication.kind on a governed_policy basis at the record gate and the re-check (step 5), leaving the Mission active (#1921, #1923)", () => {
+    const kernel = makeKernel();
+    clockMs = T0 + 60_000;
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    const { envelope: _e, ...unsigned } = kernel.governanceRecords.forMission(mission.id) as ApprovalGovernanceRecord;
+    const basis = mission.approval_basis as { adjudication: Record<string, unknown> };
+    const unknownKind = { ...basis, adjudication: { ...basis.adjudication, kind: "x_oracle" } };
+    const KIND = /the accountable assertion's kind is not adjudication.kind/;
+    // The gate: the committed basis (kind policy) passes; an unrecognized kind is refused.
+    expect(() => assertGovernedPolicyRecord(unsigned, mission.approval_basis as never)).not.toThrow();
+    expect(() => assertGovernedPolicyRecord(unsigned, unknownKind as never)).toThrow(KIND);
+    // The re-check: the record re-checks as committed; with the kind stored
+    // unrecognized it is not re-checked, and the Mission keeps its state.
+    const recheck = () => recheckApprovalGovernanceRecord(kernel, mission.id, { resolveKey: resolveKey(kernel) });
+    expect(recheck()).toEqual({ rechecked: true });
+    kernel.db.prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?").run(JSON.stringify(unknownKind), mission.id);
+    expect(recheck()).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(KIND) });
+    expect(kernel.get(mission.id)?.state).toBe("active");
+    expect(kernel.checkDerivation(mission.id).state).toBe("active");
   });
 });

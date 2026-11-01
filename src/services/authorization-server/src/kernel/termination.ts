@@ -16,10 +16,13 @@ import { COMMIT_IS_EFFECT_REASONS } from "@mission/core";
 import type { LifecycleCommit, MissionRecord, MissionState, Termination } from "./types.js";
 
 /**
- * @spec mission#termination (transition-period reading): the terminal state
- * values a record, event or signed artifact committed before the termination
- * vocabulary can hold, and the reason each reads as (`cascaded` as
- * `parent_terminated`). A read-side view only: never re-emitted or re-signed.
+ * Store upgrade (#705; kept by the #1504 audit, D1006): the terminal state
+ * values a row or journaled commit this issuer stored before the termination
+ * vocabulary can hold, and the reason each was committed as (`cascaded` as
+ * `parent_terminated`). It reads only this issuer's own store, and what the
+ * issuer reports from it is in the current encoding (`terminated` with
+ * `termination.reason`). No received report or signed artifact is read this
+ * way: the OAuth binding no longer reads these values as a state.
  */
 export const LEGACY_TERMINAL_REASONS: ReadonlyMap<string, string> = new Map([
   ["revoked", "revoked"],
@@ -172,9 +175,9 @@ export function parentTerminatedTermination(parent: { id: string; termination?: 
 }
 
 /**
- * @spec mission#termination (transition-period reading): a lifecycle commit
- * persisted before the termination vocabulary (outbox payload version 1),
- * normalized in memory: a legacy terminal `state` reads as `terminated` with
+ * Store upgrade (#705; kept by the #1504 audit, D1006): a lifecycle commit
+ * this issuer persisted before the termination vocabulary (outbox payload
+ * version 1), normalized in memory: a legacy terminal `state` reads as `terminated` with
  * that reason, and the top-level `successor` / `carried_to` fold into its
  * `termination`. The stored bytes are never rewritten. A commit already in
  * the current vocabulary is returned unchanged.

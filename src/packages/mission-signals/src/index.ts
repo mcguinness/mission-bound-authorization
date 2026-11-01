@@ -46,9 +46,9 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import type { LifecycleCommit } from "@mission/authorization-server";
 import {
+  COMMIT_IS_EFFECT_REASONS,
   type MissionStatusLease,
   type MissionTermination,
-  normalizeLegacyMissionState,
   readMissionTermination,
   type StateSource,
 } from "@mission/core";
@@ -191,17 +191,72 @@ export async function signLifecycleEvent(
 }
 
 /**
+ * Store upgrade (#705; kept by the #1504 audit, D1006): the terminal state
+ * values a commit journaled in this emitter's own outbox before the
+ * termination vocabulary can hold, and the reason each was committed as
+ * (`cascaded` as `parent_terminated`). It reads only this emitter's own
+ * journal. A received report is never read this way: a SET carrying one of
+ * these values is read as reported, a state that is not `active`
+ * ({@link parseEvent}).
+ */
+const JOURNALED_TERMINAL_STATES: ReadonlyMap<string, string> = new Map([
+  ["revoked", "revoked"],
+  ["expired", "expired"],
+  ["completed", "completed"],
+  ["superseded", "superseded"],
+  ["cascaded", "parent_terminated"],
+]);
+
+/**
+ * @spec mission#termination (a termination recorded before its reason
+ * defined a member): the termination a pre-vocabulary journaled commit
+ * reports, from the facts the commit retained and nothing else: its
+ * `version`; the reason's reference (`successor` for `superseded`,
+ * `carried_to` for `parent_terminated`); and a `terminated_at` of
+ * `expires_at` for `expired`, or of the commit time for a
+ * {@link COMMIT_IS_EFFECT_REASONS} reason. A `parent_terminated` reading has
+ * no `terminated_at`: the cascade's commit is not its effect.
+ */
+function journaledTermination(
+  reason: string,
+  journaled: {
+    version?: unknown;
+    expires_at?: unknown;
+    committed_at?: unknown;
+    successor?: unknown;
+    carried_to?: unknown;
+  },
+): MissionTermination {
+  const termination: MissionTermination = { reason };
+  const str = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
+  const at =
+    reason === "expired"
+      ? str(journaled.expires_at)
+      : COMMIT_IS_EFFECT_REASONS.has(reason)
+        ? str(journaled.committed_at)
+        : undefined;
+  if (at !== undefined) termination.terminated_at = at;
+  const { version } = journaled;
+  if (typeof version === "number" && Number.isSafeInteger(version) && version >= 1) {
+    termination.version = version;
+  }
+  const successor = str(journaled.successor);
+  if (reason === "superseded" && successor !== undefined) termination.successor = successor;
+  const carriedTo = str(journaled.carried_to);
+  if (reason === "parent_terminated" && carriedTo !== undefined) termination.carried_to = carriedTo;
+  return termination;
+}
+
+/**
  * @spec mission#termination, signals#lifecycle-event: the lifecycle members
  * a SET reports for one commit. A commit in the termination vocabulary is
  * relayed: `termination` only beside `terminated`, `prior_state` only when it
- * is `active` or `suspended`. A commit journaled before that vocabulary (a
- * durable outbox job whose SET was never signed) still carries a legacy
- * terminal `state` and top-level `successor` or `carried_to`: it is reported
- * as `terminated` with that reason (`cascaded` as `parent_terminated`) and
- * the facts the commit retained ({@link normalizeLegacyMissionState}): its
- * `version`, its reference, and `terminated_at` from `expires_at` for
- * `expired` or from `committed_at` where the commit was the effect. No
- * member it did not retain is filled in.
+ * is `active` or `suspended`. A commit journaled in this emitter's own outbox
+ * before that vocabulary (a durable job whose SET was never signed) still
+ * carries a retired terminal `state` and a top-level `successor` or
+ * `carried_to`; the store upgrade signs it as `terminated` with that reason
+ * and the facts the commit retained ({@link journaledTermination}), so no
+ * SET this emitter signs carries a retired value as `state`.
  */
 function eventLifecycle(commit: LifecycleCommit): {
   state: string;
@@ -218,17 +273,17 @@ function eventLifecycle(commit: LifecycleCommit): {
     journaled.prior_state === "active" || journaled.prior_state === "suspended"
       ? { prior_state: journaled.prior_state }
       : {};
-  const normalized = normalizeLegacyMissionState(journaled.state, {
-    version: commit.version,
-    expires_at: commit.expires_at,
-    committed_at: commit.committed_at,
-    successor: journaled.successor,
-    carried_to: journaled.carried_to,
-  });
-  if (normalized.state !== "terminated") return { state: normalized.state, ...prior };
+  const retiredReason = JOURNALED_TERMINAL_STATES.get(journaled.state);
+  if (retiredReason !== undefined) {
+    return {
+      state: "terminated",
+      ...prior,
+      termination: journaledTermination(retiredReason, journaled),
+    };
+  }
+  if (journaled.state !== "terminated") return { state: journaled.state, ...prior };
   const termination: MissionTermination | undefined =
-    normalized.termination ??
-    (commit.termination !== undefined ? { ...commit.termination } : undefined);
+    commit.termination !== undefined ? { ...commit.termination } : undefined;
   return { state: "terminated", ...prior, ...(termination !== undefined ? { termination } : {}) };
 }
 
@@ -1116,13 +1171,11 @@ export class MissionSignalReceiver {
   }
 
   /**
-   * @spec mission#termination — the original compact SET whose verified
-   * payload established {@link viewState} for a Mission, exactly as received:
-   * it verifies against the issuer's keys unchanged and still carries what the
-   * issuer signed (a legacy terminal `state` included), while `viewState`
-   * holds this receiver's normalized reading of it. After a restore (#1749),
-   * until a later event replaces it, it is the Mission Status response that
-   * resynchronized the Mission, as received.
+   * The original compact SET whose verified payload established
+   * {@link viewState} for a Mission, exactly as received: it verifies against
+   * the issuer's keys unchanged and carries what the issuer signed. After a
+   * restore (#1749), until a later event replaces it, it is the Mission
+   * Status response that resynchronized the Mission, as received.
    */
   retainedSet(missionId: string): string | undefined {
     return this.row(missionId)?.retained_set;
@@ -1448,22 +1501,22 @@ interface ParsedEvent {
 
 /**
  * Pull and shape-check the required members of the lifecycle-change event.
- * Called only on a SET whose signature has verified, so a legacy event is
- * read over its verified bytes.
+ * Called only on a SET whose signature has verified, so every event is read
+ * over its verified bytes.
  *
  * @spec mission#termination: `termination` is read from the event body
  * beside a `terminated` state; a top-level `successor` or `carried_to` beside
  * it is not read. A missing or malformed `termination` never refuses the
  * event (refusing would leave an earlier `active` in the cache): the Mission
  * is applied as `terminated` with no termination facts, and a `termination`
- * beside any other state is dropped. A legacy terminal `state` (`revoked`,
- * `expired`, `completed`, `superseded`, `cascaded`) is read as `terminated`
- * with that reason, `cascaded` as `parent_terminated`, and the facts the
- * event retained ({@link normalizeLegacyMissionState}): its `version`, its
- * top-level `successor` or `carried_to`, and `terminated_at` from
- * `expires_at` for `expired` or from `committed_at` where the commit was the
- * effect. A local view, never re-emitted or re-signed; the receiver retains
- * the SET it read it from ({@link MissionSignalReceiver.retainedSet}).
+ * beside any other state is dropped.
+ *
+ * @spec mission#lifecycle (the forward-compatibility rule; #1504, D1006):
+ * `state` is read as reported. A retired value (`revoked`, `expired`,
+ * `completed`, `superseded`, `cascaded`) is not mapped to `terminated` or to
+ * a termination reason: like any value this receiver does not recognize, it
+ * is a state other than `active`, so it permits no derivation or reliance,
+ * and no termination is attached to it.
  */
 function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   const events = payload.events as Record<string, unknown> | undefined;
@@ -1485,18 +1538,8 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
   ) {
     return undefined;
   }
-  const normalized = normalizeLegacyMissionState(reported, {
-    version,
-    expires_at,
-    committed_at: ev.committed_at,
-    successor: ev.successor,
-    carried_to: ev.carried_to,
-  });
-  const state = normalized.state;
-  const termination =
-    state !== "terminated"
-      ? undefined
-      : (normalized.termination ?? readMissionTermination(ev.termination));
+  const state = reported;
+  const termination = state !== "terminated" ? undefined : readMissionTermination(ev.termination);
   const committedMs =
     typeof ev.committed_at === "string" ? Date.parse(ev.committed_at) : Number.NaN;
   return {
