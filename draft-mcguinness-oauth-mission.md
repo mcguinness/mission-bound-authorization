@@ -933,7 +933,7 @@ The Submission envelope is a JSON object with exactly these members:
   ({{intent-submission-evidence}}); the AS refuses an empty array
   with the `invalid_request` error code.
 
-`intent_hash` commits exactly the `intent` object, not the
+The `intent_hash` anchor commits exactly the `intent` object, not the
 Submission envelope or its `evidence` array ({{integrity-anchors}}).
 
 The following rules govern a submission:
@@ -1239,11 +1239,11 @@ Supporting an evidence type is optional, but these rules are not: an
 AS that supports none still applies them and refuses every presented
 entry ({{conformance-roles}}).
 
-`submission_evidence` ({{record-content-members}}) is provenance, not
-enforcement input, and is not carried on the `mission` claim
-({{mission-claim}}). Recorded facts, such as a verified consent
-reference, are provenance and policy input only; a resource domain
-validates them under its own current policy
+The record's `submission_evidence` member ({{record-content-members}})
+is provenance, not enforcement input, and is not carried on the
+`mission` claim ({{mission-claim}}). Recorded facts, such as a
+verified consent reference, are provenance and policy input only; a
+resource domain validates them under its own current policy
 ({{third-party-data-subjects}}).
 
 No integrity anchor commits `submission_evidence`: its digests are
@@ -2307,8 +2307,8 @@ value.
     commitment over, the governed organizational policy the Mission
     draws on.
 
-  `authority_source` is provenance like `approval_basis`: recorded
-  alongside it, folded into neither `intent_hash` nor
+  The `authority_source` member is provenance like `approval_basis`:
+  recorded alongside it, folded into neither `intent_hash` nor
   `authority_hash`, and not carried on access tokens; resource
   servers enforce `authorization_details` and do not consult it.
 
@@ -2567,9 +2567,9 @@ keeps the policy's commitment from being transplanted across policy
 authorities, and the same policy commits identically at every AS that
 records it.
 
-`intent_hash` and `authority_hash` are independent commitments to
-independent objects. That the approved task bounds the derived
-authority is a governance assertion, made by derivation policy and
+The `intent_hash` and `authority_hash` anchors are independent
+commitments to independent objects. That the approved task bounds the
+derived authority is a governance assertion, made by derivation policy and
 auditable through `policy_version` where the Mission records it
 ({{authorization-derivation}}), not a cryptographic relation between
 the anchors: neither anchor proves anything about the other's object.
@@ -2578,7 +2578,7 @@ The `typ` value space is an extension point
 ({{commitment-mechanisms}}): additional committed objects use this
 same envelope with a new `typ` and the canonicalization below.
 
-`authority_hash` commits an Authority Set, not a Mission:
+The `authority_hash` anchor commits an Authority Set, not a Mission:
 two Missions that approve byte-identical authority share it, and a
 consumer MUST NOT use it as a Mission Identifier or as a replay or
 idempotency key for a Mission.
@@ -2633,8 +2633,8 @@ Resource Access Profile's Common Constraints do for constraint values
 The security considerations of {{RFC8785}} apply to every JCS
 computation.
 
-The algorithm prefix is the agility mechanism. `sha-256` is
-mandatory to implement and the only algorithm this document defines.
+The algorithm prefix is the agility mechanism. The `sha-256` algorithm
+is mandatory to implement and the only algorithm this document defines.
 A new algorithm enters only through a new prefix defined by a
 referencing specification, its name drawn from the Named Information
 Hash Algorithm Registry ({{RFC6920}}); this document defines no
@@ -3192,9 +3192,9 @@ Alongside it, this document defines `mission_expires_at`: the exact
 RFC 3339 string recorded as the Mission Record's effective
 `expires_at` ({{mission-record}}), the common member of every
 Mission-creating success response, whatever surface completes the
-creation. `expires_in` describes the access token's lifetime, not the
-Mission's, and the effective expiry can be shorter than the requested
-`intent.expires_at`.
+creation. The `expires_in` parameter describes the access token's
+lifetime, not the Mission's, and the effective expiry can be shorter
+than the requested `intent.expires_at`.
 
 A client learns both values from these members, not from the access
 token, which it treats as opaque ({{Section 6 of RFC9068}}). The AS
@@ -3991,13 +3991,13 @@ access token:
 }
 ~~~
 
-`sub` is still the user. `client_id` is `tool-runner-7`, the delegate
-that authenticated the Token Exchange and requested this token
-({{client-id-rebinding}}); it matches the outermost `act` only
-because `tool-runner-7` authenticated the exchange itself. `client_id`
-does not name `s6BhdRkqt3`, the originally-approved agent, whose
-identity remains recoverable from the Mission Record via `mission_id`
-({{mission-record}}).
+The `sub` claim is still the user. The `client_id` claim is
+`tool-runner-7`, the delegate that authenticated the Token Exchange
+and requested this token ({{client-id-rebinding}}); it matches the
+outermost `act` only because `tool-runner-7` authenticated the
+exchange itself. The `client_id` claim does not name `s6BhdRkqt3`, the
+originally-approved agent, whose identity remains recoverable from the
+Mission Record via `mission_id` ({{mission-record}}).
 
 The `cnf` is `tool-runner-7`'s own key, not the agent's, so this token
 cannot be replayed as the agent. The non-delegable write entry was
@@ -4342,9 +4342,9 @@ authorization to access the introspection endpoint, the AS:
 These rules apply equally to the `mission` member of an
 `active: false` response ({{composite-active}}).
 
-Disclosure is member-scoped as well as caller-scoped.
+Disclosure is member-scoped as well as caller-scoped. The
 `proposal_hash`, `authority_hash`, `approval_basis`, and
-`authority_source` serve audit and correlation consumers, not
+`authority_source` members serve audit and correlation consumers, not
 resource server enforcement, and the AS MUST disclose each only to a
 caller the deployment has granted that member's disclosure privilege.
 By default, an audience-authorized resource server receives the
@@ -5140,8 +5140,8 @@ separation. To keep that domain separation safe without a registry, a
 new `typ` value MUST be a collision-resistant name (for example, a
 short name prefixed within a namespace the defining profile controls,
 following the Collision-Resistant Name guidance of
-{{Section 2 of RFC7519}}). `mission-` prefixed values, used by this
-document and the profiles that extend it, form a namespace
+{{Section 2 of RFC7519}}). Values with the `mission-` prefix, used by
+this document and the profiles that extend it, form a namespace
 coordinated through this document's change controller.
 
 This document defines no transition mechanism: every commitment a
@@ -5445,10 +5445,10 @@ independently anchored approval commitment, and against post-approval
 signing-key compromise where the original commitment is pinned outside
 the issuer.
 
-`intent_hash` extends the same protection to the task: it commits the
-approved Mission Intent, so an auditor holding a value captured at
-approval can detect a later alteration of the recorded task. No
-anchor substitutes for another.
+The `intent_hash` anchor extends the same protection to the task: it
+commits the approved Mission Intent, so an auditor holding a value
+captured at approval can detect a later alteration of the recorded
+task. No anchor substitutes for another.
 
 Recording an anchor is optional ({{record-content-members}}). A
 recorded anchor lets a verifier detect a later change to the
@@ -5459,12 +5459,12 @@ check, and detection rests on a value captured outside the record
 before the change, such as a pinned commitment, a signed carrier, or
 an audit record. Recomputing both sides from the changed record
 detects nothing.
-`authority_hash` is computed over the Authority Set alone
+The `authority_hash` anchor is computed over the Authority Set alone
 ({{integrity-anchors}}), what a resource server enforces and a
 cross-domain projection carries, so it can be checked without the
 Intent.
-`intent_hash` stays tamper-evident audit material even where the
-authority is projected without the Intent.
+The `intent_hash` anchor stays tamper-evident audit material even
+where the authority is projected without the Intent.
 
 The anchors do not commit the **rendered consent disclosure**: none
 binds the locale, disclosure-template version, or material notices the
@@ -5537,11 +5537,11 @@ auditable by naming the policy it ran under.
 
 This document assumes that an agent reading attacker-influenceable
 content can be prompt-injected. Authority is fixed at the approval
-event, so injected text cannot expand an approved Mission. `purpose`
-supplies candidate authority only as a lookup key of the pre-approval
-Authority Set derivation whose result the Approver reads and
-consents to, and otherwise can only refuse or tighten; `goal` and
-`task_bounds` bound it only through that disclosure
+event, so injected text cannot expand an approved Mission. The
+`purpose` member supplies candidate authority only as a lookup key of
+the pre-approval Authority Set derivation whose result the Approver
+reads and consents to, and otherwise can only refuse or tighten;
+`goal` and `task_bounds` bound it only through that disclosure
 ({{mission-intent}}, {{authorization-derivation}}).
 
 Within an approved Authority Set, an injected agent can still read
@@ -5678,9 +5678,9 @@ following limit this exposure:
 
 - The per-entry delegation constraints (delegability, `max_depth`, and
   `allowed_delegates`, {{delegation-constraints}}) bound it at approval
-  time. `max_depth` bounds the length of a delegation chain, not its
-  breadth: only `allowed_delegates` bounds fan-out to many distinct
-  depth-1 delegates.
+  time. The `max_depth` constraint bounds the length of a delegation
+  chain, not its breadth: only `allowed_delegates` bounds fan-out to
+  many distinct depth-1 delegates.
 - Binding each delegated token to the delegate's own key
   ({{delegated-exchange}}) confines a compromised delegate to its own
   credential.
@@ -5911,7 +5911,7 @@ untouched.
 # Internationalization Considerations {#i18n}
 
 Mission Intent prose (`goal`, `task_bounds`) is human-readable
-disclosure. `goal_lang` ({{mission-intent}}) declares the
+disclosure. The `goal_lang` member ({{mission-intent}}) declares the
 language of that prose as a BCP 47 language tag {{RFC5646}}, so an
 approval surface can render, translate, or route it without guessing the
 language.
@@ -6329,9 +6329,9 @@ consent:
 ]
 ~~~
 
-`alice` approves at 08:00:00 UTC on 2026-11-02, and the AS records
-Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state
-with `authority_hash`
+The user `alice` approves at 08:00:00 UTC on 2026-11-02, and the AS
+records Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active`
+state with `authority_hash`
 `sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM`,
 `intent_hash`
 `sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0`, and
@@ -6641,9 +6641,9 @@ The following are out of scope for this document:
   identities themselves.
 - **Cross-audience unlinkability.** A single canonical Mission
   Identifier lets any party holding a token correlate a Mission's
-  activity across audiences and resources. `authority_hash` is not
-  part of that baseline correlation surface: it stays on the Mission
-  Record and the audit and profile surfaces that carry it by
+  activity across audiences and resources. The `authority_hash` anchor
+  is not part of that baseline correlation surface: it stays on the
+  Mission Record and the audit and profile surfaces that carry it by
   disclosure privilege ({{mission-claim}},
   {{caller-authorization-and-minimization}}), not on every token by
   default. Pairwise or unlinkable presentation of Mission-bound
