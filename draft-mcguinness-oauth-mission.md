@@ -4833,9 +4833,8 @@ client's workflows unrelated to the Mission
 
 An AS that advertises support for this document MUST include at least
 one AS-supported type in its `authorization_details_types_supported`
-metadata ({{RFC9396}}): the approved-set commitment a Mission-aware
-client relies on. Where `mission_resource_access` is among them, the
-Mission Resource Access Profile
+metadata ({{RFC9396}}). Where `mission_resource_access` is among them,
+the Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), not
 out-of-band documentation, is that type's normative definition.
 
