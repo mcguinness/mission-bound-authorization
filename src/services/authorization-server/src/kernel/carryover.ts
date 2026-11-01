@@ -689,7 +689,8 @@ function rowToResult(row: Record<string, unknown>): CarryoverCommittedResult {
     successor_id: row.successor_id as string,
     manifest_hash: row.manifest_hash as string,
     manifest: JSON.parse(row.manifest_json as string) as CarryoverManifest,
-    // The retained map is read normalized; `evidence_jws` stays byte for byte.
+    // The issuer's own stored map copy is read through the store upgrade
+    // ({@link readCarryoverMap}); `evidence_jws` stays byte for byte.
     map: readCarryoverMap(JSON.parse(row.map_json as string) as CarryoverMap),
     evidence_hash: row.evidence_hash as string,
     evidence_jws: row.evidence_jws as string,
@@ -724,9 +725,11 @@ export type CarryoverMapRow =
       /**
        * The row's terminal state: `terminated` (the committed cascade this row
        * took, or the termination it already held). Evidence signed before the
-       * termination vocabulary carries a legacy value here (`cascaded`,
-       * `revoked`, ...); {@link readCarryoverMap} normalizes it on read, after
-       * any signature check, and the stored bytes are never rewritten.
+       * termination vocabulary carries a retired value here (`cascaded`,
+       * `revoked`, ...). The issuer's own stored map copy reads it through
+       * the store upgrade ({@link readCarryoverMap}); a verified envelope
+       * keeps it as signed ({@link verifyCarryoverEvidence}). The stored
+       * bytes are never rewritten.
        */
       terminal_state: MissionState;
       /**
@@ -742,15 +745,17 @@ export type CarryoverMapRow =
 export type CarryoverMap = CarryoverMapRow[];
 
 /**
- * @spec mission#termination (transition-period reading): a Carryover map as
- * a reader sees it: an excluded row whose `terminal_state` is a legacy value
- * (`cascaded`, `revoked`, ...) or any value other than `terminated` reads as
+ * Store upgrade (#705; kept by the #1504 audit, D1006): the issuer's own
+ * stored Carryover map copy (`carryover_results.map_json`) as the issuer
+ * reads it. An excluded row this issuer stored before the termination
+ * vocabulary, whose `terminal_state` is a retired value (`cascaded`,
+ * `revoked`, ...) or any value other than `terminated`, reads as
  * `terminated` with that reason (`cascaded` as `parent_terminated`), and a
  * row that already carries its `termination` is unchanged. Only `reason` is
- * set on a normalized row: such a row retained no other termination member,
- * and none is invented. A read-side view, never re-signed or re-stored; a
- * reader of the signed envelope applies it only after verifying the
- * signature over the stored bytes ({@link verifyCarryoverEvidence}).
+ * set on such a row (@spec mission#termination: a termination recorded
+ * before its reason defined a member exposes only what it retained). It is
+ * never applied to a signed artifact: {@link verifyCarryoverEvidence}
+ * returns the map as signed.
  */
 export function readCarryoverMap(map: CarryoverMap): CarryoverMap {
   return map.map((row) => {
@@ -1285,9 +1290,14 @@ export function applyCarryoverInCallerTx(
   // policy-adjudicated drawdown cannot enable carryover by supplying an
   // approver-shaped object.
   if (!input.directApproval || successor.approval_basis.type !== "direct") {
+    // @spec mission#record-principal-members (#1936): one refusal, two causes,
+    // each named; a successor of an unrecognized basis type is not reported
+    // as a policy-adjudicated drawdown.
     throw new CarryoverError(
       "approval_basis_not_direct",
-      "carryover requires an authenticated direct approval; a policy-adjudicated drawdown MUST NOT perform carryover",
+      input.directApproval
+        ? `carryover requires a direct successor; this successor's approval_basis.type is '${String(successor.approval_basis.type)}'`
+        : "carryover requires an authenticated direct approval; a policy-adjudicated drawdown MUST NOT perform carryover",
     );
   }
   if (carryoverManifestHash(issuer, manifest) !== input.manifestHash) {
@@ -1944,13 +1954,14 @@ export function decodeCarryoverEvidence(jws: string): CarryoverEvidence {
 }
 
 /**
- * @spec child-delegation#carryover-evidence, mission#termination: VERIFY a
+ * @spec child-delegation#carryover-evidence, mission#lifecycle: VERIFY a
  * retained Carryover Evidence envelope, then read it: the signature is checked
- * over the stored compact bytes FIRST (`typ`, ES256 under the issuer's Status
- * key), and only the verified payload is normalized ({@link readCarryoverMap}),
- * so evidence signed with a legacy `terminal_state` such as `cascaded` still
- * verifies and reads as `terminated`. The envelope bytes are never rewritten
- * or re-signed.
+ * over the stored compact bytes (`typ`, ES256 under the issuer's Status key),
+ * and the verified payload is returned as signed. A `terminal_state` the
+ * envelope carries is read as reported: a retired value such as `cascaded`
+ * is not mapped to `terminated` or to a termination reason (the
+ * forward-compatibility rule; #1504, D1006). The envelope bytes are never
+ * rewritten or re-signed.
  */
 export async function verifyCarryoverEvidence(
   jws: string,
@@ -1961,5 +1972,5 @@ export async function verifyCarryoverEvidence(
     throw new Error(`unexpected carryover evidence typ: ${String(protectedHeader.typ)}`);
   }
   const evidence = JSON.parse(new TextDecoder().decode(payload)) as CarryoverEvidence;
-  return { ...evidence, map: readCarryoverMap(evidence.map) };
+  return evidence;
 }

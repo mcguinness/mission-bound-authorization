@@ -471,13 +471,7 @@ A verifier reads the value under the issuance profile's fail-safe
 rule: any value other than the exact string `active`, including one it
 does not recognize, means the Mission was not active at minting. The
 Mission may have transitioned since minting, and nothing in the
-artifact would show it. A `state_at_issuance` of `revoked`, `expired`,
-`completed`, `superseded`, or `cascaded` is read under the issuance
-profile's transition-period rule
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Termination"), over the Mandate's verified original bytes; like
-`termination_at_issuance`, it describes the Mission at `iat`, never
-its current status.
+artifact would show it.
 
 Current state comes from a state surface, not from the Mandate:
 
@@ -1296,6 +1290,10 @@ IANA is requested to register two media types per {{RFC6838}}.
 - Minting populates `intent_hash` and `authority_hash` from the
   Mission record's integrity anchors, recorded or implied, since the
   OAuth binding makes them implied members (#1917).
+- A `state_at_issuance` of `revoked`, `expired`, `completed`,
+  `superseded`, or `cascaded` is read under the fail-safe rule, as not
+  active at minting: the issuance profile no longer reads those values
+  as a state (#1504, D1006).
 
 # Acknowledgments
 {:numbered="false"}

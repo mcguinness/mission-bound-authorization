@@ -213,20 +213,29 @@ describe("harness termination: terminated with any reason is non-active (@spec m
     expect(calls).toEqual([]);
   });
 
-  it("reads a legacy terminal state on a lease as terminated with that reason (cascaded as parent_terminated), with no invented members", async () => {
-    const cases: Array<[string, string]> = [
-      ["revoked", "revoked"],
-      ["expired", "expired"],
-      ["completed", "completed"],
-      ["superseded", "superseded"],
-      ["cascaded", "parent_terminated"],
-    ];
-    for (const [legacy, reason] of cases) {
-      const decision = await checkStatusContinuity(terminatedLease({ state: legacy }), LEASE_NOW());
-      expect(decision.proceed, legacy).toBe(false);
-      expect(decision.state, legacy).toBe("terminated");
-      expect(decision.termination, legacy).toEqual({ reason });
-      expect(decision.successor, legacy).toBeUndefined();
+  // @spec mission#lifecycle (the forward-compatibility rule; #1504, D1006):
+  // the OAuth binding no longer reads a retired value as a Mission's `state`.
+  it("reads a retired state value on a lease as unrecognized (@spec mission#lifecycle, #1504): revoked, expired, completed, superseded or cascaded stops before the channel, with no termination or successor read from it", async () => {
+    for (const retired of ["revoked", "expired", "completed", "superseded", "cascaded"]) {
+      // A stray termination beside the retired value is not read either.
+      const lease = terminatedLease({
+        state: retired,
+        termination: { reason: retired, successor: "msn_successor" },
+      });
+      const decision = await checkStatusContinuity(lease, LEASE_NOW());
+      expect(decision.proceed, retired).toBe(false);
+      expect(decision.reason, retired).toContain("not recognized");
+      expect(decision.termination, retired).toBeUndefined();
+      expect(decision.successor, retired).toBeUndefined();
+      expect(supersessionSuccessor(decision), retired).toBeUndefined();
+      const { channel, calls } = spyChannel();
+      const harness = new MediatedHarness(channel, "msn", unusedReadState, {
+        readStatus: async () => lease,
+        now: LEASE_NOW,
+      });
+      const res = await harness.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, "jwt");
+      expect(res.ok, retired).toBe(false);
+      expect(calls, retired).toEqual([]);
     }
   });
 });
@@ -261,7 +270,7 @@ describe("harness supersession continuity keys on termination.reason (@spec harn
       ["superseded without a successor", terminatedLease({ termination: { reason: "superseded" } })],
       ["superseded with a non-string successor", superseded(42)],
       ["superseded with an empty successor", superseded("")],
-      ["a legacy superseded state string", terminatedLease({ state: "superseded", termination: stray })],
+      ["a retired superseded state value", terminatedLease({ state: "superseded", termination: stray })],
       ["a suspended Mission carrying a stray termination", terminatedLease({ state: "suspended", termination: stray })],
       ["a stale lease", terminatedLease({ status_expires_at: "2026-01-02T01:00:00Z", termination: stray })],
     ];

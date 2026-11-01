@@ -67,6 +67,7 @@ import {
   resolveFreshCapabilitySources,
 } from "./capability-binding.js";
 import { deriveAuthoritySetWithProvenance, isSubsetEntry, isSubsetSet } from "./derive.js";
+import { isRecognizedApprovalBasisType } from "./approval-basis.js";
 import { recheckDirectApprovalRecord } from "./direct-approval-record.js";
 import { recheckDrawdownApprovalRecord } from "./drawdown-approval-record.js";
 import { inheritChildActorOrigins } from "./child-actor-eligibility.js";
@@ -1555,6 +1556,13 @@ export function recheckApprovalGovernanceRecord(
   }
   // A recorded ceiling drawdown replays its decision, gate and recency (#1470 slice 2).
   if (mission.approval_basis.type === "ceiling_drawdown") return recheckDrawdownApprovalRecord(kernel, mission, record);
+  // @spec mission#record-principal-members (#1936): a basis type this issuer
+  // does not define is named as the cause, not reported as missing inputs.
+  // The step and the outcome are unchanged.
+  const basisType: unknown = mission.approval_basis.type;
+  if (!isRecognizedApprovalBasisType(basisType)) {
+    return no(4, `approval_basis.type '${String(basisType)}' is not one this issuer defines; nothing is replayed`);
+  }
   const activation = kernel.governedPolicyConsents.activation(missionId);
   if (mission.approval_basis.type !== "governed_policy" || !activation) {
     return no(4, "no recorded inputs to replay");

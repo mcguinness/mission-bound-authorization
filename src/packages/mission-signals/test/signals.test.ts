@@ -630,60 +630,7 @@ describe("Mission Signals: termination in the lifecycle-change event (@spec miss
     }
   });
 
-  it("normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained", async () => {
-    const T = NOW.toISOString();
-    const legacy: Array<[Record<string, unknown>, Record<string, unknown>]> = [
-      [
-        // A reference the reason does not define is not folded in.
-        { state: "revoked", prior_state: "active", successor: "msn_x", carried_to: "msn_y" },
-        { reason: "revoked", terminated_at: T, version: 1 },
-      ],
-      [
-        { state: "expired", prior_state: "active" },
-        { reason: "expired", terminated_at: EXPIRES_AT, version: 1 },
-      ],
-      [
-        { state: "completed", prior_state: "active" },
-        { reason: "completed", terminated_at: T, version: 1 },
-      ],
-      [
-        { state: "superseded", prior_state: "active", successor: "msn_successor" },
-        { reason: "superseded", terminated_at: T, version: 1, successor: "msn_successor" },
-      ],
-      [
-        // A cascade's commit is not its effect: no `terminated_at` is invented.
-        { state: "cascaded", prior_state: "active", carried_to: "msn_replacement" },
-        { reason: "parent_terminated", version: 1, carried_to: "msn_replacement" },
-      ],
-    ];
-    for (const [body, termination] of legacy) {
-      const { keys, receiver, signEvent } = await fixture();
-      // Verify before normalize: a legacy SET under an untrusted key is refused, the cache untouched.
-      const rogue = await generateKeyPair("ES256", { extractable: true });
-      const forged = await signEvent({ ...body, version: 1 }, rogue.privateKey);
-      expect(await receiver.verifyAndApply(forged)).toEqual({
-        status: "refused",
-        reason: "signature",
-      });
-      expect(receiver.viewState(MISSION_ID)).toBeUndefined();
-
-      const set = await signEvent({ ...body, version: 1 }, keys.privateKey);
-      const res = await receiver.verifyAndApply(set);
-      expect(res, String(body.state)).toEqual({
-        status: "applied",
-        state: "terminated",
-        termination,
-        version: 1,
-        rematerialize: false,
-      });
-      expect(
-        receiver.lease(MISSION_ID, NOW.toISOString())?.termination,
-        String(body.state),
-      ).toEqual(termination);
-    }
-  });
-
-  it("retains the original SET behind its normalized reading: the retained bytes verify unchanged and still carry the legacy state", async () => {
+  it("retains the original SET as received: the retained bytes verify unchanged, and a retired state in them is kept as signed", async () => {
     const { keys, receiver, signEvent } = await fixture();
     expect(receiver.retainedSet(MISSION_ID)).toBeUndefined();
     const activation = await signEvent({ state: "active", version: 1 });
@@ -697,10 +644,10 @@ describe("Mission Signals: termination in the lifecycle-change event (@spec miss
       version: 2,
     });
     expect((await receiver.verifyAndApply(legacy)).status).toBe("applied");
-    expect(receiver.viewState(MISSION_ID)?.state).toBe("terminated");
+    expect(receiver.viewState(MISSION_ID)?.state).toBe("cascaded");
 
     // Retained as received, byte for byte, and still verifiable: the issuer's
-    // signed legacy state and reference, not the receiver's normalized view.
+    // signed state and reference.
     const retained = receiver.retainedSet(MISSION_ID) as string;
     expect(retained).toBe(legacy);
     const { payload } = await jwtVerify(retained, keys.publicKey, { typ: SET_TYP });
@@ -721,5 +668,49 @@ describe("Mission Signals: termination in the lifecycle-change event (@spec miss
     const replay = await signEvent({ state: "active", version: 1 });
     expect((await receiver.verifyAndApply(replay)).status).toBe("stale");
     expect(receiver.retainedSet(MISSION_ID)).toBe(legacy);
+  });
+
+  /**
+   * @spec mission#lifecycle (the forward-compatibility rule; #1504, D1006):
+   * the OAuth binding no longer reads `revoked`, `expired`, `completed`,
+   * `superseded` or `cascaded` as a Mission's `state`. A receiver keeps such
+   * a value as reported: a state other than `active`, so it permits no
+   * reliance, never mapped to `terminated` or given a termination.
+   */
+  it("keeps a retired state value in a verified SET as reported (@spec mission#lifecycle, #1504): revoked, expired, completed, superseded or cascaded leaves the Mission non-active, with no termination attached, and replaces an earlier active", async () => {
+    for (const retired of ["revoked", "expired", "completed", "superseded", "cascaded"]) {
+      const { receiver, signEvent } = await fixture();
+      expect(
+        (await receiver.verifyAndApply(await signEvent({ state: "active", version: 1 }))).status,
+        retired,
+      ).toBe("applied");
+      // The members a pre-vocabulary SET carried beside a retired state, and a
+      // stray termination: none is folded into a termination.
+      const set = await signEvent({
+        state: retired,
+        prior_state: "active",
+        version: 2,
+        successor: "msn_successor",
+        carried_to: "msn_replacement",
+        termination: { reason: retired },
+      });
+      expect(await receiver.verifyAndApply(set), retired).toEqual({
+        status: "applied",
+        state: retired,
+        version: 2,
+        rematerialize: false,
+      });
+      expect(receiver.viewState(MISSION_ID), retired).toEqual({
+        state: retired,
+        version: 2,
+        expires_at: EXPIRES_AT,
+      });
+      const lease = receiver.lease(MISSION_ID, NOW.toISOString());
+      expect(lease?.state, retired).toBe(retired);
+      expect(lease, retired).not.toHaveProperty("termination");
+      // A state other than `active` is never relied on as active: its bound
+      // is the Mission's expiry, not the active staleness window.
+      expect(lease?.status_expires_at, retired).toBe(EXPIRES_AT);
+    }
   });
 });

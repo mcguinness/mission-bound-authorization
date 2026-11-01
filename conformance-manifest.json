@@ -59,8 +59,8 @@
     "content_sha256": "e47c8deee7b1b3bb75355aeed4ae871acd4d2608fca1bfb512fb9ebb4d4386dd"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "cb963b585961949baf7fdfa82223b544cf8a4712",
-    "content_sha256": "a975b4b5579699e3f3b5855589e2369b6bfb942e6a6aea20ffc9103b82b02420"
+    "revision": "b576809d4bb1d8d5a9065e4b1bcc5e6868e8e2b2",
+    "content_sha256": "12c74444c85ff4c0c51f38026b6ef2fbcccba6341154a99ffa0bedf13b185360"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "65037204039a9db7a234ed095700bf63461827fd",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "1c6353544b45e8c019b34291c425fa116464e6a8",
-    "content_sha256": "c220721979d607fcd7667cea04241303693250edd89e8a0c66dc875eb0ff979b"
+    "revision": "eb2240f109a3e17bee4ab75277591ea984e16211",
+    "content_sha256": "bbd0aa897d928cf7b7fecdb28ac6604b638d90d6dae0cd970bf756ece8cc5693"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -139,8 +139,8 @@
     "content_sha256": "3c1d883d71a887cc0643d40a023ecea1b16e272778ce9851353a3b6807b14927"
    },
    "draft-mcguinness-mission-mandate.md": {
-    "revision": "65037204039a9db7a234ed095700bf63461827fd",
-    "content_sha256": "c563db78c6dc955bffc36c9f7b83406d223a38796828c5e444ea715254724782"
+    "revision": "b576809d4bb1d8d5a9065e4b1bcc5e6868e8e2b2",
+    "content_sha256": "179ad40762c04961fecb4ca26e1128d6a17e9ee870abb3984f97342936246418"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
     "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
@@ -6050,7 +6050,7 @@
    "id": "core.submission.front-channel-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "The AS MUST reject with `invalid_request` a `mission_intent` presented on a front-channel authorization request that does not use a PAR-issued `request_uri`",
+   "text": "The AS MUST refuse with `invalid_request` a `mission_intent` presented on a front-channel authorization request that does not use a PAR-issued `request_uri`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6081,7 +6081,7 @@
    "id": "core.submission.duplicate-outside-request-object",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "a `mission_intent` submitted outside the Request Object in the same push MUST be rejected with `invalid_request`",
+   "text": "a `mission_intent` submitted outside the Request Object in the same push MUST be refused with `invalid_request`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6143,7 +6143,7 @@
    "id": "core.submission.request-object-claim-non-object-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "the AS MUST reject with `invalid_request` a claim whose value is a string or any other value that is not a JSON object",
+   "text": "the AS MUST refuse with `invalid_request` a claim whose value is a string or any other value that is not a JSON object",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6212,7 +6212,7 @@
    "id": "core.authority-proposal.governed-client-omission-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "If a client registered as Mission-governed sends an authorization request, through PAR or at the authorization endpoint, that carries `authorization_details` but no `mission_intent`, the AS MUST reject the request with the `invalid_request` error code",
+   "text": "If a client registered as Mission-governed sends an authorization request, through PAR or at the authorization endpoint, that carries `authorization_details` but no `mission_intent`, the AS MUST refuse the request with the `invalid_request` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7614,7 +7614,7 @@
    "id": "core.submission.closed-top-levels",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "The AS MUST reject a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines",
+   "text": "The AS MUST refuse a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14335,8 +14335,15 @@
      "name": "termination on every emitter (#705 witnesses 1 and 2) > reports only active, suspended or terminated, with termination present exactly when terminated and carrying every member its reason requires",
      "level": "unit",
      "surface": "introspection"
+    },
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to",
+     "level": "unit",
+     "surface": "signals"
     }
-   ]
+   ],
+   "notes": "The Signals SET builder witness moved here from the retired core.termination.emitter-never-legacy-state row (#1504, D1006): a lifecycle-change SET carries `termination` exactly beside `terminated`."
   },
   {
    "id": "core.termination.written-once-cause-preserved",
@@ -14471,55 +14478,6 @@
    ]
   },
   {
-   "id": "core.termination.verify-original-bytes-before-normalizing",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "termination",
-   "text": "it verifies a signed artifact over its original bytes, which it retains, before reading it this way.",
-   "role": "verifier",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "verification",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "a signed artifact carrying a retired state value (retained Carryover Evidence, a lifecycle-change SET) is verified over its stored bytes before it is read as `terminated` with that reason, an unverifiable one is never normalized, and the bytes read are retained as received and still verify unchanged"
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/carryover.test.ts",
-     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > verifies a retained legacy Carryover Evidence envelope carrying cascaded over its stored bytes, and normalizes only after verification",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > retains the original SET behind its normalized reading: the retained bytes verify unchanged and still carry the legacy state",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
-     "level": "unit",
-     "surface": "verification"
-    }
-   ],
-   "notes": "#705 (D359). The Signals receiver retains the compact SET that established each Mission's cached state, byte for byte; the issuer side retains its Carryover Evidence JWS byte for byte."
-  },
-  {
    "id": "core.termination.retained-instant",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "termination",
@@ -14569,86 +14527,6 @@
    "notes": "#705 (D359); #1162 review: legacy facts are the committing `version`, `expires_at` for `expired`, and a commit time only where the commit was the effect."
   },
   {
-   "id": "core.termination.legacy-reading-retained-facts",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "termination",
-   "text": "a consumer of a report that still carries `revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a Mission's `state` MAY read it as `terminated` with that reason (`cascaded` as `parent_terminated`) and the facts the report retained",
-   "role": "verifier",
-   "strength": "MAY",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "verification",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a verified lifecycle-change SET carrying a retired state reads as `terminated` with that reason, keeping the event's `version`, the reference its reason defines (`successor`, `carried_to`) and a retained instant, and folding no reference its reason does not define"
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
-     "level": "unit",
-     "surface": "verification"
-    }
-   ],
-   "notes": "#705 (D359); #1162 review: legacy facts are the committing `version`, `expires_at` for `expired`, and a commit time only where the commit was the effect."
-  },
-  {
-   "id": "core.termination.emitter-never-legacy-state",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "termination",
-   "text": "an emitter never reports those values as a state.",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "signals",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a commit journaled under a retired state value is delivered and signed as `terminated` with that reason, never with the retired value as `state`; a SET already signed is redelivered byte for byte, never re-signed"
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to",
-     "level": "unit",
-     "surface": "signals"
-    },
-    {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
-     "level": "unit",
-     "surface": "signals"
-    },
-    {
-     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
-     "name": "durable lifecycle fan-out > migrates a legacy expansion outbox onto the generalized table without losing an event",
-     "level": "unit",
-     "surface": "signals"
-    }
-   ],
-   "notes": "#705 (D359)."
-  },
-  {
    "id": "core.lifecycle.computed-expiry-before-materialization",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "lifecycle",
@@ -14683,6 +14561,85 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "core.lifecycle.non-active-state-verifier",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lifecycle",
+   "text": "a consumer MUST treat only the exact value `active` as permitting derivation or continued reliance, and MUST treat every other value, including one it does not recognize, as non-active and non-deriving",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a verified signed report (a lifecycle-change SET, a retained Carryover Evidence envelope) whose state is not exactly `active`, including a retired value (`revoked`, `expired`, `completed`, `superseded`, `cascaded`), is kept as reported: the Mission is non-active and is never relied on as `active`, the value is never mapped to `terminated` or to a termination reason, and no termination is attached to it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > keeps a retired state value in a verified SET as reported (@spec mission#lifecycle, #1504): revoked, expired, completed, superseded or cascaded leaves the Mission non-active, with no termination attached, and replaces an earlier active",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers an already-signed SET byte for byte, whose retired state a receiver keeps as reported (@spec mission#termination, mission#lifecycle)",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > verifies a retained Carryover Evidence envelope carrying a retired terminal_state over its stored bytes and returns it as signed, while the issuer's own stored map copy reads through the store upgrade (@spec mission#lifecycle, #1504)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1504 (D1006): the binding no longer reads `revoked`, `expired`, `completed`, `superseded` or `cascaded` as a Mission's `state`, so a retired value falls under this rule. Mutation proofs: restoring the retired normalization in the Signals receiver, the harness lease reader and the Carryover Evidence verifier failed each retired-value witness, and treating an unrecognized lease state as active failed the harness's unrecognized-state witness; each passes restored. The issuer's own store upgrade (rows and journaled commits it persisted before #705) is not a received report and is witnessed under core.termination.retained-facts-only and core.termination.retained-instant."
+  },
+  {
+   "id": "core.lifecycle.non-active-state-harness",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lifecycle",
+   "text": "a consumer MUST treat only the exact value `active` as permitting derivation or continued reliance, and MUST treat every other value, including one it does not recognize, as non-active and non-deriving",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a status lease whose state is not exactly `active`, including a retired value (`revoked`, `expired`, `completed`, `superseded`, `cascaded`), stops resumption before any channel call: the harness proceeds only on `active`, reads a retired value as no recognized state, and reads no termination or successor from it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/mediated-harness.test.ts",
+     "name": "harness termination: terminated with any reason is non-active (@spec mission#termination) > reads a retired state value on a lease as unrecognized (@spec mission#lifecycle, #1504): revoked, expired, completed, superseded or cascaded stops before the channel, with no termination or successor read from it",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/agent/test/mediated-harness.test.ts",
+     "name": "harness termination: terminated with any reason is non-active (@spec mission#termination) > fails closed to terminated with no termination, never a fabricated revoked, when state or lease is unavailable or unrecognized",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1504 (D1006): the binding no longer reads `revoked`, `expired`, `completed`, `superseded` or `cascaded` as a Mission's `state`, so a retired value falls under this rule. Mutation proofs: restoring the retired normalization in the Signals receiver, the harness lease reader and the Carryover Evidence verifier failed each retired-value witness, and treating an unrecognized lease state as active failed the harness's unrecognized-state witness; each passes restored. The issuer's own store upgrade (rows and journaled commits it persisted before #705) is not a received report and is witnessed under core.termination.retained-facts-only and core.termination.retained-instant."
   },
   {
    "id": "core.intent.requested-expiry-invalid-request",
@@ -18075,7 +18032,7 @@
    "id": "core.rs-enforcement.unenforceable-refusal-code",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
-   "text": "It MUST refuse the request, with `insufficient_scope` ({{RFC6750}}) or the RAR-remediation challenge as {{rs-denials}} states",
+   "text": "It MUST challenge with `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation challenge as {{rs-denials}} states",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -18211,7 +18168,7 @@
    "id": "core.rs-enforcement.mission-issuer-invalid-token",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
-   "text": "It MUST reject a token that fails either check with the `invalid_token` error code",
+   "text": "It MUST challenge with the `invalid_token` error code a request whose token fails either check",
    "role": "RS",
    "strength": "MUST",
    "applicability": {

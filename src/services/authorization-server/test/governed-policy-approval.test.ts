@@ -1528,8 +1528,12 @@ describe("an unrecognized stored approval basis type (@spec mission#record-princ
     expect(recheck()).toEqual({ rechecked: true });
     rewriteType(kernel, mission);
     // The record still verifies against the Mission (step 1 reads no basis);
-    // only the type stops the replay.
-    expect(recheck()).toEqual({ rechecked: false, step: 4, reason: "no recorded inputs to replay" });
+    // only the type stops the replay, and the reason names it (#1936).
+    expect(recheck()).toEqual({
+      rechecked: false,
+      step: 4,
+      reason: "approval_basis.type 'x_quorum' is not one this issuer defines; nothing is replayed",
+    });
     expect(kernel.get(mission.id)?.state).toBe("active");
   });
 
