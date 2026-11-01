@@ -33,6 +33,7 @@ import {
   type CarryoverManifest,
   CARRYOVER_EVIDENCE_JWS_TYP,
   CARRYOVER_EVIDENCE_MEDIA_TYPE,
+  CarryoverError,
   CarryoverRetrievalError,
   CarryoverStore,
   applyCarryoverInCallerTx,
@@ -561,6 +562,70 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     // does not reach the replacement.
     expect(replacement.expires_at).toBe(child.expires_at);
     expect(Date.parse(replacement.expires_at)).toBeLessThan(Date.parse(successor.expires_at));
+  });
+
+  it("refuses carryover under a successor whose stored basis type it does not recognize, the predecessor and child staying active (@spec mission#record-principal-members, #1932)", () => {
+    // Commit an expansion successor and apply carryover in one transaction,
+    // optionally rewriting the successor's stored basis type first.
+    const run = (rewrite: boolean) => {
+      const pred = approvePredecessor();
+      const child = addChild(pred.id, "child-a");
+      const store = new ExpansionDeferralStore(kernel, () => clock, config());
+      const plan = prepareCarryover(kernel, store.carryover, {
+        predecessorId: pred.id,
+        successorIntent: widerIntent(),
+        successorProposal: widerProposal(),
+        config: config(),
+      });
+      if (!plan) throw new Error("no carryover plan");
+      const approvalEventId = `xapev-${seq++}`;
+      const committed = commitCarryoverManifest(plan, approvalEventId);
+      let error: unknown;
+      try {
+        withTransaction(kernel.db, () => {
+          const res = createExpansion(kernel, {
+            predecessorId: pred.id,
+            intent: widerIntent(),
+            proposedAuthority: widerProposal(),
+            approver: { iss: ISS, sub: "bob" },
+            approvalEventId,
+            approvedUntil: PRED_EXP,
+            successorId: committed.manifest.successor.mission_id,
+          });
+          if (rewrite) {
+            kernel.db
+              .prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?")
+              .run(JSON.stringify({ ...res.successor.approval_basis, type: "x_quorum" }), res.successor.id);
+          }
+          return applyCarryoverInCallerTx(kernel, store.carryover, {
+            planId: plan.plan_id,
+            manifest: committed.manifest,
+            manifestHash: committed.manifestHash,
+            successor: kernel.get(res.successor.id) as MissionRecord,
+            approver: { iss: ISS, sub: "bob" },
+            expansionApprovalEventId: approvalEventId,
+            directApproval: true,
+            config: config(),
+          });
+        });
+      } catch (e) {
+        error = e;
+      }
+      return { pred, child, successorId: committed.manifest.successor.mission_id, error };
+    };
+    // The control: the same carryover under a direct successor commits and carries the child.
+    const control = run(false);
+    expect(control.error).toBeUndefined();
+    expect((kernel.get(control.child.id) as MissionRecord).termination?.carried_to).toBeDefined();
+    // Under an unrecognized basis type the carryover is refused, and the
+    // whole transaction rolls back: no successor, the child not carried.
+    const refused = run(true);
+    expect(refused.error).toBeInstanceOf(CarryoverError);
+    expect((refused.error as CarryoverError).code).toBe("approval_basis_not_direct");
+    expect(kernel.get(refused.successorId)).toBeUndefined();
+    expect(kernel.get(refused.pred.id)?.state).toBe("active");
+    expect(kernel.get(refused.child.id)?.state).toBe("active");
+    expect((kernel.get(refused.child.id) as MissionRecord).termination?.carried_to).toBeUndefined();
   });
 
   it("refuses a completion whose manifest hash does not match the approved commitment, creating nothing", () => {

@@ -200,6 +200,45 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     expect(kernel.governanceRecords.count()).toBe(0);
   });
 
+  it("refuses a direct approval whose event already committed a Mission of a basis type it does not recognize, the deferral staying pending and the Mission active (@spec mission#record-principal-members, #1932)", () => {
+    // A Mission committed under the deferral's own approval event while the
+    // deferral is still pending; its stored basis type optionally rewritten.
+    const committedUnder = (rewrite: boolean) => {
+      const { kernel, store } = setup();
+      const code = open(store);
+      const mission = kernel.approve({
+        intent: intent(),
+        subject: SUBJECT,
+        approver: DANA,
+        clientId: "svc-agent",
+        approvalEventId: store.approvalEventId(code),
+      });
+      if (rewrite) {
+        kernel.db
+          .prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?")
+          .run(JSON.stringify({ ...mission.approval_basis, type: "x_quorum" }), mission.id);
+      }
+      return { kernel, store, code, mission };
+    };
+    // The control: a direct Mission under the event is the approval's own; the deferral settles to it.
+    const control = committedUnder(false);
+    expect(control.store.approveDirect(control.code, { approver: DANA, subject: SUBJECT }).id).toBe(control.mission.id);
+    expect(control.store.state(control.code)).toBe("approved");
+    // An unrecognized basis type under the event is not taken for a direct approval.
+    const { kernel, store, code, mission } = committedUnder(true);
+    let error: unknown;
+    try {
+      store.approveDirect(code, { approver: DANA, subject: SUBJECT });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(MissionApprovalDeferralError);
+    expect((error as MissionApprovalDeferralError).code).toBe("not_pending");
+    expect(store.state(code)).toBe("pending");
+    expect(kernel.get(mission.id)?.state).toBe("active");
+    expect(kernel.allMissions()).toHaveLength(1);
+  });
+
   it("records a reviewer's direct approval where the deployment records direct approvals, and refuses one without the reviewer's authentication (@spec approval-governance#atomic-commitment, #1470)", () => {
     const rule = directApprovalRuleFrom({
       floor: APPROVAL_FLOOR,

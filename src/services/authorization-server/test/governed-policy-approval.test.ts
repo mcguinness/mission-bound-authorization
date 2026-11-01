@@ -1461,3 +1461,57 @@ describe("governed adjudication assembles the reference before evaluation (@spec
     nothingCommitted(kernel);
   });
 });
+
+describe("an unrecognized stored approval basis type (@spec mission#record-principal-members, #1932)", () => {
+  // A committed governed activation whose stored basis type is rewritten to one
+  // this issuer does not define; nothing else about the Mission changes.
+  const rewriteType = (kernel: MissionKernel, mission: MissionRecord) =>
+    kernel.db
+      .prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?")
+      .run(JSON.stringify({ ...mission.approval_basis, type: "x_quorum" }), mission.id);
+
+  it("refuses an activation retried under an event whose committed Mission's basis type it does not recognize, committing nothing", () => {
+    const kernel = makeKernel();
+    const c = consent(kernel);
+    const first = activate(kernel, c.consent_id, { approvalEventId: "ape-x" });
+    // The control: a retry under the event returns the committed activation.
+    expect(activate(kernel, c.consent_id, { approvalEventId: "ape-x" }).mission.id).toBe(first.mission.id);
+    rewriteType(kernel, first.mission);
+    let error: unknown;
+    try {
+      activate(kernel, c.consent_id, { approvalEventId: "ape-x" });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(GovernedPolicyError);
+    expect((error as GovernedPolicyError).code).toBe("approval_event_used");
+    expect((error as Error).message).toMatch(/x_quorum/);
+    expect(kernel.allMissions()).toHaveLength(1);
+    expect(kernel.governanceRecords.count()).toBe(1);
+    expect(kernel.get(first.mission.id)?.state).toBe("active");
+  });
+
+  it("does not reproduce a governed activation whose stored basis type it does not recognize, leaving the Mission active", () => {
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    // The control: the activation as committed reproduces.
+    expect(recheckGovernedActivation(kernel, mission.id).reproduced).toBe(true);
+    rewriteType(kernel, mission);
+    expect(recheckGovernedActivation(kernel, mission.id)).toEqual({ reproduced: false });
+    expect(kernel.get(mission.id)?.state).toBe("active");
+  });
+
+  it("does not re-check the Approval Governance Record of a Mission whose stored basis type it does not recognize (step 4), leaving it active", () => {
+    const kernel = makeKernel();
+    clockMs = T0 + 60_000;
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    const recheck = () => recheckApprovalGovernanceRecord(kernel, mission.id, { resolveKey: resolveKey(kernel) });
+    // The control: the record, its activation row and the Mission as committed re-check.
+    expect(recheck()).toEqual({ rechecked: true });
+    rewriteType(kernel, mission);
+    // The record still verifies against the Mission (step 1 reads no basis);
+    // only the type stops the replay.
+    expect(recheck()).toEqual({ rechecked: false, step: 4, reason: "no recorded inputs to replay" });
+    expect(kernel.get(mission.id)?.state).toBe("active");
+  });
+});
