@@ -813,11 +813,11 @@ Wire error codes:
 | `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, a Lifecycle `operation` the AS does not serve ({{mission-lifecycle-endpoint}}), or a retransmitted `nonce` whose operation members differ from the original's, present or absent alike ({{idempotency}}). |
 | `invalid_client` | 400 | Direct client authentication failed and its method defines no other error, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
 | `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges of {{mission-status-auth-failures}}. |
-| `not_found` | 404 | Reference does not exist OR is not visible. |
+| `not_found` | 404 | The referenced Mission does not exist or is not visible to the caller. |
 | `conflict` | 409 | Lifecycle operation not legal from the current state ({{idempotency}}). |
 | `stale_version` | 409 | `expected_version` differs from the current state version ({{idempotency}}). |
-| `rate_limited` | 429 | Consumer is rate-limited. |
-| `unavailable` | 503 | AS temporarily cannot serve status. |
+| `rate_limited` | 429 | The caller is rate-limited. |
+| `unavailable` | 503 | The AS temporarily cannot answer, including while an accepted Lifecycle request is still in flight ({{idempotency}}). |
 {: title="Error codes"}
 
 A client authentication method's own error codes and statuses
