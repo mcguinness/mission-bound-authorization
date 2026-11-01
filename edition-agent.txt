@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-01T04:56:30Z
-Source repository commit: a37a61bba9f169bb3cbfd4a1cc33426e1ac4ffd4
+Generated: 2026-11-01T05:06:51Z
+Source repository commit: fc2da48ea1e1f816d7e6b527ae6e10ca4351f2fc
 Member count: 9
 
 Reading order:
@@ -13063,12 +13063,14 @@ Table of Contents
    couples token revocation to Mission revocation documents that
    behavior.
 
-   Token validity and Mission validity are distinct: an issued access
-   token remains valid until it expires (Section 7.1.3).  A deployment
-   whose consumers rely on Mission state beyond a token's lifetime
-   offers token introspection (Section 9.2) or Mission Status
-   ([I-D.draft-mcguinness-oauth-mission-status]), so they read current
-   state rather than infer it from token validity.
+   Token validity and Mission validity are distinct: a consumer that
+   enforces from the token alone can honor an issued access token until
+   it expires (Section 7.1.3), and one that checks Mission state refuses
+   it when that check reports a non-active state, under the mechanism's
+   freshness rules.  A deployment whose consumers rely on Mission state
+   beyond a token's lifetime offers token introspection (Section 9.2) or
+   Mission Status ([I-D.draft-mcguinness-oauth-mission-status]), so they
+   read current state rather than infer it from token validity.
 
 11.  Error and Challenge Mapping
 
@@ -16096,6 +16098,13 @@ Appendix E.  Document History
    [[ To be removed from the final specification ]]
 
    -02
+
+   *  Revocation says what a token's consumer does after its Mission
+      terminates: one that enforces from the token alone can honor it
+      until it expires, and one that checks Mission state refuses it
+      when that check reports a non-active state, under the mechanism's
+      freshness rules.  It no longer says an issued access token remains
+      valid until it expires.  No requirement changed (#1937).
 
    *  Preparing the Approval states the direct approval steps as a
       concise procedure, and each step's rules sit in the subsection
