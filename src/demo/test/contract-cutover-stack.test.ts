@@ -318,6 +318,7 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
         expect((r.resource as { properties?: Record<string, unknown> }).properties?.resource_contract).toEqual(pinned?.resource_contract);
       }
     } finally {
+      stack.onEnforce(() => {});
       completed.mockRestore();
       admitted.mockRestore();
       pepAfter.mockRestore();

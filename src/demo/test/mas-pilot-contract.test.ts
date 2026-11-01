@@ -75,6 +75,8 @@ d("MAS pilot: a joined credential under a contract-stating scope value works end
   afterAll(async () => {
     await pilot?.close();
   });
+  /** The pilot's Execution Evidence records, all Missions. */
+  const executionCount = (): number => pilot.evidence.all().filter((e) => e.kind === "execution").length;
 
   it("joins a credential the estate issues under the contract-stating value to the Mission approved against the same contract, and permits the read under that contract", async () => {
     const authority = (pilot.kernel.get(pinnedMission) as { authority_set: Array<{ resource_contract?: unknown }> }).authority_set;
@@ -93,15 +95,19 @@ d("MAS pilot: a joined credential under a contract-stating scope value works end
 
   it("denies resource_contract_drift, performing nothing, a legacy value that states no contract against the Mission approved against the contract", async () => {
     const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const executions = executionCount();
     const res = await call(pilot, credential, pinnedMission, "get_invoice", { invoice_id: "inv-1" });
     expect(res).toMatchObject({ ok: false, denial_reason: "resource_contract_drift" });
     expect((res as { result?: unknown }).result).toBeUndefined();
+    expect(executionCount()).toBe(executions);
   });
 
   it("denies resource_contract_drift, performing nothing, the contract-stating value against a Mission approved with no reference", async () => {
     const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", STATING);
+    const executions = executionCount();
     const res = await call(pilot, credential, unpinnedMission, "get_invoice", { invoice_id: "inv-1" });
     expect(res).toMatchObject({ ok: false, denial_reason: "resource_contract_drift" });
     expect((res as { result?: unknown }).result).toBeUndefined();
+    expect(executionCount()).toBe(executions);
   });
 });
