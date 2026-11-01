@@ -1285,9 +1285,14 @@ export function applyCarryoverInCallerTx(
   // policy-adjudicated drawdown cannot enable carryover by supplying an
   // approver-shaped object.
   if (!input.directApproval || successor.approval_basis.type !== "direct") {
+    // @spec mission#record-principal-members (#1936): one refusal, two causes,
+    // each named; a successor of an unrecognized basis type is not reported
+    // as a policy-adjudicated drawdown.
     throw new CarryoverError(
       "approval_basis_not_direct",
-      "carryover requires an authenticated direct approval; a policy-adjudicated drawdown MUST NOT perform carryover",
+      input.directApproval
+        ? `carryover requires a direct successor; this successor's approval_basis.type is '${String(successor.approval_basis.type)}'`
+        : "carryover requires an authenticated direct approval; a policy-adjudicated drawdown MUST NOT perform carryover",
     );
   }
   if (carryoverManifestHash(issuer, manifest) !== input.manifestHash) {
