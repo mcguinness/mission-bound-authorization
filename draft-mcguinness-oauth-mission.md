@@ -6906,6 +6906,17 @@ resolve before interoperating.
 
 -02
 
+- Editorial, no requirement change: Signing and Key Rotation cites the
+  Mandate; the undefined "primary" access token is named as a
+  Mission-bound access token that is not a delegated token; the
+  `authorization_details_types_supported` requirement drops an unclear
+  trailing clause; sentences that opened with a bare identifier name
+  its kind; the AS refuses, and a resource server challenges with the
+  applicable response, wherever an outcome was worded otherwise;
+  Mission State via Token Introspection compares token representation
+  with state freshness; and `goal` and `task_bounds` are rendering and
+  review context for a proposal (#1504).
+
 - The integrity anchors `intent_hash`, `authority_hash`, and
   `proposal_hash` are implied members: each is OPTIONAL on the record,
   an omitted one is its `sha-256` construction over the retained
