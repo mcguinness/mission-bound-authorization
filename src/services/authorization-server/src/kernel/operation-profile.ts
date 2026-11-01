@@ -139,8 +139,9 @@ export class OperationProfileRegistry {
    * challenge's entry is admitted under. A carried `resource_contract`
    * reference names it, and resolves under the resource's declarations or
    * is refused; otherwise the resource's current version, which the workflow
-   * records, unless the resource requires a reference for the operation
-   * (D1071), which refuses.
+   * records. Where the deployment's configuration requires a reference for
+   * the operation, such an entry is refused instead ({@link missingReference},
+   * D1071).
    */
   admit(iss: string, entry: JsonValue, now: Date): ProfileResolution {
     const ref = (entry as { resource_contract?: unknown } | null)?.resource_contract;
@@ -209,14 +210,18 @@ export class OperationProfileRegistry {
   }
 
   /**
-   * @spec runtime#resource-contract, txn-authorization#resource-challenge (#249,
-   * D1071): an entry carrying no `resource_contract` is refused where the
-   * resource requires a reference for the operation it resolves to, at
-   * admission and again at completion, so a workflow admitted before the
-   * requirement cannot be completed under it. Operation-specific: an action
-   * the resource does not require a reference for is unaffected, and no
-   * reference is ever substituted. An entry carrying one resolves under its
-   * own contract version instead ({@link underContract}).
+   * @spec runtime#resource-contract (#249, D1071): an entry carrying no
+   * `resource_contract` is refused where the resource requires a reference
+   * for the operation it resolves to, at admission and again at completion,
+   * so a workflow admitted before the requirement cannot be completed under
+   * it. Operation-specific: an action the resource does not require a
+   * reference for is unaffected, and no reference is ever substituted. An
+   * entry carrying one resolves under its own contract version instead
+   * ({@link underContract}). This applies the deployment's configured
+   * requirement ahead of the PDP the runtime profile obliges to refuse; the
+   * transaction authorization draft states no such refusal (an entry without
+   * a reference takes the resource's current version), and this adds no
+   * family rule.
    */
   private missingReference(iss: string, action: string): { ok: false; reason: string } | undefined {
     return this.contracts.requiresReference(iss, action)
