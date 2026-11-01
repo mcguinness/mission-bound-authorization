@@ -149,11 +149,9 @@ export {
 } from "./authority-subset.js";
 export {
   COMMIT_IS_EFFECT_REASONS,
-  type LegacyRetainedFacts,
   type MissionBinding,
   type MissionStatusLease,
   type MissionTermination,
-  normalizeLegacyMissionState,
   readMissionTermination,
   type StateSource,
   type StopPolicy,
