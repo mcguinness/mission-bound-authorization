@@ -6224,7 +6224,8 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "an authorization request from a client registered as Mission-governed that carries authorization_details without mission_intent fails invalid_request, through PAR, at the authorization endpoint and on resuming the request; the same request from an ungoverned client, or with mission_intent, is not refused by this rule"
+    "normative": "an authorization request from a client registered as Mission-governed that carries authorization_details without mission_intent fails invalid_request, through PAR, at the authorization endpoint and on resuming the request; the same request from an ungoverned client, or with mission_intent, is not refused by this rule",
+    "local": "the deployment requires PAR, so the authorization endpoint reads a request only from a pushed request: a direct request is refused invalid_request for every client (\"Pushed Authorization Request must be used\") before this rule, and the endpoint applies the rule again to the pushed request it reads"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -6246,9 +6247,33 @@
      "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > a governed client submitting the proposal WITH mission_intent proceeds",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "the Mission-governed client rule at the authorization endpoint and its resume (@spec mission#mission-governed, #1448, D585) > refuses invalid_request at the authorization endpoint a governed client's pushed request carrying authorization_details without mission_intent, starting no interaction to resume",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "the Mission-governed client rule at the authorization endpoint and its resume (@spec mission#mission-governed, #1448, D585) > control: the same stored request from an ungoverned client passes the rule and starts the interaction",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "the Mission-governed client rule at the authorization endpoint and its resume (@spec mission#mission-governed, #1448, D585) > control: a governed client's request with mission_intent passes the rule at the authorization endpoint and completes through its resume",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "the Mission-governed client rule at the authorization endpoint and its resume (@spec mission#mission-governed, #1448, D585) > a direct authorization request without PAR is refused invalid_request for a governed and an ungoverned client alike: the deployment requires PAR",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "D585 (#1448). Witnessed at PAR only: the governed rejection with its ungoverned and with-Intent controls. The authorization endpoint and the resumed request have no witness yet (#1448)."
+   "notes": "D585 (#1448). PAR: the governed refusal with its ungoverned and with-Intent controls (rar-carriage). Authorization endpoint: the endpoint's own check refuses a governed client's stored pushed request carrying the omission, witnessed by storing the pushed request directly so that PAR's check does not run, with ungoverned and with-Intent controls; the direct-request witness records the PAR requirement, not this rule. Resume: no refusal witness, so the row stays partial. oidc-provider 9.10.0 does not run the RAR validate hook on the resume route, which restores the parameters the authorization endpoint admitted under the same static registration, so a client cannot present the omission there; the witnesses show a refused request starts no interaction and a governed request with mission_intent completes through its resume."
   },
   {
    "id": "core.authority-proposal.governed-client-token-request-not-reached",
@@ -6266,12 +6291,50 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission-governed client's narrowing refresh (and, where supported, its self-exchange and designation exchange) carrying authorization_details without mission_intent is not refused for the missing Intent and issues the narrowed subset; a widening request is still refused under Issuance Gating and the subset rule"
+    "normative": "a Mission-governed client's narrowing refresh (and, where supported, its self-exchange and designation exchange) carrying authorization_details without mission_intent is not refused for the missing Intent and issues the narrowed subset; a widening request is still refused under Issuance Gating and the subset rule",
+    "local": "witnessed for a narrowing refresh and code exchange, a self-exchange (the delegation handle, which takes no authorization_details, and the family it opens, which narrows to the requested authorization_details), a designation and a governed delegate's delegated exchange (neither takes authorization_details; each is issued within the presented authority); the checks shown still refusing are a widening refresh and family (invalid_authorization_details), the refresh grant's client binding and Issuance Gating (invalid_grant), and possession of the presented token's key at designation (invalid_request)"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work. #1892 Stage 2a moved the designation example out of the quoted list; the general clause still covers a designation request, which the Designation section classifies as such a request."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "a Mission-governed client's token requests under its Mission-bound grant need no mission_intent (@spec mission#mission-governed, #1448, D585) > a narrowing refresh carrying authorization_details without mission_intent issues exactly the requested subset, in the token and the response",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "a Mission-governed client's token requests under its Mission-bound grant need no mission_intent (@spec mission#mission-governed, #1448, D585) > a narrowing code exchange carrying authorization_details without mission_intent issues exactly the requested subset",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "a Mission-governed client's token requests under its Mission-bound grant need no mission_intent (@spec mission#mission-governed, #1448, D585) > a widening refresh is still refused invalid_authorization_details, issuing no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "a Mission-governed client's token requests under its Mission-bound grant need no mission_intent (@spec mission#mission-governed, #1448, D585) > the grant's client binding and Issuance Gating still refuse a governed client's narrowing refresh",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "a Mission-governed client's token requests under its Mission-bound grant need no mission_intent (@spec mission#mission-governed, #1448, D585) > a self-exchange without mission_intent issues the delegation handle and opens a family narrowed to exactly the requested subset; a request beyond the presented token is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
+     "name": "a Mission-governed client's token requests under its Mission-bound grant need no mission_intent (@spec mission#mission-governed, #1448, D585) > a governed client's designation and a governed delegate's delegated exchange are issued without mission_intent, each within the presented authority; a designation proven under another key is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D585 (#1448): ruled A. The AS's RAR validate hook runs at the token endpoint only for the authorization_code and refresh_token grants, where it passes a governed client's request without mission_intent; the Token Exchange grant does not call it. #1892 Stage 2a moved the designation example out of the quoted list; the general clause still covers a designation request, which the Designation section classifies as such a request."
   },
   {
    "id": "core.mission-claim-reservation.conforming-issuance-only",
