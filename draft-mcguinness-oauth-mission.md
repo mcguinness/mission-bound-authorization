@@ -1532,13 +1532,13 @@ for a type establishes a subset ({{other-types}}).
 
 The Authority Set MAY include any AS-supported {{RFC9396}}
 `authorization_details` type an audience consumes; this document
-defines no type itself. ("Supported" here means the AS recognizes
-and documents the type: it appears in
+defines no type itself. "Supported" here means the AS recognizes and
+documents the type: it appears in
 `authorization_details_types_supported` or, where the AS advertises
 the schema endpoint, as a key in its
-`authorization_details_types_metadata_endpoint` response, then the
-source of truth for the supported set ({{discovery}}).) The Mission
-apparatus is type-agnostic toward every supported type:
+`authorization_details_types_metadata_endpoint` response, which is
+then the source of truth for the supported set ({{discovery}}). The
+Mission apparatus is type-agnostic toward every supported type:
 
 - an entry is committed by `authority_hash` and gated on Mission state
   the same way regardless of type;
