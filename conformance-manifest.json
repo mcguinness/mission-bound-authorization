@@ -26161,6 +26161,50 @@
    "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
+   "id": "status.auth.protected-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "role": "AS",
+   "strength": "stated",
+   "profiles": [],
+   "surface": "verification",
+   "level": "endpoint",
+   "anchor": "mission-status-authentication",
+   "text": "the AS publishes, in its Protected Resource Metadata for this resource {{RFC9728}}, the `resource` identifier the token's audience MUST name, the `mission_status` scope it requires (`scopes_supported`), and the presentation and sender constraints it accepts",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status-access-token-auth"
+   },
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the Mission Status endpoint accepts the access-token path, its Protected Resource Metadata lists the endpoint's `resource` identifier, `mission_status` in `scopes_supported`, and the bearer methods and sender constraints it accepts"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1864 item 6: the publication rule the conformance classes now name. Todo: the reference AS publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`, #972 item 18)."
+  },
+  {
+   "id": "status.lifecycle.protected-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "role": "AS",
+   "strength": "stated",
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "level": "endpoint",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "the AS publishes, in its Protected Resource Metadata for this resource {{RFC9728}}, the `resource` identifier the token's audience MUST name and the scopes it requires (`scopes_supported`)",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle-access-token-auth"
+   },
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the Lifecycle endpoint accepts the access-token path, its Protected Resource Metadata lists the endpoint's `resource` identifier and, in `scopes_supported`, `mission_lifecycle` and any scope an adopted extension operation defines"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1864 item 6: the Lifecycle twin of `status.auth.protected-resource-metadata`. Todo: the reference AS publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`, #972 item 18)."
+  },
+  {
    "id": "status.auth.invalid-client",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-auth-failures",
