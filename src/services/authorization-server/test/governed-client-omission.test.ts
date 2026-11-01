@@ -173,9 +173,9 @@ async function authorize(client: Client, requestUri: string, jar: Jar): Promise<
   return { status: res.status, location: res.headers.get("location") ?? "" };
 }
 
-/** The redirect to the client, as its redirect URI and query. */
+/** A redirect's target, without its query, and the query; a relative Location resolves on the AS. */
 function clientRedirect(location: string): { target: string; query: URLSearchParams } {
-  const url = new URL(location);
+  const url = new URL(location, ISSUER);
   return { target: `${url.origin}${url.pathname}`, query: url.searchParams };
 }
 
