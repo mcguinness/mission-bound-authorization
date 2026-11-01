@@ -4685,12 +4685,14 @@ Mission's refresh token as revoking the Mission;
 a deployment that couples token revocation to Mission revocation
 documents that behavior.
 
-Token validity and Mission validity are distinct: an issued access
-token remains valid until it expires ({{derived-token-lifetime}}). A
-deployment whose consumers rely on Mission state beyond a token's
-lifetime offers token introspection ({{introspection}}) or Mission
-Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read
-current state rather than infer it from token validity.
+Token validity and Mission validity are distinct: a consumer that
+enforces from the token alone can honor an issued access token until
+it expires ({{derived-token-lifetime}}), and one that reads Mission
+state refuses it once the Mission is no longer active. A deployment
+whose consumers rely on Mission state beyond a token's lifetime
+offers token introspection ({{introspection}}) or Mission Status
+({{I-D.draft-mcguinness-oauth-mission-status}}), so they read current
+state rather than infer it from token validity.
 
 # Error and Challenge Mapping {#error-mapping}
 
@@ -6883,6 +6885,11 @@ resolve before interoperating.
 
 -02
 
+- Revocation says what a token's consumer does after its Mission
+  terminates: one that enforces from the token alone can honor it until
+  it expires, and one that reads Mission state refuses it. It no longer
+  says an issued access token remains valid until it expires. No
+  requirement changed (#1937).
 - The integrity anchors `intent_hash`, `authority_hash`, and
   `proposal_hash` are implied members: each is OPTIONAL on the record,
   an omitted one is its `sha-256` construction over the retained
