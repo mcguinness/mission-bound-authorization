@@ -6,7 +6,7 @@
  * removed was still permitted).
  */
 
-import { type MissionKernel, standingPaymentBudgetBindingOf } from "@mission/authorization-server";
+import { type MissionKernel, resolvedAnchors, standingPaymentBudgetBindingOf } from "@mission/authorization-server";
 import {
   deriveJoinDelegation,
   type MissionBudgetBinding,
@@ -79,7 +79,8 @@ export function kernelMissionView(kernel: MissionKernel, missionId: string): Mis
     issuer: fresh.issuer,
     state: fresh.state,
     version: fresh.version,
-    authority_hash: fresh.authority_hash,
+    // @spec mission#integrity-anchors (#1917, D1061): recorded or implied.
+    authority_hash: resolvedAnchors(fresh).authority_hash,
     // @spec authority-server#mission-join rule 5 (#557 review point 2):
     // this is the canonical Mission loader, so it is where a kernel
     // AuthorityEntry's own `delegation` policy gets mapped to the PDP's

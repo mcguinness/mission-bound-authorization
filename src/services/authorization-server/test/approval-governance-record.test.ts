@@ -5,6 +5,7 @@ import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   activateGovernedPolicy,
+  AnchorMismatchError,
   AGR_JWS_CTY,
   AGR_JWS_TYP,
   type AgrAssertion,
@@ -21,11 +22,22 @@ import {
   type MissionRecord,
   type PortableMissionReference,
   recordGovernedPolicyConsent,
+  resolvedAnchors,
   signApprovalGovernanceRecord,
   type UnsignedApprovalGovernanceRecord,
   validateMissionIntent,
   verifyApprovalGovernanceRecord,
 } from "../src/index.js";
+
+/**
+ * The Mission without its recorded anchors (#1917, D1061): each is then
+ * implied by the object it commits, so changing that object, or the issuer
+ * the anchor is computed under, moves the anchor.
+ */
+const unanchored = (m: MissionRecord): MissionRecord => {
+  const { intent_hash: _i, authority_hash: _a, proposal_hash: _p, ...rest } = m;
+  return rest as MissionRecord;
+};
 
 /**
  * @spec approval-governance#envelope: the Approval Governance Record's
@@ -220,11 +232,21 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
   it("rejects a record whose mission binding does not match the Mission it is retained with", () => {
     for (const other of [
       { ...mission, approval_event_id: "ape-other" },
-      { ...mission, intent_hash: "sha-256:AAAA" },
-      { ...mission, authority_hash: "sha-256:BBBB" },
-      { ...mission, issuer: "https://other.test" },
+      // A recorded anchor always commits its object (#1917, D1061), so
+      // another Intent, Authority Set or issuer is what moves an anchor.
+      { ...unanchored(mission), intent: { ...mission.intent, goal: "another goal" } },
+      { ...unanchored(mission), authority_set: [...mission.authority_set, ...mission.authority_set] },
+      { ...unanchored(mission), issuer: "https://other.test" },
     ]) {
       expect(() => verifyAgainst(record, other)).toThrow(/mission binding/);
+    }
+    // A Mission whose recorded anchor is not the anchor over its object is
+    // refused before any comparison.
+    for (const other of [
+      { ...mission, intent_hash: "sha-256:AAAA" },
+      { ...mission, authority_hash: "sha-256:BBBB" },
+    ]) {
+      expect(() => verifyAgainst(record, other)).toThrow(AnchorMismatchError);
     }
   });
 
@@ -604,8 +626,11 @@ describe("portable approval-binding check (@spec approval-governance#portable-bi
   });
 
   it("case 18: fails when the record names another Mission Issuer, though it verifies under the expected issuer's key", () => {
-    const misnamed = resigned({ mission: { ...record.mission, issuer: AS2 } });
-    expect(() => verifyApprovalGovernanceRecord(misnamed, { resolveKey, mission: { ...mission, issuer: AS2 } })).not.toThrow();
+    // The anchors commit `iss` (#1917, D1061): the same Mission at AS2 has AS2's anchors.
+    const atAs2 = { ...unanchored(mission), issuer: AS2 };
+    const { intent_hash, authority_hash } = resolvedAnchors(atAs2);
+    const misnamed = resigned({ mission: { issuer: AS2, intent_hash, authority_hash } });
+    expect(() => verifyApprovalGovernanceRecord(misnamed, { resolveKey, mission: atAs2 })).not.toThrow();
     expect(portable(misnamed, referenceOf(misnamed))).toMatchObject(failure);
   });
 

@@ -20,6 +20,7 @@ import {
 } from "@mission/core";
 import { type AudienceReference, audienceReferences, derivedAudiences, derivesFrom } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
+import { resolvedAnchors } from "./anchors.js";
 import { entriesMayOverlap } from "./derive.js";
 import { entryDigest } from "./discharge.js";
 import type { ExpansionDeferralStore } from "./deferred.js";
@@ -335,8 +336,10 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
 
   const evidence: ExpansionEvidence = {
     evidence_id: `exp_${randomBytes(9).toString("base64url")}`,
-    predecessor: { id: predecessor.id, issuer: predecessor.issuer, authority_hash: predecessor.authority_hash },
-    successor: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
+    // @spec mission#integrity-anchors (#1917, D1061): each record's
+    // authority_hash, recorded or implied, over its approved Authority Set.
+    predecessor: { id: predecessor.id, issuer: predecessor.issuer, authority_hash: resolvedAnchors(predecessor).authority_hash },
+    successor: { id: record.id, issuer: record.issuer, authority_hash: resolvedAnchors(record).authority_hash },
     ...(containmentHistory ? { containment_history: containmentHistory } : {}),
     created_at: record.created_at,
   };

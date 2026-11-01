@@ -420,7 +420,9 @@ protection.
 `mission`:
 : REQUIRED. An object binding the record to the approved Mission:
   `issuer` (the Mission Issuer), `intent_hash`, and `authority_hash`,
-  each equal to the committed Mission Record member of the same name. A
+  each equal to the Mission Record's member of the same name, an
+  integrity anchor recorded or implied
+  ({{I-D.draft-mcguinness-oauth-mission}}). A
   record whose binding does not match the Mission Record it is retained
   with is invalid.
 
@@ -1774,7 +1776,13 @@ Record member of the same name, verbatim, except:
 - `approver` copies the Mission Record's
   `approval_basis.consent_principal`; and
 - `submission_evidence_commitment` is computed from the Mission Record's
-  `submission_evidence` ({{approval-context-construction}}).
+  `submission_evidence` ({{approval-context-construction}}); and
+- `intent_hash`, `authority_hash`, and `proposal_hash` take the
+  Mission Record's integrity anchor of the same name, recorded or
+  implied ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Approved Content and Commitments"): a recorded anchor is
+  copied verbatim, and an omitted one is its implied value, the same
+  bytes.
 
 A conditional member is present if and only if its condition holds:
 
@@ -1783,7 +1791,7 @@ A conditional member is present if and only if its condition holds:
 | `issuer` | always |
 | `id` | always |
 | `intent_hash` | always |
-| `proposal_hash` | when the Mission Record carries `proposal_hash` |
+| `proposal_hash` | when the Mission Record carries `proposed_authority` |
 | `authority_hash` | always |
 | `ceiling_hash` | when the Mission Record carries `ceiling_hash` |
 | `subject` | always |
@@ -1807,8 +1815,8 @@ The `ceiling_hash` member is the manifest's fourth anchor alongside
 `intent_hash`, `proposal_hash`, and `authority_hash`: the manifest MUST
 include `ceiling_hash` when the Mission Record carries one and MUST omit
 it when the Mission Record carries none. The manifest copies the
-recorded value verbatim, as it copies every other member, so computing
-or verifying the manifest never computes `ceiling_hash`. Its
+recorded value verbatim, so computing or verifying the manifest never
+computes `ceiling_hash`. Its
 construction and semantics belong to the Progressive profile
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}), and adopting this
 Approval Context Commitment profile does not require adopting
@@ -1864,7 +1872,9 @@ The member list of {{approval-context-manifest}} is closed for
 `mission-approval-context-v1`. Adding, removing, or redefining a
 member, or changing how `submission_evidence_commitment` is
 constructed, MUST use a new `typ`, never a silent reinterpretation of
-this one.
+this one. Taking an integrity anchor's implied value
+({{approval-context-manifest}}) yields the bytes the record would
+carry and redefines no member.
 
 ## Limits {#approval-context-limits}
 
@@ -2464,6 +2474,13 @@ disclosed mismatch is definitive.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The record's `mission` binding and the Approval Context Manifest
+  take the Mission Record's integrity anchors recorded or implied,
+  since the OAuth binding makes them implied members. The manifest's
+  `proposal_hash` is present when the record carries
+  `proposed_authority`, its bytes are unchanged, and it stays
+  `mission-approval-context-v1` (#1917).
 
 - The Approval Basis Contract states the contract every
   standing-consent approval basis meets (Standing-Consent Bases,

@@ -755,8 +755,8 @@ instance with:
   the result unchanged, so a proposal narrows the instance and never
   widens it beyond the Template Ceiling. Absent a proposal, the
   instance derives from the dispatch intent alone. An instance
-  created from a Dispatch carrying one records `proposed_authority`
-  and `proposal_hash`.
+  created from a Dispatch carrying one records `proposed_authority`,
+  its `proposal_hash` recorded or implied.
 
 `dispatch_event_id`:
 : REQUIRED. The dispatch event identifier that makes the Dispatch
@@ -1877,6 +1877,10 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- An instance created from a Dispatch carrying a proposal records
+  `proposed_authority`, its `proposal_hash` recorded or implied
+  (#1917).
 
 - The `template` basis meets Approval Governance's Approval Basis
   Contract, and the Dispatch Policy reference, its verification and

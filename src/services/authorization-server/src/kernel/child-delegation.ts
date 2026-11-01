@@ -31,6 +31,7 @@ import { type ActObject, ActorChainError, extendChain, validateActChain } from "
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash, resourceWithin } from "@mission/core";
 import { verifiedActivationPolicy } from "./activation-policy.js";
 import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js";
+import { resolvedAnchors } from "./anchors.js";
 import { isRecognizedApprovalBasisType } from "./approval-basis.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
@@ -528,6 +529,10 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // used for the inserted record on permit.
   const childId = newMissionId();
   const childAuthorityHash = authorityHash(parent.issuer, childAuthority as never);
+  // @spec child-delegation#parent-member, mission#integrity-anchors (#1917,
+  // D1061): the Parent's authority_hash, recorded or implied, over its
+  // immutable approved `authority_set`; never its effective set.
+  const parentAuthorityHash = resolvedAnchors(parent).authority_hash;
 
   const makeEvidence = (
     decision: "created" | "denied",
@@ -536,7 +541,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     fanout?: { active_children: number; max_children?: number },
   ): ChildEvidence => ({
     evidence_id: `chd_${randomBytes(9).toString("base64url")}`,
-    parent: { id: parent.id, issuer: parent.issuer, authority_hash: parent.authority_hash },
+    parent: { id: parent.id, issuer: parent.issuer, authority_hash: parentAuthorityHash },
     child: { id: childId, issuer: parent.issuer, authority_hash: childAuthorityHash },
     child_actor: {
       sub: input.childActor.sub,
@@ -787,7 +792,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   const parentRef: ParentRef = {
     id: parent.id,
     issuer: parent.issuer,
-    authority_hash: parent.authority_hash,
+    authority_hash: parentAuthorityHash,
     depth,
     cascade_mode: cascadeMode,
     ...(input.delegationId ? { delegation_id: input.delegationId } : {}),
@@ -822,7 +827,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
       activation_event_id: approvalEventId,
     },
     activation_actor: { iss: parent.issuer, sub: parent.client_id },
-    root_commitment: primaryPolicy?.digest ?? parent.authority_hash,
+    root_commitment: primaryPolicy?.digest ?? parentAuthorityHash,
     // @spec mission#mission-record (#580), child-delegation#record-requirements
     // (#1514) — the human approval instant of the root the child's authority
     // traces to, from the retained Parent record, never the request. A

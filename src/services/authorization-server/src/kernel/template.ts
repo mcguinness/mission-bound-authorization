@@ -58,6 +58,7 @@ import {
   verifiedActivationPolicy,
 } from "./activation-policy.js";
 import { signApprovalGovernanceRecord } from "./approval-governance.js";
+import { resolvedAnchors } from "./anchors.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { UniqueViolationError } from "@mission/store";
@@ -1464,7 +1465,8 @@ function admitStandingPaymentInCallerTx(
       });
       kernel.templateApprovalRecords.retainInCallerTx(record.id, record.issuer, ruleRef, rule, {
         approval_event_id: record.approval_event_id,
-        intent_hash: record.intent_hash,
+        // @spec mission#integrity-anchors (#1917, D1061): recorded or implied.
+        intent_hash: resolvedAnchors(record).intent_hash,
         authority: record.authority_set,
         consumption_bound: { amount: maxBudget.amount, currency: maxBudget.currency },
         deciding: template.dispatch_policy,

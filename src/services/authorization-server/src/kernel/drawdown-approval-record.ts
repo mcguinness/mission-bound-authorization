@@ -58,6 +58,7 @@ import {
   type RuntimeActionClass,
 } from "./progressive.js";
 import type { ApprovalBasisCeilingDrawdown, AuthorityEntry, MissionRecord } from "./types.js";
+import { resolvedAnchors } from "./anchors.js";
 
 /** The default identifier of the ceiling-drawdown recording rule. */
 export const DRAWDOWN_RECORDING_RULE_ID = "urn:mission:ceiling-drawdown-recording-rule";
@@ -343,9 +344,12 @@ export function buildDrawdownRecord(
     decided_at: mission.created_at,
     authority: { policy_id: deciding.id, version: deciding.version, approved_at: basis.approved_at },
   };
+  // @spec mission#integrity-anchors (#1917, D1061): the Mission's anchors,
+  // recorded or implied, computed at approval whether or not retained.
+  const { intent_hash, authority_hash } = resolvedAnchors(mission);
   return {
     approval_event_id: mission.approval_event_id,
-    mission: { issuer: mission.issuer, intent_hash: mission.intent_hash, authority_hash: mission.authority_hash },
+    mission: { issuer: mission.issuer, intent_hash, authority_hash },
     approval_policy: ruleRef,
     assertions: [assertion],
     evaluation: { decision: "approved", evaluated_at: mission.created_at, contributing: [DRAWDOWN_ASSERTION_ID] },
@@ -539,7 +543,7 @@ export function recheckDrawdownApprovalRecord(
     retained.approval_event_id !== record.approval_event_id ||
     inputs.approval_event_id !== record.approval_event_id ||
     inputs.intent_hash !== record.mission.intent_hash ||
-    authorityHash(mission.issuer, inputs.authority as never) !== mission.authority_hash ||
+    authorityHash(mission.issuer, inputs.authority as never) !== resolvedAnchors(mission).authority_hash ||
     !sameJson(inputs.adjudication.requested, inputs.authority)
   ) {
     return no(4, "the recorded inputs are not bound to this approval event, Intent and Authority Set");

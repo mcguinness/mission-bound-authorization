@@ -793,7 +793,9 @@ Beyond {{mission-evidence-envelope-integrity}} and the producer
 authorization above, a verifier holding the referenced Mission Record
 MUST confirm `payload.intent_hash` and `payload.submission_evidence`
 are byte-for-byte equal, member for member, to the Mission Record's
-own `intent_hash` and `submission_evidence`.
+`intent_hash`, recorded or implied
+({{I-D.draft-mcguinness-oauth-mission}}), and its
+`submission_evidence`.
 
 **This is an AS attestation, not independent proof of the original
 assertion.** A verifier that has done all of the above has confirmed
@@ -1144,6 +1146,9 @@ under this registry's policy until it is published.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The intent admission cross-check compares `payload.intent_hash`
+  with the Mission Record's `intent_hash`, recorded or implied (#1917).
 
 Initial version. Defines the Mission Evidence Envelope, the Mission
 Evidence Payload Type Registry, and Intent Admission Evidence as the

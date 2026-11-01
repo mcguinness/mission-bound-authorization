@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { getTracer, initTelemetry } from "@mission/telemetry";
 import { credentialAuthorityFrom, type TokenFacts } from "@mission/mcp-payments";
+import { resolvedAnchors } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { approveDemoMission, composeStack } from "./stack.js";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
@@ -45,7 +46,7 @@ async function main() {
     iss: stack.issuer,
     clientId: "ap-agent",
     clientInstanceId: "inst-1",
-    mission: { id: mission.id, issuer: "https://as.example.com", authority_hash: record?.authority_hash ?? "" },
+    mission: { id: mission.id, issuer: "https://as.example.com", authority_hash: record ? resolvedAnchors(record).authority_hash : "" },
     cnfJkt: "jkt-demo",
     // @spec runtime#input-authority (#825) — what the issuer mints for this
     // Mission: its own authority as the credential's.

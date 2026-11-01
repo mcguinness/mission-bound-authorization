@@ -31,6 +31,7 @@ import {
   type UnsignedApprovalGovernanceRecord,
 } from "./approval-governance.js";
 import type { ApprovalBasisDirect, AuthorityEntry, MissionRecord } from "./types.js";
+import { resolvedAnchors } from "./anchors.js";
 
 /** The default identifier of the direct approval rule. */
 export const DIRECT_APPROVAL_RULE_ID = "urn:mission:direct-approval-rule";
@@ -232,9 +233,12 @@ export function buildDirectApprovalRecord(
     decided_at: mission.created_at,
     authority: { auth_time: new Date(inputs.authentication.auth_time * 1000).toISOString(), acr: inputs.authentication.acr },
   };
+  // @spec mission#integrity-anchors (#1917, D1061): the Mission's anchors,
+  // recorded or implied, computed at approval whether or not retained.
+  const { intent_hash, authority_hash } = resolvedAnchors(mission);
   return {
     approval_event_id: mission.approval_event_id,
-    mission: { issuer: mission.issuer, intent_hash: mission.intent_hash, authority_hash: mission.authority_hash },
+    mission: { issuer: mission.issuer, intent_hash, authority_hash },
     approval_policy: ruleRef,
     assertions: [human],
     evaluation: { decision: "approved", evaluated_at: mission.created_at, contributing: [DIRECT_ASSERTION_ID] },
@@ -425,7 +429,7 @@ export function recheckDirectApprovalRecord(
   }
   const decision = evaluateDirectApprovalRule(rule, inputs, record.evaluation.evaluated_at);
   if (decision.decision !== "approve") return no(5, `the replay does not approve: ${decision.reason}`);
-  if (authorityHash(mission.issuer, inputs.authority as never) !== mission.authority_hash) {
+  if (authorityHash(mission.issuer, inputs.authority as never) !== resolvedAnchors(mission).authority_hash) {
     return no(5, "the replay approves a different Authority Set");
   }
   const contributing = record.evaluation.contributing;

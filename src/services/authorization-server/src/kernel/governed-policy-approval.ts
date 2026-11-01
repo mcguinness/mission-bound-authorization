@@ -50,6 +50,7 @@ import {
 import { openStoreReadOnly, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { type RegisteredActivationPolicy, verifiedActivationPolicy } from "./activation-policy.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
+import { resolvedAnchors } from "./anchors.js";
 import {
   type AgrAssertion,
   type ApprovalGovernanceRecord,
@@ -1499,7 +1500,8 @@ export function recheckGovernedActivation(
       replayed = undefined;
     }
   }
-  const reproduced = replayed !== undefined && authorityHash(issuer, replayed as never) === mission.authority_hash;
+  const reproduced =
+    replayed !== undefined && authorityHash(issuer, replayed as never) === resolvedAnchors(mission).authority_hash;
   return { reproduced, decision };
 }
 
@@ -1626,7 +1628,7 @@ export function recheckApprovalGovernanceRecord(
   } catch {
     return no(5, "the retained capability resolution does not replay");
   }
-  if (authorityHash(issuer, replayed as never) !== mission.authority_hash) {
+  if (authorityHash(issuer, replayed as never) !== resolvedAnchors(mission).authority_hash) {
     return no(5, "the replay approves a different Authority Set");
   }
   // The replay counts what the rules count: the consent principal's policy
