@@ -36321,7 +36321,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
-     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest an unpinned entry gets",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest the current contract's entry gets, while an unpinned entry's execute is refused before any decision",
      "level": "cross-component",
      "surface": "decision-request"
     },

@@ -27,7 +27,7 @@ import {
   type ResourceContractRef,
   resourceContractDigest,
 } from "@mission/core";
-import { contractsRequiring, RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
   createDecisionChannel,
   createEphemeralDecisionPoint,
@@ -894,14 +894,14 @@ const CUTOVER = [
 
 /**
  * @spec resource-access#resource-contract, runtime#resource-contract (#249
- * C.3a, D1071): under the shipped declarations requiring the cutover's five
- * actions (the configuration C.3b ships), the requirement applies per tool:
+ * C.3a and C.3b, D1071): under the shipped declarations, which require a
+ * reference for the cutover's five actions, the requirement applies per tool:
  * exactly the tools whose action is one of the five, the three that share
  * `payments:payment.execute` and differ only by phase included, and none of
  * the reads.
  */
 describe("the per-tool reference requirement under the cutover's five actions (@spec resource-access#resource-contract, runtime#resource-contract, #249, D1071)", () => {
-  const requiring = contractsRequiring(CUTOVER);
+  const requiring = RESOURCE_CONTRACTS;
   const READ_ARGS: Record<string, Record<string, unknown>> = {
     list_invoices: {},
     get_invoice: { invoice_id: "inv-1" },
