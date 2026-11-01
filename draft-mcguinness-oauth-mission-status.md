@@ -2269,6 +2269,22 @@ Mission Termination Reasons registry
   store them with the record, and a signed or exchanged Mission
   Record does not carry them. Authorization, atomicity, versioning
   and scheduling rules are unchanged (#1879).
+- Each rule that was stated twice has one normative home, and the
+  other statement points to it: the freshness cap and reliance bound
+  (Caching), the response checks, the `nonce` check and the RFC 9701
+  and unsigned-response prohibitions (Response), and the TLS rule
+  (Mission Status Operation). The Anti-Oracle timing rule is one
+  sentence. No requirement changed.
+- The conformance classes name the Protected Resource Metadata of the
+  access-token path, and the Introspection projection class follows
+  that section on `fresh_until` and RFC 9701 signing.
+- Terminology: "transition event" and "error code" throughout, "the
+  AS" for the body uses of "Mission Issuer", a `jwks_uri` response in
+  Signing-Key Retention, and endpoint-neutral error-table
+  descriptions. The Privacy Considerations disclosure heading names
+  the Mission Status operation and introspection.
+- The Lifecycle `mission_id` member and base-operations list point to
+  the Mission Status request and the Legal Transitions table.
 
 -00
 
