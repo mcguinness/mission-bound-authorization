@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "65037204039a9db7a234ed095700bf63461827fd",
-    "content_sha256": "f0ef94e08deabd548f2f2537e54fc53b517c9b9ab050462c86b329baad39f7c8"
+    "revision": "b35aa912b66de945ddde26ea5ea33a3d65879213",
+    "content_sha256": "8179a6cb57b55fa9a70101b138ba4dccd0cc08dbdc31c1a967328b5dc4d4073f"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -14991,7 +14991,7 @@
    "id": "core.approval-commit.anchors-computed-at-approval",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-commit",
-   "text": "The AS computes them here whether or not the record carries them, and every artifact bound at the approval event carries the values computed here.",
+   "text": "The AS computes them here whether or not the record carries them; an artifact bound at the approval event that carries one of these anchors carries the value computed here.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -15034,7 +15034,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1917 (D1061). Witnessed at kernel level: buildAuthorizationServer has no recordAnchors option, so the render-revision case runs at kernel and approvalContext level, not over HTTP. No separate mutation: each witness compares an artifact bound at approval with the resolved value of an omitted-anchor record."
+   "notes": "#1917 (D1061). Witnessed at kernel level: buildAuthorizationServer has no recordAnchors option, so the render-revision case runs at kernel and approvalContext level, not over HTTP. No separate mutation: each witness compares an artifact bound at approval with the resolved value of an omitted-anchor record. #1931 review: re-quoted; the clause binds an artifact that carries an anchor and adds none to any artifact."
   },
   {
    "id": "core.approval-event.ordered-procedure",
@@ -96383,7 +96383,7 @@
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a record that omits its anchors resolves each to its implied value while the stored row, the record read back, the Approval Context Manifest and the approval event's canonical bytes keep the members exactly as recorded; a record that carries them keeps them, through storage, the schema rebuild and resolution",
+    "normative": "a record that omits its anchors resolves each to its implied value while the stored row, the record read back and the approval event's canonical bytes keep its members exactly as recorded; a record that carries them keeps them, through storage, the schema rebuild and resolution. The Approval Context Manifest is not a record preimage: it includes the resolved anchors (approval-context.manifest.anchors-recorded-or-implied)",
     "local": "the reference resolves every anchor read through resolvedAnchors (kernel/anchors.ts); KernelOptions.recordAnchors (default true) controls only whether insertRecord persists the three anchors, and false persists NULL"
    },
    "level": "unit",
@@ -96412,21 +96412,9 @@
      "name": "migration: nullable anchor columns (@spec mission#record-content-members, #1917) > a second open is a no-op",
      "level": "unit",
      "surface": "commitment"
-    },
-    {
-     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
-     "name": "Approval Context Manifest v1 unchanged (@spec mission#integrity-anchors, #1917) > a manifest built for a Mission that omits its anchors is byte-identical to the same Mission with them recorded, with a proposal",
-     "level": "unit",
-     "surface": "commitment"
-    },
-    {
-     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
-     "name": "Approval Context Manifest v1 unchanged (@spec mission#integrity-anchors, #1917) > a manifest built for a Mission that omits its anchors is byte-identical to the same Mission with them recorded, without a proposal",
-     "level": "unit",
-     "surface": "commitment"
     }
    ],
-   "notes": "#1917 (D1061). Mutation proofs: inserting resolved anchors into approvalEventPreimage fails the record-bytes witness; persisting anchors regardless of recordAnchors fails the genuine-omission witness; removing the rebuild's guard fails the second-open witness. The Audit sentence (approval-event bytes as recorded) is witnessed by the record-bytes test; Mission Audit has no ledger rows."
+   "notes": "#1917 (D1061). Mutation proofs: inserting resolved anchors into approvalEventPreimage fails the record-bytes witness; persisting anchors regardless of recordAnchors fails the genuine-omission witness; removing the rebuild's guard fails the second-open witness. The Audit sentence (approval-event bytes as recorded) is witnessed by the record-bytes test; Mission Audit has no ledger rows. #1931 review: the manifest witnesses moved off this row; the manifest includes resolved anchors and is cited on approval-context.manifest.anchors-recorded-or-implied."
   },
   {
    "id": "core.mission-record.anchor-proposal-hash-conditional",
@@ -96518,7 +96506,7 @@
    "id": "core.integrity-anchors.compute-from-retained-record",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "integrity-anchors",
-   "text": "An issuer MUST compute an anchor it emits or verifies from that retained record, never from a token's carried subset, a projection or response it serves, or authority a companion narrows after approval.",
+   "text": "Once a Mission exists, an issuer that emits or verifies its `intent_hash`, `authority_hash`, or `proposal_hash` MUST resolve the anchor, recorded or implied, from the Mission's retained record, never from a token's carried subset, a projection or response it serves, or authority a companion narrows after approval.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -96531,7 +96519,7 @@
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a contained Mission resolves authority_hash over its approved authority_set, the creation-time value, never its effective set; an approved-set retrieval whose served set differs from the approved one fails closed against the anchor of the stored record",
+    "normative": "for an existing Mission, a contained Mission resolves authority_hash over its approved authority_set, the creation-time value, never its effective set; an approved-set retrieval whose served set differs from the approved one, including a projection that shortens the record's own set in place, fails closed against the anchor resolved from the stored record before the projection runs",
     "local": "the reference resolves every anchor read through resolvedAnchors (kernel/anchors.ts); KernelOptions.recordAnchors (default true) controls only whether insertRecord persists the three anchors, and false persists NULL"
    },
    "level": "unit",
@@ -96554,9 +96542,15 @@
      "name": "recorded anchors: a match resolves to itself, a mismatch is refused and never replaced (@spec mission#integrity-anchors, #1917) > a path that emits an anchor refuses a mismatching recorded one rather than emitting a fresh value",
      "level": "unit",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/implied-anchors.test.ts",
+     "name": "authoritative inputs (@spec mission#integrity-anchors, #1917) > Approved-Set Verification Tier 1: a projection that shortens the record's own set in place cannot move the expected anchor, which is captured before it runs",
+     "level": "unit",
+     "surface": "commitment"
     }
    ],
-   "notes": "#1917 (D1061). Mutation proofs: computing authority_hash over effectiveAuthoritySet fails the contained-Mission witness; deriving the retrieval's expected anchor from the served projection fails the Tier 1 witness. The approved-set retrieval is kernel-level (approvedSetRetrieval, approvedSetProjection): the AS has no retrieval route, as approved-set-verification.surface.retrieval-transport-and-disclosure-gate records."
+   "notes": "#1917 (D1061). Mutation proofs: computing authority_hash over effectiveAuthoritySet fails the contained-Mission witness; deriving the retrieval's expected anchor from the served projection fails the Tier 1 witness. The approved-set retrieval is kernel-level (approvedSetRetrieval, approvedSetProjection): the AS has no retrieval route, as approved-set-verification.surface.retrieval-transport-and-disclosure-gate records. #1931 review: the rule is scoped to an existing Mission's three anchors; pre-creation computations and companion-defined commitment inputs keep their own. The retrieval now captures the anchor before the projection: resolving it after the projection fails the in-place witness, which the slice() witness did not catch."
   },
   {
    "id": "core.commitment-mechanisms.new-algorithm-preserves-commitments",
