@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         31 October 2026
-Expires: 4 May 2027
+Intended status: Standards Track                         1 November 2026
+Expires: 5 May 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 May 2027.
+   This Internet-Draft will expire on 5 May 2027.
 
 Copyright Notice
 
@@ -1563,9 +1563,9 @@ Table of Contents
    [I-D.draft-araut-oauth-transaction-tokens-for-agents]
               Raut, A., "Transaction Tokens For Agents", Work in
               Progress, Internet-Draft, draft-araut-oauth-transaction-
-              tokens-for-agents-02, 21 May 2026,
+              tokens-for-agents-03, 31 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-araut-oauth-
-              transaction-tokens-for-agents-02>.
+              transaction-tokens-for-agents-03>.
 
    [I-D.draft-fletcher-transaction-token-chaining-profile]
               Fletcher, G., Kasselman, P., and S. O'Dell, "Transaction

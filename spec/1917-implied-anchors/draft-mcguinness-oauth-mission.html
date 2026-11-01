@@ -1065,11 +1065,11 @@ svg {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">OAuth Mission</td>
-<td class="right">October 2026</td>
+<td class="right">November 2026</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 4 May 2027</td>
+<td class="center">Expires 5 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-31" class="published">31 October 2026</time>
+<time datetime="2026-11-01" class="published">1 November 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-04">4 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-05">5 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1151,7 +1151,7 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 4 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 5 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -3572,8 +3572,9 @@ catalog-sourced action.<a href="#section-6.1.1.1-1.5.5" class="pilcrow">¶</a></
 over the approved Mission Intent, and, when an authority proposal
 was submitted (<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>), <code>proposal_hash</code> over the
 submitted <code>authorization_details</code> array. The AS computes them here
-whether or not the record carries them, and every artifact bound
-at the approval event carries the values computed here.<a href="#section-6.1.1.2-2.1.1" class="pilcrow">¶</a></p>
+whether or not the record carries them; an artifact bound at the
+approval event that carries one of these anchors carries the value
+computed here.<a href="#section-6.1.1.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
               <li id="section-6.1.1.2-2.2">
                 <p id="section-6.1.1.2-2.2.1"><strong>Create the Mission Record</strong> (<a href="#mission-record" class="auto internal xref">Section 6.2</a>) in the <code>active</code>
@@ -4576,10 +4577,16 @@ servers. The <code>sha-256:</code> prefix is the algorithm-agility mechanism
 <code>sha-256</code> construction over the retained record: the record's
 <code>intent</code>, <code>authority_set</code>, or <code>proposed_authority</code>, each array in its
 recorded order, with <code>iss</code> the record's <code>issuer</code>, whatever algorithm
-the issuer uses for new commitments. An issuer <span class="bcp14">MUST</span> compute an anchor
-it emits or verifies from that retained record, never from a token's
-carried subset, a projection or response it serves, or authority a
-companion narrows after approval.<a href="#section-6.3.1-4" class="pilcrow">¶</a></p>
+the issuer uses for new commitments. Once a Mission exists, an issuer
+that emits or verifies its <code>intent_hash</code>, <code>authority_hash</code>, or
+<code>proposal_hash</code> <span class="bcp14">MUST</span> resolve the anchor, recorded or implied, from
+the Mission's retained record, never from a token's carried subset, a
+projection or response it serves, or authority a companion narrows
+after approval. This governs only those anchors of an existing
+Mission: a computation before the Mission exists, such as the
+provisional <code>intent_hash</code> (<a href="#submission-processing" class="auto internal xref">Section 4.5</a>) or step 6
+(<a href="#approval-commit" class="auto internal xref">Section 6.1.1.2</a>), and a commitment whose inputs a companion
+defines keep their own inputs.<a href="#section-6.3.1-4" class="pilcrow">¶</a></p>
 <p id="section-6.3.1-5">The anchors this section lists, and the Authority Set entry
 commitment (<a href="#entry-commitment" class="auto internal xref">Section 14.4.1</a>), bind the AS issuer. The <code>digest</code> of an
 <code>authority_source.policy</code> reference (<a href="#record-principal-members" class="auto internal xref">Section 6.2.3</a>) is
@@ -10627,9 +10634,9 @@ resolve before interoperating.<a href="#appendix-D-36" class="pilcrow">¶</a></p
 <code>proposal_hash</code> are implied members: each is <span class="bcp14">OPTIONAL</span> on the record,
 an omitted one is its <code>sha-256</code> construction over the retained
 record, and a recorded one <span class="bcp14">MUST</span> equal it, a mismatch being refused.
-The AS still computes them at the approval event for every artifact
-bound there, and an issuer computes an emitted or verified anchor
-from the retained record alone. A specification adding an algorithm
+The AS still computes them at the approval event for any artifact
+bound there that carries one, and an issuer resolves an existing
+Mission's anchors from its retained record alone. A specification adding an algorithm
 preserves existing commitments. Consent Binding states what optional
 storage gives up, and <code>created_at</code> names the creation commit's
 instant (#1917).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
