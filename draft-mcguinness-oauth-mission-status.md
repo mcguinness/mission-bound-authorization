@@ -817,7 +817,7 @@ Wire error codes:
 | `conflict` | 409 | Lifecycle operation not legal from the current state ({{idempotency}}). |
 | `stale_version` | 409 | `expected_version` differs from the current state version ({{idempotency}}). |
 | `rate_limited` | 429 | The caller is rate-limited. |
-| `unavailable` | 503 | The AS temporarily cannot answer, including while an accepted Lifecycle request is still in flight ({{idempotency}}). |
+| `unavailable` | 503 | The AS temporarily cannot answer, including a retransmit of a Lifecycle request still being processed ({{idempotency}}). |
 {: title="Error codes"}
 
 A client authentication method's own error codes and statuses
