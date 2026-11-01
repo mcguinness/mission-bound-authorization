@@ -1616,8 +1616,9 @@ Each mechanism is discovered from its own metadata:
   metadata.
 
 A deployment that claims revocation propagation ({{conformance}})
-advertises `mission_max_stale_seconds` ({{as-metadata}}), the ceiling, in seconds, on reliance on an observation of Mission
-state: the freshness cap of {{mission-status-caching}} applies it to a
+advertises `mission_max_stale_seconds` ({{as-metadata}}), the
+ceiling, in seconds, on reliance on an observation of Mission state:
+the freshness cap of {{mission-status-caching}} applies it to a
 Mission Status Response, and the issuer applies it to an introspection
 projection's `fresh_until` ({{introspection-projection}}). It does
 not bound a self-contained token, which a consumer relies on for its
