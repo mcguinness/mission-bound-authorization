@@ -114,7 +114,7 @@ const intent = (over: Record<string, unknown> = {}) =>
     JSON.stringify({
       goal: "Reconcile Acme invoices",
       target_resources: [RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: "2098-01-01T00:00:00Z",
       ...over,
     }),
   );
@@ -313,7 +313,7 @@ describe("authority source intake (@spec mission#submission-via-par, mission#aut
     try {
       validateMissionIntentSubmission(
         JSON.stringify({
-          intent: { goal: "g", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          intent: { goal: "g", target_resources: [RESOURCE], expires_at: "2098-01-01T00:00:00Z" },
           authority_source: { type: "organizational" },
         }),
       );
@@ -330,7 +330,7 @@ describe("authority source intake (@spec mission#submission-via-par, mission#aut
         JSON.stringify({
           goal: "g",
           target_resources: [RESOURCE],
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: "2098-01-01T00:00:00Z",
           authority_source: { type: "organizational" },
         }),
       );
@@ -455,7 +455,7 @@ describe("unrecognized authority source type (@spec mission#mission-record, #150
   };
   const OPAQUE = /unrecognized type 'delegated_by_vibes', so its source semantics cannot be established/;
   const childIntent = () =>
-    intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" });
+    intent({ goal: "Read one invoice", expires_at: "2097-01-01T00:00:00Z" });
 
   /** Rewrite a Mission's stored source in its record and in its committed root. */
   const storeUnrecognized = (kernel: MissionKernel, id: string): void => {
@@ -579,7 +579,7 @@ describe("unrecognized authority source type (@spec mission#mission-record, #150
           templateId: template.id,
           dispatchEventId: `dsp-${seq++}`,
           dispatcher: "ap-agent",
-          intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+          intent: intent({ expires_at: "2097-01-01T00:00:00Z" }),
           subject: { iss: ISS, sub: "alice" },
           policyVersion: DERIVATION_POLICY.policy_version,
         } as never),
@@ -623,7 +623,7 @@ describe("unrecognized authority source type (@spec mission#mission-record, #150
 
 describe("authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation)", () => {
   const childIntent = () =>
-    intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" });
+    intent({ goal: "Read one invoice", expires_at: "2097-01-01T00:00:00Z" });
 
   it("a Child Mission carries the parent's source verbatim", () => {
     const kernel = makeKernel({ actorProfiles: { "child-agent": "ai_agent" } });
@@ -699,7 +699,7 @@ describe("authority source drawdown (@spec mission#authority-sources, child-dele
       templateId: template.id,
       dispatchEventId: `dsp-${seq++}`,
       dispatcher: "ap-agent",
-      intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+      intent: intent({ expires_at: "2097-01-01T00:00:00Z" }),
       subject: { iss: ISS, sub: "alice" },
       policyVersion: DERIVATION_POLICY.policy_version,
     } as never);
@@ -997,7 +997,7 @@ describe("issuer-qualified principals at the source gates (@spec mission#authori
         dispatchEventId,
         dispatcher: "ap-agent",
         recipient: "ap-agent",
-        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        intent: intent({ expires_at: "2097-01-01T00:00:00Z" }),
         subject,
         policyVersion: DERIVATION_POLICY.policy_version,
       } as never);
@@ -1352,7 +1352,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
       proposedAuthority: [grant(READS, "acme"), grant(SCHEDULE, "acme", "100.00")],
       approver: { iss: ISS, sub: "rita" },
       approvalEventId: `apev-827-exp-${seq++}`,
-      approvedUntil: "2027-01-01T00:00:00Z",
+      approvedUntil: "2098-01-01T00:00:00Z",
     });
     expect(calls).toBe(2);
     expect(successor.authority_source).toEqual({ type: "user_delegated" });
@@ -1364,7 +1364,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         proposedAuthority: [grant(READS, "globex")],
         approver: { iss: ISS, sub: "rita" },
         approvalEventId: `apev-827-exp-${seq++}`,
-        approvedUntil: "2027-01-01T00:00:00Z",
+        approvedUntil: "2098-01-01T00:00:00Z",
       }),
     ).toThrow(/source 'alice-delegated'/);
   });
@@ -1376,7 +1376,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     // alice's acme read lies outside it: the child succeeds only on alice's.
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
-      intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
+      intent: intent({ goal: "Read one invoice", expires_at: "2097-01-01T00:00:00Z" }),
       proposedAuthority: [grant(["payments:invoice.read"], "acme")],
       childActor: { sub: "child-agent", sub_profile: "ai_agent" },
     } as never);
@@ -1455,7 +1455,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         templateId: template.id,
         dispatchEventId: `dsp-827-${seq++}`,
         dispatcher: "ap-agent",
-        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        intent: intent({ expires_at: "2097-01-01T00:00:00Z" }),
         subject: { iss: ISS, sub },
         policyVersion: DERIVATION_POLICY.policy_version,
       } as never);
@@ -1576,7 +1576,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         templateId: template.id,
         dispatchEventId: `dsp-827-${seq++}`,
         dispatcher: "svc-agent",
-        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        intent: intent({ expires_at: "2097-01-01T00:00:00Z" }),
         subject: { iss: ISS, sub },
         policyVersion: DERIVATION_POLICY.policy_version,
       } as never);
@@ -1603,7 +1603,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     const parent = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
-      intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
+      intent: intent({ goal: "Read one invoice", expires_at: "2097-01-01T00:00:00Z" }),
       proposedAuthority: [grant(["payments:invoice.read"], "acme")],
       childActor: { sub: "child-agent", sub_profile: "ai_agent" },
     } as never);
@@ -1637,7 +1637,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
           templateId: template.id,
           dispatchEventId: `dsp-827-${seq++}`,
           dispatcher: "ap-agent",
-          intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+          intent: intent({ expires_at: "2097-01-01T00:00:00Z" }),
           subject: { iss: ISS, sub: "alice" },
           policyVersion: DERIVATION_POLICY.policy_version,
         } as never),
@@ -1737,7 +1737,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
   const childOf = (kernel: MissionKernel, parentId: string) =>
     createChildMission(kernel, {
       parentId,
-      intent: intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" }),
+      intent: intent({ goal: "Read one invoice", expires_at: "2097-01-01T00:00:00Z" }),
       proposedAuthority: [grant(["payments:invoice.read"], "acme")],
       childActor: { sub: "child-agent", sub_profile: "ai_agent" },
     } as never);
@@ -1776,7 +1776,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         proposedAuthority: [grant(READS, "acme"), grant(SCHEDULE, "acme", "100.00")],
         approver: { iss: ISS, sub: "rita" },
         approvalEventId: `apev-827-exp-${seq++}`,
-        approvedUntil: "2027-01-01T00:00:00Z",
+        approvedUntil: "2098-01-01T00:00:00Z",
       });
       expect(after.committedSourceBinding(successor.id).rootId).toBe("alice-delegated-v2");
       expect(after.sourceBindings.basisOf(successor.id)).toBe("resolved");
@@ -1998,7 +1998,7 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
         dispatchEventId: `dsp-827-${seq++}`,
         dispatcher: "ap-agent",
         dispatchPolicies: READ_ONLY_POLICIES,
-        intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+        intent: intent({ expires_at: "2097-01-01T00:00:00Z" }),
         subject: { iss: ISS, sub: "alice" },
         policyVersion: DERIVATION_POLICY.policy_version,
       } as never).mission;
