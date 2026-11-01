@@ -5,7 +5,11 @@
     "subagent-invoice-extractor": { "max_depth": 1 }
   },
   "scope_actions": {
-    "payments.read": ["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"]
+    "payments.read": ["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"],
+    "payments.read.2026-10-27": {
+      "actions": ["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"],
+      "resource_contract": { "id": "https://payments.example/contracts/payments", "version": "2026-10-27", "digest": "sha-256:wLsBMvOEFtvnozYZjgIgZyFAh5QuP6eF8y5Dmk_ze8Y" }
+    }
   },
   "mapping_contract": {
     "contract_id": "shared-demo-join",
