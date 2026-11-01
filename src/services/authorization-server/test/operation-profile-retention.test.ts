@@ -93,3 +93,81 @@ describe("the TAS registry holds every declared contract version's Operation Pro
     });
   });
 });
+
+/** The five non-read payments actions the cutover requires a reference for (D865). */
+const CUTOVER = [
+  "payments:payment.schedule",
+  "payments:payment.schedule.cancel",
+  "payments:payment.execute",
+  "payments:payment.reverse",
+  "payments:remittance.send",
+];
+
+/** `base`'s declarations requiring a reference for `actions` (controlled configuration; the shipped one requires none). */
+function requiring(actions: readonly string[], base: ResourceContractDeclarations = RESOURCE_CONTRACTS): ResourceContractDeclarations {
+  return new ResourceContractDeclarations(
+    base.declarations.map((d) => ({
+      resource: d.resource,
+      ...(d.resource_match !== undefined ? { resource_match: d.resource_match } : {}),
+      id: d.id,
+      requires_reference: [...actions],
+      versions: d.versions.map((v) => ({
+        version: v.version,
+        state: v.state,
+        digest: v.digest,
+        ...(v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+        ...(v.document !== undefined ? { document: v.document } : {}),
+      })),
+    })),
+  );
+}
+
+const MISSING = { ok: false, reason: "the resource requires a resource_contract reference for this operation" };
+const CURRENT = VERSIONS.find((v) => v.state === "current");
+const OLDER = VERSIONS.find((v) => v.state === "superseded");
+
+describe("the TAS refuses a missing reference where the challenged operation requires one, at admission and at completion (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, D1071)", () => {
+  it("refuses an unpinned entry for an operation the resource requires a reference for, and admits an unpinned read it does not", () => {
+    const registry = contractOperationProfiles(RESOURCE, requiring(CUTOVER));
+    for (const action of CUTOVER) expect(registry.admit(RESOURCE, entry(action), NOW), action).toEqual(MISSING);
+    expect(registry.admit(RESOURCE, entry("payments:invoice.read"), NOW)).toMatchObject({ ok: true, version: CURRENT?.operation_profile });
+  });
+
+  it("admits a supported older reference under its own version's profile where the operation requires one, never the current one", () => {
+    expect(OLDER?.operation_profile).not.toBe(CURRENT?.operation_profile);
+    const admitted = contractOperationProfiles(RESOURCE, requiring(CUTOVER)).admit(
+      RESOURCE,
+      entry("payments:remittance.send", OLDER?.version),
+      NOW,
+    );
+    expect(admitted).toMatchObject({ ok: true, version: OLDER?.operation_profile });
+  });
+
+  it("refuses at completion an unpinned workflow admitted before the requirement, which completes without it", () => {
+    const before = contractOperationProfiles(RESOURCE);
+    const admitted = before.admit(RESOURCE, entry("payments:remittance.send"), NOW);
+    expect(admitted).toMatchObject({ ok: true, version: CURRENT?.operation_profile });
+    const version = admitted.ok ? admitted.version : "";
+    expect(before.complete(RESOURCE, version, entry("payments:remittance.send"), NOW)).toMatchObject({ ok: true });
+    const after = contractOperationProfiles(RESOURCE, requiring(CUTOVER));
+    expect(after.complete(RESOURCE, version, entry("payments:remittance.send"), NOW)).toEqual(MISSING);
+  });
+
+  it("refuses at completion a workflow admitted before versions were recorded where its operation now requires a reference", () => {
+    const legacyOf = (contracts: ResourceContractDeclarations) =>
+      contractOperationProfiles(RESOURCE, contracts).bindLegacyType(RESOURCE, "mission_resource_access", CURRENT?.operation_profile as string);
+    expect(legacyOf(RESOURCE_CONTRACTS).completeLegacy(RESOURCE, "mission_resource_access", entry("payments:remittance.send"))).toMatchObject({ ok: true });
+    expect(legacyOf(requiring(CUTOVER)).completeLegacy(RESOURCE, "mission_resource_access", entry("payments:remittance.send"))).toEqual(MISSING);
+  });
+
+  it("refuses at completion a pinned workflow whose version was retired between admission and completion (controlled configuration: no retired version is shipped)", () => {
+    const admitted = contractOperationProfiles(RESOURCE, requiring(CUTOVER)).admit(RESOURCE, entry("payments:remittance.send", OLDER?.version), NOW);
+    expect(admitted).toMatchObject({ ok: true, version: OLDER?.operation_profile });
+    const version = admitted.ok ? admitted.version : "";
+    const retired = contractOperationProfiles(RESOURCE, requiring(CUTOVER, withState(OLDER?.version as string, "retired")));
+    expect(retired.complete(RESOURCE, version, entry("payments:remittance.send", OLDER?.version), NOW)).toEqual({
+      ok: false,
+      reason: "the resource_contract reference does not resolve (retired)",
+    });
+  });
+});

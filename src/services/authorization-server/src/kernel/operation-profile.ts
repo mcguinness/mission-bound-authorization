@@ -139,7 +139,9 @@ export class OperationProfileRegistry {
    * challenge's entry is admitted under. A carried `resource_contract`
    * reference names it, and resolves under the resource's declarations or
    * is refused; otherwise the resource's current version, which the workflow
-   * records.
+   * records. Where the deployment's configuration requires a reference for
+   * the operation, such an entry is refused instead ({@link missingReference},
+   * D1071).
    */
   admit(iss: string, entry: JsonValue, now: Date): ProfileResolution {
     const ref = (entry as { resource_contract?: unknown } | null)?.resource_contract;
@@ -150,6 +152,8 @@ export class OperationProfileRegistry {
     }
     const resolved = profile.resolve(entry, { resource: iss });
     if (!resolved.ok) return { ok: false, reason: `operation rejected by its Operation Profile (${resolved.reason})` };
+    const missing = this.missingReference(iss, resolved.operation.action);
+    if (missing) return missing;
     return { ok: true, version: profile.version, operation: resolved.operation };
   }
 
@@ -171,6 +175,8 @@ export class OperationProfileRegistry {
     if (!profile) return { ok: false, reason: "the Operation Profile version this workflow was admitted under is not retained" };
     const resolved = profile.resolve(entry, { resource: iss });
     if (!resolved.ok) return { ok: false, reason: `operation rejected by its Operation Profile (${resolved.reason})` };
+    const missing = this.missingReference(iss, resolved.operation.action);
+    if (missing) return missing;
     return { ok: true, version, operation: resolved.operation };
   }
 
@@ -198,7 +204,29 @@ export class OperationProfileRegistry {
     }
     const resolved = profile.resolve(entry, { resource: iss });
     if (!resolved.ok) return { ok: false, reason: `operation rejected by its Operation Profile (${resolved.reason})` };
+    const missing = this.missingReference(iss, resolved.operation.action);
+    if (missing) return missing;
     return { ok: true, version, operation: resolved.operation };
+  }
+
+  /**
+   * @spec runtime#resource-contract (#249, D1071): an entry carrying no
+   * `resource_contract` is refused where the resource requires a reference
+   * for the operation it resolves to, at admission and again at completion,
+   * so a workflow admitted before the requirement cannot be completed under
+   * it. Operation-specific: an action the resource does not require a
+   * reference for is unaffected, and no reference is ever substituted. An
+   * entry carrying one resolves under its own contract version instead
+   * ({@link underContract}). This applies the deployment's configured
+   * requirement ahead of the PDP the runtime profile obliges to refuse; the
+   * transaction authorization draft states no such refusal (an entry without
+   * a reference takes the resource's current version), and this adds no
+   * family rule.
+   */
+  private missingReference(iss: string, action: string): { ok: false; reason: string } | undefined {
+    return this.contracts.requiresReference(iss, action)
+      ? { ok: false, reason: "the resource requires a resource_contract reference for this operation" }
+      : undefined;
   }
 
   /**

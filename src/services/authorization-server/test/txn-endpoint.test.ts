@@ -3330,6 +3330,153 @@ describe("a workflow store file created before Operation Profile versions were r
   });
 });
 
+/** The older-reference helpers below are shared by the two contract-reference describes that follow (#1846, D1071). */
+const OLDER = "2026-10-26";
+const CUTOVER = [
+  "payments:payment.schedule",
+  "payments:payment.schedule.cancel",
+  "payments:payment.execute",
+  "payments:payment.reverse",
+  "payments:remittance.send",
+];
+
+/** The shipped TAS's registry, as `demo/src/stack.ts` builds it. */
+const shipped = (): OperationProfileRegistry => contractOperationProfiles(RESOURCE);
+/** The registry the stack built before #1846: the current contract version's profile alone. */
+const currentOnly = (): OperationProfileRegistry =>
+  new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile(currentContractProfileVersion(RESOURCE)));
+
+/**
+ * The shipped declarations as they stood while `version` was current: it
+ * current, every newer version absent, the cutover's actions required.
+ */
+function asOf(version: string): ResourceContractDeclarations {
+  return new ResourceContractDeclarations(
+    RESOURCE_CONTRACTS.declarations.map((d) => {
+      const versions = d.versions.filter((v) => v.version <= version);
+      const served = new Set(versions.filter((v) => v.state !== "retired").flatMap((v) => v.operations));
+      return {
+        resource: d.resource,
+        ...(d.resource_match !== undefined ? { resource_match: d.resource_match } : {}),
+        id: d.id,
+        requires_reference: CUTOVER.filter((a) => served.has(a)),
+        versions: versions.map((v) => ({
+          version: v.version,
+          state: v.version === version ? "current" : v.state,
+          digest: v.digest,
+          ...(v.version !== version && v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+          ...(v.document !== undefined ? { document: v.document } : {}),
+        })),
+      };
+    }),
+  );
+}
+
+/** A Mission approved while `version` was current: its payments entries carry that version's reference. */
+async function approvedWhileCurrent(version: string): ReturnType<typeof freshMission> {
+  const then = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(asOf(version));
+  try {
+    return await freshMission();
+  } finally {
+    then.mockRestore();
+  }
+}
+
+async function contractDepsWith(registry: OperationProfileRegistry, decided: string[] = []) {
+  const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+  const txnKeys = await generateKeyPair("ES256", { extractable: true });
+  return {
+    decided,
+    deps: {
+      issuer: ISSUER,
+      kernel: as.kernel,
+      clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+      accessTokenJwks: asJwks,
+      dpopProofReplay: newDpopProofReplay(),
+      subjectTokenLive: async () => true,
+      now: () => new Date(),
+      scopeProjection: SCOPE_PROJECTION,
+      txn: {
+        challengeIssuers: new Map([
+          [RESOURCE, { jwks: createLocalJWKSet({ keys: [{ ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK] }), algs: ["ES256"] }],
+        ]) as ChallengeIssuers,
+        ars,
+        operationProfiles: registry,
+        tokenKey: txnKeys.privateKey,
+        tokenKid: "older-txn",
+        workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+        maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+        freshDecision: async (input: { profileVersion: string }) => {
+          decided.push(input.profileVersion);
+          return { decision: "permit" as const };
+        },
+      },
+    } as unknown as TxnAuthorizationDeps,
+  };
+}
+
+/**
+ * Challenge, admit, approve and complete one remittance under `m`: admitted
+ * through `registry`, and completed on the same workflow store through
+ * `completeUnder`, the registry after a configuration change between the two.
+ */
+async function remitThrough(
+  registry: OperationProfileRegistry,
+  m: Awaited<ReturnType<typeof freshMission>>,
+  txn: string,
+  completeUnder: OperationProfileRegistry = registry,
+) {
+  const decided: string[] = [];
+  const { deps } = await contractDepsWith(registry, decided);
+  const workflows = newTxnWorkflows();
+  const admitted = await callTransactionEndpoint(deps, workflows, {
+    transaction_challenge: await signChallenge(
+      {
+        txn,
+        authorization_details: remittanceEntry(m.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission: m.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    ),
+    subject_token: m.token,
+    subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+  });
+  if (admitted.status !== 200) return { admitted, decided, workflows };
+  const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+  await ars.adjudicate(taskFor(txn), "approve", "bob");
+  const completion = completeUnder === registry ? deps : (await contractDepsWith(completeUnder, decided)).deps;
+  const issued = await callTransactionEndpoint(completion, workflows, { transaction_authorization_id: handle });
+  return { admitted, issued, decided, workflows, handle };
+}
+
+/** `contracts` with `version` retired (controlled configuration: no retired version is shipped). */
+function retiring(contracts: ResourceContractDeclarations, version: string): ResourceContractDeclarations {
+  return new ResourceContractDeclarations(
+    contracts.declarations.map((d) => ({
+      resource: d.resource,
+      ...(d.resource_match !== undefined ? { resource_match: d.resource_match } : {}),
+      id: d.id,
+      requires_reference: [...d.requires_reference],
+      versions: d.versions.map((v) => ({
+        version: v.version,
+        state: v.version === version ? "retired" : v.state,
+        digest: v.digest,
+        ...(v.version !== version && v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+        ...(v.document !== undefined ? { document: v.document } : {}),
+      })),
+    })),
+  );
+}
+
+/** The workflows a store holds. */
+const workflowCount = (workflows: ReturnType<typeof newTxnWorkflows>): number =>
+  (workflows.db.prepare("SELECT COUNT(*) AS n FROM txn_workflows").get() as { n: number }).n;
+
 /**
  * @spec txn-authorization#resource-challenge, runtime#resource-contract (#249,
  * #1846): every contract version a resource declares as supported resolves at
@@ -3341,119 +3488,6 @@ describe("a workflow store file created before Operation Profile versions were r
  * the current one.
  */
 describe("an older supported contract reference at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846)", () => {
-  const OLDER = "2026-10-26";
-  const CUTOVER = [
-    "payments:payment.schedule",
-    "payments:payment.schedule.cancel",
-    "payments:payment.execute",
-    "payments:payment.reverse",
-    "payments:remittance.send",
-  ];
-
-  /** The shipped TAS's registry, as `demo/src/stack.ts` builds it. */
-  const shipped = (): OperationProfileRegistry => contractOperationProfiles(RESOURCE);
-  /** The registry the stack built before #1846: the current contract version's profile alone. */
-  const currentOnly = (): OperationProfileRegistry =>
-    new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile(currentContractProfileVersion(RESOURCE)));
-
-  /**
-   * The shipped declarations as they stood while `version` was current: it
-   * current, every newer version absent, the cutover's actions required.
-   */
-  function asOf(version: string): ResourceContractDeclarations {
-    return new ResourceContractDeclarations(
-      RESOURCE_CONTRACTS.declarations.map((d) => {
-        const versions = d.versions.filter((v) => v.version <= version);
-        const served = new Set(versions.filter((v) => v.state !== "retired").flatMap((v) => v.operations));
-        return {
-          resource: d.resource,
-          ...(d.resource_match !== undefined ? { resource_match: d.resource_match } : {}),
-          id: d.id,
-          requires_reference: CUTOVER.filter((a) => served.has(a)),
-          versions: versions.map((v) => ({
-            version: v.version,
-            state: v.version === version ? "current" : v.state,
-            digest: v.digest,
-            ...(v.version !== version && v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
-            ...(v.document !== undefined ? { document: v.document } : {}),
-          })),
-        };
-      }),
-    );
-  }
-
-  /** A Mission approved while `version` was current: its payments entries carry that version's reference. */
-  async function approvedWhileCurrent(version: string): ReturnType<typeof freshMission> {
-    const then = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(asOf(version));
-    try {
-      return await freshMission();
-    } finally {
-      then.mockRestore();
-    }
-  }
-
-  async function depsWith(registry: OperationProfileRegistry) {
-    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
-    const txnKeys = await generateKeyPair("ES256", { extractable: true });
-    const decided: string[] = [];
-    return {
-      decided,
-      deps: {
-        issuer: ISSUER,
-        kernel: as.kernel,
-        clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
-        accessTokenJwks: asJwks,
-        dpopProofReplay: newDpopProofReplay(),
-        subjectTokenLive: async () => true,
-        now: () => new Date(),
-        scopeProjection: SCOPE_PROJECTION,
-        txn: {
-          challengeIssuers: new Map([
-            [RESOURCE, { jwks: createLocalJWKSet({ keys: [{ ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK] }), algs: ["ES256"] }],
-          ]) as ChallengeIssuers,
-          ars,
-          operationProfiles: registry,
-          tokenKey: txnKeys.privateKey,
-          tokenKid: "older-txn",
-          workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
-          maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
-          freshDecision: async (input: { profileVersion: string }) => {
-            decided.push(input.profileVersion);
-            return { decision: "permit" as const };
-          },
-        },
-      } as unknown as TxnAuthorizationDeps,
-    };
-  }
-
-  /** Challenge, admit, approve and complete one remittance under `m` through `registry`. */
-  async function remitThrough(registry: OperationProfileRegistry, m: Awaited<ReturnType<typeof freshMission>>, txn: string) {
-    const { deps, decided } = await depsWith(registry);
-    const workflows = newTxnWorkflows();
-    const admitted = await callTransactionEndpoint(deps, workflows, {
-      transaction_challenge: await signChallenge(
-        {
-          txn,
-          authorization_details: remittanceEntry(m.missionId),
-          iss: RESOURCE,
-          aud: ISSUER,
-          reason: "action_approval_required",
-          parameter_digest: `sha-256:${txn}`,
-          mission: m.mission,
-        },
-        rsTxnKeys.privateKey,
-        "rs-txn",
-      ),
-      subject_token: m.token,
-      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-    });
-    if (admitted.status !== 200) return { admitted, decided };
-    const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
-    await ars.adjudicate(taskFor(txn), "approve", "bob");
-    const issued = await callTransactionEndpoint(deps, workflows, { transaction_authorization_id: handle });
-    return { admitted, issued, decided };
-  }
-
   it("admits a transaction-authorized operation under a superseded version within its retention, and completes it under that version's own Operation Profile", async () => {
     const m = await approvedWhileCurrent(OLDER);
     const pinned = RESOURCE_CONTRACTS.versionOf(remittanceEntry(m.missionId)[0]?.resource_contract);
@@ -3478,5 +3512,111 @@ describe("an older supported contract reference at the Transaction Authorization
     );
     expect(issued).toBeUndefined();
     expect(decided).toEqual([]);
+  });
+
+  it("refuses invalid_grant at admission a reference to a retired version, by resolution, creating no workflow and opening no approval (controlled configuration: no retired version is shipped)", async () => {
+    const m = await approvedWhileCurrent(OLDER);
+    const txn = "txn_older_retired";
+    const { admitted, issued, decided, workflows } = await remitThrough(
+      contractOperationProfiles(RESOURCE, retiring(RESOURCE_CONTRACTS, OLDER)),
+      m,
+      txn,
+    );
+    expect(admitted.status).toBe(400);
+    expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
+    expect((admitted.body as { error_description?: string }).error_description).toBe(
+      "the resource_contract reference does not resolve (retired)",
+    );
+    expect(issued).toBeUndefined();
+    expect(decided).toEqual([]);
+    expect(workflowCount(workflows)).toBe(0);
+    expect(ars.getTask(taskFor(txn))).toBeUndefined();
+  });
+});
+
+/**
+ * @spec txn-authorization#resource-challenge, runtime#resource-contract (#249,
+ * D1071): where the deployment requires a reference for the challenged
+ * operation, the Transaction Authorization Server refuses an entry carrying
+ * none, at admission before any workflow opens and again at completion, so a
+ * workflow admitted before the requirement cannot mint after it. The
+ * requirement is the payments deployment's configuration, operation-specific;
+ * the TAS draft's rule for an entry without a reference (the resource's
+ * current version, recorded at admission) is unchanged elsewhere. A supported
+ * older reference stays acceptable under its own profile, and the current
+ * reference is never substituted. The requiring configuration is controlled:
+ * the shipped one requires no reference yet (#249 C.3b).
+ */
+describe("a missing contract reference where the challenged operation requires one, at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, D1071)", () => {
+  /** The shipped contract version current today. */
+  const CURRENT_CONTRACT = RESOURCE_CONTRACTS.declarations[0]?.versions.find((v) => v.state === "current")?.version as string;
+  /** The shipped declarations with the cutover's five actions required. */
+  const requiringDeclarations = (): ResourceContractDeclarations => asOf(CURRENT_CONTRACT);
+  const requiring = (): OperationProfileRegistry => contractOperationProfiles(RESOURCE, requiringDeclarations());
+
+  it("requires a reference for exactly the cutover's five actions, every shipped version kept in its state", () => {
+    const [declared] = requiringDeclarations().declarations;
+    expect(declared?.requires_reference).toEqual(CUTOVER);
+    expect(declared?.versions.map((v) => [v.version, v.state])).toEqual(
+      RESOURCE_CONTRACTS.declarations[0]?.versions.map((v) => [v.version, v.state]),
+    );
+  });
+
+  it("refuses invalid_grant at admission an unpinned remittance, creating no workflow and opening no approval, and the shipped configuration, which requires none, admits and issues it", async () => {
+    const m = await freshMission();
+    expect(remittanceEntry(m.missionId)[0]?.resource_contract).toBeUndefined();
+    const txn = "txn_missing_reference_admission";
+    const { admitted, issued, decided, workflows } = await remitThrough(requiring(), m, txn);
+    expect(admitted.status).toBe(400);
+    expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
+    expect((admitted.body as { error_description?: string }).error_description).toBe(
+      "the resource requires a resource_contract reference for this operation",
+    );
+    expect(issued).toBeUndefined();
+    expect(decided).toEqual([]);
+    expect(workflowCount(workflows)).toBe(0);
+    expect(ars.getTask(taskFor(txn))).toBeUndefined();
+
+    const control = await remitThrough(shipped(), m, "txn_missing_reference_control");
+    expect(control.admitted.status, JSON.stringify(control.admitted.body)).toBe(200);
+    expect(control.issued?.status, JSON.stringify(control.issued?.body)).toBe(200);
+  });
+
+  it("refuses access_denied at completion, minting nothing, an unpinned remittance admitted and approved before the operation required a reference, and leaves the workflow pending", async () => {
+    const m = await freshMission();
+    const txn = "txn_missing_reference_completion";
+    const { admitted, issued, decided, workflows, handle } = await remitThrough(shipped(), m, txn, requiring());
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    expect(ars.getTask(taskFor(txn))?.state).toBe("approved");
+    expect(issued?.status).toBe(400);
+    expect((issued?.body as { error?: string }).error).toBe("access_denied");
+    expect((issued?.body as { access_token?: string }).access_token).toBeUndefined();
+    expect(decided).toEqual([]);
+    expect(workflows.get(handle as string)?.state).toBe("pending");
+  });
+
+  it("admits a supported older reference where the operation requires one, and completes it under that version's own Operation Profile, never the current one", async () => {
+    const m = await approvedWhileCurrent(OLDER);
+    const pinned = RESOURCE_CONTRACTS.versionOf(remittanceEntry(m.missionId)[0]?.resource_contract);
+    expect(pinned?.version.version).toBe(OLDER);
+    const { admitted, issued, decided } = await remitThrough(requiring(), m, "txn_required_older");
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    expect(issued?.status, JSON.stringify(issued?.body)).toBe(200);
+    expect(decided).toEqual([pinned?.version.operation_profile]);
+    expect(decided[0]).not.toBe(currentContractProfileVersion(RESOURCE));
+  });
+
+  it("refuses access_denied at completion, minting nothing, a supported older reference retired between admission and completion (controlled configuration: no retired version is shipped)", async () => {
+    const m = await approvedWhileCurrent(OLDER);
+    const txn = "txn_required_retired";
+    const retired = contractOperationProfiles(RESOURCE, retiring(requiringDeclarations(), OLDER));
+    const { admitted, issued, decided, workflows, handle } = await remitThrough(requiring(), m, txn, retired);
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    expect(ars.getTask(taskFor(txn))?.state).toBe("approved");
+    expect(issued?.status).toBe(400);
+    expect((issued?.body as { error?: string }).error).toBe("access_denied");
+    expect((issued?.body as { access_token?: string }).access_token).toBeUndefined();
+    expect(decided).toEqual([]);
+    expect(workflows.get(handle as string)?.state).toBe("pending");
   });
 });
