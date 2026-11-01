@@ -14551,6 +14551,85 @@
    ]
   },
   {
+   "id": "core.lifecycle.non-active-state-verifier",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lifecycle",
+   "text": "a consumer MUST treat only the exact value `active` as permitting derivation or continued reliance, and MUST treat every other value, including one it does not recognize, as non-active and non-deriving",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a verified signed report (a lifecycle-change SET, a retained Carryover Evidence envelope) whose state is not exactly `active`, including a retired value (`revoked`, `expired`, `completed`, `superseded`, `cascaded`), is kept as reported: the Mission is non-active and is never relied on as `active`, the value is never mapped to `terminated` or to a termination reason, and no termination is attached to it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > keeps a retired state value in a verified SET as reported (@spec mission#lifecycle, #1504): revoked, expired, completed, superseded or cascaded leaves the Mission non-active, with no termination attached, and replaces an earlier active",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers an already-signed SET byte for byte, whose retired state a receiver keeps as reported (@spec mission#termination, mission#lifecycle)",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > verifies a retained Carryover Evidence envelope carrying a retired terminal_state over its stored bytes and returns it as signed, while the issuer's own stored map copy reads through the store upgrade (@spec mission#lifecycle, #1504)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1504 (D1006): the binding no longer reads `revoked`, `expired`, `completed`, `superseded` or `cascaded` as a Mission's `state`, so a retired value falls under this rule. Each witness was proved by restoring the retired normalization in its reader. The issuer's own store upgrade (rows and journaled commits it persisted before #705) is not a received report and is witnessed under core.termination.retained-facts-only and core.termination.retained-instant."
+  },
+  {
+   "id": "core.lifecycle.non-active-state-harness",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "lifecycle",
+   "text": "a consumer MUST treat only the exact value `active` as permitting derivation or continued reliance, and MUST treat every other value, including one it does not recognize, as non-active and non-deriving",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a status lease whose state is not exactly `active`, including a retired value (`revoked`, `expired`, `completed`, `superseded`, `cascaded`), stops resumption before any channel call: the harness proceeds only on `active`, reads a retired value as no recognized state, and reads no termination or successor from it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/mediated-harness.test.ts",
+     "name": "harness termination: terminated with any reason is non-active (@spec mission#termination) > reads a retired state value on a lease as unrecognized (@spec mission#lifecycle, #1504): revoked, expired, completed, superseded or cascaded stops before the channel, with no termination or successor read from it",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/agent/test/mediated-harness.test.ts",
+     "name": "harness termination: terminated with any reason is non-active (@spec mission#termination) > fails closed to terminated with no termination, never a fabricated revoked, when state or lease is unavailable or unrecognized",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1504 (D1006): the binding no longer reads `revoked`, `expired`, `completed`, `superseded` or `cascaded` as a Mission's `state`, so a retired value falls under this rule. Each witness was proved by restoring the retired normalization in its reader. The issuer's own store upgrade (rows and journaled commits it persisted before #705) is not a received report and is witnessed under core.termination.retained-facts-only and core.termination.retained-instant."
+  },
+  {
    "id": "core.intent.requested-expiry-invalid-request",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-intent",

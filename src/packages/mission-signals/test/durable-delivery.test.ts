@@ -481,7 +481,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     kernel.db.close();
   });
 
-  it("signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)", async () => {
+  it("signs a job journaled before the termination vocabulary in it, and redelivers an already-signed SET byte for byte, whose retired state a receiver keeps as reported (@spec mission#termination, mission#lifecycle)", async () => {
     const { privateKey, jwks } = await statusKeyPair();
     const emitter = new MissionSignalEmitter({
       key: privateKey,
@@ -569,15 +569,16 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     expect(event).not.toHaveProperty("successor");
     expect(seen).toContain(signedLegacy); // never re-signed
 
-    // The receiver verified the legacy bytes, then read them as terminated
-    // with the facts they retained, and keeps the bytes it read them from.
+    // The job signed in the termination vocabulary reads as terminated with
+    // the facts the journaled commit retained. The SET signed before it is
+    // read as signed (#1504, D1006): its retired `cascaded` is kept, a state
+    // other than `active`, with no termination attached.
     expect(receiver.viewState("msn_legacy_superseded")).toMatchObject({
       state: "terminated",
       termination: superseded,
     });
     expect(receiver.viewState("msn_legacy_cascaded")).toEqual({
-      state: "terminated",
-      termination: { reason: "parent_terminated", version: 1, carried_to: "msn_replacement" },
+      state: "cascaded",
       version: 1,
       expires_at: "2027-01-01T00:00:00Z",
     });
