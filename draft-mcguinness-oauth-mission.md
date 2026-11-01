@@ -4655,15 +4655,6 @@ not recognize, still treats the Mission as terminated: it stops work
 governed by the Mission, follows no absent reference, and infers no
 cause-specific action.
 
-For a transition period, a consumer of a report that still carries
-`revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
-Mission's `state` MAY read it as `terminated` with that reason
-(`cascaded` as `parent_terminated`) and the facts the report
-retained; an emitter never reports those values as a state. That
-reading is local: the consumer never re-emits or re-signs it, and it
-verifies a signed artifact over its original bytes, which it retains,
-before reading it this way.
-
 ## Revocation {#revocation}
 
 A Mission is revoked when the AS receives a revocation for it from a
@@ -6905,6 +6896,16 @@ resolve before interoperating.
 \[\[ To be removed from the final specification ]]
 
 -02
+
+- Intentional behavior change, with no compatibility window: the
+  legacy Mission-state reading is removed. A consumer no longer reads
+  `revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
+  Mission's `state`; such a value is non-active and non-deriving under
+  the forward-compatibility rule of Mission Lifecycle, like any other
+  value it does not recognize. Reports carry `state` `terminated` and
+  the reason in `termination`. The rules for a termination recorded
+  before its reason defined a member, and for a reason a consumer does
+  not recognize, are unchanged (#1504, D1006).
 
 - Editorial, no requirement change: Signing and Key Rotation cites the
   Mandate; the undefined "primary" access token is named as a

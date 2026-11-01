@@ -14323,8 +14323,15 @@
      "name": "termination on every emitter (#705 witnesses 1 and 2) > reports only active, suspended or terminated, with termination present exactly when terminated and carrying every member its reason requires",
      "level": "unit",
      "surface": "introspection"
+    },
+    {
+     "file": "src/packages/mission-signals/test/signals.test.ts",
+     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to",
+     "level": "unit",
+     "surface": "signals"
     }
-   ]
+   ],
+   "notes": "The Signals SET builder witness moved here from the retired core.termination.emitter-never-legacy-state row (#1504, D1006): a lifecycle-change SET carries `termination` exactly beside `terminated`."
   },
   {
    "id": "core.termination.written-once-cause-preserved",
@@ -14459,55 +14466,6 @@
    ]
   },
   {
-   "id": "core.termination.verify-original-bytes-before-normalizing",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "termination",
-   "text": "it verifies a signed artifact over its original bytes, which it retains, before reading it this way.",
-   "role": "verifier",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "verification",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "a signed artifact carrying a retired state value (retained Carryover Evidence, a lifecycle-change SET) is verified over its stored bytes before it is read as `terminated` with that reason, an unverifiable one is never normalized, and the bytes read are retained as received and still verify unchanged"
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/carryover.test.ts",
-     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > verifies a retained legacy Carryover Evidence envelope carrying cascaded over its stored bytes, and normalizes only after verification",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > retains the original SET behind its normalized reading: the retained bytes verify unchanged and still carry the legacy state",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
-     "level": "unit",
-     "surface": "verification"
-    }
-   ],
-   "notes": "#705 (D359). The Signals receiver retains the compact SET that established each Mission's cached state, byte for byte; the issuer side retains its Carryover Evidence JWS byte for byte."
-  },
-  {
    "id": "core.termination.retained-instant",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "termination",
@@ -14555,86 +14513,6 @@
     }
    ],
    "notes": "#705 (D359); #1162 review: legacy facts are the committing `version`, `expires_at` for `expired`, and a commit time only where the commit was the effect."
-  },
-  {
-   "id": "core.termination.legacy-reading-retained-facts",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "termination",
-   "text": "a consumer of a report that still carries `revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a Mission's `state` MAY read it as `terminated` with that reason (`cascaded` as `parent_terminated`) and the facts the report retained",
-   "role": "verifier",
-   "strength": "MAY",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "verification",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a verified lifecycle-change SET carrying a retired state reads as `terminated` with that reason, keeping the event's `version`, the reference its reason defines (`successor`, `carried_to`) and a retained instant, and folding no reference its reason does not define"
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > normalizes a legacy SET's state only after its signature verifies, keeping the references and instants the event retained",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
-     "level": "unit",
-     "surface": "verification"
-    }
-   ],
-   "notes": "#705 (D359); #1162 review: legacy facts are the committing `version`, `expires_at` for `expired`, and a commit time only where the commit was the effect."
-  },
-  {
-   "id": "core.termination.emitter-never-legacy-state",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "termination",
-   "text": "an emitter never reports those values as a state.",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "signals",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a commit journaled under a retired state value is delivered and signed as `terminated` with that reason, never with the retired value as `state`; a SET already signed is redelivered byte for byte, never re-signed"
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/packages/mission-signals/test/signals.test.ts",
-     "name": "Mission Signals: termination in the lifecycle-change event (@spec mission#termination) > the SET builder emits only active, suspended or terminated, with termination exactly beside terminated and no top-level successor or carried_to",
-     "level": "unit",
-     "surface": "signals"
-    },
-    {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > signs a job journaled before the termination vocabulary in it, and redelivers a legacy SET already signed byte for byte (@spec mission#termination)",
-     "level": "unit",
-     "surface": "signals"
-    },
-    {
-     "file": "src/services/authorization-server/test/control-plane-fanout.test.ts",
-     "name": "durable lifecycle fan-out > migrates a legacy expansion outbox onto the generalized table without losing an event",
-     "level": "unit",
-     "surface": "signals"
-    }
-   ],
-   "notes": "#705 (D359)."
   },
   {
    "id": "core.lifecycle.computed-expiry-before-materialization",
