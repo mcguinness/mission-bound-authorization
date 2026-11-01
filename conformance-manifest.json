@@ -7150,6 +7150,36 @@
    "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. #1892 ruling 6 (D1031): the reference's render revision commits the rendered approval surface (the context a rendering showed, which the decision is bound to), so this MUST applies to it; its context omits the provenance facts, a gap #1897 tracks. #1897: the render revision commits the normalized verified facts (each fact's type, artifact_hash and facts) as a digest, and a change to them alone keeps the stale approval from proceeding, with an unchanged-facts control. Proved by mutation (2026-10-29): committing no facts approves the stale decision; committing each fact's verified_at too refuses the unchanged-facts control. Owner ruling D1035 (#1897): the commitment may omit each element's AS-generated verified_at and no other member; the OAuth binding states the permission beside the MUST, and the companions' full-record commitments are unchanged. Tested: the unit witnesses fix two distinct verification instants over identical facts (the same commitment) and change type, artifact_hash and each member of facts, a timestamp within facts included (only submission_evidence changes); the endpoint witness shows the stale decision refused and unchanged facts approved. Proved by mutation (2026-10-30): committing verified_at too fails the distinct-instants witness; leaving facts out of the commitment fails the changed-facts witness."
   },
   {
+   "id": "core.submission.record-submission-evidence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "At activation, record the approved `intent`, the Authority Set, and the verified evidence facts as `submission_evidence` ({{mission-record}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a submission carrying evidence that verifies lands its verified facts on the Mission Record's submission_evidence at activation, request-derived and outside every integrity anchor"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > PAR-submitted evidence is verified, RENDERED to the Approver, and landed request-derived on submission_evidence — outside all anchors",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1927 (D1082). A3. The step list's lead is keyword-free; the procedure is the AS's."
+  },
+  {
    "id": "core.submission-evidence.structural-entry-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "intent-submission-evidence",
@@ -8420,9 +8450,27 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion's kind is not the basis's adjudication.kind (#1921)",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > the re-check refuses a stored governed_policy basis with kind human at step 5, and the Mission stays active (#1921)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > the re-check refuses a stored governed_policy basis with kind service at step 5, and the Mission stays active (#1921)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > the re-check refuses a stored governed_policy basis with an unrecognized kind at step 5, and the Mission stays active (#1921)",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 mutation proof: disabling the direct gate's kind-equality check (direct-approval-record.ts:285) fails \"a kind that is not adjudication.kind\". #1921 (D1073): the stage 2 mutation run found that the governed_policy record gate did not compare adjudication.kind with the accountable assertion's kind; assertGovernedPolicyRecord now refuses that mismatch before commit, as the direct gate does. Mutation proof: removing the comparison fails \"refuses a record whose accountable assertion's kind is not the basis's adjudication.kind\". This supersedes #1925's interim note."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 mutation proof: disabling the direct gate's kind-equality check (direct-approval-record.ts:285) fails \"a kind that is not adjudication.kind\". #1921 (D1073): the stage 2 mutation run found that the governed_policy record gate did not compare adjudication.kind with the accountable assertion's kind; assertGovernedPolicyRecord now refuses that mismatch before commit, as the direct gate does. Mutation proof: removing the comparison fails \"refuses a record whose accountable assertion's kind is not the basis's adjudication.kind\". This supersedes #1925's interim note. #1927: the governed gate witness includes an unrecognized kind, and the governed re-check refuses a stored basis relabelled human, service or an unrecognized kind at step 5 with the Mission left active; removing the comparison fails all four."
   },
   {
    "id": "approval-governance.triggers.required-under-adopting-profile",
@@ -8934,9 +8982,21 @@
      "name": "an unrecognized stored approval basis type (@spec mission#record-principal-members, #1932) > does not re-check the Approval Governance Record of a Mission whose stored basis type it does not recognize (step 4), leaving it active",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion's kind is not the basis's adjudication.kind (#1921)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > the re-check refuses a stored governed_policy basis with an unrecognized kind at step 5, and the Mission stays active (#1921)",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. #1912 (D1047) states the rule once, at the end of Principals and Approval Basis, for approval_basis.type, adjudication.kind and authority_source.type. This row stays scoped to the two adjudication discriminators; the authority_source.type facet, with its source-semantics refusal, is core.mission-record.authority-source-type-unrecognized (tested). #1923 (D1059): partial. Witnessed: an unrecognized approval_basis.type with an unrecognized adjudication.kind is stored, read and returned unchanged through a reopen; the Mission stays active, derivable and introspectable; the direct-creation guard does not apply to it; and two operations that needed the basis's semantics and used to infer them now refuse: child delegation (delegation_not_permitted, nothing created, parent active) and the activation policy audit check (unrecognized_basis, never not_applicable). Gaps: (1) an unrecognized adjudication.kind on a recognized standing-consent basis is refused by the ceiling_drawdown gate and re-check (#1928, witnessed by the drawdown tests listed) and, since #1921 (#1934), by the governed_policy record gate and re-check through the shared assertGovernedPolicyRecord comparison. #1932 (D1068) witnesses the remaining refusals of an unrecognized type, each with a recognized positive control and the Mission left active, and each mutation-checked: carryover (approval_basis_not_direct, rolled back), Deferred Approval's direct approval (not_pending, the deferral pending), a governed activation retried under the event (approval_event_used, nothing committed), the governed reproduction (not reproduced) and the Approval Governance re-check (step 4). The remaining gap is a witness gap, not missing implementation: the governed witness (#1934) covers human and service at the gate, and neither an unrecognized kind nor the governed re-check is witnessed here. Introspection's sender-constraint narrowing applies to the recognized template type, so an unrecognized type gets the OAuth binding's base rule, which infers no standing."
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. #1912 (D1047) states the rule once, at the end of Principals and Approval Basis, for approval_basis.type, adjudication.kind and authority_source.type. This row stays scoped to the two adjudication discriminators; the authority_source.type facet, with its source-semantics refusal, is core.mission-record.authority-source-type-unrecognized (tested). #1923 (D1059): partial. Witnessed: an unrecognized approval_basis.type with an unrecognized adjudication.kind is stored, read and returned unchanged through a reopen; the Mission stays active, derivable and introspectable; the direct-creation guard does not apply to it; and two operations that needed the basis's semantics and used to infer them now refuse: child delegation (delegation_not_permitted, nothing created, parent active) and the activation policy audit check (unrecognized_basis, never not_applicable). Gaps: (1) an unrecognized adjudication.kind on a recognized standing-consent basis is refused by the ceiling_drawdown gate and re-check (#1928, witnessed by the drawdown tests listed) and, since #1921 (#1934), by the governed_policy record gate and re-check through the shared assertGovernedPolicyRecord comparison. #1932 (D1068) witnesses the remaining refusals of an unrecognized type, each with a recognized positive control and the Mission left active, and each mutation-checked: carryover (approval_basis_not_direct, rolled back), Deferred Approval's direct approval (not_pending, the deferral pending), a governed activation retried under the event (approval_event_used, nothing committed), the governed reproduction (not reproduced) and the Approval Governance re-check (step 4). #1927 closes the witness gap #1934 left: an unrecognized kind is refused at the governed gate, and the governed re-check refuses a stored basis with an unrecognized kind at step 5 with the Mission left active. Introspection's sender-constraint narrowing applies to the recognized template type, so an unrecognized type gets the OAuth binding's base rule, which infers no standing."
   },
   {
    "id": "core.approval-basis.required-fixed-at-approval",
@@ -12843,6 +12903,72 @@
     }
    ],
    "notes": "#1912 (D1047). Owner review of #1913 (D1048): the row applied only where core.standing-consent-recency was claimed, but the requirement binds every deployment using a feature that depends on versioned derivation-policy identification. No capability names Mission Mandate or Approval Revision (Mission Mandate's rows are unconditional, and Approval Revision has none), so an any_of over capabilities cannot cover the set: the row is unconditional, and its observation states the condition. A deployment using none of the listed features may omit policy_version. Partial: the witness (also core.mission-record.members-immutable's) holds every member but state and termination, policy_version included, unchanged across a derivation, suspend, resume and revoke. Proved by mutation (2026-10-30, #1912): a suspend or resume UPDATE that replaces policy_version fails it. Not witnessed: that policy_version is present at creation (the witness compares whatever the record holds), or the rule in a deployment shown to use a listed feature."
+  },
+  {
+   "id": "core.mission-record.created-at-required",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-provenance-members",
+   "text": "REQUIRED. A string. RFC 3339 timestamp of creation: the instant of the atomic creation commit ({{approval-commit}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a committed record carries created_at, an RFC 3339 timestamp equal to the instant of its creation commit: on the direct path the decision's commit instant (a lifetime measured from a later decision moves neither it nor expires_at), and on Template Dispatch the reservation's instant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > the Mission commits the effective expires_at its rendering showed: a lifetime measured from a later decision never moves it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/event-identity-boundary.test.ts",
+     "name": "Template Dispatch: the dispatch_event_id horizon at its boundary (@spec mission#approval-idempotency, #1915) > retains the key 1 ms before and exactly at reservation + horizon (recovering the instance and its approval_event_id) and frees it 1 ms after (a new instance, a new approval_event_id) (@spec mission#approval-idempotency, #1915)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1927 (D1082). A1. Witnessed on the direct decision and on Dispatch; other creation paths set created_at through the same insertRecord."
+  },
+  {
+   "id": "core.mission-record.expires-after-created",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-provenance-members",
+   "text": "MUST be later than `created_at`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a record whose expires_at is not later than its created_at is refused at insertion and nothing is committed"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a record whose expires_at is not later than created_at",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1927 (D1082). A1. The step 7 creation-commit check (core.creation.atomic-expiry-check) is the same comparison at the commit instant."
   },
   {
    "id": "core.audit-horizon.terminated-record-retained",
@@ -28548,6 +28674,27 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#997 (D995). No reference implementation of Mission Management exists; `bulk_token` is unimplemented. Planned test surface: the Mission Management endpoint. Dry run a bulk `resume` over two suspended members; through the status endpoint, resume and re-suspend one of them; then execute. That member reports `stale_version` and stays suspended, the other reports `applied`, and a member terminated in between reports `already_terminal`. The witness also covers a concurrent change between the version comparison and the commit: the guard protects each member's transition without requiring a transaction across the batch (owner review of #1870)."
+  },
+  {
+   "id": "management.filter.created-window",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "filter",
+   "text": "RFC 3339 {{RFC3339}} date-times. Match a Mission whose `created_at` is strictly after, respectively strictly before, the value.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission listing filtered by created_after or created_before returns exactly the Missions whose created_at is strictly after, respectively strictly before, the value"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1927 (D1082). A4. The reference implements no Mission Management listing or filter."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -61769,6 +61916,28 @@
    "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the approval page of a standing-payment successor renders the dispatched instance's counter and the shared budget's, each as consumption to date and outstanding reservations, keyed by the dispatched instance even for a second-generation successor; through the composed stack the page shows the claim domain's committed, reserved and held totals (instance 50.00/10.00/25.00, shared 70.00/15.00/25.00); a change before the decision refuses it naming budget_exposure; a failed or malformed reading returns a 503 page and refuses the decision 503, approving nothing. Current kills: R1 and R2 (composed stack) and R3 (two-hop), each failing at the Instance line; M19 and M1 to M3 (failed and malformed readings). Pre-enablement gap 1 (D947; impl/813-pre-enablement-as at 8f2d1558, mutation at the same commit): a shared-line witness sets each of the shared counter's three totals apart from the instance counter's and asserts the shared line alone. Each mutant alone, all killed. S1 (the shared counter read from the dispatched instance's key, in deferralBudgetExposure) and S2 (the shared line rendered with the instance counter's figures, in budgetExposureSection) fail the shared-line witness, and fail the rendering, two-hop and composed-stack tests at their shared line, their instance line passing first. O7 (the stack port keys the shared counter by owner alone) fails the composed-stack test at its shared line, its instance line passing. S3 (the instance counter read from the shared key) fails the rendering, two-hop and composed-stack tests at their instance line and the render-to-decide test at its 409. Re-run against the review-fixed code: O38 (section not rendered, re-targeted to the section followed directly by the ceiling section) fails the rendering and two-hop tests at the continued-counter sentence, the shared-line witness, the composed-stack test at its instance line, and the ordinary-deferral test at its section check; O4 (successor figures left out of the commitment) fails the render-to-decide test at its 409 and the ordinary-deferral test at its commitment; O5 (page read failure rendered as no exposure) fails the read-failure page test and the three malformed-reading tests at the successor page's 503; O6 (decision read failure read as no exposure) fails the read-failure decision test and the three malformed-reading tests at the successor decision's 503. Every witness successor keeps its instance's max_budget, the only successor the reference admits (assertSuccessorMaxBudget refuses a raised one; see metering.capacity-across-missions.raised-bound-renders-consumption), so the page is witnessed for a successor that raises no bound."
   },
   {
+   "id": "template.audit-linkage.recompute-effective-expiry",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "audit-linkage",
+   "text": "recompute the instance's effective `expires_at` as the minimum of the dispatch intent's requested `expires_at`, the committed `created_at` plus `instance_lifetime`, and the template's `expires_at` ({{dispatch}}), and match it to the recorded value",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorized auditor recomputes a dispatched instance's effective expires_at as the three-way minimum from its committed created_at and matches it to the recorded value"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1927 (D1082). A5. The AS computes the clamp at Dispatch (kernel/template.ts, witnessed by the Dispatch tests), but the reference offers no audit surface that recomputes and matches it."
+  },
+  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
@@ -76457,8 +76626,15 @@
      "name": "Approval Context Commitment vectors (approval-governance § approval-context-vectors) > vector 4: conditional submission_evidence_commitment",
      "level": "unit",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > carries submission_evidence_commitment in the Approval Context Manifest input exactly when the record carries submission_evidence (#1927 item B)",
+     "level": "unit",
+     "surface": "commitment"
     }
-   ]
+   ],
+   "notes": " #1927 item B: the kernel's manifest input (approvalContextInput) now carries the anchor exactly when the record carries submission_evidence; mutation: dropping it fails the kernel witness."
   },
   {
    "id": "approval-context.computation.recompute-on-demand",
@@ -96506,6 +96682,42 @@
     }
    ],
    "notes": "#1917 (D1061). The clause's text recurs on other conditional members; the anchor scopes it to proposal_hash."
+  },
+  {
+   "id": "core.mission-record.proposed-authority-recorded",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-content-members",
+   "text": "REQUIRED when the client submitted an authority proposal ({{authority-proposal}}), absent otherwise.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission derived from a submitted proposal records proposed_authority as the submitted array, persisted unchanged; a Mission derived without one (template or configured-mapping mode) records none"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "record + introspection vs claim (@spec mission#mission-record, #introspection) > a narrowing-mode Mission records the submitted array and its commitment",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "record + introspection vs claim (@spec mission#mission-record, #introspection) > a template-mode Mission records NEITHER proposed_authority nor proposal_hash",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1927 (D1082). A2. The clause text recurs on other conditional members; the anchor scopes it to proposed_authority, the first member of the section carrying it."
   },
   {
    "id": "core.integrity-anchors.implied-construction",
