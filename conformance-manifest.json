@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "b35aa912b66de945ddde26ea5ea33a3d65879213",
-    "content_sha256": "8179a6cb57b55fa9a70101b138ba4dccd0cc08dbdc31c1a967328b5dc4d4073f"
+    "revision": "1c6353544b45e8c019b34291c425fa116464e6a8",
+    "content_sha256": "c220721979d607fcd7667cea04241303693250edd89e8a0c66dc875eb0ff979b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -11166,7 +11166,7 @@
   {
    "id": "core.approval-event.subject-rendering",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "rendering-safeguards",
    "text": "When the Approver is not the Subject, the rendering MUST identify the Subject the authority is granted for",
    "role": "AS",
    "strength": "MUST",
@@ -11234,7 +11234,7 @@
   {
    "id": "core.approval-event.consent-object-derived-set",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "rendering-safeguards",
    "text": "An approval surface that renders only the `goal` or Mission Intent does not conform.",
    "role": "AS",
    "strength": "stated",
@@ -11270,7 +11270,7 @@
   {
    "id": "core.approval-event.proposal-narrowing-distinguished",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "rendering-safeguards",
    "text": "When the client submitted an authority proposal ({{authority-proposal}}), the rendering MUST distinguish the entries the client proposed from any narrowing or restructuring the AS applied",
    "role": "AS",
    "strength": "MUST",
@@ -12225,7 +12225,7 @@
   {
    "id": "core.mission-record.authority-source-unrecognized-not-approved",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "authority-sources",
    "text": "An AS MUST NOT approve a Mission whose authority source it does not recognize.",
    "role": "AS",
    "strength": "MUST NOT",
