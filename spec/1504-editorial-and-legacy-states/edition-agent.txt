@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-01T04:42:22Z
-Source repository commit: e0a95ba63fbacf20cfd9531237600fc5c0d39c7f
+Generated: 2026-11-01T04:48:59Z
+Source repository commit: b3907e68126365ccb69c826a2052cd596daaa02d
 Member count: 9
 
 Reading order:
@@ -8539,7 +8539,7 @@ Table of Contents
        6.1.2.  Approver Authentication Strength
        6.1.3.  Subject Establishment
        6.1.4.  Authority Sources
-       6.1.5.  Rendering Safeguards
+       6.1.5.  Consent Rendering
        6.1.6.  Changes Before the Decision
        6.1.7.  Authorization Code Protection
        6.1.8.  Single Accountable Approver
@@ -10021,43 +10021,16 @@ Table of Contents
 
    1.  *Authenticate the Approver*, subject to the approval-
        authentication floor and any client-requested strength
-       (Section 6.1.2).  The AS MUST NOT take the Approver's identity or
-       achieved authentication context from unauthenticated client
-       input; the authenticated surface that resolved the approval
-       establishes both.
+       (Section 6.1.2).
 
    2.  *Establish the Subject*: the principal the task is for, recorded
        as the Mission's subject and mapped to the sub of every derived
-       token (Section 7.2).  The Subject can be a workload or
-       organizational principal (Section 6.1.4), established and mapped
-       the same way.
-
-       *  *Self-approval.* When the Approver is the Subject, the Subject
-          is the authenticated Approver.
-
-       *  *Another principal or an external Subject.* The rules of
-          Section 6.1.3 apply at this step.
+       token (Section 7.2), under the rules of Section 6.1.3.
 
    3.  *Establish the authority source*: whose authority the approval
        draws on, recorded as the Mission's authority_source
-       (Section 6.1.4, Section 6.2).  The AS MUST establish it from
-       trusted configuration or authenticated governance state, never
-       from client assertion.
-
-       The AS then makes two checks:
-
-       *  The AS MUST verify the Approver is authorized under local
-          policy to activate the established source.
-
-       *  The AS MUST verify the derived Authority Set lies within that
-          source's authority (for organizational, within the governed
-          policy identified by authority_source.policy).
-
-       These are distinct checks: an organizational owner may be
-       authorized to activate policy without personally holding every
-       operational permission.  The AS MUST refuse when either
-       relationship cannot be established.  An AS MUST NOT approve a
-       Mission whose authority source it does not recognize.
+       (Section 6.2), and check the Approver and the derived Authority
+       Set against it, under the rules of Section 6.1.4.
 
    4.  *Establish the effective Mission expiry*: the requested
        intent.expires_at ceiling narrowed by applicable AS policy and
@@ -10076,37 +10049,7 @@ Table of Contents
        meaningful terms, with the goal, task_bounds, and the effective
        expires_at (and, when it differs, the requested
        intent.expires_at, so the Approver sees the narrowing) as
-       context.
-
-       The consent object is the *derived Authority Set*: what the agent
-       may do.  It is not the goal or Mission Intent, because Authority
-       Set derivation is local policy and nothing commits that the
-       derived authority reflects the goal the Approver read.  An
-       approval surface that renders only the goal or Mission Intent
-       does not conform.
-
-       These requirements apply to the rendering:
-
-       *  The rendering MUST identify the OAuth client that receives the
-          authority, the Agent, from client identity information the AS
-          trusts, such as its own registration of the client; display
-          text the client supplies does not by itself identify it.
-
-       *  When the Approver is not the Subject, the rendering MUST
-          identify the Subject the authority is granted for.
-
-       *  The rendering MUST identify the authority source and, for
-          organizational, the governed policy it draws on
-          (authority_source.policy).
-
-       *  When the client submitted an authority proposal (Section 4.3),
-          the rendering MUST distinguish the entries the client proposed
-          from any narrowing or restructuring the AS applied.
-
-       Mission Capability Binding
-       ([I-D.draft-mcguinness-mission-capability-binding]) states what
-       the rendering presents about the source binding of a catalog-
-       sourced action.
+       context, under the rules of Section 6.1.5.
 
 6.1.1.2.  Committing the Mission
 
@@ -10143,6 +10086,11 @@ Table of Contents
    delivery of the same approval decision on approval_event_id.
 
 6.1.2.  Approver Authentication Strength
+
+   Step 1 of the direct approval steps (Section 6.1.1) authenticates the
+   Approver.  The AS MUST NOT take the Approver's identity or achieved
+   authentication context from unauthenticated client input; the
+   authenticated surface that resolved the approval establishes both.
 
    A deployment MUST publish a statement declaring the minimum approval-
    authentication strength (the approval-authentication floor) it
@@ -10218,7 +10166,13 @@ Table of Contents
 6.1.3.  Subject Establishment
 
    These rules apply at step 2 of the direct approval steps
-   (Section 6.1.1).
+   (Section 6.1.1).  The Subject can be a workload or organizational
+   principal, established and mapped the same way; which principal a
+   service-owned or organizational Mission records as its Subject is
+   stated for every Mission in Section 6.1.4.
+
+   *  *Self-approval.* When the Approver is the Subject, the Subject is
+      the authenticated Approver.
 
    *  *Approval for another principal.* When the Approver is a different
       principal (for example, an administrator approving on a user's
@@ -10258,6 +10212,26 @@ Table of Contents
    establishes the source and verifies the derived Authority Set against
    it before approval (Section 6.1.1, Section 14.3).
 
+   At step 3 of the direct approval steps, the AS establishes the
+   authority source.  The AS MUST establish it from trusted
+   configuration or authenticated governance state, never from client
+   assertion.
+
+   The AS then makes two checks:
+
+   *  The AS MUST verify the Approver is authorized under local policy
+      to activate the established source.
+
+   *  The AS MUST verify the derived Authority Set lies within that
+      source's authority (for organizational, within the governed policy
+      identified by authority_source.policy).
+
+   These are distinct checks: an organizational owner may be authorized
+   to activate policy without personally holding every operational
+   permission.  The AS MUST refuse when either relationship cannot be
+   established.  An AS MUST NOT approve a Mission whose authority source
+   it does not recognize.
+
    An organizational Mission's authority_source.policy reference
    (Section 6.2.3) commits to the governed policy through its digest:
 
@@ -10290,7 +10264,39 @@ Table of Contents
       that requested it (Section 7.2), and delegates are carried in the
       act chain (Section 8).
 
-6.1.5.  Rendering Safeguards
+6.1.5.  Consent Rendering
+
+   These rules apply at step 5 of the direct approval steps
+   (Section 6.1.1).
+
+   The consent object is the *derived Authority Set*: what the agent may
+   do.  It is not the goal or Mission Intent, because Authority Set
+   derivation is local policy and nothing commits that the derived
+   authority reflects the goal the Approver read.  An approval surface
+   that renders only the goal or Mission Intent does not conform.
+
+   These requirements apply to the rendering:
+
+   *  The rendering MUST identify the OAuth client that receives the
+      authority, the Agent, from client identity information the AS
+      trusts, such as its own registration of the client; display text
+      the client supplies does not by itself identify it.
+
+   *  When the Approver is not the Subject, the rendering MUST identify
+      the Subject the authority is granted for.
+
+   *  The rendering MUST identify the authority source and, for
+      organizational, the governed policy it draws on
+      (authority_source.policy).
+
+   *  When the client submitted an authority proposal (Section 4.3), the
+      rendering MUST distinguish the entries the client proposed from
+      any narrowing or restructuring the AS applied.
+
+   Mission Capability Binding
+   ([I-D.draft-mcguinness-mission-capability-binding]) states what the
+   rendering presents about the source binding of a catalog-sourced
+   action.
 
    The consent rendering is hardened against client text:
 
@@ -10303,8 +10309,8 @@ Table of Contents
    *  The rendering MUST visually distinguish the AS-derived Authority
       Set from client-supplied text and attribute that text to the
       client, identified from client identity information the AS trusts
-      (Section 6.1.1.1), so crafted client text cannot pass as derived
-      authority or as a statement of the AS.
+      (above), so crafted client text cannot pass as derived authority
+      or as a statement of the AS.
 
    The rendering presents goal and task_bounds as recorded, without
    truncation: the Intent is recorded verbatim and committed by
@@ -16090,6 +16096,13 @@ Appendix E.  Document History
    [[ To be removed from the final specification ]]
 
    -02
+
+   *  Preparing the Approval states the direct approval steps as a
+      concise procedure, and each step's rules sit in the subsection
+      that owns its topic: Approver Authentication Strength (step 1),
+      Subject Establishment (step 2), Authority Sources (step 3) and
+      Consent Rendering, formerly Rendering Safeguards (step 5).  Step
+      numbers and order are unchanged.  No requirement changed (#1938).
 
    *  Intentional behavior change, with no compatibility window: the
       legacy Mission-state reading is removed.  A consumer no longer
