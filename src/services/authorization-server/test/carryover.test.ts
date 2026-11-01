@@ -1420,7 +1420,7 @@ describe("Child Mission Carryover termination vocabulary (@spec mission#terminat
     });
   });
 
-  it("verifies a retained legacy Carryover Evidence envelope carrying cascaded over its stored bytes, and normalizes only after verification", async () => {
+  it("verifies a retained Carryover Evidence envelope carrying a retired terminal_state over its stored bytes and returns it as signed, while the issuer's own stored map copy reads through the store upgrade (@spec mission#lifecycle, #1504)", async () => {
     const store = new CarryoverStore(kernel, () => clock);
     const legacyMap = [
       {
@@ -1475,19 +1475,23 @@ describe("Child Mission Carryover termination vocabulary (@spec mission#terminat
     // The envelope is retained byte for byte; its signed payload still says `cascaded`.
     expect(retained?.evidence_jws).toBe(jws);
     expect(decodeCarryoverEvidence(jws).map[0]).toMatchObject({ terminal_state: "cascaded" });
-    // It verifies over those stored bytes; only the verified payload is read
-    // normalized (`cascaded` as `parent_terminated`), inventing no member.
+    // It verifies over those stored bytes and is read as signed (#1504,
+    // D1006): a retired `terminal_state` is kept as reported, a state other
+    // than `active`, and no termination is attached to it.
     const verified = await verifyCarryoverEvidence(jws, pubKey);
-    expect(verified.map[0]).toMatchObject({ terminal_state: "terminated", termination: { reason: "parent_terminated" } });
-    expect((verified.map[0] as { termination?: unknown }).termination).toEqual({ reason: "parent_terminated" });
-    expect(verified.map[1]).toMatchObject({ terminal_state: "terminated", termination: { reason: "revoked" } });
-    // The retained map copy reads normalized as well.
+    expect(verified.map).toEqual(legacyMap);
+    expect(verified.map[0]).toMatchObject({ terminal_state: "cascaded" });
+    expect(verified.map[0]).not.toHaveProperty("termination");
+    expect(verified.map[1]).toMatchObject({ terminal_state: "revoked" });
+    expect(verified.map[1]).not.toHaveProperty("termination");
+    // The issuer's own stored map copy reads through the store upgrade
+    // (rows stored before the termination vocabulary), with only its reason.
     expect(retained?.map[0]).toMatchObject({ terminal_state: "terminated", termination: { reason: "parent_terminated" } });
-    // Normalization never touches signed bytes: a payload rewritten into the
-    // normalized form under the original signature does not verify.
+    // The signed bytes are never rewritten: a payload rewritten into the
+    // current vocabulary under the original signature does not verify.
     const [header, , signature] = jws.split(".");
     await expect(
-      verifyCarryoverEvidence(`${header}.${enc({ ...legacy, map: verified.map })}.${signature}`, pubKey),
+      verifyCarryoverEvidence(`${header}.${enc({ ...legacy, map: retained?.map })}.${signature}`, pubKey),
     ).rejects.toThrow();
   });
 
