@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         31 October 2026
-Expires: 4 May 2027
+Intended status: Standards Track                         1 November 2026
+Expires: 5 May 2027
 
 
                        Mission Audit Transparency
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 May 2027.
+   This Internet-Draft will expire on 5 May 2027.
 
 Copyright Notice
 
@@ -503,6 +503,11 @@ Table of Contents
    +-----------+-----------------+---------------+--------------+---------+
 
                                   Table 1
+
+   The approval event's canonical bytes are the record's members as
+   recorded: an integrity anchor the record omits
+   ([I-D.draft-mcguinness-oauth-mission], Section "Approved Content and
+   Commitments") is not inserted, and one it carries is not removed.
 
    The table is extensible by specification: a profile MAY define an
    additional evidence type by fixing its canonical bytes, its payload-
@@ -1845,6 +1850,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The approval event's canonical bytes are the record as recorded:
+      an integrity anchor the record omits is not inserted, and one it
+      carries is not removed (#1917).
 
    *  The evidence-type table shows the Approval Governance Record's
       operational typ with application/ omitted, as Mission Approval

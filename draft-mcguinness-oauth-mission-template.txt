@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            31 October 2026
-Expires: 4 May 2027
+Intended status: Experimental                            1 November 2026
+Expires: 5 May 2027
 
 
                      Mission Template for OAuth 2.0
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 May 2027.
+   This Internet-Draft will expire on 5 May 2027.
 
 Copyright Notice
 
@@ -709,7 +709,7 @@ Table of Contents
       instance and never widens it beyond the Template Ceiling.  Absent
       a proposal, the instance derives from the dispatch intent alone.
       An instance created from a Dispatch carrying one records
-      proposed_authority and proposal_hash.
+      proposed_authority, its proposal_hash recorded or implied.
 
    dispatch_event_id:  REQUIRED.  The dispatch event identifier that
       makes the Dispatch idempotent (Section 7).  A redemption bearing
@@ -1993,6 +1993,9 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  An instance created from a Dispatch carrying a proposal records
+      proposed_authority, its proposal_hash recorded or implied (#1917).
 
    *  The template basis meets Approval Governance's Approval Basis
       Contract, and the Dispatch Policy reference, its verification and

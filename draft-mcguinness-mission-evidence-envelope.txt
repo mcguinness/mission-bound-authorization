@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            31 October 2026
-Expires: 4 May 2027
+Intended status: Experimental                            1 November 2026
+Expires: 5 May 2027
 
 
                        Mission Evidence Envelope
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 May 2027.
+   This Internet-Draft will expire on 5 May 2027.
 
 Copyright Notice
 
@@ -807,7 +807,8 @@ Table of Contents
    Beyond Section 4.5 and the producer authorization above, a verifier
    holding the referenced Mission Record MUST confirm
    payload.intent_hash and payload.submission_evidence are byte-for-byte
-   equal, member for member, to the Mission Record's own intent_hash and
+   equal, member for member, to the Mission Record's intent_hash,
+   recorded or implied ([I-D.draft-mcguinness-oauth-mission]), and its
    submission_evidence.
 
    *This is an AS attestation, not independent proof of the original
@@ -1300,6 +1301,9 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The intent admission cross-check compares payload.intent_hash with
+      the Mission Record's intent_hash, recorded or implied (#1917).
 
    Initial version.  Defines the Mission Evidence Envelope, the Mission
    Evidence Payload Type Registry, and Intent Admission Evidence as the
