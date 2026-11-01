@@ -4696,10 +4696,11 @@ documents that behavior.
 
 Token validity and Mission validity are distinct: a consumer that
 enforces from the token alone can honor an issued access token until
-it expires ({{derived-token-lifetime}}), and one that reads Mission
-state refuses it once the Mission is no longer active. A deployment
-whose consumers rely on Mission state beyond a token's lifetime
-offers token introspection ({{introspection}}) or Mission Status
+it expires ({{derived-token-lifetime}}), and one that checks Mission
+state refuses it when that check reports a non-active state, under the
+mechanism's freshness rules. A deployment whose consumers rely on
+Mission state beyond a token's lifetime offers token introspection
+({{introspection}}) or Mission Status
 ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read current
 state rather than infer it from token validity.
 
