@@ -53,6 +53,14 @@ function statingConfig(port: number): MasPilotConfig {
   return moved;
 }
 
+/**
+ * The controlled clock every in-process component reads (`Date` faked,
+ * advancing with real time): the estate, the gateway, the PEP, the PDP and
+ * the MAS kernel. The shared `approve` helper's Intent expires on 2027-06-01,
+ * after it, and no assertion moves with the real date.
+ */
+const CLOCK_MS = Date.parse("2026-11-02T12:00:00Z");
+
 const claimsOf = (token: string) => JSON.parse(Buffer.from(token.split(".")[1] as string, "base64url").toString()) as Record<string, unknown>;
 
 d("MAS pilot: a joined credential under a contract-stating scope value works end to end (@spec authority-server#mission-join, resource-access#resource-contract, #249, D967)", () => {
@@ -62,6 +70,8 @@ d("MAS pilot: a joined credential under a contract-stating scope value works end
   let unpinnedMission: string;
 
   beforeAll(async () => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(CLOCK_MS);
     ({ pilot, requests } = await composeRecorded({ config: statingConfig(14985) }));
     // Approved against the intended contract, as a Mission created after the flip is (D989).
     const requiring = vi.spyOn(pilot.kernel, "resourceContracts").mockReturnValue(contractsRequiring(CUTOVER));
@@ -74,12 +84,15 @@ d("MAS pilot: a joined credential under a contract-stating scope value works end
   }, 30_000);
   afterAll(async () => {
     await pilot?.close();
+    vi.useRealTimers();
   });
   /** The pilot's Execution Evidence records, all Missions. */
   const executionCount = (): number => pilot.evidence.all().filter((e) => e.kind === "execution").length;
 
   it("joins a credential the estate issues under the contract-stating value to the Mission approved against the same contract, and permits the read under that contract", async () => {
-    const authority = (pilot.kernel.get(pinnedMission) as { authority_set: Array<{ resource_contract?: unknown }> }).authority_set;
+    const record = pilot.kernel.get(pinnedMission) as { authority_set: Array<{ resource_contract?: unknown }>; intent: { expires_at: string } };
+    expect(Date.parse(record.intent.expires_at)).toBeGreaterThan(Date.now());
+    const authority = record.authority_set;
     expect(authority.length).toBeGreaterThan(0);
     for (const e of authority) expect(e.resource_contract).toEqual(CURRENT);
 

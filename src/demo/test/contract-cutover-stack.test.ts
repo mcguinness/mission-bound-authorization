@@ -43,6 +43,16 @@ const CUTOVER = [
 const REQUIRING = (): ResourceContractDeclarations => contractsRequiring(CUTOVER);
 
 /**
+ * The controlled clock every component in this file reads (`Date` faked,
+ * advancing with real time): after the current contract's version took effect
+ * and inside 2026-10-26's declared retention, so neither the Intent's expiry
+ * nor that retention moves with the real date.
+ */
+const CLOCK_MS = Date.parse("2026-11-02T12:00:00Z");
+/** The Intent's expiry: thirty days after the controlled clock. */
+const EXPIRES_AT = new Date(CLOCK_MS + 30 * 86_400_000).toISOString();
+
+/**
  * The shipped declarations as they stood while `version` was current: it
  * current, every newer version absent, the cutover's actions required.
  */
@@ -76,6 +86,8 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
   let fgaBootstrap: MockInstance;
   let stack: DemoStack;
   beforeAll(async () => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(CLOCK_MS);
     fgaBootstrap = vi.spyOn(Fga, "bootstrap").mockResolvedValue({
       fga: { checkWithContext: async () => true, checkStored: async () => true, client: { write: async () => ({}) }, modelId: "test" } as unknown as Fga,
       storeId: "test",
@@ -104,6 +116,7 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
       stack.kernel.db.close();
     }
     fgaBootstrap.mockRestore();
+    vi.useRealTimers();
   });
 
   const authServer = () => {
@@ -121,7 +134,7 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
           intent: {
             goal: "Pay approved Acme invoices and send their remittance",
             target_resources: [CANONICAL_RESOURCE],
-            expires_at: "2027-01-01T00:00:00Z",
+            expires_at: EXPIRES_AT,
           },
         }),
         authorizationDetails: JSON.stringify([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, constraints }]),
@@ -224,6 +237,8 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
           const res = await present(credential, issued.dpopKeys, tool, args);
           calls += 1;
           expect(res.ok, `${tool}: ${JSON.stringify(res)}`).toBe(false);
+          // Refused before the decision request, not after one.
+          expect(recordsOf(missionId, "decision").length, `${tool}: decided`).toBe(decisionsBefore);
           expect(res.refusal_reason, tool).toBe("resource_contract_unresolvable");
         }
       }
@@ -253,6 +268,8 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
     expect(pinned?.resource_contract?.version).toBe(OLDER);
     const declared = RESOURCE_CONTRACTS.versionOf(pinned?.resource_contract);
     expect(declared?.version.state).toBe("superseded");
+    // Within its declared retention at the controlled clock.
+    expect(Date.parse(declared?.version.retained_until as string)).toBeGreaterThan(Date.now());
     const olderProfile = declared?.version.operation_profile;
     expect(olderProfile).toBe("payments-runtime-profile-v15");
     expect(olderProfile).not.toBe(currentContractProfileVersion(CANONICAL_RESOURCE));
