@@ -951,8 +951,7 @@ governs who may perform each operation.
 The AS publishes its Mission Lifecycle endpoint URL in authorization
 server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
 distinct from {{RFC7009}} token revocation. The endpoint MUST be
-served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
-recommendations of {{RFC9325}}.
+served over TLS as the Mission Status endpoint is ({{mission-status}}).
 
 This endpoint's operations extend the issuance profile's lifecycle
 state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission

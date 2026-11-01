@@ -24256,7 +24256,7 @@
    "id": "status.lifecycle.tls",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of {{RFC9325}}.",
+   "text": "The endpoint MUST be served over TLS as the Mission Status endpoint is ({{mission-status}})",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24274,6 +24274,29 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+  },
+  {
+   "id": "status.read.endpoint-tls",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status",
+   "text": "The endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of {{RFC9325}}",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Mission Status endpoint is reachable only over TLS 1.2 or later",
+    "local": "the reference listens on plain HTTP for local development, so no test witnesses this; the deployment evidence that would is a TLS terminator in front of mission_status_endpoint that refuses protocol versions below TLS 1.2, recorded with the deployment (#1240 review)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1864 item 5g: the Mission Status endpoint's own TLS row. Before #1864, `status.lifecycle.tls` matched this sentence and the Lifecycle endpoint's identical one; the Lifecycle endpoint now points here."
   },
   {
    "id": "status.lifecycle.form-request",
