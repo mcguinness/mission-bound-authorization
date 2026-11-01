@@ -27,7 +27,7 @@ import {
   type ResourceContractRef,
   resourceContractDigest,
 } from "@mission/core";
-import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { contractsRequiring, RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
   createDecisionChannel,
   createEphemeralDecisionPoint,
@@ -48,6 +48,7 @@ import {
   Connectors,
   createEphemeralEvidenceKeys,
   credentialAuthorityFrom,
+  dispatchPathFor,
   EvidenceStore,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
@@ -141,6 +142,9 @@ const tokenFor = (view: MissionView, entries: Entry[] = view.authority_set): Tok
 interface Built {
   server: McpPaymentsServer;
   pep: Pep;
+  /** The transaction tier's connectors and the write tier's reservations: every effect a tool can leave. */
+  connectors: Connectors;
+  writeReservations: ReturnType<typeof openEphemeralWriteReservationStore>;
   decided: EvaluationRequest[];
   records: () => ReturnType<EvidenceStore["forMission"]>;
   setPepContracts: (d: ResourceContractDeclarations) => void;
@@ -221,6 +225,7 @@ async function build(
     claims: channel.claims,
   });
   const writeReservations = openEphemeralWriteReservationStore({ owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string });
+  const connectors = new Connectors();
   const server = new McpPaymentsServer({
     pep,
     payments,
@@ -229,12 +234,14 @@ async function build(
     jwks: { keys: [] },
     keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     enforcementScopeStatement: loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: channel.remoteDecisionChannels }),
-    transaction: { engine: new TransactionEngine("epoch-249", now), connectors: new Connectors(), evidence },
+    transaction: { engine: new TransactionEngine("epoch-249", now), connectors, evidence },
     writeReservations,
   });
   return {
     server,
     pep,
+    connectors,
+    writeReservations,
     decided,
     records: () => evidence.forMission(view.id),
     setPepContracts: (d) => {
@@ -871,6 +878,103 @@ describe("the executing PEP re-resolves the permit's contract before release (@s
         expect(x.pep.permitUseFailure(unbound), mode).toBe("resource_contract_unresolvable");
       } finally {
         await x.close();
+      }
+    }
+  });
+});
+
+/** The five non-read payments actions the cutover requires a reference for (D865). */
+const CUTOVER = [
+  "payments:payment.schedule",
+  "payments:payment.schedule.cancel",
+  "payments:payment.execute",
+  "payments:payment.reverse",
+  "payments:remittance.send",
+];
+
+/**
+ * @spec resource-access#resource-contract, runtime#resource-contract (#249
+ * C.3a, D1071): under the shipped declarations requiring the cutover's five
+ * actions (the configuration C.3b ships), the requirement applies per tool:
+ * exactly the tools whose action is one of the five, the three that share
+ * `payments:payment.execute` and differ only by phase included, and none of
+ * the reads.
+ */
+describe("the per-tool reference requirement under the cutover's five actions (@spec resource-access#resource-contract, runtime#resource-contract, #249, D1071)", () => {
+  const requiring = contractsRequiring(CUTOVER);
+  const READ_ARGS: Record<string, Record<string, unknown>> = {
+    list_invoices: {},
+    get_invoice: { invoice_id: "inv-1" },
+    lookup_vendor: { vendor_id: "acme" },
+    check_transfer: { invoice_id: "inv-1" },
+    hold_transfer: { invoice_id: "inv-1" },
+  };
+  const argsFor = (tool: string): Record<string, unknown> =>
+    READ_ARGS[tool] ?? { invoice_id: "inv-1", idempotency_key: `idem_${crypto.randomUUID()}` };
+
+  it("requires a reference for exactly the seven tools whose action is one of the five, the preflight, prepare and commit phases of payments:payment.execute included, and for none of the three reads", () => {
+    expect(requiring.declarations[0]?.requires_reference).toEqual(CUTOVER);
+    const tools = Object.keys(TOOL_ACTIONS);
+    expect(tools).toHaveLength(10);
+    const required = tools.filter((t) => requiring.requiresReference(CANONICAL_RESOURCE, (TOOL_ACTIONS[t] as ActionMapping).action));
+    expect([...required].sort()).toEqual([
+      "cancel_scheduled_payment",
+      "check_transfer",
+      "execute_wire_transfer",
+      "hold_transfer",
+      "reverse_wire_transfer",
+      "schedule_payment",
+      "send_remittance_email",
+    ]);
+    const execute = tools
+      .filter((t) => TOOL_ACTIONS[t]?.action === "payments:payment.execute")
+      .map((t) => [t, TOOL_ACTIONS[t]?.phase]);
+    expect(execute).toEqual(
+      expect.arrayContaining([
+        ["check_transfer", "preflight"],
+        ["hold_transfer", "prepare"],
+        ["execute_wire_transfer", "commit"],
+      ]),
+    );
+    expect(execute).toHaveLength(3);
+    expect(tools.filter((t) => !required.includes(t)).sort()).toEqual(["get_invoice", "list_invoices", "lookup_vendor"]);
+  });
+
+  it("refuses an unpinned entry resource_contract_unresolvable for each of the seven, before any decision and with no effect, and performs each of the three reads, on its own dispatch path", async () => {
+    const unpinned = viewOf([entry(undefined)]);
+    for (const mode of MODES) {
+      for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
+        const label = `${mode} ${tool}`;
+        const x = await build(mode, unpinned, requiring, { shippedRetainedProfiles: true });
+        try {
+          const path = dispatchPathFor(mapping, true);
+          const call =
+            path === "read"
+              ? x.server.callReadTool.bind(x.server)
+              : path === "write"
+                ? x.server.callWriteTool.bind(x.server)
+                : x.server.callTransactionTool.bind(x.server);
+          const res = await call(tool, argsFor(tool), tokenFor(unpinned));
+          if (CUTOVER.includes(mapping.action)) {
+            expect(res, label).toMatchObject({ ok: false, refusal_reason: "resource_contract_unresolvable" });
+            expect(res.result, label).toBeUndefined();
+            expect(x.decided, label).toHaveLength(0);
+            const recorded = x.records();
+            expect(recorded.filter((e) => e.kind === "refusal").map((e) => e.content), label).toEqual([
+              expect.objectContaining({ denial_reason: "resource_contract_unresolvable" }),
+            ]);
+            expect(recorded.filter((e) => e.kind === "execution" || e.kind === "decision"), label).toEqual([]);
+            expect(x.connectors.ledgerEntries(), label).toEqual([]);
+            expect(x.connectors.reversalEntries(), label).toEqual([]);
+            expect(x.connectors.committedEffects(), label).toEqual([]);
+            expect(x.writeReservations.schedules(), label).toEqual([]);
+          } else {
+            expect(res.ok, `${label}: ${JSON.stringify(res)}`).toBe(true);
+            expect(x.decided, label).toHaveLength(1);
+          }
+        } finally {
+          await x.close();
+        }
       }
     }
   });
