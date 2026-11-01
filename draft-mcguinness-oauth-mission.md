@@ -1831,7 +1831,9 @@ In every approval interaction, the `prompt`, `login_hint`, and
 
 These rules apply at step 2 of the direct approval steps
 ({{direct-approval-steps}}). The Subject can be a workload or
-organizational principal, established and mapped the same way.
+organizational principal, established and mapped the same way; which
+principal a service-owned or organizational Mission records as its
+Subject is stated for every Mission in {{authority-sources}}.
 
 - **Self-approval.** When the Approver is the Subject, the Subject is
   the authenticated Approver.
@@ -1850,15 +1852,6 @@ organizational principal, established and mapped the same way.
   same local `sub`). A derived token's (`iss`, `sub`) pair then
   denotes exactly one Subject. Adopting the external `sub` verbatim
   is valid only where it collides with no other principal's `sub`.
-- **Workload or organizational Subject.** `sub` carries a delegating
-  person only in the user-delegated source ({{authority-sources}}).
-  A service-owned or organizational Mission MUST record the workload
-  or organizational principal as `subject` and MUST NOT record a
-  human principal in its place. The injective mapping above applies
-  unchanged: that principal receives its own AS-local `sub`, denotes
-  itself, and impersonates nobody. It MUST be an authorization
-  subject the AS recognizes as a resource owner in its own right
-  (the `sub` model of {{RFC9068}}), not only the task's beneficiary.
 
 ### Authority Sources {#authority-sources}
 
@@ -1909,12 +1902,21 @@ its `digest`:
   consumer holding the policy can reproduce it, and one that does
   not compares it as an opaque value.
 
-Whatever the source ({{subject-establishment}} states which principal
-is the Subject):
+The subject-representation discipline is the same in every source:
 
 - The accountable principal is the record's
   `approval_basis.consent_principal` in every source; it MUST NOT be
   inferred from the token `sub`.
+- `sub` carries a delegating person only in the user-delegated
+  source. A service-owned or organizational Mission MUST record the
+  workload or organizational principal as `subject` and MUST NOT
+  record a human principal in its place. The injective mapping of
+  {{subject-establishment}} applies unchanged: that principal
+  receives its own AS-local `sub`, denotes itself, and impersonates
+  nobody. It
+  MUST be an authorization subject the AS recognizes as a resource
+  owner in its own right (the `sub` model of {{RFC9068}}), not only
+  the task's beneficiary.
 - The actor model does not vary by source: the Mission Record's
   `client_id` names the Agent, a token's `client_id` names the client
   that requested it ({{token-claims}}), and delegates are carried in
