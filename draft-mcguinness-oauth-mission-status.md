@@ -1638,10 +1638,8 @@ the consumer's view of Mission state is; it does not bound
 reconciliation delay upstream of the issuer or effects already
 underway.
 
-Where the member is present, a status response's `mission.fresh_until`
-MUST NOT exceed the response's issuance time plus the advertised
-bound ({{mission-status-caching}}). The 60-second value in the
-examples is a tight deployment's choice, not a floor.
+The 60-second value in the examples is a tight deployment's choice,
+not a floor.
 
 Where a deployment needs Mission revocation to take effect but only
 the baseline derivation-time check is in use, Mission-bound access
