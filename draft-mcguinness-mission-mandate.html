@@ -1752,13 +1752,7 @@ it <span class="bcp14">MUST NOT</span> be treated as proof of the Mission's curr
 rule: any value other than the exact string <code>active</code>, including one it
 does not recognize, means the Mission was not active at minting. The
 Mission may have transitioned since minting, and nothing in the
-artifact would show it. A <code>state_at_issuance</code> of <code>revoked</code>, <code>expired</code>,
-<code>completed</code>, <code>superseded</code>, or <code>cascaded</code> is read under the issuance
-profile's transition-period rule
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Termination"), over the Mandate's verified original bytes; like
-<code>termination_at_issuance</code>, it describes the Mission at <code>iat</code>, never
-its current status.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
+artifact would show it.<a href="#section-4.3-2" class="pilcrow">¶</a></p>
 <p id="section-4.3-3">Current state comes from a state surface, not from the Mandate:<a href="#section-4.3-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4.3-4.1">
@@ -3021,6 +3015,12 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
           <p id="appendix-A-2.1.1">Minting populates <code>intent_hash</code> and <code>authority_hash</code> from the
 Mission record's integrity anchors, recorded or implied, since the
 OAuth binding makes them implied members (#1917).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">A <code>state_at_issuance</code> of <code>revoked</code>, <code>expired</code>, <code>completed</code>,
+<code>superseded</code>, or <code>cascaded</code> is read under the fail-safe rule, as not
+active at minting: the issuance profile no longer reads those values
+as a state (#1504, D1006).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

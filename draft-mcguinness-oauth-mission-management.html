@@ -1652,14 +1652,7 @@ Mission at or past its <code>expires_at</code> is <code>terminated</code> with r
 transition was persisted (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Mission Lifecycle").
 The AS <span class="bcp14">MUST NOT</span> refuse a filter for carrying a state value it does
-not produce; such a value matches no Mission, except that, for a
-transition period, <code>revoked</code>, <code>expired</code>, <code>completed</code>, <code>superseded</code>,
-or <code>cascaded</code> matches a Mission <code>terminated</code> with that termination
-reason (<code>cascaded</code> matching <code>parent_terminated</code>), the issuance
-profile's transition-period reading
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Termination"). A Mission matched this way is reported as
-<code>terminated</code> with its <code>termination</code>, never under the filter's value.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+not produce; such a value matches no Mission.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.7">
@@ -2828,6 +2821,12 @@ member whose version moved and reports it <code>stale_version</code>, and a
 terminated member still reports <code>already_terminal</code>. The pinned
 versions are the bulk-path form of the status profile's
 <code>expected_version</code> guard (#997, D995).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">A <code>filter.state</code> value of <code>revoked</code>, <code>expired</code>, <code>completed</code>,
+<code>superseded</code>, or <code>cascaded</code> matches no Mission, like any other state
+value the AS does not produce: the issuance profile no longer reads
+those values as a state (#1504, D1006).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

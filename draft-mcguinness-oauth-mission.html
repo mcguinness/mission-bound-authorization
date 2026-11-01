@@ -1296,7 +1296,7 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
                     <p id="section-toc.1-1.6.2.1.2.4.1"><a href="#section-6.1.4" class="auto internal xref">6.1.4</a>.  <a href="#name-authority-sources" class="internal xref">Authority Sources</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1.2.5">
-                    <p id="section-toc.1-1.6.2.1.2.5.1"><a href="#section-6.1.5" class="auto internal xref">6.1.5</a>.  <a href="#name-rendering-safeguards" class="internal xref">Rendering Safeguards</a></p>
+                    <p id="section-toc.1-1.6.2.1.2.5.1"><a href="#section-6.1.5" class="auto internal xref">6.1.5</a>.  <a href="#name-consent-rendering" class="internal xref">Consent Rendering</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1.2.6">
                     <p id="section-toc.1-1.6.2.1.2.6.1"><a href="#section-6.1.6" class="auto internal xref">6.1.6</a>.  <a href="#name-changes-before-the-decision" class="internal xref">Changes Before the Decision</a></p>
@@ -2549,7 +2549,7 @@ with the <code>invalid_request</code> error code.<a href="#section-4.2.1-2.4.1" 
 </dd>
           <dd class="break"></dd>
 </dl>
-<p id="section-4.2.1-3"><code>intent_hash</code> commits exactly the <code>intent</code> object, not the
+<p id="section-4.2.1-3">The <code>intent_hash</code> anchor commits exactly the <code>intent</code> object, not the
 Submission envelope or its <code>evidence</code> array (<a href="#integrity-anchors" class="auto internal xref">Section 6.3.1</a>).<a href="#section-4.2.1-3" class="pilcrow">¶</a></p>
 <p id="section-4.2.1-4">The following rules govern a submission:<a href="#section-4.2.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2561,7 +2561,7 @@ definitions, <span class="bcp14">MUST</span> refuse the request with the <code>i
 error code.<a href="#section-4.2.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-4.2.1-5.2">
-              <p id="section-4.2.1-5.2.1"><strong>Closed top levels.</strong> The AS <span class="bcp14">MUST</span> reject a submission with the
+              <p id="section-4.2.1-5.2.1"><strong>Closed top levels.</strong> The AS <span class="bcp14">MUST</span> refuse a submission with the
 <code>invalid_request</code> error code if the Submission envelope contains a
 top-level member other than <code>intent</code> and <code>evidence</code>, or if the
 <code>intent</code> contains a top-level member that neither this document
@@ -2627,14 +2627,14 @@ body; or<a href="#section-4.2.2-3.1.1" class="pilcrow">¶</a></p>
               <p id="section-4.2.2-3.2.1">a <code>mission_intent</code> claim inside a signed Request Object
 (<span>[<a href="#RFC9101" class="cite xref">RFC9101</a>]</span>) that is itself pushed through PAR. The claim's
 value is the Submission envelope itself, a JSON object, not its
-serialization; the AS <span class="bcp14">MUST</span> reject with <code>invalid_request</code> a claim
+serialization; the AS <span class="bcp14">MUST</span> refuse with <code>invalid_request</code> a claim
 whose value is a string or any other value that is not a JSON
 object.<a href="#section-4.2.2-3.2.1" class="pilcrow">¶</a></p>
 </li>
           </ol>
 <p id="section-4.2.2-4">When the pushed request carries a Request Object (a <code>request</code>
 parameter value), that object is authoritative: a <code>mission_intent</code>
-submitted outside the Request Object in the same push <span class="bcp14">MUST</span> be rejected
+submitted outside the Request Object in the same push <span class="bcp14">MUST</span> be refused
 with <code>invalid_request</code>, strengthening <span><a href="https://rfc-editor.org/rfc/rfc9101#section-6.3" class="relref">Section 6.3</a> of [<a href="#RFC9101" class="cite xref">RFC9101</a>]</span>,
 under which the AS would only ignore such a value.<a href="#section-4.2.2-4" class="pilcrow">¶</a></p>
 <p id="section-4.2.2-5">A client proposes concrete authority on the standard
@@ -2648,7 +2648,7 @@ start authorization. Pushed parameters are authoritative: on the
 front-channel request that redeems the <code>request_uri</code>, the AS <span class="bcp14">MUST</span>
 ignore any <code>mission_intent</code>, <code>authorization_details</code>, <code>scope</code>, or
 <code>resource</code> presented.<a href="#section-4.2.2-6" class="pilcrow">¶</a></p>
-<p id="section-4.2.2-7">The AS <span class="bcp14">MUST</span> reject with <code>invalid_request</code> a <code>mission_intent</code> presented
+<p id="section-4.2.2-7">The AS <span class="bcp14">MUST</span> refuse with <code>invalid_request</code> a <code>mission_intent</code> presented
 on a front-channel authorization request that does not use a
 PAR-issued <code>request_uri</code>. A client <span class="bcp14">MUST NOT</span> send <code>mission_intent</code> as a
 plaintext front-channel authorization-request parameter, whether or
@@ -2740,7 +2740,7 @@ entry as a subset (<a href="#subset" class="auto internal xref">Section 5.4</a>)
 type</em>: narrowed under that type's own subset rule where the AS has
 declared <code>narrowing</code> for the type, or carried through unchanged
 otherwise (<a href="#transformation-capabilities" class="auto internal xref">Section 5.5.1</a>). With a proposal present,
-<code>goal</code> and <code>task_bounds</code> serve as rendering and bounding context over
+<code>goal</code> and <code>task_bounds</code> serve as rendering and review context for
 the proposed authority.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
 <p id="section-4.3.2-2">Policy narrowing is distinct from validation (<a href="#proposal-validation" class="auto internal xref">Section 4.3.1</a>).
 During Authority Set derivation the AS <span class="bcp14">MAY</span> omit a syntactically valid
@@ -2805,7 +2805,7 @@ for that resource outside a Mission, on any grant type.<a href="#section-4.3.3-2
             <li id="section-4.3.3-2.2">
               <p id="section-4.3.3-2.2.1">If a client registered as Mission-governed sends an authorization
 request, through PAR or at the authorization endpoint, that carries
-<code>authorization_details</code> but no <code>mission_intent</code>, the AS <span class="bcp14">MUST</span> reject
+<code>authorization_details</code> but no <code>mission_intent</code>, the AS <span class="bcp14">MUST</span> refuse
 the request with the <code>invalid_request</code> error code, so the client
 cannot drop the Intent from a request that still carries
 <code>authorization_details</code>.<a href="#section-4.3.3-2.2.1" class="pilcrow">¶</a></p>
@@ -2892,7 +2892,7 @@ member names its evidence type.<a href="#section-4.4-1" class="pilcrow">¶</a></
 <p id="section-4.4-2">Processing is governed by the following rules:<a href="#section-4.4-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4.4-3.1">
-            <p id="section-4.4-3.1.1"><strong>Reject, do not ignore.</strong> An entry that is not a JSON object, or
+            <p id="section-4.4-3.1.1"><strong>Refuse, do not ignore.</strong> An entry that is not a JSON object, or
 that lacks <code>type</code>, is structurally invalid and refused with the
 <code>invalid_request</code> error code at step 1 of the processing order
 (<a href="#submission-processing" class="auto internal xref">Section 4.5</a>). The AS <span class="bcp14">MUST</span> refuse an entry whose
@@ -2913,11 +2913,11 @@ for this request.<a href="#section-4.4-3.2.1" class="pilcrow">¶</a></p>
 <p id="section-4.4-4">Supporting an evidence type is optional, but these rules are not: an
 AS that supports none still applies them and refuses every presented
 entry (<a href="#conformance-roles" class="auto internal xref">Section 15.1</a>).<a href="#section-4.4-4" class="pilcrow">¶</a></p>
-<p id="section-4.4-5"><code>submission_evidence</code> (<a href="#record-content-members" class="auto internal xref">Section 6.2.2</a>) is provenance, not
-enforcement input, and is not carried on the <code>mission</code> claim
-(<a href="#mission-claim" class="auto internal xref">Section 7.8</a>). Recorded facts, such as a verified consent
-reference, are provenance and policy input only; a resource domain
-validates them under its own current policy
+<p id="section-4.4-5">The record's <code>submission_evidence</code> member (<a href="#record-content-members" class="auto internal xref">Section 6.2.2</a>)
+is provenance, not enforcement input, and is not carried on the
+<code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>). Recorded facts, such as a
+verified consent reference, are provenance and policy input only; a
+resource domain validates them under its own current policy
 (<a href="#third-party-data-subjects" class="auto internal xref">Section 18.4</a>).<a href="#section-4.4-5" class="pilcrow">¶</a></p>
 <p id="section-4.4-6">No integrity anchor commits <code>submission_evidence</code>: its digests are
 only as trustworthy as the Mission Record that holds them and do not
@@ -3254,13 +3254,13 @@ for a type establishes a subset (<a href="#other-types" class="auto internal xre
         </h3>
 <p id="section-5.5-1">The Authority Set <span class="bcp14">MAY</span> include any AS-supported <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
           <code>authorization_details</code> type an audience consumes; this document
-defines no type itself. ("Supported" here means the AS recognizes
-and documents the type: it appears in
+defines no type itself. "Supported" here means the AS recognizes and
+documents the type: it appears in
 <code>authorization_details_types_supported</code> or, where the AS advertises
 the schema endpoint, as a key in its
-<code>authorization_details_types_metadata_endpoint</code> response, then the
-source of truth for the supported set (<a href="#discovery" class="auto internal xref">Section 12</a>).) The Mission
-apparatus is type-agnostic toward every supported type:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<code>authorization_details_types_metadata_endpoint</code> response, which is
+then the source of truth for the supported set (<a href="#discovery" class="auto internal xref">Section 12</a>). The
+Mission apparatus is type-agnostic toward every supported type:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.5-2.1">
             <p id="section-5.5-2.1.1">an entry is committed by <code>authority_hash</code> and gated on Mission state
@@ -3452,53 +3452,19 @@ selecting a grant bound to a Mission.<a href="#section-6.1.1-3" class="pilcrow">
 <li id="section-6.1.1.1-1.1">
                 <p id="section-6.1.1.1-1.1.1"><strong>Authenticate the Approver</strong>, subject to the approval-authentication
 floor and any client-requested strength
-(<a href="#approval-authentication" class="auto internal xref">Section 6.1.2</a>). The AS <span class="bcp14">MUST NOT</span> take the Approver's
-identity or achieved authentication context from unauthenticated
-client input; the authenticated surface that resolved the approval
-establishes both.<a href="#section-6.1.1.1-1.1.1" class="pilcrow">¶</a></p>
+(<a href="#approval-authentication" class="auto internal xref">Section 6.1.2</a>).<a href="#section-6.1.1.1-1.1.1" class="pilcrow">¶</a></p>
 </li>
               <li id="section-6.1.1.1-1.2">
                 <p id="section-6.1.1.1-1.2.1"><strong>Establish the Subject</strong>: the principal the task is for, recorded as
 the Mission's <code>subject</code> and mapped to the <code>sub</code> of every derived
-token (<a href="#token-claims" class="auto internal xref">Section 7.2</a>). The Subject can be a workload or
-organizational principal (<a href="#authority-sources" class="auto internal xref">Section 6.1.4</a>), established and
-mapped the same way.<a href="#section-6.1.1.1-1.2.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-6.1.1.1-1.2.2.1">
-                    <p id="section-6.1.1.1-1.2.2.1.1"><strong>Self-approval.</strong> When the Approver is the Subject, the Subject
-is the authenticated Approver.<a href="#section-6.1.1.1-1.2.2.1.1" class="pilcrow">¶</a></p>
-</li>
-                  <li class="normal" id="section-6.1.1.1-1.2.2.2">
-                    <p id="section-6.1.1.1-1.2.2.2.1"><strong>Another principal or an external Subject.</strong> The rules of
-<a href="#subject-establishment" class="auto internal xref">Section 6.1.3</a> apply at this step.<a href="#section-6.1.1.1-1.2.2.2.1" class="pilcrow">¶</a></p>
-</li>
-                </ul>
+token (<a href="#token-claims" class="auto internal xref">Section 7.2</a>), under the rules of
+<a href="#subject-establishment" class="auto internal xref">Section 6.1.3</a>.<a href="#section-6.1.1.1-1.2.1" class="pilcrow">¶</a></p>
 </li>
               <li id="section-6.1.1.1-1.3">
                 <p id="section-6.1.1.1-1.3.1"><strong>Establish the authority source</strong>: whose authority the approval
 draws on, recorded as the Mission's <code>authority_source</code>
-(<a href="#authority-sources" class="auto internal xref">Section 6.1.4</a>, <a href="#mission-record" class="auto internal xref">Section 6.2</a>). The AS <span class="bcp14">MUST</span> establish
-it from trusted configuration or authenticated governance state,
-never from client assertion.<a href="#section-6.1.1.1-1.3.1" class="pilcrow">¶</a></p>
-<p id="section-6.1.1.1-1.3.2">
-The AS then makes two checks:<a href="#section-6.1.1.1-1.3.2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-6.1.1.1-1.3.3.1">
-                    <p id="section-6.1.1.1-1.3.3.1.1">The AS <span class="bcp14">MUST</span> verify the Approver is authorized under local policy
-to activate the established source.<a href="#section-6.1.1.1-1.3.3.1.1" class="pilcrow">¶</a></p>
-</li>
-                  <li class="normal" id="section-6.1.1.1-1.3.3.2">
-                    <p id="section-6.1.1.1-1.3.3.2.1">The AS <span class="bcp14">MUST</span> verify the derived Authority Set lies within that
-source's authority (for <code>organizational</code>, within the governed
-policy identified by <code>authority_source.policy</code>).<a href="#section-6.1.1.1-1.3.3.2.1" class="pilcrow">¶</a></p>
-</li>
-                </ul>
-<p id="section-6.1.1.1-1.3.4">
-These are distinct checks: an organizational owner may be
-authorized to activate policy without personally holding every
-operational permission. The AS <span class="bcp14">MUST</span> refuse when either relationship
-cannot be established. An AS <span class="bcp14">MUST NOT</span> approve a Mission whose
-authority source it does not recognize.<a href="#section-6.1.1.1-1.3.4" class="pilcrow">¶</a></p>
+(<a href="#mission-record" class="auto internal xref">Section 6.2</a>), and check the Approver and the derived
+Authority Set against it, under the rules of <a href="#authority-sources" class="auto internal xref">Section 6.1.4</a>.<a href="#section-6.1.1.1-1.3.1" class="pilcrow">¶</a></p>
 </li>
               <li id="section-6.1.1.1-1.4">
                 <p id="section-6.1.1.1-1.4.1"><strong>Establish the effective Mission expiry</strong>: the requested
@@ -3518,43 +3484,7 @@ the only additional ceiling is applicable AS policy.<a href="#section-6.1.1.1-1.
 terms, with the <code>goal</code>, <code>task_bounds</code>, and the effective
 <code>expires_at</code> (and, when it differs, the requested
 <code>intent.expires_at</code>, so the Approver sees the narrowing) as
-context.<a href="#section-6.1.1.1-1.5.1" class="pilcrow">¶</a></p>
-<p id="section-6.1.1.1-1.5.2">
-The consent object is the <strong>derived Authority Set</strong>: what the agent
-may do. It is not the <code>goal</code> or Mission Intent, because Authority
-Set derivation is local policy and nothing commits that the derived
-authority reflects the goal the Approver read. An approval surface
-that renders only the <code>goal</code> or Mission Intent does not conform.<a href="#section-6.1.1.1-1.5.2" class="pilcrow">¶</a></p>
-<p id="section-6.1.1.1-1.5.3">
-These requirements apply to the rendering:<a href="#section-6.1.1.1-1.5.3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-6.1.1.1-1.5.4.1">
-                    <p id="section-6.1.1.1-1.5.4.1.1">The rendering <span class="bcp14">MUST</span> identify the OAuth client that receives the
-authority, the Agent, from client identity information the AS
-trusts, such as its own registration of the client; display text
-the client supplies does not by itself identify it.<a href="#section-6.1.1.1-1.5.4.1.1" class="pilcrow">¶</a></p>
-</li>
-                  <li class="normal" id="section-6.1.1.1-1.5.4.2">
-                    <p id="section-6.1.1.1-1.5.4.2.1">When the Approver is not the Subject, the rendering <span class="bcp14">MUST</span>
-identify the Subject the authority is granted for.<a href="#section-6.1.1.1-1.5.4.2.1" class="pilcrow">¶</a></p>
-</li>
-                  <li class="normal" id="section-6.1.1.1-1.5.4.3">
-                    <p id="section-6.1.1.1-1.5.4.3.1">The rendering <span class="bcp14">MUST</span> identify the authority source and, for
-<code>organizational</code>, the governed policy it draws on
-(<code>authority_source.policy</code>).<a href="#section-6.1.1.1-1.5.4.3.1" class="pilcrow">¶</a></p>
-</li>
-                  <li class="normal" id="section-6.1.1.1-1.5.4.4">
-                    <p id="section-6.1.1.1-1.5.4.4.1">When the client submitted an authority proposal
-(<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>), the rendering <span class="bcp14">MUST</span> distinguish the
-entries the client proposed from any narrowing or restructuring
-the AS applied.<a href="#section-6.1.1.1-1.5.4.4.1" class="pilcrow">¶</a></p>
-</li>
-                </ul>
-<p id="section-6.1.1.1-1.5.5">
-Mission Capability Binding
-(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>) states what
-the rendering presents about the source binding of a
-catalog-sourced action.<a href="#section-6.1.1.1-1.5.5" class="pilcrow">¶</a></p>
+context, under the rules of <a href="#rendering-safeguards" class="auto internal xref">Section 6.1.5</a>.<a href="#section-6.1.1.1-1.5.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 </section>
@@ -3608,24 +3538,29 @@ duplicate delivery of the same approval decision on
           <h4 id="name-approver-authentication-str">
 <a href="#section-6.1.2" class="section-number selfRef">6.1.2. </a><a href="#name-approver-authentication-str" class="section-name selfRef">Approver Authentication Strength</a>
           </h4>
-<p id="section-6.1.2-1">A deployment <span class="bcp14">MUST</span> publish a statement declaring the minimum
+<p id="section-6.1.2-1">Step 1 of the direct approval steps (<a href="#direct-approval-steps" class="auto internal xref">Section 6.1.1</a>)
+authenticates the Approver. The AS <span class="bcp14">MUST NOT</span> take the Approver's
+identity or achieved authentication context from unauthenticated
+client input; the authenticated surface that resolved the approval
+establishes both.<a href="#section-6.1.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.1.2-2">A deployment <span class="bcp14">MUST</span> publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
 it enforces for Missions whose derived Authority Set carries high-risk
 authority, and the deployment scope it applies to. This document
-requires no particular serialization.<a href="#section-6.1.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.1.2-2">High-risk authority means irreversible, external-commitment, or
+requires no particular serialization.<a href="#section-6.1.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.1.2-3">High-risk authority means irreversible, external-commitment, or
 privileged-administration actions under the deployment's
 classification, or a consumption bound
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6.1.2-2" class="pilcrow">¶</a></p>
-<p id="section-6.1.2-3">The authentication actually achieved for the approval event (<code>acr</code>,
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6.1.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.1.2-4">The authentication actually achieved for the approval event (<code>acr</code>,
 <code>amr</code>, and <code>auth_time</code>, in the sense <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> and <span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span>
 define them) is approval-time provenance, not requested Intent. This
 document never records it as a Mission Intent member, and an AS
-<span class="bcp14">MUST NOT</span> read it back from a Mission Intent member.<a href="#section-6.1.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.1.2-4">Where a deployment records Consent Evidence, the achieved values
+<span class="bcp14">MUST NOT</span> read it back from a Mission Intent member.<a href="#section-6.1.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.1.2-5">Where a deployment records Consent Evidence, the achieved values
 belong in its <code>authentication_context</code> member
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>). This
-document defines no Mission Record member for them.<a href="#section-6.1.2-4" class="pilcrow">¶</a></p>
+document defines no Mission Record member for them.<a href="#section-6.1.2-5" class="pilcrow">¶</a></p>
 <div id="approval-requested-strength">
 <section id="section-6.1.2.1">
             <h5 id="name-requested-strength">
@@ -3685,26 +3620,33 @@ requires.<a href="#section-6.1.2.2-4" class="pilcrow">¶</a></p>
 <a href="#section-6.1.3" class="section-number selfRef">6.1.3. </a><a href="#name-subject-establishment" class="section-name selfRef">Subject Establishment</a>
           </h4>
 <p id="section-6.1.3-1">These rules apply at step 2 of the direct approval steps
-(<a href="#direct-approval-steps" class="auto internal xref">Section 6.1.1</a>).<a href="#section-6.1.3-1" class="pilcrow">¶</a></p>
+(<a href="#direct-approval-steps" class="auto internal xref">Section 6.1.1</a>). The Subject can be a workload or
+organizational principal, established and mapped the same way; which
+principal a service-owned or organizational Mission records as its
+Subject is stated for every Mission in <a href="#authority-sources" class="auto internal xref">Section 6.1.4</a>.<a href="#section-6.1.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.1.3-2.1">
-              <p id="section-6.1.3-2.1.1"><strong>Approval for another principal.</strong> When the Approver is a
+              <p id="section-6.1.3-2.1.1"><strong>Self-approval.</strong> When the Approver is the Subject, the Subject is
+the authenticated Approver.<a href="#section-6.1.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.1.3-2.2">
+              <p id="section-6.1.3-2.2.1"><strong>Approval for another principal.</strong> When the Approver is a
 different principal (for example, an administrator approving on
 a user's behalf), the AS <span class="bcp14">MUST NOT</span> take the Subject from
 unauthenticated client input, and <span class="bcp14">MUST</span> authorize the Approver to
 approve for that Subject under local policy. This document
 defines no wire parameter for the Subject; how the AS establishes
 it (administrative selection, a directory, an authenticated
-reference) is a deployment matter.<a href="#section-6.1.3-2.1.1" class="pilcrow">¶</a></p>
+reference) is a deployment matter.<a href="#section-6.1.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6.1.3-2.2">
-              <p id="section-6.1.3-2.2.1"><strong>External Subject.</strong> When the Subject's home issuer
+            <li class="normal" id="section-6.1.3-2.3">
+              <p id="section-6.1.3-2.3.1"><strong>External Subject.</strong> When the Subject's home issuer
 (<code>subject.iss</code>) differs from the AS, the AS <span class="bcp14">MUST</span> map the external
 (<code>subject.iss</code>, <code>subject.sub</code>) pair to an AS-local <code>sub</code> under an
 injective mapping (no two distinct external Subjects map to the
 same local <code>sub</code>). A derived token's (<code>iss</code>, <code>sub</code>) pair then
 denotes exactly one Subject. Adopting the external <code>sub</code> verbatim
-is valid only where it collides with no other principal's <code>sub</code>.<a href="#section-6.1.3-2.2.1" class="pilcrow">¶</a></p>
+is valid only where it collides with no other principal's <code>sub</code>.<a href="#section-6.1.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
@@ -3735,31 +3677,51 @@ standing-consent basis a companion defines.<a href="#section-6.1.4-3" class="pil
 <p id="section-6.1.4-4">Approval activates only authority the source already holds: the AS
 establishes the source and verifies the derived Authority Set against it
 before approval (<a href="#direct-approval-steps" class="auto internal xref">Section 6.1.1</a>, <a href="#mission-creating-paths" class="auto internal xref">Section 14.3</a>).<a href="#section-6.1.4-4" class="pilcrow">¶</a></p>
-<p id="section-6.1.4-5">An organizational Mission's <code>authority_source.policy</code> reference
-(<a href="#record-principal-members" class="auto internal xref">Section 6.2.3</a>) commits to the governed policy through
-its <code>digest</code>:<a href="#section-6.1.4-5" class="pilcrow">¶</a></p>
+<p id="section-6.1.4-5">At step 3 of the direct approval steps, the AS establishes the
+authority source. The AS <span class="bcp14">MUST</span> establish it from trusted configuration
+or authenticated governance state, never from client assertion.<a href="#section-6.1.4-5" class="pilcrow">¶</a></p>
+<p id="section-6.1.4-6">The AS then makes two checks:<a href="#section-6.1.4-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6.1.4-6.1">
-              <p id="section-6.1.4-6.1.1"><code>digest</code> is a prefixed commitment (<a href="#commitment-mechanisms" class="auto internal xref">Section 14.4</a>)
-whose exact committed input and construction the policy's format
-specifies: its species and, for an envelope anchor, its <code>typ</code>,
-<code>iss</code>, and <code>value</code>.<a href="#section-6.1.4-6.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6.1.4-7.1">
+              <p id="section-6.1.4-7.1.1">The AS <span class="bcp14">MUST</span> verify the Approver is authorized under local policy to
+activate the established source.<a href="#section-6.1.4-7.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6.1.4-6.2">
-              <p id="section-6.1.4-6.2.1">The party that produces the reference computes <code>digest</code>; a
-consumer holding the policy can reproduce it, and one that does
-not compares it as an opaque value.<a href="#section-6.1.4-6.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-6.1.4-7.2">
+              <p id="section-6.1.4-7.2.1">The AS <span class="bcp14">MUST</span> verify the derived Authority Set lies within that
+source's authority (for <code>organizational</code>, within the governed policy
+identified by <code>authority_source.policy</code>).<a href="#section-6.1.4-7.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-6.1.4-7">The subject-representation discipline is the same in every source:<a href="#section-6.1.4-7" class="pilcrow">¶</a></p>
+<p id="section-6.1.4-8">These are distinct checks: an organizational owner may be authorized
+to activate policy without personally holding every operational
+permission. The AS <span class="bcp14">MUST</span> refuse when either relationship cannot be
+established. An AS <span class="bcp14">MUST NOT</span> approve a Mission whose authority source
+it does not recognize.<a href="#section-6.1.4-8" class="pilcrow">¶</a></p>
+<p id="section-6.1.4-9">An organizational Mission's <code>authority_source.policy</code> reference
+(<a href="#record-principal-members" class="auto internal xref">Section 6.2.3</a>) commits to the governed policy through
+its <code>digest</code>:<a href="#section-6.1.4-9" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6.1.4-8.1">
-              <p id="section-6.1.4-8.1.1">The accountable principal is the record's
-<code>approval_basis.consent_principal</code> in every source; it <span class="bcp14">MUST NOT</span> be
-inferred from the token <code>sub</code>.<a href="#section-6.1.4-8.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6.1.4-10.1">
+              <p id="section-6.1.4-10.1.1"><code>digest</code> is a prefixed commitment (<a href="#commitment-mechanisms" class="auto internal xref">Section 14.4</a>)
+whose exact committed input and construction the policy's format
+specifies: its species and, for an envelope anchor, its <code>typ</code>,
+<code>iss</code>, and <code>value</code>.<a href="#section-6.1.4-10.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6.1.4-8.2">
-              <p id="section-6.1.4-8.2.1"><code>sub</code> carries a delegating person only in the user-delegated
+            <li class="normal" id="section-6.1.4-10.2">
+              <p id="section-6.1.4-10.2.1">The party that produces the reference computes <code>digest</code>; a
+consumer holding the policy can reproduce it, and one that does
+not compares it as an opaque value.<a href="#section-6.1.4-10.2.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.1.4-11">The subject-representation discipline is the same in every source:<a href="#section-6.1.4-11" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1.4-12.1">
+              <p id="section-6.1.4-12.1.1">The accountable principal is the record's
+<code>approval_basis.consent_principal</code> in every source; it <span class="bcp14">MUST NOT</span> be
+inferred from the token <code>sub</code>.<a href="#section-6.1.4-12.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.1.4-12.2">
+              <p id="section-6.1.4-12.2.1"><code>sub</code> carries a delegating person only in the user-delegated
 source. A service-owned or organizational Mission <span class="bcp14">MUST</span> record the
 workload or organizational principal as <code>subject</code> and <span class="bcp14">MUST NOT</span>
 record a human principal in its place. The injective mapping of
@@ -3768,57 +3730,92 @@ receives its own AS-local <code>sub</code>, denotes itself, and impersonates
 nobody. It
 <span class="bcp14">MUST</span> be an authorization subject the AS recognizes as a resource
 owner in its own right (the <code>sub</code> model of <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>), not only
-the task's beneficiary.<a href="#section-6.1.4-8.2.1" class="pilcrow">¶</a></p>
+the task's beneficiary.<a href="#section-6.1.4-12.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6.1.4-8.3">
-              <p id="section-6.1.4-8.3.1">The actor model does not vary by source: the Mission Record's
+            <li class="normal" id="section-6.1.4-12.3">
+              <p id="section-6.1.4-12.3.1">The actor model does not vary by source: the Mission Record's
 <code>client_id</code> names the Agent, a token's <code>client_id</code> names the client
 that requested it (<a href="#token-claims" class="auto internal xref">Section 7.2</a>), and delegates are carried in
-the <code>act</code> chain (<a href="#delegation" class="auto internal xref">Section 8</a>).<a href="#section-6.1.4-8.3.1" class="pilcrow">¶</a></p>
+the <code>act</code> chain (<a href="#delegation" class="auto internal xref">Section 8</a>).<a href="#section-6.1.4-12.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
 </div>
 <div id="rendering-safeguards">
 <section id="section-6.1.5">
-          <h4 id="name-rendering-safeguards">
-<a href="#section-6.1.5" class="section-number selfRef">6.1.5. </a><a href="#name-rendering-safeguards" class="section-name selfRef">Rendering Safeguards</a>
+          <h4 id="name-consent-rendering">
+<a href="#section-6.1.5" class="section-number selfRef">6.1.5. </a><a href="#name-consent-rendering" class="section-name selfRef">Consent Rendering</a>
           </h4>
-<p id="section-6.1.5-1">The consent rendering is hardened against client text:<a href="#section-6.1.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.1.5-1">These rules apply at step 5 of the direct approval steps
+(<a href="#direct-approval-steps" class="auto internal xref">Section 6.1.1</a>).<a href="#section-6.1.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.1.5-2">The consent object is the <strong>derived Authority Set</strong>: what the agent
+may do. It is not the <code>goal</code> or Mission Intent, because Authority Set
+derivation is local policy and nothing commits that the derived
+authority reflects the goal the Approver read. An approval surface
+that renders only the <code>goal</code> or Mission Intent does not conform.<a href="#section-6.1.5-2" class="pilcrow">¶</a></p>
+<p id="section-6.1.5-3">These requirements apply to the rendering:<a href="#section-6.1.5-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-6.1.5-2.1">
-              <p id="section-6.1.5-2.1.1">Client-supplied strings (<code>goal</code>, <code>task_bounds</code>) <span class="bcp14">MUST</span> be rendered as
-inert text and <span class="bcp14">MUST NOT</span> be interpreted as markup.<a href="#section-6.1.5-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6.1.5-4.1">
+              <p id="section-6.1.5-4.1.1">The rendering <span class="bcp14">MUST</span> identify the OAuth client that receives the
+authority, the Agent, from client identity information the AS
+trusts, such as its own registration of the client; display text
+the client supplies does not by itself identify it.<a href="#section-6.1.5-4.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6.1.5-2.2">
-              <p id="section-6.1.5-2.2.1">The AS <span class="bcp14">SHOULD</span> mitigate Unicode direction-override and
-confusable-character presentation in them.<a href="#section-6.1.5-2.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-6.1.5-4.2">
+              <p id="section-6.1.5-4.2.1">When the Approver is not the Subject, the rendering <span class="bcp14">MUST</span> identify
+the Subject the authority is granted for.<a href="#section-6.1.5-4.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-6.1.5-2.3">
-              <p id="section-6.1.5-2.3.1">The rendering <span class="bcp14">MUST</span> visually distinguish the AS-derived Authority
-Set from client-supplied text and attribute that text to the client,
-identified from client identity information the AS trusts
-(<a href="#approval-preparation" class="auto internal xref">Section 6.1.1.1</a>), so crafted client text cannot pass as
-derived authority or as a statement of the AS.<a href="#section-6.1.5-2.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-6.1.5-4.3">
+              <p id="section-6.1.5-4.3.1">The rendering <span class="bcp14">MUST</span> identify the authority source and, for
+<code>organizational</code>, the governed policy it draws on
+(<code>authority_source.policy</code>).<a href="#section-6.1.5-4.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.1.5-4.4">
+              <p id="section-6.1.5-4.4.1">When the client submitted an authority proposal
+(<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>), the rendering <span class="bcp14">MUST</span> distinguish the
+entries the client proposed from any narrowing or restructuring the
+AS applied.<a href="#section-6.1.5-4.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-6.1.5-3">The rendering presents <code>goal</code> and <code>task_bounds</code> as recorded, without
+<p id="section-6.1.5-5">Mission Capability Binding
+(<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>) states what the
+rendering presents about the source binding of a catalog-sourced
+action.<a href="#section-6.1.5-5" class="pilcrow">¶</a></p>
+<p id="section-6.1.5-6">The consent rendering is hardened against client text:<a href="#section-6.1.5-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1.5-7.1">
+              <p id="section-6.1.5-7.1.1">Client-supplied strings (<code>goal</code>, <code>task_bounds</code>) <span class="bcp14">MUST</span> be rendered as
+inert text and <span class="bcp14">MUST NOT</span> be interpreted as markup.<a href="#section-6.1.5-7.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.1.5-7.2">
+              <p id="section-6.1.5-7.2.1">The AS <span class="bcp14">SHOULD</span> mitigate Unicode direction-override and
+confusable-character presentation in them.<a href="#section-6.1.5-7.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.1.5-7.3">
+              <p id="section-6.1.5-7.3.1">The rendering <span class="bcp14">MUST</span> visually distinguish the AS-derived Authority
+Set from client-supplied text and attribute that text to the client,
+identified from client identity information the AS trusts
+(above), so crafted client text cannot pass as
+derived authority or as a statement of the AS.<a href="#section-6.1.5-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.1.5-8">The rendering presents <code>goal</code> and <code>task_bounds</code> as recorded, without
 truncation: the Intent is recorded verbatim and committed by
 <code>intent_hash</code> (<a href="#integrity-anchors" class="auto internal xref">Section 6.3.1</a>), so a truncated rendering would
-show the Approver less than the record holds.<a href="#section-6.1.5-3" class="pilcrow">¶</a></p>
-<p id="section-6.1.5-4">Rendering a bound is not the same as enforcing it: a deployment <span class="bcp14">MUST NOT</span> present a rendered bound as enforced when no party enforces it.
+show the Approver less than the record holds.<a href="#section-6.1.5-8" class="pilcrow">¶</a></p>
+<p id="section-6.1.5-9">Rendering a bound is not the same as enforcing it: a deployment <span class="bcp14">MUST NOT</span> present a rendered bound as enforced when no party enforces it.
 Which party enforces each bound, and what holds when that party is
 absent, follows from Enforcement Requirements (<a href="#rs-requirements" class="auto internal xref">Section 9.1.1</a>)
 and, for a resource server that enforces only <code>scope</code>, from Scope
 Projection (<a href="#scope-projection" class="auto internal xref">Section 7.7</a>).
 An AS <span class="bcp14">SHOULD</span> make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
-binds nowhere.<a href="#section-6.1.5-4" class="pilcrow">¶</a></p>
-<p id="section-6.1.5-5">Mission Consent Evidence
+binds nowhere.<a href="#section-6.1.5-9" class="pilcrow">¶</a></p>
+<p id="section-6.1.5-10">Mission Consent Evidence
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>) defines
 layered rendering of a committed disclosure, including what its first
 layer carries and practices for a large or varied Authority Set, and
-lets the Approver ask the basis for an entry before deciding.<a href="#section-6.1.5-5" class="pilcrow">¶</a></p>
+lets the Approver ask the basis for an entry before deciding.<a href="#section-6.1.5-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="approval-context-changes">
@@ -4281,8 +4278,8 @@ draws on.<a href="#section-6.2.3-1.6.2.4.1" class="pilcrow">¶</a></p>
 </dd>
               <dd class="break"></dd>
 </dl>
-<p id="section-6.2.3-1.6.3"><code>authority_source</code> is provenance like <code>approval_basis</code>: recorded
-alongside it, folded into neither <code>intent_hash</code> nor
+<p id="section-6.2.3-1.6.3">The <code>authority_source</code> member is provenance like <code>approval_basis</code>:
+recorded alongside it, folded into neither <code>intent_hash</code> nor
 <code>authority_hash</code>, and not carried on access tokens; resource
 servers enforce <code>authorization_details</code> and do not consult it.<a href="#section-6.2.3-1.6.3" class="pilcrow">¶</a></p>
 </dd>
@@ -4595,16 +4592,16 @@ governed organizational policy its governing authority. That binding
 keeps the policy's commitment from being transplanted across policy
 authorities, and the same policy commits identically at every AS that
 records it.<a href="#section-6.3.1-5" class="pilcrow">¶</a></p>
-<p id="section-6.3.1-6"><code>intent_hash</code> and <code>authority_hash</code> are independent commitments to
-independent objects. That the approved task bounds the derived
-authority is a governance assertion, made by derivation policy and
+<p id="section-6.3.1-6">The <code>intent_hash</code> and <code>authority_hash</code> anchors are independent
+commitments to independent objects. That the approved task bounds the
+derived authority is a governance assertion, made by derivation policy and
 auditable through <code>policy_version</code> where the Mission records it
 (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>), not a cryptographic relation between
 the anchors: neither anchor proves anything about the other's object.<a href="#section-6.3.1-6" class="pilcrow">¶</a></p>
 <p id="section-6.3.1-7">The <code>typ</code> value space is an extension point
 (<a href="#commitment-mechanisms" class="auto internal xref">Section 14.4</a>): additional committed objects use this
 same envelope with a new <code>typ</code> and the canonicalization below.<a href="#section-6.3.1-7" class="pilcrow">¶</a></p>
-<p id="section-6.3.1-8"><code>authority_hash</code> commits an Authority Set, not a Mission:
+<p id="section-6.3.1-8">The <code>authority_hash</code> anchor commits an Authority Set, not a Mission:
 two Missions that approve byte-identical authority share it, and a
 consumer <span class="bcp14">MUST NOT</span> use it as a Mission Identifier or as a replay or
 idempotency key for a Mission.<a href="#section-6.3.1-8" class="pilcrow">¶</a></p>
@@ -4673,8 +4670,8 @@ Resource Access Profile's Common Constraints do for constraint values
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-6.3.3-2" class="pilcrow">¶</a></p>
 <p id="section-6.3.3-3">The security considerations of <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> apply to every JCS
 computation.<a href="#section-6.3.3-3" class="pilcrow">¶</a></p>
-<p id="section-6.3.3-4">The algorithm prefix is the agility mechanism. <code>sha-256</code> is
-mandatory to implement and the only algorithm this document defines.
+<p id="section-6.3.3-4">The algorithm prefix is the agility mechanism. The <code>sha-256</code> algorithm
+is mandatory to implement and the only algorithm this document defines.
 A new algorithm enters only through a new prefix defined by a
 referencing specification, its name drawn from the Named Information
 Hash Algorithm Registry (<span>[<a href="#RFC6920" class="cite xref">RFC6920</a>]</span>); this document defines no
@@ -5189,8 +5186,9 @@ recommends, via a <code>cnf</code> claim <span>[<a href="#RFC7800" class="cite x
 (<code>cnf.jkt</code>) or mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> (<code>cnf.x5t#S256</code>).<a href="#section-7.2-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-7.2-3">The primary access token may be a bearer token, preserving
-compatibility with bearer-only resource servers while retaining
+<p id="section-7.2-3">A Mission-bound access token that is not a delegated token may be a
+bearer token, preserving compatibility with bearer-only resource
+servers while retaining
 <span><a href="https://rfc-editor.org/rfc/rfc9700#section-2.2.1" class="relref">Section 2.2.1</a> of [<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>'s recommendation; the cost is the
 stolen-token exposure (<a href="#token-theft" class="auto internal xref">Section 17.4.1</a>).<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <p id="section-7.2-4">A delegated token is sender-constrained to the delegate's own key
@@ -5341,9 +5339,9 @@ client <span class="bcp14">MUST NOT</span> derive authority from it.<a href="#se
 RFC 3339 string recorded as the Mission Record's effective
 <code>expires_at</code> (<a href="#mission-record" class="auto internal xref">Section 6.2</a>), the common member of every
 Mission-creating success response, whatever surface completes the
-creation. <code>expires_in</code> describes the access token's lifetime, not the
-Mission's, and the effective expiry can be shorter than the requested
-<code>intent.expires_at</code>.<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
+creation. The <code>expires_in</code> parameter describes the access token's
+lifetime, not the Mission's, and the effective expiry can be shorter
+than the requested <code>intent.expires_at</code>.<a href="#section-7.3.1-2" class="pilcrow">¶</a></p>
 <p id="section-7.3.1-3">A client learns both values from these members, not from the access
 token, which it treats as opaque (<span><a href="https://rfc-editor.org/rfc/rfc9068#section-6" class="relref">Section 6</a> of [<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>). The AS
 returns them as follows:<a href="#section-7.3.1-3" class="pilcrow">¶</a></p>
@@ -6302,13 +6300,13 @@ access token:<a href="#section-8.5-1" class="pilcrow">¶</a></p>
 }
 </pre><a href="#section-8.5-2" class="pilcrow">¶</a>
 </div>
-<p id="section-8.5-3"><code>sub</code> is still the user. <code>client_id</code> is <code>tool-runner-7</code>, the delegate
-that authenticated the Token Exchange and requested this token
-(<a href="#client-id-rebinding" class="auto internal xref">Appendix C.3</a>); it matches the outermost <code>act</code> only
-because <code>tool-runner-7</code> authenticated the exchange itself. <code>client_id</code>
-does not name <code>s6BhdRkqt3</code>, the originally-approved agent, whose
-identity remains recoverable from the Mission Record via <code>mission_id</code>
-(<a href="#mission-record" class="auto internal xref">Section 6.2</a>).<a href="#section-8.5-3" class="pilcrow">¶</a></p>
+<p id="section-8.5-3">The <code>sub</code> claim is still the user. The <code>client_id</code> claim is
+<code>tool-runner-7</code>, the delegate that authenticated the Token Exchange
+and requested this token (<a href="#client-id-rebinding" class="auto internal xref">Appendix C.3</a>); it matches the
+outermost <code>act</code> only because <code>tool-runner-7</code> authenticated the
+exchange itself. The <code>client_id</code> claim does not name <code>s6BhdRkqt3</code>, the
+originally-approved agent, whose identity remains recoverable from the
+Mission Record via <code>mission_id</code> (<a href="#mission-record" class="auto internal xref">Section 6.2</a>).<a href="#section-8.5-3" class="pilcrow">¶</a></p>
 <p id="section-8.5-4">The <code>cnf</code> is <code>tool-runner-7</code>'s own key, not the agent's, so this token
 cannot be replayed as the agent. The non-delegable write entry was
 dropped; the read entry survives, carrying its <code>delegation</code> member so
@@ -6360,8 +6358,8 @@ type states otherwise.<a href="#section-9.1.1-2.1.1" class="pilcrow">¶</a></p>
               <p id="section-9.1.1-2.2.1"><span class="bcp14">MUST</span> treat as providing no authority any applicable entry whose
 type it does not implement, or whose type-defined enforcement it
 cannot complete (an unrecognized member, an unenforceable
-constraint, or an unrecognized matching mode). It <span class="bcp14">MUST</span> refuse the
-request, with <code>insufficient_scope</code> (<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>) or the
+constraint, or an unrecognized matching mode). It <span class="bcp14">MUST</span> challenge
+with <code>insufficient_scope</code> (<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>), or with the
 RAR-remediation challenge as <a href="#rs-denials" class="auto internal xref">Section 9.1.4</a> states, unless another
 applicable entry that it can fully enforce authorizes the whole
 request on its own, and <span class="bcp14">MUST NOT</span> combine parts of several entries
@@ -6383,11 +6381,12 @@ the Mission Record (<a href="#mission-record" class="auto internal xref">Section
 </li>
             <li id="section-9.1.1-2.5">
               <p id="section-9.1.1-2.5.1"><span class="bcp14">MUST</span>, when configured to require the <code>mission</code> claim for a
-Mission-governed resource, reject a token that lacks it with the
-<code>invalid_token</code> error code. The issuance-side duty that pairs with
-this rejection is stated in <a href="#mission-governed" class="auto internal xref">Section 4.3.3</a>, the downgrade
-it prevents in <a href="#downgrade-by-omission" class="auto internal xref">Section 17.1.2</a>, and the metadata that
-advertises the requirement in <a href="#protected-resource-metadata" class="auto internal xref">Section 13</a>.<a href="#section-9.1.1-2.5.1" class="pilcrow">¶</a></p>
+Mission-governed resource, challenge with the <code>invalid_token</code> error
+code a request whose token lacks it. The issuance-side duty that
+pairs with this challenge is stated in <a href="#mission-governed" class="auto internal xref">Section 4.3.3</a>, the
+downgrade it prevents in <a href="#downgrade-by-omission" class="auto internal xref">Section 17.1.2</a>, and the
+metadata that advertises the requirement in
+<a href="#protected-resource-metadata" class="auto internal xref">Section 13</a>.<a href="#section-9.1.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
             <li id="section-9.1.1-2.6">
               <p id="section-9.1.1-2.6.1"><span class="bcp14">MUST</span> accept a <code>mission</code> claim only from an issuer it explicitly
@@ -6398,8 +6397,8 @@ Mission-binding profile it has adopted (<a href="#mission-claim-reservation" cla
 such as <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
 explicitly establishes the permitted relationship between the two.
 It <span class="bcp14">MUST</span>
-reject a token that fails either check with the <code>invalid_token</code>
-error code. For an opaque token, the issuer is the AS whose
+challenge with the <code>invalid_token</code> error code a request whose token
+fails either check. For an opaque token, the issuer is the AS whose
 introspection response or issuer-local resolution the resource
 server relies on, and the same checks apply to that response's
 <code>mission</code> member (<a href="#introspected-consumption" class="auto internal xref">Section 9.2.4</a>).<a href="#section-9.1.1-2.6.1" class="pilcrow">¶</a></p>
@@ -6545,8 +6544,8 @@ challenge where
             <li id="section-9.1.4-2.4">
               <p id="section-9.1.4-2.4.1"><strong>Unenforceable constraint.</strong> An applicable entry carries a
 type-defined member or constraint the resource server cannot
-enforce, and the request fails closed under the same base error as
-case 3.<a href="#section-9.1.4-2.4.1" class="pilcrow">¶</a></p>
+enforce, and the resource server challenges with the same base
+error as case 3.<a href="#section-9.1.4-2.4.1" class="pilcrow">¶</a></p>
 </li>
           </ol>
 <p id="section-9.1.4-3">Cases 3 and 4 are identical <code>403</code> responses to a client, which cannot
@@ -6567,7 +6566,7 @@ a new approval or an expansion where that companion is deployed.<a href="#sectio
 <code>constraint_unrecognized</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-9.1.4-4.4">
               <p id="section-9.1.4-4.4.1">An applicable entry carries a type-defined member or constraint the
-resource server cannot enforce, and the request fails closed. A
+resource server cannot enforce. A
 client <span class="bcp14">MUST NOT</span> treat this value as inviting retry, step-up, or
 fresh approval: none of those makes a resource server enforce a
 constraint it does not implement.<a href="#section-9.1.4-4.4.1" class="pilcrow">¶</a></p>
@@ -6647,70 +6646,82 @@ a direct read of the AS's authoritative committed token and grant
 state (<a href="#introspected-consumption" class="auto internal xref">Section 9.2.4</a>).<a href="#section-9.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-9.2-3">An AS <span class="bcp14">MAY</span> support OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> for
+<p id="section-9.2-3">The cases separate token representation from state freshness.
+Representation is where a resource server reads the token's
+authority: the JWT itself or, for an opaque token, its active
+introspection response or issuer-local resolution. Freshness is how
+recent its view of Mission state is: a JWT read alone shows only that
+the Mission was <code>active</code> when the token was issued; an introspection
+response reports the token and its Mission for one decision; and a
+state-distribution companion such as Mission Status
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) reports the Mission's
+state, not a token's, with its own freshness. In every case the
+authority a resource server enforces is the one the token carries
+(<a href="#rs-requirements" class="auto internal xref">Section 9.1.1</a>).<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2-4">An AS <span class="bcp14">MAY</span> support OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> for
 Mission-bound access tokens. When it does, an <code>active: true</code> response
 for such a token, to a caller authorized to receive Mission data
 (<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 9.2.1</a>), <span class="bcp14">MUST</span> carry, in addition
 to the standard members, a <code>mission</code> member: a JSON object with the
-following members:<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+following members:<a href="#section-9.2-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9.2-4.1">
-            <p id="section-9.2-4.1.1"><code>id</code> and <code>issuer</code>: as in the <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>).<a href="#section-9.2-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-9.2-5.1">
+            <p id="section-9.2-5.1.1"><code>id</code> and <code>issuer</code>: as in the <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>).<a href="#section-9.2-5.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.2-4.2">
-            <p id="section-9.2-4.2.1"><code>state</code>: the Mission's current lifecycle state (string). Its value
+          <li class="normal" id="section-9.2-5.2">
+            <p id="section-9.2-5.2.1"><code>state</code>: the Mission's current lifecycle state (string). Its value
 space, including a state a deployed companion profile defines, and
 the consumer's forward-compatibility rule are those of
-<a href="#lifecycle" class="auto internal xref">Section 10</a>.<a href="#section-9.2-4.2.1" class="pilcrow">¶</a></p>
+<a href="#lifecycle" class="auto internal xref">Section 10</a>.<a href="#section-9.2-5.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.2-4.3">
-            <p id="section-9.2-4.3.1"><code>termination</code>: when <code>state</code> is <code>terminated</code>, the Mission's
-<code>termination</code> (<a href="#termination" class="auto internal xref">Section 10.1</a>) (object).<a href="#section-9.2-4.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-9.2-5.3">
+            <p id="section-9.2-5.3.1"><code>termination</code>: when <code>state</code> is <code>terminated</code>, the Mission's
+<code>termination</code> (<a href="#termination" class="auto internal xref">Section 10.1</a>) (object).<a href="#section-9.2-5.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.2-4.4">
-            <p id="section-9.2-4.4.1"><code>proposal_hash</code>: when the Mission records an authority proposal,
-the Mission's <code>proposal_hash</code> (<a href="#mission-record" class="auto internal xref">Section 6.2</a>) (string).<a href="#section-9.2-4.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-9.2-5.4">
+            <p id="section-9.2-5.4.1"><code>proposal_hash</code>: when the Mission records an authority proposal,
+the Mission's <code>proposal_hash</code> (<a href="#mission-record" class="auto internal xref">Section 6.2</a>) (string).<a href="#section-9.2-5.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.2-4.5">
-            <p id="section-9.2-4.5.1"><code>authority_hash</code>: the Mission's Authority Set commitment
-(<a href="#mission-record" class="auto internal xref">Section 6.2</a>) (string).<a href="#section-9.2-4.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-9.2-5.5">
+            <p id="section-9.2-5.5.1"><code>authority_hash</code>: the Mission's Authority Set commitment
+(<a href="#mission-record" class="auto internal xref">Section 6.2</a>) (string).<a href="#section-9.2-5.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.2-4.6">
-            <p id="section-9.2-4.6.1"><code>approval_basis</code>: the Mission's <code>approval_basis</code>
-(<a href="#mission-record" class="auto internal xref">Section 6.2</a>), carrying <code>type</code> only.<a href="#section-9.2-4.6.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-9.2-5.6">
+            <p id="section-9.2-5.6.1"><code>approval_basis</code>: the Mission's <code>approval_basis</code>
+(<a href="#mission-record" class="auto internal xref">Section 6.2</a>), carrying <code>type</code> only.<a href="#section-9.2-5.6.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-9.2-4.7">
-            <p id="section-9.2-4.7.1"><code>authority_source</code>: the Mission's <code>authority_source</code>
+          <li class="normal" id="section-9.2-5.7">
+            <p id="section-9.2-5.7.1"><code>authority_source</code>: the Mission's <code>authority_source</code>
 (<a href="#mission-record" class="auto internal xref">Section 6.2</a>), carrying <code>type</code> and, for <code>organizational</code>,
-<code>policy</code> with <code>id</code> and <code>version</code> only, never the policy <code>digest</code>.<a href="#section-9.2-4.7.1" class="pilcrow">¶</a></p>
+<code>policy</code> with <code>id</code> and <code>version</code> only, never the policy <code>digest</code>.<a href="#section-9.2-5.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-9.2-5">Only the Mission <code>issuer</code> reports <code>state</code>, <code>termination</code>,
+<p id="section-9.2-6">Only the Mission <code>issuer</code> reports <code>state</code>, <code>termination</code>,
 <code>proposal_hash</code>, <code>authority_hash</code>, <code>approval_basis</code>, and
 <code>authority_source</code> (<a href="#only-issuer-reports-state" class="auto internal xref">Section 9.2.3</a>). The last four are
 audit and correlation signals, not enforcement inputs
 (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>); each is disclosed only as
-<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 9.2.1</a> permits.<a href="#section-9.2-5" class="pilcrow">¶</a></p>
-<p id="section-9.2-6">For a malformed, unknown, individually expired, or otherwise
+<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 9.2.1</a> permits.<a href="#section-9.2-6" class="pilcrow">¶</a></p>
+<p id="section-9.2-7">For a malformed, unknown, individually expired, or otherwise
 unresolvable token, the AS responds per <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> (<code>active: false</code>)
 with no <code>mission</code> member; it does not reveal Mission state for a
 token it cannot bind to a Mission. The AS discloses a <code>mission</code> member
 only for a token it has established was issued on a path that
 conforms to <a href="#mission-claim-reservation" class="auto internal xref">Section 7.8.1</a>; a token it cannot establish
 so is unresolvable in this sense. How the AS establishes this is its
-own; a record of its own issuance is one means.<a href="#section-9.2-6" class="pilcrow">¶</a></p>
-<p id="section-9.2-7">The composite-active rule (<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>) and the <code>mission</code>
+own; a record of its own issuance is one means.<a href="#section-9.2-7" class="pilcrow">¶</a></p>
+<p id="section-9.2-8">The composite-active rule (<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>) and the <code>mission</code>
 member apply equally when a Mission-bound refresh token is
-introspected.<a href="#section-9.2-7" class="pilcrow">¶</a></p>
-<p id="section-9.2-8">Freshness is per use. Strengthening <span><a href="https://rfc-editor.org/rfc/rfc7662#section-4" class="relref">Section 4</a> of [<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, which
+introspected.<a href="#section-9.2-8" class="pilcrow">¶</a></p>
+<p id="section-9.2-9">Freshness is per use. Strengthening <span><a href="https://rfc-editor.org/rfc/rfc7662#section-4" class="relref">Section 4</a> of [<a href="#RFC7662" class="cite xref">RFC7662</a>]</span>, which
 permits a protected resource to cache the response, this document
 defines no caching semantics for the <code>mission</code> member: a resource
 server that relies on introspection for Mission state treats each
 response as an observation for that decision, not as a cacheable
-state assertion.<a href="#section-9.2-8" class="pilcrow">¶</a></p>
-<p id="section-9.2-9">A deployment that needs bounded-staleness caching adopts the Mission
+state assertion.<a href="#section-9.2-9" class="pilcrow">¶</a></p>
+<p id="section-9.2-10">A deployment that needs bounded-staleness caching adopts the Mission
 Status companion, whose signed responses carry explicit freshness
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-9.2-9" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).<a href="#section-9.2-10" class="pilcrow">¶</a></p>
 <div id="caller-authorization-and-minimization">
 <section id="section-9.2.1">
           <h4 id="name-caller-authorization-and-mi">
@@ -6736,9 +6747,9 @@ audiences (<a href="#mission-bound-tokens" class="auto internal xref">Section 7<
           </ul>
 <p id="section-9.2.1-3">These rules apply equally to the <code>mission</code> member of an
 <code>active: false</code> response (<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>).<a href="#section-9.2.1-3" class="pilcrow">¶</a></p>
-<p id="section-9.2.1-4">Disclosure is member-scoped as well as caller-scoped.
+<p id="section-9.2.1-4">Disclosure is member-scoped as well as caller-scoped. The
 <code>proposal_hash</code>, <code>authority_hash</code>, <code>approval_basis</code>, and
-<code>authority_source</code> serve audit and correlation consumers, not
+<code>authority_source</code> members serve audit and correlation consumers, not
 resource server enforcement, and the AS <span class="bcp14">MUST</span> disclose each only to a
 caller the deployment has granted that member's disclosure privilege.
 By default, an audience-authorized resource server receives the
@@ -7125,14 +7136,6 @@ where that commit was the termination's effect.<a href="#section-10.1-6" class="
 not recognize, still treats the Mission as terminated: it stops work
 governed by the Mission, follows no absent reference, and infers no
 cause-specific action.<a href="#section-10.1-7" class="pilcrow">¶</a></p>
-<p id="section-10.1-8">For a transition period, a consumer of a report that still carries
-<code>revoked</code>, <code>expired</code>, <code>completed</code>, <code>superseded</code>, or <code>cascaded</code> as a
-Mission's <code>state</code> <span class="bcp14">MAY</span> read it as <code>terminated</code> with that reason
-(<code>cascaded</code> as <code>parent_terminated</code>) and the facts the report
-retained; an emitter never reports those values as a state. That
-reading is local: the consumer never re-emits or re-signs it, and it
-verifies a signed artifact over its original bytes, which it retains,
-before reading it this way.<a href="#section-10.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="revocation">
@@ -7531,9 +7534,8 @@ client's workflows unrelated to the Mission
 (<a href="#downgrade-by-omission" class="auto internal xref">Section 17.1.2</a>).<a href="#section-12-4" class="pilcrow">¶</a></p>
 <p id="section-12-5">An AS that advertises support for this document <span class="bcp14">MUST</span> include at least
 one AS-supported type in its <code>authorization_details_types_supported</code>
-metadata (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>): the approved-set commitment a Mission-aware
-client relies on. Where <code>mission_resource_access</code> is among them, the
-Mission Resource Access Profile
+metadata (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). Where <code>mission_resource_access</code> is among them,
+the Mission Resource Access Profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), not
 out-of-band documentation, is that type's normative definition.<a href="#section-12-5" class="pilcrow">¶</a></p>
 <p id="section-12-6">An AS that advertises <code>mission_bound_authorization_supported: true</code>
@@ -7925,8 +7927,8 @@ separation. To keep that domain separation safe without a registry, a
 new <code>typ</code> value <span class="bcp14">MUST</span> be a collision-resistant name (for example, a
 short name prefixed within a namespace the defining profile controls,
 following the Collision-Resistant Name guidance of
-<span><a href="https://rfc-editor.org/rfc/rfc7519#section-2" class="relref">Section 2</a> of [<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>). <code>mission-</code> prefixed values, used by this
-document and the profiles that extend it, form a namespace
+<span><a href="https://rfc-editor.org/rfc/rfc7519#section-2" class="relref">Section 2</a> of [<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>). Values with the <code>mission-</code> prefix, used by
+this document and the profiles that extend it, form a namespace
 coordinated through this document's change controller.<a href="#section-14.4-5" class="pilcrow">¶</a></p>
 <p id="section-14.4-6">This document defines no transition mechanism: every commitment a
 current carrier defines is a single prefixed string, and no carrier
@@ -8108,7 +8110,7 @@ that supports none of them is still conformant:<a href="#section-15.2-1" class="
 (<a href="#designation" class="auto internal xref">Section 8.1</a>) and the derived tokens that carry the <code>act</code>
 delegation chain, and consuming those tokens. Only a
 sender-constrained token can be designated, so Delegation requires
-sender-constrained primary tokens.<a href="#section-15.2-2.1.1" class="pilcrow">¶</a></p>
+sender-constrained non-delegated Mission-bound access tokens.<a href="#section-15.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-15.2-2.2">
             <p id="section-15.2-2.2.1"><strong>Self-Exchange</strong> (<a href="#self-exchange" class="auto internal xref">Section 7.5</a>): narrowing an agent's own
@@ -8314,10 +8316,10 @@ implementation errors, against corruption of the record after an
 independently anchored approval commitment, and against post-approval
 signing-key compromise where the original commitment is pinned outside
 the issuer.<a href="#section-17.1.1-4" class="pilcrow">¶</a></p>
-<p id="section-17.1.1-5"><code>intent_hash</code> extends the same protection to the task: it commits the
-approved Mission Intent, so an auditor holding a value captured at
-approval can detect a later alteration of the recorded task. No
-anchor substitutes for another.<a href="#section-17.1.1-5" class="pilcrow">¶</a></p>
+<p id="section-17.1.1-5">The <code>intent_hash</code> anchor extends the same protection to the task: it
+commits the approved Mission Intent, so an auditor holding a value
+captured at approval can detect a later alteration of the recorded
+task. No anchor substitutes for another.<a href="#section-17.1.1-5" class="pilcrow">¶</a></p>
 <p id="section-17.1.1-6">Recording an anchor is optional (<a href="#record-content-members" class="auto internal xref">Section 6.2.2</a>). A
 recorded anchor lets a verifier detect a later change to the
 retained <code>intent</code>, <code>authority_set</code>, or <code>proposed_authority</code> against
@@ -8327,12 +8329,12 @@ check, and detection rests on a value captured outside the record
 before the change, such as a pinned commitment, a signed carrier, or
 an audit record. Recomputing both sides from the changed record
 detects nothing.
-<code>authority_hash</code> is computed over the Authority Set alone
+The <code>authority_hash</code> anchor is computed over the Authority Set alone
 (<a href="#integrity-anchors" class="auto internal xref">Section 6.3.1</a>), what a resource server enforces and a
 cross-domain projection carries, so it can be checked without the
 Intent.
-<code>intent_hash</code> stays tamper-evident audit material even where the
-authority is projected without the Intent.<a href="#section-17.1.1-6" class="pilcrow">¶</a></p>
+The <code>intent_hash</code> anchor stays tamper-evident audit material even
+where the authority is projected without the Intent.<a href="#section-17.1.1-6" class="pilcrow">¶</a></p>
 <p id="section-17.1.1-7">The anchors do not commit the <strong>rendered consent disclosure</strong>: none
 binds the locale, disclosure-template version, or material notices the
 Approver was shown. A buggy or malicious rendering layer could
@@ -8416,11 +8418,11 @@ auditable by naming the policy it ran under.<a href="#section-17.1.3-1" class="p
           </h4>
 <p id="section-17.2.1-1">This document assumes that an agent reading attacker-influenceable
 content can be prompt-injected. Authority is fixed at the approval
-event, so injected text cannot expand an approved Mission. <code>purpose</code>
-supplies candidate authority only as a lookup key of the pre-approval
-Authority Set derivation whose result the Approver reads and
-consents to, and otherwise can only refuse or tighten; <code>goal</code> and
-<code>task_bounds</code> bound it only through that disclosure
+event, so injected text cannot expand an approved Mission. The
+<code>purpose</code> member supplies candidate authority only as a lookup key of
+the pre-approval Authority Set derivation whose result the Approver
+reads and consents to, and otherwise can only refuse or tighten;
+<code>goal</code> and <code>task_bounds</code> bound it only through that disclosure
 (<a href="#mission-intent" class="auto internal xref">Section 4</a>, <a href="#authorization-derivation" class="auto internal xref">Section 5</a>).<a href="#section-17.2.1-1" class="pilcrow">¶</a></p>
 <p id="section-17.2.1-2">Within an approved Authority Set, an injected agent can still read
 what the Mission permits and write to a sink the Mission permits: a
@@ -8601,9 +8603,9 @@ following limit this exposure:<a href="#section-17.4.2-1" class="pilcrow">¶</a>
 <li class="normal" id="section-17.4.2-2.1">
               <p id="section-17.4.2-2.1.1">The per-entry delegation constraints (delegability, <code>max_depth</code>, and
 <code>allowed_delegates</code>, <a href="#delegation-constraints" class="auto internal xref">Section 8.4</a>) bound it at approval
-time. <code>max_depth</code> bounds the length of a delegation chain, not its
-breadth: only <code>allowed_delegates</code> bounds fan-out to many distinct
-depth-1 delegates.<a href="#section-17.4.2-2.1.1" class="pilcrow">¶</a></p>
+time. The <code>max_depth</code> constraint bounds the length of a delegation
+chain, not its breadth: only <code>allowed_delegates</code> bounds fan-out to
+many distinct depth-1 delegates.<a href="#section-17.4.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-17.4.2-2.2">
               <p id="section-17.4.2-2.2.1">Binding each delegated token to the delegate's own key
@@ -8642,9 +8644,9 @@ exchange accepts only a designation naming the authenticated
 requesting client, which only the token's holder obtains, by proving
 possession of the token's key, so a token obtained from an audience is
 refused there.
-Sender-constraining the primary token (<a href="#token-claims" class="auto internal xref">Section 7.2</a>)
-likewise keeps a stolen token from being designated or
-self-exchanged.<a href="#section-17.4.2-5" class="pilcrow">¶</a></p>
+Sender-constraining a non-delegated Mission-bound access token
+(<a href="#token-claims" class="auto internal xref">Section 7.2</a>) likewise keeps a stolen token from being designated
+or self-exchanged.<a href="#section-17.4.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="composition-and-the-effective-ceiling">
@@ -8697,7 +8699,8 @@ the AS's signing key, whose publication and rotation
 the audit horizon (<a href="#audit-horizon" class="auto internal xref">Section 16.2</a>) of every Mission whose tokens it
 signed lets an auditor verify those tokens later. A companion that
 anchors a longer-lived artifact to the same keys (a status assertion, a
-Mandate, registered evidence) states its own retention bound.<a href="#section-17.4.5-2" class="pilcrow">¶</a></p>
+Mandate <span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>, registered evidence)
+states its own retention bound.<a href="#section-17.4.5-2" class="pilcrow">¶</a></p>
 <p id="section-17.4.5-3">Revocation for a known or suspected compromise is distinct from routine
 retirement: the issuer publishes the compromised key as revoked, or
 marks it with a compromise time, rather than only rotating it out.<a href="#section-17.4.5-3" class="pilcrow">¶</a></p>
@@ -8895,7 +8898,7 @@ untouched.<a href="#section-18.5-4" class="pilcrow">¶</a></p>
 <a href="#section-19" class="section-number selfRef">19. </a><a href="#name-internationalization-consid" class="section-name selfRef">Internationalization Considerations</a>
       </h2>
 <p id="section-19-1">Mission Intent prose (<code>goal</code>, <code>task_bounds</code>) is human-readable
-disclosure. <code>goal_lang</code> (<a href="#mission-intent" class="auto internal xref">Section 4</a>) declares the
+disclosure. The <code>goal_lang</code> member (<a href="#mission-intent" class="auto internal xref">Section 4</a>) declares the
 language of that prose as a BCP 47 language tag <span>[<a href="#RFC5646" class="cite xref">RFC5646</a>]</span>, so an
 approval surface can render, translate, or route it without guessing the
 language.<a href="#section-19-1" class="pilcrow">¶</a></p>
@@ -9655,6 +9658,10 @@ member's registration in its own IANA considerations.<a href="#section-20.9-9" c
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Capability Binding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
@@ -9916,9 +9923,9 @@ consent:<a href="#appendix-A.1-11" class="pilcrow">¶</a></p>
 ]
 </pre><a href="#appendix-A.1-12" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.1-13"><code>alice</code> approves at 08:00:00 UTC on 2026-11-02, and the AS records
-Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> in the <code>active</code> state
-with <code>authority_hash</code>
+<p id="appendix-A.1-13">The user <code>alice</code> approves at 08:00:00 UTC on 2026-11-02, and the AS
+records Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> in the <code>active</code>
+state with <code>authority_hash</code>
           <code>sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM</code>,
 <code>intent_hash</code>
           <code>sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0</code>, and
@@ -10364,9 +10371,9 @@ identities themselves.<a href="#appendix-C.2-2.7.1" class="pilcrow">¶</a></p>
           <li class="normal" id="appendix-C.2-2.8">
             <p id="appendix-C.2-2.8.1"><strong>Cross-audience unlinkability.</strong> A single canonical Mission
 Identifier lets any party holding a token correlate a Mission's
-activity across audiences and resources. <code>authority_hash</code> is not
-part of that baseline correlation surface: it stays on the Mission
-Record and the audit and profile surfaces that carry it by
+activity across audiences and resources. The <code>authority_hash</code> anchor
+is not part of that baseline correlation surface: it stays on the
+Mission Record and the audit and profile surfaces that carry it by
 disclosure privilege (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>,
 <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 9.2.1</a>), not on every token by
 default. Pairwise or unlinkable presentation of Mission-bound
@@ -10630,7 +10637,38 @@ resolve before interoperating.<a href="#appendix-D-36" class="pilcrow">¶</a></p
 <p id="appendix-E-2">-02<a href="#appendix-E-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-E-3.1">
-          <p id="appendix-E-3.1.1">The integrity anchors <code>intent_hash</code>, <code>authority_hash</code>, and
+          <p id="appendix-E-3.1.1">Preparing the Approval states the direct approval steps as a
+concise procedure, and each step's rules sit in the subsection that
+owns its topic: Approver Authentication Strength (step 1), Subject
+Establishment (step 2), Authority Sources (step 3) and Consent
+Rendering, formerly Rendering Safeguards (step 5). Step numbers and
+order are unchanged. No requirement changed (#1938).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-E-3.2">
+          <p id="appendix-E-3.2.1">Intentional behavior change, with no compatibility window: the
+legacy Mission-state reading is removed. A consumer no longer reads
+<code>revoked</code>, <code>expired</code>, <code>completed</code>, <code>superseded</code>, or <code>cascaded</code> as a
+Mission's <code>state</code>; such a value is non-active and non-deriving under
+the forward-compatibility rule of Mission Lifecycle, like any other
+value it does not recognize. Reports carry <code>state</code> <code>terminated</code> and
+the reason in <code>termination</code>. The rules for a termination recorded
+before its reason defined a member, and for a reason a consumer does
+not recognize, are unchanged (#1504, D1006).<a href="#appendix-E-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-E-3.3">
+          <p id="appendix-E-3.3.1">Editorial, no requirement change: Signing and Key Rotation cites the
+Mandate; the undefined "primary" access token is named as a
+Mission-bound access token that is not a delegated token; the
+<code>authorization_details_types_supported</code> requirement drops an unclear
+trailing clause; sentences that opened with a bare identifier name
+its kind; the AS refuses, and a resource server challenges with the
+applicable response, wherever an outcome was worded otherwise;
+Mission State via Token Introspection compares token representation
+with state freshness; and <code>goal</code> and <code>task_bounds</code> are rendering and
+review context for a proposal (#1504).<a href="#appendix-E-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-E-3.4">
+          <p id="appendix-E-3.4.1">The integrity anchors <code>intent_hash</code>, <code>authority_hash</code>, and
 <code>proposal_hash</code> are implied members: each is <span class="bcp14">OPTIONAL</span> on the record,
 an omitted one is its <code>sha-256</code> construction over the retained
 record, and a recorded one <span class="bcp14">MUST</span> equal it, a mismatch being refused.
@@ -10639,10 +10677,10 @@ bound there that carries one, and an issuer resolves an existing
 Mission's anchors from its retained record alone. A specification adding an algorithm
 preserves existing commitments. Consent Binding states what optional
 storage gives up, and <code>created_at</code> names the creation commit's
-instant (#1917).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
+instant (#1917).<a href="#appendix-E-3.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.2">
-          <p id="appendix-E-3.2.1">Mission-Creating Paths replaces Standing-Consent Bases and its three
+        <li class="normal" id="appendix-E-3.5">
+          <p id="appendix-E-3.5.1">Mission-Creating Paths replaces Standing-Consent Bases and its three
 subsections. It keeps relocating the direct ceremony distinct from
 activating under standing consent. A companion profile defining a
 standing-consent basis makes it conform to Approval Governance's
@@ -10653,19 +10691,19 @@ Approval of a standing consent's consented root carries explicit
 MUSTs: authenticate the consenting principal, establish their
 authorization over the root's permitted Subjects and authority
 sources, and obtain their consent to the root's authority, limits
-and activation policy (#1915).<a href="#appendix-E-3.2.1" class="pilcrow">¶</a></p>
+and activation policy (#1915).<a href="#appendix-E-3.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.3">
-          <p id="appendix-E-3.3.1">Approval Idempotency states what every creation path shares: the
+        <li class="normal" id="appendix-E-3.6">
+          <p id="appendix-E-3.6.1">Approval Idempotency states what every creation path shares: the
 AS allocates <code>approval_event_id</code> and never derives it from a
 reusable client value, binds the direct path's identifier to the
 authorization interaction, refuses a decision delivered after the
 lifetime of what it decides, and requires a profile with a request
 key to state its retention contract, under which a reuse after the
-reservation expires is a new operation (#1915).<a href="#appendix-E-3.3.1" class="pilcrow">¶</a></p>
+reservation expires is a new operation (#1915).<a href="#appendix-E-3.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.4">
-          <p id="appendix-E-3.4.1">Mission Creation states the direct creation path, with the Mission
+        <li class="normal" id="appendix-E-3.7">
+          <p id="appendix-E-3.7.1">Mission Creation states the direct creation path, with the Mission
 Approval subsections in the order of the steps they serve.
 Standing-Consent Bases and Commitment Mechanisms move to
 Extensibility, which lists approval bases as an extension point.
@@ -10677,10 +10715,10 @@ Authentication Strength, and the binding index into Implementation
 Considerations. Grant Bindings and Related Mechanisms drops what
 Template and Continuation state, and Approval Governance holds the
 record-digest, per-action and later-reliance points. No requirement
-changed (#1914).<a href="#appendix-E-3.4.1" class="pilcrow">¶</a></p>
+changed (#1914).<a href="#appendix-E-3.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.5">
-          <p id="appendix-E-3.5.1">Mission Record names its required members, and every other member
+        <li class="normal" id="appendix-E-3.8">
+          <p id="appendix-E-3.8.1">Mission Record names its required members, and every other member
 is optional or defined by the profile that uses it. <code>activation</code>,
 <code>activation_actor</code>, and <code>root_commitment</code> are optional for <code>direct</code>,
 with implied values that a present member must match, and are
@@ -10696,26 +10734,26 @@ rule for <code>approval_basis.type</code>, <code>adjudication.kind</code>, and
 <code>authority_source.type</code> is stated once, and a consumer neither
 interprets nor removes a record member it does not recognize.
 Approval Governance defines <code>governance_record</code> (#1912, D1047,
-D1048).<a href="#appendix-E-3.5.1" class="pilcrow">¶</a></p>
+D1048).<a href="#appendix-E-3.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.6">
-          <p id="appendix-E-3.6.1">Editorial, no requirement change: citations elsewhere in the
+        <li class="normal" id="appendix-E-3.9">
+          <p id="appendix-E-3.9.1">Editorial, no requirement change: citations elsewhere in the
 document name the subsection that states the cited rule, not its
 parent section, where #1908's subsections make one precise (#1910,
-D1045).<a href="#appendix-E-3.6.1" class="pilcrow">¶</a></p>
+D1045).<a href="#appendix-E-3.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.7">
-          <p id="appendix-E-3.7.1">Editorial, no requirement change: Submission via PAR is retitled
+        <li class="normal" id="appendix-E-3.10">
+          <p id="appendix-E-3.10.1">Editorial, no requirement change: Submission via PAR is retitled
 Submitting a Mission Intent, with subsections for the Submission
 envelope, its carriage through PAR, and other carriages. Authority
 Proposal, Preparing the Approval, Approver Authentication Strength,
 and Issuance Gating are restructured into subsections, shorter
 sentences, and lists; numbered steps, checks, and rules keep their
 numbers, and Issuance Gating keeps its numbered procedure at its
-head (#1908, D1042).<a href="#appendix-E-3.7.1" class="pilcrow">¶</a></p>
+head (#1908, D1042).<a href="#appendix-E-3.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.8">
-          <p id="appendix-E-3.8.1">Editorial, no requirement change: the Introduction states the
+        <li class="normal" id="appendix-E-3.11">
+          <p id="appendix-E-3.11.1">Editorial, no requirement change: the Introduction states the
 problem and the approach and points to the Overview; it no longer
 restates the flow that Protocol Flow and the Introductory Example
 show, or details stated in their own sections (consent to the
@@ -10724,10 +10762,10 @@ identifier, the <code>mission</code> claim and resource-server enforcement).
 The issuance-only deployment pointer moves to Issuance Scope and
 Runtime Enforcement. Protocol Flow gains a legend keyed to its
 figure that carries the flow's properties, with a pointer to each
-section that specifies them (#1906, D1039).<a href="#appendix-E-3.8.1" class="pilcrow">¶</a></p>
+section that specifies them (#1906, D1039).<a href="#appendix-E-3.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.9">
-          <p id="appendix-E-3.9.1">Editorial, no requirement change: the back matter that describes
+        <li class="normal" id="appendix-E-3.12">
+          <p id="appendix-E-3.12.1">Editorial, no requirement change: the back matter that describes
 the family rather than the protocol moves to the Architecture: the
 Mapping Assessment of this document against the Mission Substrate
 contract, Relationship to Adjacent Work, the two future-work items,
@@ -10737,33 +10775,33 @@ that this document makes no substrate conformance claim; the
 <code>mission</code> claim's distinction from similarly named claims follows
 its JSON Web Token Claims registration; Scope and Future Work
 becomes Scope, keeping its boundary statements; and the Derivation
-Policy appendix keeps its worked example (#1794, D973).<a href="#appendix-E-3.9.1" class="pilcrow">¶</a></p>
+Policy appendix keeps its worked example (#1794, D973).<a href="#appendix-E-3.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.10">
-          <p id="appendix-E-3.10.1">Token Claims: a token whose format a companion profile explicitly
+        <li class="normal" id="appendix-E-3.13">
+          <p id="appendix-E-3.13.1">Token Claims: a token whose format a companion profile explicitly
 defines, with its own <code>typ</code> and verification rules (the Mission
 Offline Attenuation root), follows that profile; JWT access-token
 validation stays under Section 4 of RFC 9068, accepting <code>at+jwt</code> or
-<code>application/at+jwt</code> (#1760).<a href="#appendix-E-3.10.1" class="pilcrow">¶</a></p>
+<code>application/at+jwt</code> (#1760).<a href="#appendix-E-3.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.11">
-          <p id="appendix-E-3.11.1">Configured-mapping mode can key on the requested <code>scope</code> values for
+        <li class="normal" id="appendix-E-3.14">
+          <p id="appendix-E-3.14.1">Configured-mapping mode can key on the requested <code>scope</code> values for
 a <code>scope</code>-only target, through that target's trusted scope-projection
 mapping, which also relates a requested value back to authority
-(Derivation Modes, Scope Projection).<a href="#appendix-E-3.11.1" class="pilcrow">¶</a></p>
+(Derivation Modes, Scope Projection).<a href="#appendix-E-3.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.12">
-          <p id="appendix-E-3.12.1">Editorial, no requirement change: Standing-Consent Bases points to
+        <li class="normal" id="appendix-E-3.15">
+          <p id="appendix-E-3.15.1">Editorial, no requirement change: Standing-Consent Bases points to
 the Architecture for the companion-defined bases instead of listing
 them; Grant Bindings and Related Mechanisms, Composition and the
 Effective Ceiling, Authority Materialized Before Containment, and the
 <code>approval_basis</code> definition no longer restate what the companions
 specify; the sentence on joining one credential to different Missions
 across requests moves to the Mission Authority Server's Mission
-Join.<a href="#appendix-E-3.12.1" class="pilcrow">¶</a></p>
+Join.<a href="#appendix-E-3.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.13">
-          <p id="appendix-E-3.13.1">Editorial, no requirement change: Grant Bindings and Related
+        <li class="normal" id="appendix-E-3.16">
+          <p id="appendix-E-3.16.1">Editorial, no requirement change: Grant Bindings and Related
 Mechanisms places the Template profile's Dispatch Handoff and the
 continuation profile's Identity Continuation Transport, the
 reusable-state case reads as a redeemable grant lineage, the
@@ -10771,22 +10809,22 @@ derivation resolution list points to profile-defined grants, and a
 derived token's Mission is the one its <code>subject_token</code> resolved to,
 with no binding assumed, and Grant Bindings and Related Mechanisms
 and Delegated Exchange keep a token's backing grant provenance where
-its <code>subject_token</code> was issued under a grant lineage (#1589, D726).<a href="#appendix-E-3.13.1" class="pilcrow">¶</a></p>
+its <code>subject_token</code> was issued under a grant lineage (#1589, D726).<a href="#appendix-E-3.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.14">
-          <p id="appendix-E-3.14.1">Editorial, no requirement change: Grant Bindings and Related
+        <li class="normal" id="appendix-E-3.17">
+          <p id="appendix-E-3.17.1">Editorial, no requirement change: Grant Bindings and Related
 Mechanisms names the Token Exchanges its later items cover, and the
 Namespace Taxonomy lists the <code>approval_basis.type</code> values as
-specification-defined, which Standing-Consent Bases cites.<a href="#appendix-E-3.14.1" class="pilcrow">¶</a></p>
+specification-defined, which Standing-Consent Bases cites.<a href="#appendix-E-3.17.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.15">
-          <p id="appendix-E-3.15.1">Editorial, no requirement change: the <code>approval_event_id</code> definition
+        <li class="normal" id="appendix-E-3.18">
+          <p id="appendix-E-3.18.1">Editorial, no requirement change: the <code>approval_event_id</code> definition
 names the approval event that creates the Mission and states that,
 under a standing-consent basis, it identifies the instance's
-creation, not the earlier standing approval.<a href="#appendix-E-3.15.1" class="pilcrow">¶</a></p>
+creation, not the earlier standing approval.<a href="#appendix-E-3.18.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.16">
-          <p id="appendix-E-3.16.1">An access token's <code>mission</code> claim, and its introspection <code>mission</code>
+        <li class="normal" id="appendix-E-3.19">
+          <p id="appendix-E-3.19.1">An access token's <code>mission</code> claim, and its introspection <code>mission</code>
 member, are reserved for issuance that conforms to a Mission-binding
 profile; a profile that defines another issuance or derivation path
 identifies its grant or chain, authority bound, state check, and
@@ -10794,17 +10832,17 @@ consumer checks (Claim Reservation). Introspection discloses
 <code>mission</code> only for a token issued on a conforming path. A resource
 server's <code>mission.issuer</code> check accepts the relationship any
 Mission-binding profile it has adopted establishes, not only a
-cross-domain profile's (Enforcement Requirements).<a href="#appendix-E-3.16.1" class="pilcrow">¶</a></p>
+cross-domain profile's (Enforcement Requirements).<a href="#appendix-E-3.19.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.17">
-          <p id="appendix-E-3.17.1">A Mission-governed resource, classified by the deployment or by its
+        <li class="normal" id="appendix-E-3.20">
+          <p id="appendix-E-3.20.1">A Mission-governed resource, classified by the deployment or by its
 authenticated <code>mission_bound_authorization_required</code> metadata, gets
 no token outside a Mission on any grant type; the open-ended policy
 exception is removed, and the refusal is <code>invalid_target</code>
-(Authority Proposal).<a href="#appendix-E-3.17.1" class="pilcrow">¶</a></p>
+(Authority Proposal).<a href="#appendix-E-3.20.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.18">
-          <p id="appendix-E-3.18.1">A token carries only the entries whose original approved audience
+        <li class="normal" id="appendix-E-3.21">
+          <p id="appendix-E-3.21.1">A token carries only the entries whose original approved audience
 (the audiences the AS's trusted mapping assigned an entry at
 approval, retained with the Mission and kept by the entries a derived
 Mission inherits) includes its audience, unless a declared
@@ -10813,19 +10851,19 @@ several audiences is issued only where each is approved for the same
 entries; otherwise, or where the audience is approved for none of the
 entries the token would carry, the request is refused with
 <code>invalid_target</code> (Declared Transformation Capabilities, Audience and
-Token Response; #1503, D620, D733).<a href="#appendix-E-3.18.1" class="pilcrow">¶</a></p>
+Token Response; #1503, D620, D733).<a href="#appendix-E-3.21.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.19">
-          <p id="appendix-E-3.19.1">A designation's <code>aud</code> names its redeemer and reassigns no entry's
+        <li class="normal" id="appendix-E-3.22">
+          <p id="appendix-E-3.22.1">A designation's <code>aud</code> names its redeemer and reassigns no entry's
 original approved audience: the audience rules test the audiences
 associated with the entries it carries, a permitted subset of the
 presented token's that excludes an entry without an original approved
 audience, and the delegated token issued at its redemption is subject
 to every audience rule (Audience and Token Response, Declared
-Transformation Capabilities; #1717, D845, D859).<a href="#appendix-E-3.19.1" class="pilcrow">¶</a></p>
+Transformation Capabilities; #1717, D845, D859).<a href="#appendix-E-3.22.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.20">
-          <p id="appendix-E-3.20.1">At a delegated exchange the AS authenticates the requesting client by
+        <li class="normal" id="appendix-E-3.23">
+          <p id="appendix-E-3.23.1">At a delegated exchange the AS authenticates the requesting client by
 a method it relies on to identify the client and refuses any other,
 including every public client, with <code>invalid_client</code> and no token; a
 claimed <code>client_id</code>, the designation, or an independently chosen key
@@ -10835,10 +10873,10 @@ client with <code>invalid_request</code>. An exchange presenting a designation
 is a delegated exchange, never a no-actor one (Delegated Exchange,
 Designation, Self-Exchange Down-Scoping, Establishing and Resolving
 a Binding, Error and Challenge Mapping, Token Theft, OAuth Binding
-Mapping Assessment; #1718, D845, D859).<a href="#appendix-E-3.20.1" class="pilcrow">¶</a></p>
+Mapping Assessment; #1718, D845, D859).<a href="#appendix-E-3.23.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.21">
-          <p id="appendix-E-3.21.1">The key-publication requirement applies to an AS that issues
+        <li class="normal" id="appendix-E-3.24">
+          <p id="appendix-E-3.24.1">The key-publication requirement applies to an AS that issues
 Mission-bound JWT access tokens for resource servers to consume, not
 to one issuing only designations; the first capability carrier that
 declares a member governs, <code>true</code> or <code>false</code>, and a declaration
@@ -10849,73 +10887,73 @@ comparison is refused with <code>invalid_authorization_details</code>; and
 short-lived is related to the termination latency a deployment
 accepts, with numerical bounds left to deployment profiles (Token
 Claims, Declared Transformation Capabilities, Authority Proposal,
-Derivation Modes, Subset Rule, Issuance Gating; #1720, D845).<a href="#appendix-E-3.21.1" class="pilcrow">¶</a></p>
+Derivation Modes, Subset Rule, Issuance Gating; #1720, D845).<a href="#appendix-E-3.24.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.22">
-          <p id="appendix-E-3.22.1">The AS refuses, with <code>invalid_target</code>, a delegated Mission-bound
+        <li class="normal" id="appendix-E-3.25">
+          <p id="appendix-E-3.25.1">The AS refuses, with <code>invalid_target</code>, a delegated Mission-bound
 token for an audience it has not established as a Mission-aware
 Resource Server that processes the <code>act</code> chain; routing and logging
 beyond that audience stay the deployment's (Mission-Unaware Resource
-Servers, Delegated Exchange; #1503, D620).<a href="#appendix-E-3.22.1" class="pilcrow">¶</a></p>
+Servers, Delegated Exchange; #1503, D620).<a href="#appendix-E-3.25.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.23">
-          <p id="appendix-E-3.23.1">Each redemption of a designation validates the originating credential
+        <li class="normal" id="appendix-E-3.26">
+          <p id="appendix-E-3.26.1">Each redemption of a designation validates the originating credential
 and all applicable grant state backing it, which an exchange that
 establishes no new grant lineage keeps; a designation's expiry bounds
 its redemption, not the lifetime of the delegated token issued from
 it (Delegated Exchange, Designation, Authentication Claims and
-Lifetime; #1503, D620).<a href="#appendix-E-3.23.1" class="pilcrow">¶</a></p>
+Lifetime; #1503, D620).<a href="#appendix-E-3.26.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.24">
-          <p id="appendix-E-3.24.1">Step 1 of the Submission Processing Order applies the size bounds and
+        <li class="normal" id="appendix-E-3.27">
+          <p id="appendix-E-3.27.1">Step 1 of the Submission Processing Order applies the size bounds and
 checks each evidence entry's structure, so a structurally invalid
 entry is refused with <code>invalid_request</code> before the authority proposal
 is validated, and Conformance Roles names that code for it (Submission
 Processing Order, Intent Submission Evidence, Conformance Roles;
-#1503, #1482, D620).<a href="#appendix-E-3.24.1" class="pilcrow">¶</a></p>
+#1503, #1482, D620).<a href="#appendix-E-3.27.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.25">
-          <p id="appendix-E-3.25.1">The deployment's published approval-authentication floor, and the
+        <li class="normal" id="appendix-E-3.28">
+          <p id="appendix-E-3.28.1">The deployment's published approval-authentication floor, and the
 <code>mission</code> member of an active introspection response to a caller
 authorized for Mission data, are requirements rather than lowercase
 statements (Approver Authentication Strength, Mission State via Token
-Introspection; #1503, D620).<a href="#appendix-E-3.25.1" class="pilcrow">¶</a></p>
+Introspection; #1503, D620).<a href="#appendix-E-3.28.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.26">
-          <p id="appendix-E-3.26.1">A Mission is revoked by a party the deployment's policy authorizes, or
+        <li class="normal" id="appendix-E-3.29">
+          <p id="appendix-E-3.29.1">A Mission is revoked by a party the deployment's policy authorizes, or
 by that policy itself; the Subject, the Approver, and an administrator
 can be authorized, but none is by role alone (Revocation, Mission
-Lifecycle; #1503, D620).<a href="#appendix-E-3.26.1" class="pilcrow">¶</a></p>
+Lifecycle; #1503, D620).<a href="#appendix-E-3.29.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.27">
-          <p id="appendix-E-3.27.1">Editorial, no requirement change: the Derivation definition, in
+        <li class="normal" id="appendix-E-3.30">
+          <p id="appendix-E-3.30.1">Editorial, no requirement change: the Derivation definition, in
 Terminology and Issuance Gating, includes the redemption of a
 profile-defined grant, such as the Template profile's handoff grant;
 a grant binding resolves the Mission for the operations using it,
 and a profile-defined grant can instead resolve it through its
-authenticated <code>mission</code> reference (#1631, D751).<a href="#appendix-E-3.27.1" class="pilcrow">¶</a></p>
+authenticated <code>mission</code> reference (#1631, D751).<a href="#appendix-E-3.30.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.28">
-          <p id="appendix-E-3.28.1">Editorial, no requirement change: the Mission Status variation's
+        <li class="normal" id="appendix-E-3.31">
+          <p id="appendix-E-3.31.1">Editorial, no requirement change: the Mission Status variation's
 revocation <code>reason</code> describes a revocation, not a completion
-(#1535).<a href="#appendix-E-3.28.1" class="pilcrow">¶</a></p>
+(#1535).<a href="#appendix-E-3.31.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.29">
-          <p id="appendix-E-3.29.1">Editorial, no requirement change: Single Accountable Approver states
+        <li class="normal" id="appendix-E-3.32">
+          <p id="appendix-E-3.32.1">Editorial, no requirement change: Single Accountable Approver states
 that authenticating approval evidence does not establish that
 conditions governing later reliance remain satisfied, and that the
 effect of later changes to an Approver's role, a delegation, or
-governing policy on an existing Mission is deployment policy (#830).<a href="#appendix-E-3.29.1" class="pilcrow">¶</a></p>
+governing policy on an existing Mission is deployment policy (#830).<a href="#appendix-E-3.32.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.30">
-          <p id="appendix-E-3.30.1">When the AS establishes that a Mission's recorded Subject has been
+        <li class="normal" id="appendix-E-3.33">
+          <p id="appendix-E-3.33.1">When the AS establishes that a Mission's recorded Subject has been
 deprovisioned, it <span class="bcp14">SHOULD</span> terminate the Mission with reason <code>revoked</code>;
 temporary disablement, an outage, or another principal's departure
 does not trigger the rule, and termination does not recall issued
-tokens (Revocation; #830).<a href="#appendix-E-3.30.1" class="pilcrow">¶</a></p>
+tokens (Revocation; #830).<a href="#appendix-E-3.33.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.31">
-          <p id="appendix-E-3.31.1">A direct approval whose commit finds the effective expiry passed is
+        <li class="normal" id="appendix-E-3.34">
+          <p id="appendix-E-3.34.1">A direct approval whose commit finds the effective expiry passed is
 refused with <code>access_denied</code>, with no Mission or authorization code
 (Committing the Mission). A token request that fails several checks
 gets any applicable error, subject to the orders this document
@@ -10927,10 +10965,10 @@ with HTTP 503 and no token error (Introspected Token Consumption).
 Enforcement Requirements refuses an entry it cannot enforce only with
 the codes of the error table, and Mission awareness alone does not
 imply <code>act</code> processing (Error and Challenge Mapping, Client
-Identification in Delegated Tokens; #1721, D845).<a href="#appendix-E-3.31.1" class="pilcrow">¶</a></p>
+Identification in Delegated Tokens; #1721, D845).<a href="#appendix-E-3.34.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.32">
-          <p id="appendix-E-3.32.1"><code>mission_id</code> and <code>mission_expires_at</code> are required on the response
+        <li class="normal" id="appendix-E-3.35">
+          <p id="appendix-E-3.35.1"><code>mission_id</code> and <code>mission_expires_at</code> are required on the response
 that first delivers a newly created Mission's identifier or
 credential (on the authorization-code path, the token response, not
 the code-only authorization response) and on a delegated exchange
@@ -10939,10 +10977,10 @@ response; a client learns them from the response, not from the
 access token. A client assumes no authority absent from the granted
 <code>authorization_details</code> and need not reject a narrower grant
 (Mission Identifier and Expiry in Responses, Audience and Token
-Response, Conformance Roles; #1719, D845).<a href="#appendix-E-3.32.1" class="pilcrow">¶</a></p>
+Response, Conformance Roles; #1719, D845).<a href="#appendix-E-3.35.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.33">
-          <p id="appendix-E-3.33.1">Editorial, no requirement change: the AS answers a request at its
+        <li class="normal" id="appendix-E-3.36">
+          <p id="appendix-E-3.36.1">Editorial, no requirement change: the AS answers a request at its
 final decision to release the result, so a result prepared before an
 acknowledged revocation and released after it is refused (Issuance
 Gating); the Mission Record is a logical object with no required
@@ -10950,42 +10988,42 @@ storage form; the Authority types extension point lists what a
 type's specification supplies; resource-server conformance implies
 no particular type (Conformance Roles, Authorization Details Types);
 each <code>mission_error</code> value is explained to the client (Issuance
-Gating); and Scope Projection gains an example (#1722).<a href="#appendix-E-3.33.1" class="pilcrow">¶</a></p>
+Gating); and Scope Projection gains an example (#1722).<a href="#appendix-E-3.36.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.34">
-          <p id="appendix-E-3.34.1">Editorial, no requirement change: Adjacent Work distinguishes the
+        <li class="normal" id="appendix-E-3.37">
+          <p id="appendix-E-3.37.1">Editorial, no requirement change: Adjacent Work distinguishes the
 <code>mission</code> claim from AAuth's <code>mission_s256</code> claim and the WIMSE AIMS
 agent mission; <code>target_resources</code>, like <code>purpose</code>, grants no
 authority as a configured-mapping key; Terminology defines
 "Mission-governed client"; and Issuance Gating gives the reason a
-Token Exchange refusal uses <code>invalid_request</code> (#1532).<a href="#appendix-E-3.34.1" class="pilcrow">¶</a></p>
+Token Exchange refusal uses <code>invalid_request</code> (#1532).<a href="#appendix-E-3.37.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.35">
-          <p id="appendix-E-3.35.1">The consent rendering attributes client-supplied text to the client,
+        <li class="normal" id="appendix-E-3.38">
+          <p id="appendix-E-3.38.1">The consent rendering attributes client-supplied text to the client,
 identified from client identity information the AS trusts, and
 presents <code>goal</code> and <code>task_bounds</code> as recorded, without truncation
-(Rendering Safeguards; #1532, D859).<a href="#appendix-E-3.35.1" class="pilcrow">¶</a></p>
+(Rendering Safeguards; #1532, D859).<a href="#appendix-E-3.38.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.36">
-          <p id="appendix-E-3.36.1">Editorial, no requirement change: Terminology defines "applicable
+        <li class="normal" id="appendix-E-3.39">
+          <p id="appendix-E-3.39.1">Editorial, no requirement change: Terminology defines "applicable
 entry" by the matching rule Audience and Token Response states, and
 adds the delegation terms; Mission State via Token Introspection
 describes a resource server that observes Mission state in plain
 terms; and the Implementation Map gains a table of deployment
 choices, naming for each who decides, which party learns it, and the
-existing signal, if any, it learns from (#1723, #1504, D845).<a href="#appendix-E-3.36.1" class="pilcrow">¶</a></p>
+existing signal, if any, it learns from (#1723, #1504, D845).<a href="#appendix-E-3.39.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.37">
-          <p id="appendix-E-3.37.1">Editorial, no requirement change: Mission-Bound Access Tokens opens
+        <li class="normal" id="appendix-E-3.40">
+          <p id="appendix-E-3.40.1">Editorial, no requirement change: Mission-Bound Access Tokens opens
 with Issuance Checks, one list of the checks issuance applies, each
 with its home sections and its applicability and exceptions on code
 redemption, refresh, designation, delegated exchange, and
 self-exchange, and each of those paths points to the list; the
 Implementation Map gains an operation index naming the sections each
-operation needs (#1723, D845).<a href="#appendix-E-3.37.1" class="pilcrow">¶</a></p>
+operation needs (#1723, D845).<a href="#appendix-E-3.40.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.38">
-          <p id="appendix-E-3.38.1">Editorial, no requirement change: Policy-Language Types drops its
+        <li class="normal" id="appendix-E-3.41">
+          <p id="appendix-E-3.41.1">Editorial, no requirement change: Policy-Language Types drops its
 Cedar example; Remediation Grains names its three grains in one
 paragraph; Grant Bindings and Related Mechanisms leaves the Template
 and Identity Continuation exchange mechanics to their profiles and
@@ -10994,17 +11032,17 @@ points to the Approval Governance Record for its mechanics, keeping
 both limitations; Approval Comprehension condenses its practices; and
 the Enforcement Responsibilities table is removed, with Rendering
 Safeguards pointing to Enforcement Requirements and Scope Projection
-(#1793, D919).<a href="#appendix-E-3.38.1" class="pilcrow">¶</a></p>
+(#1793, D919).<a href="#appendix-E-3.41.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.39">
-          <p id="appendix-E-3.39.1">Editorial, no requirement change: Token Claims, Delegated Exchange,
+        <li class="normal" id="appendix-E-3.42">
+          <p id="appendix-E-3.42.1">Editorial, no requirement change: Token Claims, Delegated Exchange,
 Intent Submission Evidence, Revocation, Authority Hash and Mission
 Identity, and Authority Materialized Before Containment point to the
 home of a rule they restated, keeping each operation's own condition
-(#1793, D919).<a href="#appendix-E-3.39.1" class="pilcrow">¶</a></p>
+(#1793, D919).<a href="#appendix-E-3.42.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.40">
-          <p id="appendix-E-3.40.1">Editorial, no requirement change: Scope Projection is divided into
+        <li class="normal" id="appendix-E-3.43">
+          <p id="appendix-E-3.43.1">Editorial, no requirement change: Scope Projection is divided into
 subsections for the subset condition, the per-audience condition, the
 projection steps, requested scope values, <code>scope</code>-only targets,
 refresh-token protection, and its example; Intent Members lists a
@@ -11012,10 +11050,10 @@ member's rules, the AS refusals included, under its definition, for
 each member but <code>task_bounds</code>;
 Principals and Approval Basis lists the rules that follow its member
 definitions; and Instance Context in Delegated Tokens lists its rules
-(#1723, D845).<a href="#appendix-E-3.40.1" class="pilcrow">¶</a></p>
+(#1723, D845).<a href="#appendix-E-3.43.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.41">
-          <p id="appendix-E-3.41.1">Editorial, no requirement change: Refresh Tokens, Designation, Direct
+        <li class="normal" id="appendix-E-3.44">
+          <p id="appendix-E-3.44.1">Editorial, no requirement change: Refresh Tokens, Designation, Direct
 Approval Steps, Preparing the Approval, Committing the Mission,
 Submission Processing Order, and Enforcement Requirements point to the
 rules of their operation that other sections state, which stay in
@@ -11025,15 +11063,15 @@ Resolving a Binding), the unrecognized authority source and approval
 idempotency (Principals and Approval Basis, Provenance and Expiry),
 duplicate member names (Commitment Mechanisms), and the
 resource-server rules of Mission Lifecycle, Mission Claim, Audience
-and Token Response, and Designation (#1723, D845).<a href="#appendix-E-3.41.1" class="pilcrow">¶</a></p>
+and Token Response, and Designation (#1723, D845).<a href="#appendix-E-3.44.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.42">
-          <p id="appendix-E-3.42.1">Editorial, no requirement change: Declared Transformation
+        <li class="normal" id="appendix-E-3.45">
+          <p id="appendix-E-3.45.1">Editorial, no requirement change: Declared Transformation
 Capabilities, Mission Lifecycle and Conformance drop restatements of
-rules their home sections state (#1793, D919).<a href="#appendix-E-3.42.1" class="pilcrow">¶</a></p>
+rules their home sections state (#1793, D919).<a href="#appendix-E-3.45.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.43">
-          <p id="appendix-E-3.43.1">Four rules already stated as obligations carry BCP 14 keywords, with
+        <li class="normal" id="appendix-E-3.46">
+          <p id="appendix-E-3.46.1">Four rules already stated as obligations carry BCP 14 keywords, with
 no new requirement: the current mapping does not stand in for an
 entry's original approved audience that the AS cannot establish
 (Declared Transformation Capabilities); the accountable principal is
@@ -11046,34 +11084,34 @@ Transformation Capabilities lists the rules for an entry's original
 approved audience, the creation-replay rule joins the response list
 of Mission Identifier and Expiry in Responses, and Self-Exchange
 Down-Scoping points to its <code>mission_intent</code> exemption in Authority
-Proposal (#1723, D971).<a href="#appendix-E-3.43.1" class="pilcrow">¶</a></p>
+Proposal (#1723, D971).<a href="#appendix-E-3.46.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.44">
-          <p id="appendix-E-3.44.1">Two rules already stated as obligations carry BCP 14 keywords, with no
+        <li class="normal" id="appendix-E-3.47">
+          <p id="appendix-E-3.47.1">Two rules already stated as obligations carry BCP 14 keywords, with no
 new requirement: the AS refuses a token request outside a Mission any
 of whose audiences is Mission-governed, and issues no token for the
 others (Authority Proposal); and a Mission in a state from which it
 can return to <code>active</code> is not reported with a termination reason
 (Issuance Gating). Editorial, no requirement change: Instance Context
 in Delegated Tokens names the grant lineage a delegated exchange
-establishes when it issues a refresh token (#1871, D1005).<a href="#appendix-E-3.44.1" class="pilcrow">¶</a></p>
+establishes when it issues a refresh token (#1871, D1005).<a href="#appendix-E-3.47.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.45">
-          <p id="appendix-E-3.45.1">Mission Record: its members <span class="bcp14">MUST NOT</span> be changed after creation,
+        <li class="normal" id="appendix-E-3.48">
+          <p id="appendix-E-3.48.1">Mission Record: its members <span class="bcp14">MUST NOT</span> be changed after creation,
 except <code>state</code> and the <code>termination</code> member written once, with no
 new requirement; a companion's containment overlay or suspension
 schedule is issuer-held state associated with the Mission, outside
-the record (#1873, #1879, D1014).<a href="#appendix-E-3.45.1" class="pilcrow">¶</a></p>
+the record (#1873, #1879, D1014).<a href="#appendix-E-3.48.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.46">
-          <p id="appendix-E-3.46.1">Editorial correction, no requirement change: Authority Sources says
+        <li class="normal" id="appendix-E-3.49">
+          <p id="appendix-E-3.49.1">Editorial correction, no requirement change: Authority Sources says
 the Mission Record's <code>client_id</code> names the Agent and a token's
 <code>client_id</code> names the client that requested it, as Token Claims
 states, so it no longer reads as saying a delegated token's
-<code>client_id</code> names the Agent (#1851, D971).<a href="#appendix-E-3.46.1" class="pilcrow">¶</a></p>
+<code>client_id</code> names the Agent (#1851, D971).<a href="#appendix-E-3.49.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.47">
-          <p id="appendix-E-3.47.1">Editorial, no requirement change: Issuance Gating opens with the
+        <li class="normal" id="appendix-E-3.50">
+          <p id="appendix-E-3.50.1">Editorial, no requirement change: Issuance Gating opens with the
 issuance procedure, the numbered checks each of the five issuance
 paths passes; any other derivation passes at least the resolution,
 state, subset, scope-projection and <code>exp</code> checks the Issuance Gating
@@ -11081,10 +11119,10 @@ list it replaces required, and the release-time revocation refusal.
 The numbering is presentation order, with no execution order or
 error precedence, and the orders this document states are unchanged.
 The Issuance Checks index is removed: the procedure and the sections
-it cites state its paths and per-path details (#1892, D1026).<a href="#appendix-E-3.47.1" class="pilcrow">¶</a></p>
+it cites state its paths and per-path details (#1892, D1026).<a href="#appendix-E-3.50.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.48">
-          <p id="appendix-E-3.48.1">Editorial, no requirement change: text that restates rules stated
+        <li class="normal" id="appendix-E-3.51">
+          <p id="appendix-E-3.51.1">Editorial, no requirement change: text that restates rules stated
 elsewhere is removed: the Implementation Map's index, its
 deployment-choices table becoming the Deployment Choices appendix;
 the End-to-End
@@ -11096,10 +11134,10 @@ the Projection Example, which the Resource Access Profile gives; the
 three-sides restatement in Downgrade by Omission; Authority Hash and
 Mission Identity; and
 Authority Materialized Before Containment, which the Containment
-profile states (#1892, D1026).<a href="#appendix-E-3.48.1" class="pilcrow">¶</a></p>
+profile states (#1892, D1026).<a href="#appendix-E-3.51.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.49">
-          <p id="appendix-E-3.49.1">Editorial, no requirement change: the sections follow processing
+        <li class="normal" id="appendix-E-3.52">
+          <p id="appendix-E-3.52.1">Editorial, no requirement change: the sections follow processing
 order. Mission Creation gathers Mission Approval, Standing-Consent
 Bases, Mission Record, Integrity and Commitments, and Binding the
 Mission to the Grant; Mission-Bound Access Tokens is retitled
@@ -11111,62 +11149,62 @@ Lifecycle follows as its own chapter; Error and Challenge Mapping, the
 two metadata sections, Extensibility and Conformance follow, and the
 Introduction names the chapters in order. Every moved section keeps
 its anchor and title, except the issuance chapter's title (#1892,
-D1026).<a href="#appendix-E-3.49.1" class="pilcrow">¶</a></p>
+D1026).<a href="#appendix-E-3.52.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.50">
-          <p id="appendix-E-3.50.1">Revocation: a Mission Issuer <span class="bcp14">MUST</span> accept, through an authenticated
+        <li class="normal" id="appendix-E-3.53">
+          <p id="appendix-E-3.53.1">Revocation: a Mission Issuer <span class="bcp14">MUST</span> accept, through an authenticated
 means independent of possession of any token, a revocation by
 <code>mission_id</code> from a party the deployment's policy authorizes, where
 a deployment was required to provide that means; Conformance Roles
 lists it among the Mission Issuer's surfaces; revoking a token does
-not by itself revoke a Mission (#1892, D1026).<a href="#appendix-E-3.50.1" class="pilcrow">¶</a></p>
+not by itself revoke a Mission (#1892, D1026).<a href="#appendix-E-3.53.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.51">
-          <p id="appendix-E-3.51.1">Editorial, no requirement change: Approval Comprehension's practices
+        <li class="normal" id="appendix-E-3.54">
+          <p id="appendix-E-3.54.1">Editorial, no requirement change: Approval Comprehension's practices
 for reviewing a large or varied Authority Set move to Mission Consent
 Evidence, which carries them beside its layered rendering, and
 Submission Processing Order drops its Consent Evidence example,
 keeping the rule that a committed approval surface covers the
-normalized provenance facts (#1892, D1026).<a href="#appendix-E-3.51.1" class="pilcrow">¶</a></p>
+normalized provenance facts (#1892, D1026).<a href="#appendix-E-3.54.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.52">
-          <p id="appendix-E-3.52.1">Editorial, no requirement change: delegation rules that sat in
+        <li class="normal" id="appendix-E-3.55">
+          <p id="appendix-E-3.55.1">Editorial, no requirement change: delegation rules that sat in
 issuance sections move into Delegation Within a Mission, leaving a
 pointer in each: a designation's audience, lifetime, <code>mission_intent</code>
 exemption and introspection rules move to Designation, and the
 delegated-exchange response members and the rule for a type delegable
 only unchanged move to Delegated Exchange. Self-Exchange Down-Scoping,
 which delegates nothing, moves from that chapter to follow Refresh
-Tokens (#1892, D1026).<a href="#appendix-E-3.52.1" class="pilcrow">¶</a></p>
+Tokens (#1892, D1026).<a href="#appendix-E-3.55.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.53">
-          <p id="appendix-E-3.53.1">Editorial, no requirement change: Protocol Flow keeps its figure
+        <li class="normal" id="appendix-E-3.56">
+          <p id="appendix-E-3.56.1">Editorial, no requirement change: Protocol Flow keeps its figure
 without the prose the Introduction's flow states; Derivation Policy
 and Open-Ended Tasks becomes Authority Set Example, its open-ended-task
 guidance being Mission Intent Shaping's and the Architecture's; and
 Policy-Language Types, whose rules Declared Transformation
 Capabilities and the Mission Resource Access Profile state, is
-removed with its Cedar reference (#1892, D1026).<a href="#appendix-E-3.53.1" class="pilcrow">¶</a></p>
+removed with its Cedar reference (#1892, D1026).<a href="#appendix-E-3.56.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.54">
-          <p id="appendix-E-3.54.1">Editorial, no requirement change: Revocation no longer restates the
+        <li class="normal" id="appendix-E-3.57">
+          <p id="appendix-E-3.57.1">Editorial, no requirement change: Revocation no longer restates the
 introspection overlay, and its wire-shape sentence follows the
 requirement it scopes;
 its duty to offer token introspection or Mission Status where
 consumers rely on Mission state beyond a token's lifetime is
-unchanged (#1892, D1026).<a href="#appendix-E-3.54.1" class="pilcrow">¶</a></p>
+unchanged (#1892, D1026).<a href="#appendix-E-3.57.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.55">
-          <p id="appendix-E-3.55.1">Editorial, no requirement change: Prompt Injection and Data
+        <li class="normal" id="appendix-E-3.58">
+          <p id="appendix-E-3.58.1">Editorial, no requirement change: Prompt Injection and Data
 Exfiltration, Downgrade by Omission, Authority and Propagated
 Information, and Composition and the Effective Ceiling keep their
 rules and residual risks and point to the Mission Security Model,
 which carries the analysis; Composition and the Effective Ceiling
 moves under Credentials and Delegation; the uncited Work Products
-reference is removed (#1892, D1026).<a href="#appendix-E-3.55.1" class="pilcrow">¶</a></p>
+reference is removed (#1892, D1026).<a href="#appendix-E-3.58.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.56">
-          <p id="appendix-E-3.56.1">Editorial, no requirement change: the Architecture carries material
+        <li class="normal" id="appendix-E-3.59">
+          <p id="appendix-E-3.59.1">Editorial, no requirement change: the Architecture carries material
 on the family rather than the protocol: Relationship to Existing
 OAuth Objects; Missions, Plans, and Execution; the Derivation Policy
 appendix's worked example; and the guidance on sizing a Mission to
@@ -11176,35 +11214,35 @@ Servers states that a resource server receiving no delegated token
 need not be Mission-aware; the Mission Authority Server
 pointer of Mission-Bound Token Issuance and the End-to-End Example's
 agent-identity stage, each stated elsewhere, are removed with the
-uncited SPIFFE client authentication reference (#1892, D1026).<a href="#appendix-E-3.56.1" class="pilcrow">¶</a></p>
+uncited SPIFFE client authentication reference (#1892, D1026).<a href="#appendix-E-3.59.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.57">
-          <p id="appendix-E-3.57.1">Editorial, no requirement change: the Role Mapping appendix moves to
+        <li class="normal" id="appendix-E-3.60">
+          <p id="appendix-E-3.60.1">Editorial, no requirement change: the Role Mapping appendix moves to
 the Architecture as Approval Role Mapping, which Single Accountable
 Approver cites; the companions that cited it now cite Principals and
-Approval Basis, which defines the three roles (#1892, D1026).<a href="#appendix-E-3.57.1" class="pilcrow">¶</a></p>
+Approval Basis, which defines the three roles (#1892, D1026).<a href="#appendix-E-3.60.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.58">
-          <p id="appendix-E-3.58.1">Self-exchange is an <span class="bcp14">OPTIONAL</span> capability, independent of Delegation:
+        <li class="normal" id="appendix-E-3.61">
+          <p id="appendix-E-3.61.1">Self-exchange is an <span class="bcp14">OPTIONAL</span> capability, independent of Delegation:
 an AS that does not support it refuses a no-actor exchange with
 <code>unsupported_grant_type</code> when it lacks the Token Exchange grant type,
 and otherwise with <code>invalid_request</code>; advertising that grant type
 does not establish every exchange variant. An acknowledged revocation
 is the AS's commit of the Mission's termination with reason
 <code>revoked</code>. Security Considerations state the consequence of a policy
-that authorizes no party to request revocation (#1892, D1031).<a href="#appendix-E-3.58.1" class="pilcrow">¶</a></p>
+that authorizes no party to request revocation (#1892, D1031).<a href="#appendix-E-3.61.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.59">
-          <p id="appendix-E-3.59.1">Declared Transformation Capabilities: a type's specification can
+        <li class="normal" id="appendix-E-3.62">
+          <p id="appendix-E-3.62.1">Declared Transformation Capabilities: a type's specification can
 define a value other than a boolean for a capability member, and a
 value the reader cannot validate declares that capability <code>false</code>
-(#1377, D1025).<a href="#appendix-E-3.59.1" class="pilcrow">¶</a></p>
+(#1377, D1025).<a href="#appendix-E-3.62.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-E-3.60">
-          <p id="appendix-E-3.60.1">Submission Processing Order: a commitment to the rendered approval
+        <li class="normal" id="appendix-E-3.63">
+          <p id="appendix-E-3.63.1">Submission Processing Order: a commitment to the rendered approval
 surface may omit each provenance element's <code>verified_at</code>, which the
 AS generates at each verification, and no other member (#1897,
-D1035).<a href="#appendix-E-3.60.1" class="pilcrow">¶</a></p>
+D1035).<a href="#appendix-E-3.63.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-E-4">-01<a href="#appendix-E-4" class="pilcrow">¶</a></p>

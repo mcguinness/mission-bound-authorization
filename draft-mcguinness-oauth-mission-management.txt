@@ -393,14 +393,7 @@ Table of Contents
       whether or not that transition was persisted
       ([I-D.draft-mcguinness-oauth-mission], Section "Mission
       Lifecycle").  The AS MUST NOT refuse a filter for carrying a state
-      value it does not produce; such a value matches no Mission, except
-      that, for a transition period, revoked, expired, completed,
-      superseded, or cascaded matches a Mission terminated with that
-      termination reason (cascaded matching parent_terminated), the
-      issuance profile's transition-period reading
-      ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-      Termination").  A Mission matched this way is reported as
-      terminated with its termination, never under the filter's value.
+      value it does not produce; such a value matches no Mission.
 
    created_after, created_before:  RFC 3339 [RFC3339] date-times.  Match
       a Mission whose created_at is strictly after, respectively
@@ -1292,6 +1285,11 @@ Appendix A.  Document History
       terminated member still reports already_terminal.  The pinned
       versions are the bulk-path form of the status profile's
       expected_version guard (#997, D995).
+
+   *  A filter.state value of revoked, expired, completed, superseded,
+      or cascaded matches no Mission, like any other state value the AS
+      does not produce: the issuance profile no longer reads those
+      values as a state (#1504, D1006).
 
 Author's Address
 
