@@ -1628,10 +1628,8 @@ on a Mission Status Response within the reliance bound of
 {{mission-status-caching}}. A fresh observation bounds only how stale
 the consumer's view of Mission state is; it does not bound
 reconciliation delay upstream of the issuer or effects already
-underway.
-
-The 60-second value in the examples is a tight deployment's choice,
-not a floor.
+underway. The 60-second value in the examples is a tight deployment's
+choice, not a floor.
 
 Where a deployment needs Mission revocation to take effect but only
 the baseline derivation-time check is in use, Mission-bound access
