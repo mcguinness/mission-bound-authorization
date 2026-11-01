@@ -575,7 +575,7 @@ The members are:
   request omitted `audience` ({{mission-status-request}}), the
   response is state-only and the AS MUST set `aud` to the
   authenticated client's `client_id`, as the Lifecycle endpoint does
-  ({{mission-lifecycle-endpoint}}); the consumer's `aud` verification
+  ({{lifecycle-operations}}); the consumer's `aud` verification
   below then checks that identifier. `exp` bounds the validity of the
   signed response itself; how long the consumer MAY rely on the
   reported `state` is given separately by `mission.fresh_until` below.
@@ -1303,12 +1303,10 @@ mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &nonce=nonce_8Y3vN0sM6tP1xR9bQ5
 ~~~
 
-Revoke success response: the AS returns the updated status as a signed
-Mission Status Response ({{mission-status-response}}). Because the
-lifecycle request carries no `audience`, the response is state-only: the
-AS sets `aud` to the authenticated client's `client_id` and omits
-`authorization_details` (a lifecycle confirmation reports `state`, not
-audience-scoped authority). Here `sub` carries the acting party
+Revoke success response: the signed, state-only Mission Status
+Response of {{lifecycle-operations}}, with no `authorization_details`
+(a lifecycle confirmation reports `state`, not audience-scoped
+authority). Here `sub` carries the acting party
 ({{lifecycle-authorization}}), the calling client identified by
 `client_id`; the AS records that party in its audit log with the
 operation, time, and any `reason`.
@@ -1900,9 +1898,7 @@ An implementation claiming an extension MUST meet its requirements:
   ({{lifecycle-authorization}}), the idempotency and conflict rules of
   {{idempotency}}, and the not-found refusal of an unauthorized
   request; answer each `revoke` with the signed, state-only Mission
-  Status Response, whose `aud` is the authenticated client's
-  `client_id` and whose
-  `nonce` is the request's ({{mission-status-response}}); refuse any
+  Status Response of {{lifecycle-operations}}; refuse any
   operation the implementation has not adopted
   ({{lifecycle-operations}}); and advertise
   `mission_lifecycle_endpoint`,

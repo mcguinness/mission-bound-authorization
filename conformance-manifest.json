@@ -25585,7 +25585,7 @@
    "id": "status.response.state-only-aud",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "When the request omitted `audience` ({{mission-status-request}}), the response is state-only and the AS MUST set `aud` to the authenticated client's `client_id`, as the Lifecycle endpoint does ({{mission-lifecycle-endpoint}})",
+   "text": "When the request omitted `audience` ({{mission-status-request}}), the response is state-only and the AS MUST set `aud` to the authenticated client's `client_id`, as the Lifecycle endpoint does ({{lifecycle-operations}})",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
