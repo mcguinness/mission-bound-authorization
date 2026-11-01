@@ -943,7 +943,7 @@ The following rules govern a submission:
   the Intent structurally invalid against this document's member
   definitions, MUST refuse the request with the `invalid_request`
   error code.
-- **Closed top levels.** The AS MUST reject a submission with the
+- **Closed top levels.** The AS MUST refuse a submission with the
   `invalid_request` error code if the Submission envelope contains a
   top-level member other than `intent` and `evidence`, or if the
   `intent` contains a top-level member that neither this document
@@ -999,13 +999,13 @@ two forms:
 2. a `mission_intent` claim inside a signed Request Object
    ({{RFC9101}}) that is itself pushed through PAR. The claim's
    value is the Submission envelope itself, a JSON object, not its
-   serialization; the AS MUST reject with `invalid_request` a claim
+   serialization; the AS MUST refuse with `invalid_request` a claim
    whose value is a string or any other value that is not a JSON
    object.
 
 When the pushed request carries a Request Object (a `request`
 parameter value), that object is authoritative: a `mission_intent`
-submitted outside the Request Object in the same push MUST be rejected
+submitted outside the Request Object in the same push MUST be refused
 with `invalid_request`, strengthening {{Section 6.3 of RFC9101}},
 under which the AS would only ignore such a value.
 
@@ -1022,7 +1022,7 @@ front-channel request that redeems the `request_uri`, the AS MUST
 ignore any `mission_intent`, `authorization_details`, `scope`, or
 `resource` presented.
 
-The AS MUST reject with `invalid_request` a `mission_intent` presented
+The AS MUST refuse with `invalid_request` a `mission_intent` presented
 on a front-channel authorization request that does not use a
 PAR-issued `request_uri`. A client MUST NOT send `mission_intent` as a
 plaintext front-channel authorization-request parameter, whether or
@@ -1152,7 +1152,7 @@ request ({{discovery}} states the client-side rules and
    for that resource outside a Mission, on any grant type.
 2. If a client registered as Mission-governed sends an authorization
    request, through PAR or at the authorization endpoint, that carries
-   `authorization_details` but no `mission_intent`, the AS MUST reject
+   `authorization_details` but no `mission_intent`, the AS MUST refuse
    the request with the `invalid_request` error code, so the client
    cannot drop the Intent from a request that still carries
    `authorization_details`.
@@ -1220,7 +1220,7 @@ member names its evidence type.
 
 Processing is governed by the following rules:
 
-- **Reject, do not ignore.** An entry that is not a JSON object, or
+- **Refuse, do not ignore.** An entry that is not a JSON object, or
   that lacks `type`, is structurally invalid and refused with the
   `invalid_request` error code at step 1 of the processing order
   ({{submission-processing}}). The AS MUST refuse an entry whose
@@ -4038,8 +4038,8 @@ A resource server:
 2. MUST treat as providing no authority any applicable entry whose
    type it does not implement, or whose type-defined enforcement it
    cannot complete (an unrecognized member, an unenforceable
-   constraint, or an unrecognized matching mode). It MUST refuse the
-   request, with `insufficient_scope` ({{RFC6750}}) or the
+   constraint, or an unrecognized matching mode). It MUST challenge
+   with `insufficient_scope` ({{RFC6750}}), or with the
    RAR-remediation challenge as {{rs-denials}} states, unless another
    applicable entry that it can fully enforce authorizes the whole
    request on its own, and MUST NOT combine parts of several entries
@@ -4055,11 +4055,12 @@ A resource server:
    {{client-id-rebinding}}); the approved agent is recorded only in
    the Mission Record ({{mission-record}}) at the issuer.
 5. MUST, when configured to require the `mission` claim for a
-   Mission-governed resource, reject a token that lacks it with the
-   `invalid_token` error code. The issuance-side duty that pairs with
-   this rejection is stated in {{mission-governed}}, the downgrade
-   it prevents in {{downgrade-by-omission}}, and the metadata that
-   advertises the requirement in {{protected-resource-metadata}}.
+   Mission-governed resource, challenge with the `invalid_token` error
+   code a request whose token lacks it. The issuance-side duty that
+   pairs with this challenge is stated in {{mission-governed}}, the
+   downgrade it prevents in {{downgrade-by-omission}}, and the
+   metadata that advertises the requirement in
+   {{protected-resource-metadata}}.
 6. MUST accept a `mission` claim only from an issuer it explicitly
    trusts to issue Mission-bound authorization for the resource;
    trusting the issuer's ordinary access tokens is not enough. It MUST
@@ -4068,8 +4069,8 @@ A resource server:
    such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}},
    explicitly establishes the permitted relationship between the two.
    It MUST
-   reject a token that fails either check with the `invalid_token`
-   error code. For an opaque token, the issuer is the AS whose
+   challenge with the `invalid_token` error code a request whose token
+   fails either check. For an opaque token, the issuer is the AS whose
    introspection response or issuer-local resolution the resource
    server relies on, and the same checks apply to that response's
    `mission` member ({{introspected-consumption}}).
@@ -4189,8 +4190,8 @@ the codes):
    ({{remediation-grains}}).
 4. **Unenforceable constraint.** An applicable entry carries a
    type-defined member or constraint the resource server cannot
-   enforce, and the request fails closed under the same base error as
-   case 3.
+   enforce, and the resource server challenges with the same base
+   error as case 3.
 
 Cases 3 and 4 are identical `403` responses to a client, which cannot
 tell from them whether a new approval would help. A Mission-aware
@@ -4205,7 +4206,7 @@ applies by including, alongside `error` ({{RFC6750}}), the
 
 `constraint_unrecognized`:
 : An applicable entry carries a type-defined member or constraint the
-  resource server cannot enforce, and the request fails closed. A
+  resource server cannot enforce. A
   client MUST NOT treat this value as inviting retry, step-up, or
   fresh approval: none of those makes a resource server enforce a
   constraint it does not implement.

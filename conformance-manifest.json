@@ -6050,7 +6050,7 @@
    "id": "core.submission.front-channel-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "The AS MUST reject with `invalid_request` a `mission_intent` presented on a front-channel authorization request that does not use a PAR-issued `request_uri`",
+   "text": "The AS MUST refuse with `invalid_request` a `mission_intent` presented on a front-channel authorization request that does not use a PAR-issued `request_uri`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6081,7 +6081,7 @@
    "id": "core.submission.duplicate-outside-request-object",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "a `mission_intent` submitted outside the Request Object in the same push MUST be rejected with `invalid_request`",
+   "text": "a `mission_intent` submitted outside the Request Object in the same push MUST be refused with `invalid_request`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6143,7 +6143,7 @@
    "id": "core.submission.request-object-claim-non-object-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "the AS MUST reject with `invalid_request` a claim whose value is a string or any other value that is not a JSON object",
+   "text": "the AS MUST refuse with `invalid_request` a claim whose value is a string or any other value that is not a JSON object",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6212,7 +6212,7 @@
    "id": "core.authority-proposal.governed-client-omission-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "If a client registered as Mission-governed sends an authorization request, through PAR or at the authorization endpoint, that carries `authorization_details` but no `mission_intent`, the AS MUST reject the request with the `invalid_request` error code",
+   "text": "If a client registered as Mission-governed sends an authorization request, through PAR or at the authorization endpoint, that carries `authorization_details` but no `mission_intent`, the AS MUST refuse the request with the `invalid_request` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7614,7 +7614,7 @@
    "id": "core.submission.closed-top-levels",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
-   "text": "The AS MUST reject a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines",
+   "text": "The AS MUST refuse a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -18063,7 +18063,7 @@
    "id": "core.rs-enforcement.unenforceable-refusal-code",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
-   "text": "It MUST refuse the request, with `insufficient_scope` ({{RFC6750}}) or the RAR-remediation challenge as {{rs-denials}} states",
+   "text": "It MUST challenge with `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation challenge as {{rs-denials}} states",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -18199,7 +18199,7 @@
    "id": "core.rs-enforcement.mission-issuer-invalid-token",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
-   "text": "It MUST reject a token that fails either check with the `invalid_token` error code",
+   "text": "It MUST challenge with the `invalid_token` error code a request whose token fails either check",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
