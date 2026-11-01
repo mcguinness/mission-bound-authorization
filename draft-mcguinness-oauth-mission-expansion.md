@@ -480,7 +480,7 @@ endpoint with the following parameters:
   It is a proposal, never authority: the Mission Issuer derives and
   bounds the successor's Authority Set by policy regardless of what was
   proposed. A successor created from an exchange carrying one records
-  `proposed_authority` and `proposal_hash`.
+  `proposed_authority`, its `proposal_hash` recorded or implied.
 
 `predecessor`:
 : OPTIONAL. A string: the `mission_id` of the predecessor, a
@@ -2475,6 +2475,10 @@ approved, not the predecessor's authority plus a delta.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A successor created from an exchange carrying a proposal records
+  `proposed_authority`, its `proposal_hash` recorded or implied
+  (#1917).
 
 - Tombstone Retention states when the retry horizon starts and ends,
   that a later change to the published horizon never shortens it for

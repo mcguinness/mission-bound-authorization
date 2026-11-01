@@ -575,6 +575,7 @@ import {
   STATUS_SIGNING_ALG,
   type StatusObservation,
 } from "../kernel/kernel.js";
+import { resolvedAnchors } from "../kernel/anchors.js";
 import {
   STATUS_LIST_ID,
   STATUS_LIST_MEDIA_TYPE,
@@ -3886,7 +3887,9 @@ async function handleChildJwtBearerGrant(
   if (
     record.client_id !== assertedClientId ||
     assertedIssuer !== record.issuer ||
-    (assertedHash !== undefined && record.authority_hash !== assertedHash)
+    // @spec mission#integrity-anchors (#1917, D1061): the record's anchor,
+    // recorded or implied.
+    (assertedHash !== undefined && resolvedAnchors(record).authority_hash !== assertedHash)
   ) {
     throw new errors.InvalidGrant("child grant assertion does not match the mission record");
   }

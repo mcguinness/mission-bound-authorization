@@ -195,6 +195,14 @@ not against an issuer dishonest at retrieval time or a signing key
 compromised after approval ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Consent Binding").
 
+The `authority_hash` the issuer serves is computed from the Mission's
+retained record, never over the set it returns
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Integrity
+Anchors"). Where that record omits its `authority_hash`, the expected
+value comes from the retained Authority Set itself, so Tier 1 does not
+detect a corruption of that retained set; only a value captured
+outside the record before the change does ({{independent-pinning}}).
+
 ## Independent Pinning {#independent-pinning}
 
 **Tier 2** adds the defense Tier 1 lacks ({{retrieval}}): the
@@ -405,6 +413,11 @@ it alongside `authority_hash` at the approval event.
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Tier 1's expected `authority_hash` is computed from the Mission's
+  retained record, never over the served set; where the record omits
+  the anchor, Tier 1 does not detect corruption of the retained set
+  itself (#1917).
 
 - Initial version. Carries Local Approved-Set Verification of
   Mission-Bound Authorization for OAuth 2.0 with its rules unchanged:

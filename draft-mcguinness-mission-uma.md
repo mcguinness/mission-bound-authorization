@@ -531,8 +531,9 @@ of `authorization_details` objects. This claim replaces the issuance
 profile's PAR-only proposal carriage; its validation, derivation,
 recording, and hashing rules apply unchanged, and the proposal itself
 carries no authority ({{I-D.draft-mcguinness-oauth-mission}}). A Mission
-created from a push carrying one records `proposed_authority` and
-`proposal_hash` as the issuance profile's Mission record defines them.
+created from a push carrying one records `proposed_authority`, its
+`proposal_hash` recorded or implied, as the issuance profile's Mission
+record defines them.
 
 The JWT MAY be signed by the client for attribution; a
 signature confers no authority. Its `claim_token_format` identifier
@@ -1343,6 +1344,14 @@ no registry, and the identifier of {{mission-intent}} is under this
 document's control.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- A Mission created from a push carrying a proposal records
+  `proposed_authority`, its `proposal_hash` recorded or implied
+  (#1917).
 
 # Acknowledgments
 {:numbered="false"}

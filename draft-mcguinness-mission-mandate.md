@@ -505,7 +505,9 @@ check.
 The Mission Issuer MAY mint a Mandate at any time within the Mission's
 audit horizon, including after the Mission terminates.
 Each claim MUST be populated from the Mission record's committed
-members, except `approval_governance_digest`, which is the record
+members, an integrity anchor the record omits taking its implied value
+({{I-D.draft-mcguinness-oauth-mission}}), except
+`approval_governance_digest`, which is the record
 digest of the committed Approval Governance Record that backs the
 Mission's approval event. `state_at_issuance` MUST equal the Mission's
 lifecycle state
@@ -1286,6 +1288,14 @@ IANA is requested to register two media types per {{RFC6838}}.
 - Change controller: IETF
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- Minting populates `intent_hash` and `authority_hash` from the
+  Mission record's integrity anchors, recorded or implied, since the
+  OAuth binding makes them implied members (#1917).
 
 # Acknowledgments
 {:numbered="false"}

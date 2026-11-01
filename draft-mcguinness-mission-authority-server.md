@@ -576,8 +576,9 @@ envelope validation above.
 
 The OAuth binding's intake refusals for a proposed entry map to
 `invalid_authority` here. A Mission created from a submission
-carrying a proposal records `proposed_authority` and `proposal_hash`
-as the OAuth binding's Mission record defines them.
+carrying a proposal records `proposed_authority`, its `proposal_hash`
+recorded or implied, as the OAuth binding's Mission record defines
+them.
 
 A MAS has no derivation event: no token is issued under the Mission,
 so a `requested_derivation_limit` member
@@ -3510,6 +3511,10 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A Mission created from a submission carrying a proposal records
+  `proposed_authority`, its `proposal_hash` recorded or implied
+  (#1917).
 
 - The mission submission endpoint, and the join-assertion and
   issuance-grant endpoints that inherit its rules, authenticate on

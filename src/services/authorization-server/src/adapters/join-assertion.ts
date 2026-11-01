@@ -65,6 +65,7 @@
 import { entryOverlapsResource } from "@mission/core";
 import { accessTokenHash } from "@mission/mcp-payments";
 import { ExpansionRateLimiter } from "../kernel/expansion.js";
+import { resolvedAnchors } from "../kernel/anchors.js";
 import type { JoinAssertionEvent } from "../kernel/join-evidence-store.js";
 import type { MissionKernel } from "../kernel/kernel.js";
 import type { MissionRecord } from "../kernel/types.js";
@@ -288,7 +289,11 @@ export class JoinAssertionService {
   private recheck(first: MissionRecord, audience: string): JoinAssertionAnswer | undefined {
     const current = this.deps.kernel.currentRecord(first.id);
     if (!current || current.state !== "active") return err(403, "join_failed", "the Mission is not active");
-    if (current.authority_hash !== first.authority_hash) return err(403, "join_failed", "the Mission's authority changed");
+    // @spec mission#integrity-anchors (#1917, D1061): both records' anchors,
+    // recorded or implied, over each one's approved Authority Set.
+    if (resolvedAnchors(current).authority_hash !== resolvedAnchors(first).authority_hash) {
+      return err(403, "join_failed", "the Mission's authority changed");
+    }
     if (!this.audienceEnrolled(audience, current)) {
       return err(403, "join_failed", "the audience names no PDP enrolled for the Mission's enforcement scope");
     }
@@ -393,7 +398,7 @@ export class JoinAssertionService {
     // The `mission` descriptor: id, issuer and the audit anchor only (never
     // `approval_context_commitment`).
     const claims: Json = {
-      mission: { id: record.id, issuer: record.issuer, authority_hash: record.authority_hash },
+      mission: { id: record.id, issuer: record.issuer, authority_hash: resolvedAnchors(record).authority_hash },
       token: tokenClaim,
       join: joinClaim,
       ...(join.mappingVersion !== undefined ? { mapping_version: join.mappingVersion } : {}),
