@@ -50,12 +50,30 @@ document under a recorded version, so the version moves with the values.
    completion.
 3. **Restart the Authorization Server, its Transaction Authorization
    Server, and the MAS where it issues Missions, first.** From then on every
-   approval records the reference.
-   Until the PEP and the PDP restart, they still accept an unpinned entry,
-   and they already perform a pinned one under exactly its contract, so
-   nothing new is refused yet.
-4. **Restart the PDP and the PEP together** on the same statement. From
-   then on an unpinned entry is refused for the five operations.
+   approval records the reference, and the Transaction Authorization Server
+   refuses an entry without one for the five operations: at admission
+   (`invalid_grant`), and at completion for a workflow admitted before
+   (`access_denied`, the workflow left pending). Only the PEP and PDP
+   instances not yet replaced keep their earlier behavior: they still
+   accept an unpinned entry for the five, and already perform a pinned one
+   under exactly its contract.
+4. **Bring up the PDP and PEP instances on the new statement, then remove
+   every earlier instance from routing.** No request may reach a PEP or a
+   PDP that still reads the earlier declaration. Drain or cancel those
+   instances' in-flight work: a call they admitted either completes or is
+   cancelled before the instance is stopped, and a permit they decided is
+   never released by a new instance without a matching reference (Work in
+   flight, below). Then stop them.
+5. **Declare the cutover complete only when every serving resource server
+   and PDP enforces the requirement** (D875): every instance that can
+   receive a request reads the new declaration, and no earlier, permissive
+   instance remains an authorization path. Confirm it per instance: a PEP
+   publishes its Enforcement Scope Statement in its protected resource
+   metadata (`enforcement_scope_statement.extensions.resource_contracts`,
+   whose payments `requires_reference` lists the five actions), and a PDP
+   is checked from the declaration its deployment loads. Record the
+   completion. Until then the cutover is in progress: an earlier instance
+   still authorizes an unpinned entry for the five.
 
 The reverse order, PEP before the Authorization Server, refuses every
 write under a Mission approved in between, because those approvals still
