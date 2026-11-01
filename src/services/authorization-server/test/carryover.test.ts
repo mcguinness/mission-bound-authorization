@@ -567,7 +567,7 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
   it("refuses carryover under a successor whose stored basis type it does not recognize, the predecessor and child staying active (@spec mission#record-principal-members, #1932)", () => {
     // Commit an expansion successor and apply carryover in one transaction,
     // optionally rewriting the successor's stored basis type first.
-    const run = (rewrite: boolean) => {
+    const run = (rewrite: boolean, directApproval = true) => {
       const pred = approvePredecessor();
       const child = addChild(pred.id, "child-a");
       const store = new ExpansionDeferralStore(kernel, () => clock, config());
@@ -604,7 +604,7 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
             successor: kernel.get(res.successor.id) as MissionRecord,
             approver: { iss: ISS, sub: "bob" },
             expansionApprovalEventId: approvalEventId,
-            directApproval: true,
+            directApproval,
             config: config(),
           });
         });
@@ -622,10 +622,17 @@ describe("Child Mission Carryover (@spec child-delegation#carryover)", () => {
     const refused = run(true);
     expect(refused.error).toBeInstanceOf(CarryoverError);
     expect((refused.error as CarryoverError).code).toBe("approval_basis_not_direct");
+    // #1936: the message names the successor's type, not a policy-adjudicated drawdown.
+    expect((refused.error as Error).message).toMatch(/requires a direct successor; this successor's approval_basis\.type is 'x_quorum'/);
+    expect((refused.error as Error).message).not.toMatch(/policy-adjudicated/);
     expect(kernel.get(refused.successorId)).toBeUndefined();
     expect(kernel.get(refused.pred.id)?.state).toBe("active");
     expect(kernel.get(refused.child.id)?.state).toBe("active");
     expect((kernel.get(refused.child.id) as MissionRecord).termination?.carried_to).toBeUndefined();
+    // The other cause, no direct approval, keeps its own message and the same code.
+    const undirected = run(false, false);
+    expect((undirected.error as CarryoverError).code).toBe("approval_basis_not_direct");
+    expect((undirected.error as Error).message).toMatch(/requires an authenticated direct approval; a policy-adjudicated drawdown/);
   });
 
   it("refuses a completion whose manifest hash does not match the approved commitment, creating nothing", () => {
