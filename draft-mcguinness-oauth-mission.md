@@ -1091,7 +1091,7 @@ entry as a subset ({{subset}}) of some proposed entry of the *same
 type*: narrowed under that type's own subset rule where the AS has
 declared `narrowing` for the type, or carried through unchanged
 otherwise ({{transformation-capabilities}}). With a proposal present,
-`goal` and `task_bounds` serve as rendering and bounding context over
+`goal` and `task_bounds` serve as rendering and review context for
 the proposed authority.
 
 Policy narrowing is distinct from validation ({{proposal-validation}}).
