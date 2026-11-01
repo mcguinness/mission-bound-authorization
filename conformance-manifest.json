@@ -3103,59 +3103,6 @@
    "notes": "#1535 (D649, finding 2). The resolver takes no allowance on any reliance bound. Proven by adding a 30 s allowance to the fresh_until and exp comparisons together (the exp test fails), to the expires_at comparison (the expires_at test fails) and to the ceiling (the ceiling test fails). Control: an allowance on fresh_until alone, the MAY, leaves the exp test passing, so the row does not forbid it."
   },
   {
-   "id": "status.security.replay-reliance-bound",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "security-considerations",
-   "text": "a consumer MUST NOT use a cached response after that bound.",
-   "role": "verifier",
-   "strength": "MUST NOT",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [],
-   "surface": "verification",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a cached Mission Status Response is not used after its reliance bound",
-    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
-   },
-   "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
-     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer only before its signed fresh_until",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
-     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer no longer than iat plus the issuer's mission_max_stale_seconds",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
-     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
-     "level": "unit",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
-     "level": "unit",
-     "surface": "decision-request"
-    }
-   ],
-   "notes": "#1535 (D649, finding 2). The Response Replay restatement of status.caching.reliance-bound, witnessed by the same tests and partial for the same reason (#1543 re-review): of the reference's two consumer paths, only the resolver enforces every term of the bound. The PEP-carried `assertion` path in evaluate.ts holds no issuer metadata, so it cannot enforce the advertised ceiling (iat plus mission_max_stale_seconds); only the action class's staleness window bounds the observation's age there. That path is tested on fresh_until (the two evaluate tests) and, through check 10, on exp."
-  },
-  {
    "id": "status.failures.decision-does-not-proceed",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-failures",

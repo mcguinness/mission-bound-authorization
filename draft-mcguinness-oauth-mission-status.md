@@ -1950,13 +1950,12 @@ space to enumeration.
 
 A Mission Status Response is bound to (caller `sub`, audience,
 `nonce`, issuance time). Replay against a different caller, audience
-or request fails the `sub`, `aud` and `nonce` checks, which the
-signature protects, and replay after the reliance bound fails the
-caching rule ({{mission-status-caching}}); a consumer MUST verify all
-the checks of {{mission-status-response}} before honoring a response. A
-response cached and replayed by the same caller within its reliance
-bound ({{mission-status-caching}}) is equivalent to a fresh response; a
-consumer MUST NOT use a cached response after that bound.
+or request fails the `sub`, `aud` and `nonce` checks of
+{{mission-status-response}}, which the signature protects, and replay
+after the reliance bound fails the caching rule
+({{mission-status-caching}}). A response cached and replayed by the
+same caller within its reliance bound is equivalent to a fresh
+response.
 
 ## Mission Status Denial of Service
 
