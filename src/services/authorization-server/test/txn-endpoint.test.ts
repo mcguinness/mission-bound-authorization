@@ -2195,6 +2195,13 @@ async function freshMission(
   };
 }
 
+/** The Mission's own entry for `payments:invoice.read`, narrowed to that one action. */
+function readEntry(id: string): AuthorityEntry[] {
+  return (as.kernel.get(id) as { authority_set: AuthorityEntry[] }).authority_set
+    .filter((e) => e.actions.includes("payments:invoice.read"))
+    .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:invoice.read"] }));
+}
+
 /** The Mission's own entry for the gated action, narrowed to that one action. */
 function remittanceEntry(id: string): AuthorityEntry[] {
   return (as.kernel.get(id) as { authority_set: AuthorityEntry[] }).authority_set
@@ -2364,8 +2371,11 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
   });
 
   it("completes a workflow admitted under a superseded version, and refuses new challenges naming it", async () => {
+    // A pre-cutover Mission's unpinned entry, for an operation the shipped
+    // configuration requires no reference for (#249 C.3b): the version is
+    // the one the workflow recorded at admission.
     const mission = await preCutoverMission();
-    const details = remittanceEntry(mission.missionId);
+    const details = readEntry(mission.missionId);
     const supersededDigest = "sha-256:operation-profile-v1";
 
     // Version 1: the workflow is admitted on this snapshot.
@@ -3198,9 +3208,14 @@ describe("a workflow store file created before Operation Profile versions were r
     };
   }
 
-  /** The registry today: the current version, and the earlier one retained. */
+  /**
+   * The registry today: the current version, and the earlier one retained.
+   * Its declarations are the configuration before the payments cutover,
+   * requiring no reference, as the pre-cutover Mission these workflows run
+   * under was approved (#249 C.3b).
+   */
   const today = () =>
-    new OperationProfileRegistry()
+    new OperationProfileRegistry(contractsRequiring([]))
       .retain(RESOURCE, missionResourceAccessProfile(EARLIER))
       .register(RESOURCE, missionResourceAccessProfile(CURRENT));
 
@@ -3544,29 +3559,23 @@ describe("an older supported contract reference at the Transaction Authorization
  * the TAS draft's rule for an entry without a reference (the resource's
  * current version, recorded at admission) is unchanged elsewhere. A supported
  * older reference stays acceptable under its own profile, and the current
- * reference is never substituted. The requiring configuration is controlled:
- * the shipped one requires no reference yet (#249 C.3b).
+ * reference is never substituted. The shipped configuration requires a
+ * reference for the cutover's five actions (#249 C.3b); a Mission approved
+ * before it carries none.
  */
 describe("a missing contract reference where the challenged operation requires one, at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, D1071)", () => {
-  /** The shipped contract version current today. */
-  const CURRENT_CONTRACT = RESOURCE_CONTRACTS.declarations[0]?.versions.find((v) => v.state === "current")?.version as string;
-  /** The shipped declarations with the cutover's five actions required. */
-  const requiringDeclarations = (): ResourceContractDeclarations => asOf(CURRENT_CONTRACT);
-  const requiring = (): OperationProfileRegistry => contractOperationProfiles(RESOURCE, requiringDeclarations());
+  /** The configuration before the cutover: the same declarations, requiring no reference. */
+  const preCutover = (): OperationProfileRegistry => contractOperationProfiles(RESOURCE, contractsRequiring([]));
 
-  it("requires a reference for exactly the cutover's five actions, every shipped version kept in its state", () => {
-    const [declared] = requiringDeclarations().declarations;
-    expect(declared?.requires_reference).toEqual(CUTOVER);
-    expect(declared?.versions.map((v) => [v.version, v.state])).toEqual(
-      RESOURCE_CONTRACTS.declarations[0]?.versions.map((v) => [v.version, v.state]),
-    );
+  it("the shipped configuration requires a reference for exactly the cutover's five actions", () => {
+    expect(RESOURCE_CONTRACTS.declarations[0]?.requires_reference).toEqual(CUTOVER);
   });
 
-  it("refuses invalid_grant at admission an unpinned remittance, creating no workflow and opening no approval, and the shipped configuration, which requires none, admits and issues it", async () => {
-    const m = await freshMission();
+  it("refuses invalid_grant at admission an unpinned remittance, creating no workflow and opening no approval, and the configuration before the cutover, which requires none, admits and issues it", async () => {
+    const m = await preCutoverMission();
     expect(remittanceEntry(m.missionId)[0]?.resource_contract).toBeUndefined();
     const txn = "txn_missing_reference_admission";
-    const { admitted, issued, decided, workflows } = await remitThrough(requiring(), m, txn);
+    const { admitted, issued, decided, workflows } = await remitThrough(shipped(), m, txn);
     expect(admitted.status).toBe(400);
     expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
     expect((admitted.body as { error_description?: string }).error_description).toBe(
@@ -3577,15 +3586,15 @@ describe("a missing contract reference where the challenged operation requires o
     expect(workflowCount(workflows)).toBe(0);
     expect(ars.getTask(taskFor(txn))).toBeUndefined();
 
-    const control = await remitThrough(shipped(), m, "txn_missing_reference_control");
+    const control = await remitThrough(preCutover(), m, "txn_missing_reference_control");
     expect(control.admitted.status, JSON.stringify(control.admitted.body)).toBe(200);
     expect(control.issued?.status, JSON.stringify(control.issued?.body)).toBe(200);
   });
 
   it("refuses access_denied at completion, minting nothing, an unpinned remittance admitted and approved before the operation required a reference, and leaves the workflow pending", async () => {
-    const m = await freshMission();
+    const m = await preCutoverMission();
     const txn = "txn_missing_reference_completion";
-    const { admitted, issued, decided, workflows, handle } = await remitThrough(shipped(), m, txn, requiring());
+    const { admitted, issued, decided, workflows, handle } = await remitThrough(preCutover(), m, txn, shipped());
     expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
     expect(ars.getTask(taskFor(txn))?.state).toBe("approved");
     expect(issued?.status).toBe(400);
@@ -3599,7 +3608,7 @@ describe("a missing contract reference where the challenged operation requires o
     const m = await approvedWhileCurrent(OLDER);
     const pinned = RESOURCE_CONTRACTS.versionOf(remittanceEntry(m.missionId)[0]?.resource_contract);
     expect(pinned?.version.version).toBe(OLDER);
-    const { admitted, issued, decided } = await remitThrough(requiring(), m, "txn_required_older");
+    const { admitted, issued, decided } = await remitThrough(shipped(), m, "txn_required_older");
     expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
     expect(issued?.status, JSON.stringify(issued?.body)).toBe(200);
     expect(decided).toEqual([pinned?.version.operation_profile]);
@@ -3609,8 +3618,8 @@ describe("a missing contract reference where the challenged operation requires o
   it("refuses access_denied at completion, minting nothing, a supported older reference retired between admission and completion (controlled configuration: no retired version is shipped)", async () => {
     const m = await approvedWhileCurrent(OLDER);
     const txn = "txn_required_retired";
-    const retired = contractOperationProfiles(RESOURCE, retiring(requiringDeclarations(), OLDER));
-    const { admitted, issued, decided, workflows, handle } = await remitThrough(requiring(), m, txn, retired);
+    const retired = contractOperationProfiles(RESOURCE, retiring(RESOURCE_CONTRACTS, OLDER));
+    const { admitted, issued, decided, workflows, handle } = await remitThrough(shipped(), m, txn, retired);
     expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
     expect(ars.getTask(taskFor(txn))?.state).toBe("approved");
     expect(issued?.status).toBe(400);

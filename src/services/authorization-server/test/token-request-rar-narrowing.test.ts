@@ -20,7 +20,7 @@
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, pinnedToCurrentContract } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -38,13 +38,19 @@ const READ = "payments:invoice.read";
 const EXECUTE = "payments:payment.execute";
 const ACME = { vendors: ["acme"] };
 const MISSION_ENTRY = { type: "mission_resource_access", resource: RESOURCE, actions: [LIST, READ], constraints: ACME };
-/** A requested entry; `null` constraints omits the member. */
-const entry = (actions: string[], constraints: Record<string, unknown> | null = ACME) => ({
-  type: "mission_resource_access",
-  resource: RESOURCE,
-  actions,
-  ...(constraints ? { constraints } : {}),
-});
+/**
+ * A requested entry; `null` constraints omits the member. It carries the
+ * reference the grant's entries carry: the payments resource requires one, so
+ * a fresh approval records the current reference in every entry on it (#249
+ * C.3b, D989), and a request naming the grant's authority names it too.
+ */
+const entry = (actions: string[], constraints: Record<string, unknown> | null = ACME) =>
+  pinnedToCurrentContract({
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions,
+    ...(constraints ? { constraints } : {}),
+  });
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 type Json = Record<string, unknown>;
