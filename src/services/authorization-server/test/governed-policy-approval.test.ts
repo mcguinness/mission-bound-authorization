@@ -400,12 +400,33 @@ describe("governed policy root and record (@spec approval-governance#governed-po
     expect(() => assertGovernedPolicyRecord(unsigned, basis)).not.toThrow();
     // The record is unchanged: its accountable assertion is the policy one.
     // Only the basis names another mechanism, which the record does not attest.
-    for (const kind of ["human", "service"]) {
+    for (const kind of ["human", "service", "x_oracle"]) {
       const relabelled = { ...basis, adjudication: { ...basis.adjudication, kind } } as unknown as typeof basis;
       expect(() => assertGovernedPolicyRecord(unsigned, relabelled), kind).toThrow(
         /the accountable assertion's kind is not adjudication.kind/,
       );
     }
+  });
+
+  it.each([
+    ["kind human", "human"],
+    ["kind service", "service"],
+    ["an unrecognized kind", "x_oracle"],
+  ])("the re-check refuses a stored governed_policy basis with %s at step 5, and the Mission stays active (#1921)", (_label, kind) => {
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    const recheck = () => recheckApprovalGovernanceRecord(kernel, mission.id, { resolveKey: resolveKey(kernel) });
+    // The control: the record as committed re-checks.
+    expect(recheck()).toEqual({ rechecked: true });
+    const basis = structuredClone(mission.approval_basis) as unknown as { adjudication: Record<string, unknown> };
+    basis.adjudication = { ...basis.adjudication, kind };
+    kernel.db.prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?").run(JSON.stringify(basis), mission.id);
+    expect(recheck()).toMatchObject({
+      rechecked: false,
+      step: 5,
+      reason: expect.stringMatching(/the accountable assertion's kind is not adjudication.kind/),
+    });
+    expect(kernel.get(mission.id)?.state).toBe("active");
   });
 });
 

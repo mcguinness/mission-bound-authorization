@@ -6,6 +6,8 @@ import {
   authorityHash,
   entryWithinCeiling,
   intentHash,
+  type JsonValue,
+  submissionEvidenceCommitment,
 } from "@mission/core";
 import { DERIVATION_POLICY, MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
@@ -776,6 +778,24 @@ describe("approval basis (@spec mission#record-principal-members)", () => {
     );
     // Its implied values still read through the helper.
     expect(directBasisMembers(stored).activation).toEqual({ approval_event_id: "apev-105-minimal" });
+  });
+
+  it("carries submission_evidence_commitment in the Approval Context Manifest input exactly when the record carries submission_evidence (#1927 item B)", () => {
+    const record = kernel.get(approve(intent(), 106).id) as MissionRecord;
+    expect(record.submission_evidence).toBeUndefined();
+    expect(kernel.approvalContextInput(record)).not.toHaveProperty("submission_evidence_commitment");
+    // Approval Governance vector 4's recorded element; mission-core pins
+    // submissionEvidenceCommitment to that vector's value for its issuer.
+    const element = {
+      type: "mission-intent-admission-assertion",
+      artifact_hash: "sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miFuC6-T7jXU2-R8",
+      verified_at: "2026-11-02T07:59:39Z",
+      facts: { admission_issuer: "https://admission.example.com", status: "active" },
+    };
+    const withEvidence = { ...record, submission_evidence: [element] } as unknown as MissionRecord;
+    const input = kernel.approvalContextInput(withEvidence);
+    expect(input.submission_evidence_commitment).toBe(submissionEvidenceCommitment(ISS, [element] as unknown as JsonValue[]));
+    expect(approvalContextManifest(input).submission_evidence_commitment).toBe(input.submission_evidence_commitment);
   });
 
   it("keeps the baseline mission claim to exactly {id, issuer}, with no authority_hash/approval_basis (#702)", () => {
