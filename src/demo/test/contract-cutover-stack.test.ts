@@ -1,12 +1,12 @@
 /**
  * @spec runtime#resource-contract, resource-access#resource-contract,
- * txn-authorization#resource-challenge (#249 C.3a, D967, D1071): the payments
- * contract cutover's witnesses in the composed stack, the Authorization
- * Server, its Transaction Authorization Server and the payments PEP joined,
- * under a configuration that requires a reference for the cutover's five
- * actions. The shipped configuration requires none until the flip (C.3b), so
- * the requirement is applied here by configuration alone: the PEP's and the
- * kernel's declarations, never a runtime change.
+ * txn-authorization#resource-challenge (#249 C.3a and C.3b, D967, D1071): the
+ * payments contract cutover's witnesses in the composed stack, the
+ * Authorization Server, its Transaction Authorization Server and the payments
+ * PEP joined, under the shipped configuration, which requires a reference for
+ * the cutover's five actions. Where a witness needs the configuration before
+ * the cutover, which required none, it applies it by spying on the kernel's or
+ * the PEP's declarations, never by a runtime change.
  */
 import { mkdtempSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -40,7 +40,6 @@ const CUTOVER = [
   "payments:payment.reverse",
   "payments:remittance.send",
 ];
-const REQUIRING = (): ResourceContractDeclarations => contractsRequiring(CUTOVER);
 
 /**
  * The controlled clock every component in this file reads (`Date` faked,
@@ -82,7 +81,7 @@ type Entry = { type: string; resource: string; actions: string[]; resource_contr
 const entriesOf = (token: string): Entry[] => (decodeJwt(token).authorization_details as Entry[] | undefined) ?? [];
 const missionIdOf = (token: string): string => (decodeJwt(token).mission as { id: string }).id;
 
-describe("the payments contract cutover's witnesses in the composed stack, before the configuration flip (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071)", () => {
+describe("the payments contract cutover's witnesses in the composed stack, under the shipped configuration (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071)", () => {
   let fgaBootstrap: MockInstance;
   let stack: DemoStack;
   beforeAll(async () => {
@@ -186,7 +185,7 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
   // refused after it, refreshed or not. The shipped ceiling grants no
   // payments:payment.reverse, so no credential this deployment issues carries
   // it; the reversal's refusal is witnessed at the PEP (per-tool witnesses).
-  it("refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference", async () => {
+  it("refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference; both still perform a read", async () => {
     const before = vi.spyOn(stack.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
     let issued: IssuedMission;
     try {
@@ -203,54 +202,49 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
     const rt = (issued.artifacts.token.response as { refresh_token?: string }).refresh_token;
     expect(rt, "the code exchange issues a refresh token").toBeTruthy();
 
-    // Before the requirement the credential reaches a decision and is performed.
-    const control = await present(issued.accessToken, issued.dpopKeys, "check_transfer", { invoice_id: "inv-1" });
-    expect(control.ok, JSON.stringify(control)).toBe(true);
+    // After the cutover: the shipped configuration, at the AS and the PEP. The
+    // credential is otherwise sound: it still performs a read, which requires no reference.
+    expect(stack.pep.contracts().declarations[0]?.requires_reference).toEqual(CUTOVER);
+    const read = await present(issued.accessToken, issued.dpopKeys, "get_invoice", { invoice_id: "inv-1" });
+    expect(read.ok, JSON.stringify(read)).toBe(true);
     expect(recordsOf(missionId, "decision").length).toBeGreaterThan(0);
+    const refreshed = await token({ grant_type: "refresh_token", refresh_token: rt as string, resource: CANONICAL_RESOURCE }, issued.dpopKeys);
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    const refreshedToken = refreshed.body.access_token as string;
+    expect(entriesOf(refreshedToken).length).toBe(entriesOf(issued.accessToken).length);
+    expect(entriesOf(refreshedToken).every((e) => e.resource_contract === undefined)).toBe(true);
 
-    // The requirement applies at the AS and the PEP.
-    const kernelAfter = vi.spyOn(stack.kernel, "resourceContracts").mockReturnValue(REQUIRING());
-    const pepAfter = vi.spyOn(stack.pep, "contracts").mockReturnValue(REQUIRING());
-    try {
-      const refreshed = await token({ grant_type: "refresh_token", refresh_token: rt as string, resource: CANONICAL_RESOURCE }, issued.dpopKeys);
-      expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
-      const refreshedToken = refreshed.body.access_token as string;
-      expect(entriesOf(refreshedToken).length).toBe(entriesOf(issued.accessToken).length);
-      expect(entriesOf(refreshedToken).every((e) => e.resource_contract === undefined)).toBe(true);
-
-      const decisionsBefore = recordsOf(missionId, "decision").length;
-      const refusalsBefore = recordsOf(missionId, "refusal").length;
-      const executionsBefore = recordsOf(missionId, "execution").length;
-      const effectsBefore = effects();
-      const tools: Array<[string, string]> = [
-        ["schedule_payment", "payments:payment.schedule"],
-        ["cancel_scheduled_payment", "payments:payment.schedule.cancel"],
-        ["check_transfer", "payments:payment.execute"],
-        ["hold_transfer", "payments:payment.execute"],
-        ["execute_wire_transfer", "payments:payment.execute"],
-        ["send_remittance_email", "payments:remittance.send"],
-      ];
-      let calls = 0;
-      for (const credential of [issued.accessToken, refreshedToken]) {
-        for (const [tool] of tools) {
-          const args = tool === "check_transfer" || tool === "hold_transfer" ? { invoice_id: "inv-1" } : { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
-          const res = await present(credential, issued.dpopKeys, tool, args);
-          calls += 1;
-          expect(res.ok, `${tool}: ${JSON.stringify(res)}`).toBe(false);
-          // Refused before the decision request, not after one.
-          expect(recordsOf(missionId, "decision").length, `${tool}: decided`).toBe(decisionsBefore);
-          expect(res.refusal_reason, tool).toBe("resource_contract_unresolvable");
-        }
+    const decisionsBefore = recordsOf(missionId, "decision").length;
+    const refusalsBefore = recordsOf(missionId, "refusal").length;
+    const executionsBefore = recordsOf(missionId, "execution").length;
+    const effectsBefore = effects();
+    const tools: Array<[string, string]> = [
+      ["schedule_payment", "payments:payment.schedule"],
+      ["cancel_scheduled_payment", "payments:payment.schedule.cancel"],
+      ["check_transfer", "payments:payment.execute"],
+      ["hold_transfer", "payments:payment.execute"],
+      ["execute_wire_transfer", "payments:payment.execute"],
+      ["send_remittance_email", "payments:remittance.send"],
+    ];
+    let calls = 0;
+    for (const credential of [issued.accessToken, refreshedToken]) {
+      for (const [tool] of tools) {
+        const args = tool === "check_transfer" || tool === "hold_transfer" ? { invoice_id: "inv-1" } : { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
+        const res = await present(credential, issued.dpopKeys, tool, args);
+        calls += 1;
+        expect(res.ok, `${tool}: ${JSON.stringify(res)}`).toBe(false);
+        // Refused before the decision request, not after one.
+        expect(recordsOf(missionId, "decision").length, `${tool}: decided`).toBe(decisionsBefore);
+        expect(res.refusal_reason, tool).toBe("resource_contract_unresolvable");
       }
-      expect(new Set(tools.map(([, action]) => action))).toEqual(new Set(CUTOVER.filter((a) => a !== "payments:payment.reverse")));
-      expect(recordsOf(missionId, "decision").length).toBe(decisionsBefore);
-      expect(recordsOf(missionId, "execution").length).toBe(executionsBefore);
-      expect(recordsOf(missionId, "refusal").length).toBe(refusalsBefore + calls);
-      expect(effects()).toEqual(effectsBefore);
-    } finally {
-      pepAfter.mockRestore();
-      kernelAfter.mockRestore();
     }
+    expect(new Set(tools.map(([, action]) => action))).toEqual(new Set(CUTOVER.filter((a) => a !== "payments:payment.reverse")));
+    expect(recordsOf(missionId, "decision").length).toBe(decisionsBefore);
+    expect(recordsOf(missionId, "execution").length).toBe(executionsBefore);
+    expect(recordsOf(missionId, "refusal").length).toBe(refusalsBefore + calls);
+    expect(effects()).toEqual(effectsBefore);
+    const refreshedRead = await present(refreshedToken, issued.dpopKeys, "get_invoice", { invoice_id: "inv-1" });
+    expect(refreshedRead.ok, JSON.stringify(refreshedRead)).toBe(true);
   });
 
   // D967 test 2: a supported older pin still works through transaction
@@ -275,8 +269,6 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
     expect(olderProfile).not.toBe(currentContractProfileVersion(CANONICAL_RESOURCE));
     const missionId = missionIdOf(remit.accessToken);
 
-    const kernelAfter = vi.spyOn(stack.kernel, "resourceContracts").mockReturnValue(REQUIRING());
-    const pepAfter = vi.spyOn(stack.pep, "contracts").mockReturnValue(REQUIRING());
     const registry = stack.operationProfiles;
     if (!registry) throw new Error("the stack runs the TAS");
     const admitted = vi.spyOn(registry, "admit");
@@ -338,8 +330,6 @@ describe("the payments contract cutover's witnesses in the composed stack, befor
       stack.onEnforce(() => {});
       completed.mockRestore();
       admitted.mockRestore();
-      pepAfter.mockRestore();
-      kernelAfter.mockRestore();
     }
   });
 });

@@ -31884,7 +31884,7 @@
     },
     {
      "file": "src/demo/test/contract-cutover-stack.test.ts",
-     "name": "the payments contract cutover's witnesses in the composed stack, before the configuration flip (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > performs a remittance under a Mission pinned to the superseded 2026-10-26 contract through the challenge, the Transaction Authorization Server and the transaction token's retry, under that version's Operation Profile, never the current one",
+     "name": "the payments contract cutover's witnesses in the composed stack, under the shipped configuration (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > performs a remittance under a Mission pinned to the superseded 2026-10-26 contract through the challenge, the Transaction Authorization Server and the transaction token's retry, under that version's Operation Profile, never the current one",
      "level": "cross-component",
      "surface": "transaction-authorization-endpoint"
     }
@@ -72335,7 +72335,7 @@
     },
     {
      "file": "src/demo/test/contract-cutover-stack.test.ts",
-     "name": "the payments contract cutover's witnesses in the composed stack, before the configuration flip (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference",
+     "name": "the payments contract cutover's witnesses in the composed stack, under the shipped configuration (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference; both still perform a read",
      "level": "cross-component",
      "surface": "token-endpoint"
     }
@@ -72448,7 +72448,7 @@
     },
     {
      "file": "src/demo/test/contract-cutover-stack.test.ts",
-     "name": "the payments contract cutover's witnesses in the composed stack, before the configuration flip (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference",
+     "name": "the payments contract cutover's witnesses in the composed stack, under the shipped configuration (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference; both still perform a read",
      "level": "cross-component",
      "surface": "resource-operation"
     }
