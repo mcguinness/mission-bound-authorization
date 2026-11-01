@@ -1004,9 +1004,8 @@ The endpoint accepts authenticated POST requests with a
 form-urlencoded body:
 
 `mission_id`:
-: REQUIRED. A string. The canonical Mission Identifier, named per the
-  issuance profile's external-surface convention
-  ({{I-D.draft-mcguinness-oauth-mission}}).
+: REQUIRED. A string. The Mission Identifier, as at the Mission Status
+  endpoint ({{mission-status-request}}).
 
 `operation`:
 : REQUIRED. A string. One of `revoke`, `suspend`, `resume`,
@@ -1054,14 +1053,8 @@ A companion-registered extension operation carries additional
 REQUIRED and OPTIONAL members of its own, defined completely by the
 companion that registers it.
 
-The base operations are:
-
-- `revoke`: terminate the Mission; transition to `terminated` with
-  reason `revoked`.
-- `suspend`: pause the Mission; transition to `suspended`.
-- `resume`: return a suspended Mission to `active`.
-- `complete`: mark the Mission completed; transition to `terminated`
-  with reason `completed`.
+The base operations are `revoke`, `suspend`, `resume`, and
+`complete`; {{legal-transitions}} gives the transition each applies.
 
 The AS MUST refuse an `operation` value it does not serve, a base
 operation its conformance claim omits ({{conformance}}) or an extension
