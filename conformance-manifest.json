@@ -27596,7 +27596,7 @@
    "id": "status.signing-keys.no-heuristic-freshness",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "signing-key-retention",
-   "text": "A response without valid explicit freshness information is stale when received",
+   "text": "A `jwks_uri` response without valid explicit freshness information is stale when received and is never given a heuristic lifetime ({{Section 4.2.2 of RFC9111}})",
    "role": "verifier",
    "strength": "stated",
    "applicability": {

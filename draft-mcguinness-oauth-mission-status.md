@@ -1999,9 +1999,10 @@ under a key the AS has published as compromised. A consumer MUST NOT
 use a key from the historical key set to verify a response for a
 current reliance decision. A consumer MUST NOT rely on a cached copy
 of the AS's `jwks_uri` beyond the freshness lifetime its response
-explicitly declares ({{Section 4.2.1 of RFC9111}}). A response without
-valid explicit freshness information is stale when received and is
-never given a heuristic lifetime ({{Section 4.2.2 of RFC9111}}): the
+explicitly declares ({{Section 4.2.1 of RFC9111}}). A `jwks_uri`
+response without valid explicit freshness information is stale when
+received and is never given a heuristic lifetime
+({{Section 4.2.2 of RFC9111}}): the
 consumer revalidates it before reuse. The consumer replaces its cached
 key set with each one it fetches rather than adding to it, so a
 removed key stops verifying within that lifetime. When the cached set
