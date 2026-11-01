@@ -312,6 +312,34 @@ describe("authoritative inputs (@spec mission#integrity-anchors, #1917)", () => 
       vi.restoreAllMocks();
     }
   });
+
+  it("Approved-Set Verification Tier 1: a projection that shortens the record's own set in place cannot move the expected anchor, which is captured before it runs", () => {
+    for (const recordAnchors of [false, true]) {
+      const kernel = makeKernel({ recordAnchors });
+      const id = approve(kernel).id;
+      const complete = stored(kernel, id).authority_set;
+      expect(complete.length).toBeGreaterThan(1);
+      const expected = resolvedAnchors(stored(kernel, id)).authority_hash;
+      const carried = [complete[0]] as unknown as JsonValue[];
+      const subset = (c: JsonValue, g: JsonValue) => isSubsetEntry(c as never, g as never);
+      // The projection aliases the record it is handed and drops an entry from
+      // that very array, so an anchor resolved after it would be computed over
+      // the shortened set and match it.
+      vi.spyOn(kernel, "approvedSetProjection").mockImplementation((record) => {
+        record.authority_set.splice(1);
+        return record.authority_set;
+      });
+      const served = kernel.approvedSetRetrieval(id);
+      expect(served?.authority_set).toHaveLength(1);
+      expect(served?.authority_hash, String(recordAnchors)).toBe(expected);
+      const e = refusal(() => verifyLocalApprovedSet(served as never, carried, subset));
+      expect(e, String(recordAnchors)).toBeInstanceOf(LocalApprovedSetVerificationError);
+      expect((e as LocalApprovedSetVerificationError).reason).toBe("commitment_mismatch");
+      // The store kept the complete set.
+      expect(stored(kernel, id).authority_set).toStrictEqual(complete);
+      vi.restoreAllMocks();
+    }
+  });
 });
 
 describe("creation-time binding with anchors not retained (@spec mission#approval-commit, #1917)", () => {

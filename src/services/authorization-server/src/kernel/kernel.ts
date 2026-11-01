@@ -1738,10 +1738,14 @@ export class MissionKernel {
   approvedSetRetrieval(id: string): { issuer: string; authority_set: AuthorityEntry[]; authority_hash: string } | undefined {
     const record = this.get(id);
     if (!record) return undefined;
+    // The authoritative anchor is captured before the projection runs: a
+    // projection that changed the record in place must not change the value
+    // its served set is checked against (#1931 review).
+    const authority_hash = resolvedAnchors(record).authority_hash;
     return {
       issuer: record.issuer,
       authority_set: this.approvedSetProjection(record),
-      authority_hash: resolvedAnchors(record).authority_hash,
+      authority_hash,
     };
   }
 
