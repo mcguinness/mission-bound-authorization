@@ -389,6 +389,24 @@ describe("governed policy root and record (@spec approval-governance#governed-po
       () => assertGovernedPolicyRecord({ ...unsigned, approval_policy: { ...unsigned.approval_policy, digest: activationPolicyDigest(ISS, held(rootDoc())) } }, basis),
     ).toThrow(/approval_policy.digest/);
   });
+
+  it("refuses a record whose accountable assertion's kind is not the basis's adjudication.kind (#1921)", () => {
+    const kernel = makeKernel();
+    const { mission, record } = activate(kernel, consent(kernel).consent_id);
+    if (mission.approval_basis.type !== "governed_policy") throw new Error("basis");
+    const basis = mission.approval_basis;
+    const { envelope: _e, ...unsigned } = record;
+    expect(basis.adjudication.kind).toBe("policy");
+    expect(() => assertGovernedPolicyRecord(unsigned, basis)).not.toThrow();
+    // The record is unchanged: its accountable assertion is the policy one.
+    // Only the basis names another mechanism, which the record does not attest.
+    for (const kind of ["human", "service"]) {
+      const relabelled = { ...basis, adjudication: { ...basis.adjudication, kind } } as unknown as typeof basis;
+      expect(() => assertGovernedPolicyRecord(unsigned, relabelled), kind).toThrow(
+        /the accountable assertion's kind is not adjudication.kind/,
+      );
+    }
+  });
 });
 
 describe("governed policy activation (@spec approval-governance#governed-policy-activation)", () => {

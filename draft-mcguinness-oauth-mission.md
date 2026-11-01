@@ -1689,40 +1689,17 @@ Refusals follow {{error-mapping}}.
 
 1. **Authenticate the Approver**, subject to the approval-authentication
    floor and any client-requested strength
-   ({{approval-authentication}}). The AS MUST NOT take the Approver's
-   identity or achieved authentication context from unauthenticated
-   client input; the authenticated surface that resolved the approval
-   establishes both.
+   ({{approval-authentication}}).
 
 2. **Establish the Subject**: the principal the task is for, recorded as
    the Mission's `subject` and mapped to the `sub` of every derived
-   token ({{token-claims}}). The Subject can be a workload or
-   organizational principal ({{authority-sources}}), established and
-   mapped the same way.
-   - **Self-approval.** When the Approver is the Subject, the Subject
-     is the authenticated Approver.
-   - **Another principal or an external Subject.** The rules of
-     {{subject-establishment}} apply at this step.
+   token ({{token-claims}}), under the rules of
+   {{subject-establishment}}.
 
 3. **Establish the authority source**: whose authority the approval
    draws on, recorded as the Mission's `authority_source`
-   ({{authority-sources}}, {{mission-record}}). The AS MUST establish
-   it from trusted configuration or authenticated governance state,
-   never from client assertion.
-
-   The AS then makes two checks:
-
-   - The AS MUST verify the Approver is authorized under local policy
-     to activate the established source.
-   - The AS MUST verify the derived Authority Set lies within that
-     source's authority (for `organizational`, within the governed
-     policy identified by `authority_source.policy`).
-
-   These are distinct checks: an organizational owner may be
-   authorized to activate policy without personally holding every
-   operational permission. The AS MUST refuse when either relationship
-   cannot be established. An AS MUST NOT approve a Mission whose
-   authority source it does not recognize.
+   ({{mission-record}}), and check the Approver and the derived
+   Authority Set against it, under the rules of {{authority-sources}}.
 
 4. **Establish the effective Mission expiry**: the requested
    `intent.expires_at` ceiling narrowed by applicable AS policy and
@@ -1740,34 +1717,7 @@ Refusals follow {{error-mapping}}.
    terms, with the `goal`, `task_bounds`, and the effective
    `expires_at` (and, when it differs, the requested
    `intent.expires_at`, so the Approver sees the narrowing) as
-   context.
-
-   The consent object is the **derived Authority Set**: what the agent
-   may do. It is not the `goal` or Mission Intent, because Authority
-   Set derivation is local policy and nothing commits that the derived
-   authority reflects the goal the Approver read. An approval surface
-   that renders only the `goal` or Mission Intent does not conform.
-
-   These requirements apply to the rendering:
-
-   - The rendering MUST identify the OAuth client that receives the
-     authority, the Agent, from client identity information the AS
-     trusts, such as its own registration of the client; display text
-     the client supplies does not by itself identify it.
-   - When the Approver is not the Subject, the rendering MUST
-     identify the Subject the authority is granted for.
-   - The rendering MUST identify the authority source and, for
-     `organizational`, the governed policy it draws on
-     (`authority_source.policy`).
-   - When the client submitted an authority proposal
-     ({{authority-proposal}}), the rendering MUST distinguish the
-     entries the client proposed from any narrowing or restructuring
-     the AS applied.
-
-   Mission Capability Binding
-   ({{I-D.draft-mcguinness-mission-capability-binding}}) states what
-   the rendering presents about the source binding of a
-   catalog-sourced action.
+   context, under the rules of {{rendering-safeguards}}.
 
 #### Committing the Mission {#approval-commit}
 
@@ -1806,6 +1756,12 @@ duplicate delivery of the same approval decision on
 `approval_event_id`.
 
 ### Approver Authentication Strength {#approval-authentication}
+
+Step 1 of the direct approval steps ({{direct-approval-steps}})
+authenticates the Approver. The AS MUST NOT take the Approver's
+identity or achieved authentication context from unauthenticated
+client input; the authenticated surface that resolved the approval
+establishes both.
 
 A deployment MUST publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
@@ -1882,8 +1838,13 @@ In every approval interaction, the `prompt`, `login_hint`, and
 ### Subject Establishment {#subject-establishment}
 
 These rules apply at step 2 of the direct approval steps
-({{direct-approval-steps}}).
+({{direct-approval-steps}}). The Subject can be a workload or
+organizational principal, established and mapped the same way; which
+principal a service-owned or organizational Mission records as its
+Subject is stated for every Mission in {{authority-sources}}.
 
+- **Self-approval.** When the Approver is the Subject, the Subject is
+  the authenticated Approver.
 - **Approval for another principal.** When the Approver is a
   different principal (for example, an administrator approving on
   a user's behalf), the AS MUST NOT take the Subject from
@@ -1919,6 +1880,24 @@ Approval activates only authority the source already holds: the AS
 establishes the source and verifies the derived Authority Set against it
 before approval ({{direct-approval-steps}}, {{mission-creating-paths}}).
 
+At step 3 of the direct approval steps, the AS establishes the
+authority source. The AS MUST establish it from trusted configuration
+or authenticated governance state, never from client assertion.
+
+The AS then makes two checks:
+
+- The AS MUST verify the Approver is authorized under local policy to
+  activate the established source.
+- The AS MUST verify the derived Authority Set lies within that
+  source's authority (for `organizational`, within the governed policy
+  identified by `authority_source.policy`).
+
+These are distinct checks: an organizational owner may be authorized
+to activate policy without personally holding every operational
+permission. The AS MUST refuse when either relationship cannot be
+established. An AS MUST NOT approve a Mission whose authority source
+it does not recognize.
+
 An organizational Mission's `authority_source.policy` reference
 ({{record-principal-members}}) commits to the governed policy through
 its `digest`:
@@ -1951,7 +1930,37 @@ The subject-representation discipline is the same in every source:
   that requested it ({{token-claims}}), and delegates are carried in
   the `act` chain ({{delegation}}).
 
-### Rendering Safeguards {#rendering-safeguards}
+### Consent Rendering {#rendering-safeguards}
+
+These rules apply at step 5 of the direct approval steps
+({{direct-approval-steps}}).
+
+The consent object is the **derived Authority Set**: what the agent
+may do. It is not the `goal` or Mission Intent, because Authority Set
+derivation is local policy and nothing commits that the derived
+authority reflects the goal the Approver read. An approval surface
+that renders only the `goal` or Mission Intent does not conform.
+
+These requirements apply to the rendering:
+
+- The rendering MUST identify the OAuth client that receives the
+  authority, the Agent, from client identity information the AS
+  trusts, such as its own registration of the client; display text
+  the client supplies does not by itself identify it.
+- When the Approver is not the Subject, the rendering MUST identify
+  the Subject the authority is granted for.
+- The rendering MUST identify the authority source and, for
+  `organizational`, the governed policy it draws on
+  (`authority_source.policy`).
+- When the client submitted an authority proposal
+  ({{authority-proposal}}), the rendering MUST distinguish the
+  entries the client proposed from any narrowing or restructuring the
+  AS applied.
+
+Mission Capability Binding
+({{I-D.draft-mcguinness-mission-capability-binding}}) states what the
+rendering presents about the source binding of a catalog-sourced
+action.
 
 The consent rendering is hardened against client text:
 
@@ -1962,7 +1971,7 @@ The consent rendering is hardened against client text:
 - The rendering MUST visually distinguish the AS-derived Authority
   Set from client-supplied text and attribute that text to the client,
   identified from client identity information the AS trusts
-  ({{approval-preparation}}), so crafted client text cannot pass as
+  (above), so crafted client text cannot pass as
   derived authority or as a statement of the AS.
 
 The rendering presents `goal` and `task_bounds` as recorded, without
@@ -6897,6 +6906,12 @@ resolve before interoperating.
 
 -02
 
+- Preparing the Approval states the direct approval steps as a
+  concise procedure, and each step's rules sit in the subsection that
+  owns its topic: Approver Authentication Strength (step 1), Subject
+  Establishment (step 2), Authority Sources (step 3) and Consent
+  Rendering, formerly Rendering Safeguards (step 5). Step numbers and
+  order are unchanged. No requirement changed (#1938).
 - Intentional behavior change, with no compatibility window: the
   legacy Mission-state reading is removed. A consumer no longer reads
   `revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
@@ -6906,7 +6921,6 @@ resolve before interoperating.
   the reason in `termination`. The rules for a termination recorded
   before its reason defined a member, and for a reason a consumer does
   not recognize, are unchanged (#1504, D1006).
-
 - Editorial, no requirement change: Signing and Key Rotation cites the
   Mandate; the undefined "primary" access token is named as a
   Mission-bound access token that is not a delegated token; the
@@ -6917,7 +6931,6 @@ resolve before interoperating.
   Mission State via Token Introspection compares token representation
   with state freshness; and `goal` and `task_bounds` are rendering and
   review context for a proposal (#1504).
-
 - The integrity anchors `intent_hash`, `authority_hash`, and
   `proposal_hash` are implied members: each is OPTIONAL on the record,
   an omitted one is its `sha-256` construction over the retained

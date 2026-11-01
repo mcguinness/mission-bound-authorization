@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "963a76126a21d47072e3462ad6efd14808073af2",
-    "content_sha256": "6a43f0414a39d6717c68ba5e172b798be3f5d6c445699a511b7c9827f48cacd9"
+    "revision": "1c6353544b45e8c019b34291c425fa116464e6a8",
+    "content_sha256": "c220721979d607fcd7667cea04241303693250edd89e8a0c66dc875eb0ff979b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -8374,7 +8374,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where a governed Mission populates approval_basis.adjudication with governance_record true and the Approval Governance Record carries an accountable assertion, that assertion's kind equals adjudication.kind, which the approval basis fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself",
-    "local": "Witnessed for governed_policy (adjudication.kind policy, accountable assertion kind policy, a mismatched kind refused) and for direct (a recorded direct approval carries adjudication {kind human, governance_record true}, its accountable assertion is kind human, and the direct commit gate refuses a mismatched kind). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy. A recorded ceiling drawdown carries adjudication {kind policy, governance_record true}; its record carries no accountable assertion, so the kind-equality clause does not bind it (#1470 slice 2)."
+    "local": "Witnessed for governed_policy (adjudication.kind policy and an accountable assertion of kind policy on every committed record; the gate refuses an accountable assertion of another kind and, since #1921, a basis whose adjudication.kind differs from the accountable assertion's kind) and for direct (a recorded direct approval carries adjudication {kind human, governance_record true}, its accountable assertion is kind human, and the direct commit gate refuses a mismatched kind). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy. A recorded ceiling drawdown carries adjudication {kind policy, governance_record true}; its record carries no accountable assertion, so the kind-equality clause does not bind it (#1470 slice 2)."
    },
    "level": "unit",
    "coverage": "tested",
@@ -8414,9 +8414,15 @@
      "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion's kind is not the basis's adjudication.kind (#1921)",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 mutation proof: disabling the direct gate's kind-equality check (direct-approval-record.ts:285) fails \"a kind that is not adjudication.kind\". Gap found by the stage 2 mutation run (not fixed in this no-behavior-change stage): the governed_policy record gate does not compare adjudication.kind with the accountable assertion's kind; a record mutated to kind human still committed, and only the governed test's exact-equality assertion caught it."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 mutation proof: disabling the direct gate's kind-equality check (direct-approval-record.ts:285) fails \"a kind that is not adjudication.kind\". #1921 (D1073): the stage 2 mutation run found that the governed_policy record gate did not compare adjudication.kind with the accountable assertion's kind; assertGovernedPolicyRecord now refuses that mismatch before commit, as the direct gate does. Mutation proof: removing the comparison fails \"refuses a record whose accountable assertion's kind is not the basis's adjudication.kind\". This supersedes #1925's interim note."
   },
   {
    "id": "approval-governance.triggers.required-under-adopting-profile",
@@ -8930,7 +8936,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. #1912 (D1047) states the rule once, at the end of Principals and Approval Basis, for approval_basis.type, adjudication.kind and authority_source.type. This row stays scoped to the two adjudication discriminators; the authority_source.type facet, with its source-semantics refusal, is core.mission-record.authority-source-type-unrecognized (tested). #1923 (D1059): partial. Witnessed: an unrecognized approval_basis.type with an unrecognized adjudication.kind is stored, read and returned unchanged through a reopen; the Mission stays active, derivable and introspectable; the direct-creation guard does not apply to it; and two operations that needed the basis's semantics and used to infer them now refuse: child delegation (delegation_not_permitted, nothing created, parent active) and the activation policy audit check (unrecognized_basis, never not_applicable). Gaps: (1) an unrecognized adjudication.kind on a recognized standing-consent basis is not refused at the governed_policy record gate and re-check (#1921), which read adjudication.policy without checking kind; the ceiling_drawdown gate and re-check refuse it (#1928, witnessed by the drawdown tests listed). #1932 (D1068) witnesses the remaining refusals of an unrecognized type, each with a recognized positive control and the Mission left active, and each mutation-checked: carryover (approval_basis_not_direct, rolled back), Deferred Approval's direct approval (not_pending, the deferral pending), a governed activation retried under the event (approval_event_used, nothing committed), the governed reproduction (not reproduced) and the Approval Governance re-check (step 4). #1921 is the only remaining gap. Introspection's sender-constraint narrowing applies to the recognized template type, so an unrecognized type gets the OAuth binding's base rule, which infers no standing."
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. #1912 (D1047) states the rule once, at the end of Principals and Approval Basis, for approval_basis.type, adjudication.kind and authority_source.type. This row stays scoped to the two adjudication discriminators; the authority_source.type facet, with its source-semantics refusal, is core.mission-record.authority-source-type-unrecognized (tested). #1923 (D1059): partial. Witnessed: an unrecognized approval_basis.type with an unrecognized adjudication.kind is stored, read and returned unchanged through a reopen; the Mission stays active, derivable and introspectable; the direct-creation guard does not apply to it; and two operations that needed the basis's semantics and used to infer them now refuse: child delegation (delegation_not_permitted, nothing created, parent active) and the activation policy audit check (unrecognized_basis, never not_applicable). Gaps: (1) an unrecognized adjudication.kind on a recognized standing-consent basis is refused by the ceiling_drawdown gate and re-check (#1928, witnessed by the drawdown tests listed) and, since #1921 (#1934), by the governed_policy record gate and re-check through the shared assertGovernedPolicyRecord comparison. #1932 (D1068) witnesses the remaining refusals of an unrecognized type, each with a recognized positive control and the Mission left active, and each mutation-checked: carryover (approval_basis_not_direct, rolled back), Deferred Approval's direct approval (not_pending, the deferral pending), a governed activation retried under the event (approval_event_used, nothing committed), the governed reproduction (not reproduced) and the Approval Governance re-check (step 4). The remaining gap is a witness gap, not missing implementation: the governed witness (#1934) covers human and service at the gate, and neither an unrecognized kind nor the governed re-check is witnessed here. Introspection's sender-constraint narrowing applies to the recognized template type, so an unrecognized type gets the OAuth binding's base rule, which infers no standing."
   },
   {
    "id": "core.approval-basis.required-fixed-at-approval",
@@ -11166,7 +11172,7 @@
   {
    "id": "core.approval-event.subject-rendering",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "rendering-safeguards",
    "text": "When the Approver is not the Subject, the rendering MUST identify the Subject the authority is granted for",
    "role": "AS",
    "strength": "MUST",
@@ -11234,7 +11240,7 @@
   {
    "id": "core.approval-event.consent-object-derived-set",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "rendering-safeguards",
    "text": "An approval surface that renders only the `goal` or Mission Intent does not conform.",
    "role": "AS",
    "strength": "stated",
@@ -11270,7 +11276,7 @@
   {
    "id": "core.approval-event.proposal-narrowing-distinguished",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "rendering-safeguards",
    "text": "When the client submitted an authority proposal ({{authority-proposal}}), the rendering MUST distinguish the entries the client proposed from any narrowing or restructuring the AS applied",
    "role": "AS",
    "strength": "MUST",
@@ -12225,7 +12231,7 @@
   {
    "id": "core.mission-record.authority-source-unrecognized-not-approved",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "approval-preparation",
+   "anchor": "authority-sources",
    "text": "An AS MUST NOT approve a Mission whose authority source it does not recognize.",
    "role": "AS",
    "strength": "MUST NOT",
