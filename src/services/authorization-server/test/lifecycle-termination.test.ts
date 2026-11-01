@@ -656,10 +656,10 @@ describe("the Approval Context Manifest keeps its digest (#705 witness 10)", () 
       grant_id: null,
       status_list_idx: null,
     } as unknown as MissionRecord;
-    // #1917 (D1061): the kernel refuses a recorded anchor that is not the
-    // anchor over its object, and this fixture's are placeholders. The digest
-    // stays pinned over the same manifest: the fixture's anchor strings, and
-    // every other member from the kernel's input for the record.
+    // A serialization fixture (#1917, D1061; kept on the #1931 review): its
+    // anchors are placeholders, which the kernel refuses as recorded anchors.
+    // The digest stays pinned over the same manifest: the fixture's anchor
+    // strings, and every other member from the kernel's input for the record.
     expect(() => kernel.approvalContextInput(record)).toThrow(AnchorMismatchError);
     const { intent_hash, authority_hash, proposal_hash, ...unanchored } = record;
     const manifest = approvalContextManifest({

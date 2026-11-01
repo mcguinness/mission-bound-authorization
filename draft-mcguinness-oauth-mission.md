@@ -1770,8 +1770,9 @@ The same procedure continues from step 5:
    over the approved Mission Intent, and, when an authority proposal
    was submitted ({{authority-proposal}}), `proposal_hash` over the
    submitted `authorization_details` array. The AS computes them here
-   whether or not the record carries them, and every artifact bound
-   at the approval event carries the values computed here.
+   whether or not the record carries them; an artifact bound at the
+   approval event that carries one of these anchors carries the value
+   computed here.
 7. **Create the Mission Record** ({{mission-record}}) in the `active`
    state atomically with the approval decision and issuance of the
    authorization code, or, under a back-channel carriage profile
@@ -2538,10 +2539,16 @@ An implied anchor ({{record-content-members}}) is this section's
 `sha-256` construction over the retained record: the record's
 `intent`, `authority_set`, or `proposed_authority`, each array in its
 recorded order, with `iss` the record's `issuer`, whatever algorithm
-the issuer uses for new commitments. An issuer MUST compute an anchor
-it emits or verifies from that retained record, never from a token's
-carried subset, a projection or response it serves, or authority a
-companion narrows after approval.
+the issuer uses for new commitments. Once a Mission exists, an issuer
+that emits or verifies its `intent_hash`, `authority_hash`, or
+`proposal_hash` MUST resolve the anchor, recorded or implied, from
+the Mission's retained record, never from a token's carried subset, a
+projection or response it serves, or authority a companion narrows
+after approval. This governs only those anchors of an existing
+Mission: a computation before the Mission exists, such as the
+provisional `intent_hash` ({{submission-processing}}) or step 6
+({{approval-commit}}), and a commitment whose inputs a companion
+defines keep their own inputs.
 
 The anchors this section lists, and the Authority Set entry
 commitment ({{entry-commitment}}), bind the AS issuer. The `digest` of an
@@ -6880,9 +6887,9 @@ resolve before interoperating.
   `proposal_hash` are implied members: each is OPTIONAL on the record,
   an omitted one is its `sha-256` construction over the retained
   record, and a recorded one MUST equal it, a mismatch being refused.
-  The AS still computes them at the approval event for every artifact
-  bound there, and an issuer computes an emitted or verified anchor
-  from the retained record alone. A specification adding an algorithm
+  The AS still computes them at the approval event for any artifact
+  bound there that carries one, and an issuer resolves an existing
+  Mission's anchors from its retained record alone. A specification adding an algorithm
   preserves existing commitments. Consent Binding states what optional
   storage gives up, and `created_at` names the creation commit's
   instant (#1917).
