@@ -536,7 +536,8 @@ export function assertContributing(record: UnsignedApprovalGovernanceRecord): vo
  * `governed_policy`. Its accountable assertion
  * ({@link assertAccountableApprover}) is the one `policy` assertion of
  * `approval_basis.consent_principal` that names the deciding policy's `id` and
- * `version`, with `approved_at` equal to `approval_basis.approved_at`. The
+ * `version`, with `approved_at` equal to `approval_basis.approved_at` and its
+ * `kind` equal to `approval_basis.adjudication.kind`. The
  * record's `approval_policy` is the consented root, the evaluation approved,
  * and it counts the accountable assertion. A record failing any of these
  * does not commit.
@@ -567,6 +568,9 @@ export function assertGovernedPolicyRecord(
     fail((e as Error).message);
   }
   const a = assertAccountableApprover(record, basis) as AgrAssertion;
+  // @spec approval-governance#issuance-relationship (#1921): the accountable
+  // assertion's kind equals adjudication.kind, as the direct gate requires.
+  if ((basis.adjudication.kind as string) !== a.kind) fail("the accountable assertion's kind is not adjudication.kind");
   if (a.authority.policy_id !== basis.adjudication.policy.id || a.authority.version !== basis.adjudication.policy.version) {
     fail("the accountable assertion does not name the deciding policy");
   }
