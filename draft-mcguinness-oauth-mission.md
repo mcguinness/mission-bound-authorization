@@ -3038,8 +3038,9 @@ addition to what {{RFC9068}} requires, a derived token:
   recommends, via a `cnf` claim {{RFC7800}}: DPoP {{RFC9449}}
   (`cnf.jkt`) or mTLS {{RFC8705}} (`cnf.x5t#S256`).
 
-The primary access token may be a bearer token, preserving
-compatibility with bearer-only resource servers while retaining
+A Mission-bound access token that is not a delegated token may be a
+bearer token, preserving compatibility with bearer-only resource
+servers while retaining
 {{Section 2.2.1 of RFC9700}}'s recommendation; the cost is the
 stolen-token exposure ({{token-theft}}).
 
@@ -5276,7 +5277,7 @@ that supports none of them is still conformant:
   ({{designation}}) and the derived tokens that carry the `act`
   delegation chain, and consuming those tokens. Only a
   sender-constrained token can be designated, so Delegation requires
-  sender-constrained primary tokens.
+  sender-constrained non-delegated Mission-bound access tokens.
 - **Self-Exchange** ({{self-exchange}}): narrowing an agent's own
   Mission-bound token by a Token Exchange that names no actor.
   Supporting Delegation does not require Self-Exchange, and supporting
@@ -5706,9 +5707,9 @@ exchange accepts only a designation naming the authenticated
 requesting client, which only the token's holder obtains, by proving
 possession of the token's key, so a token obtained from an audience is
 refused there.
-Sender-constraining the primary token ({{token-claims}})
-likewise keeps a stolen token from being designated or
-self-exchanged.
+Sender-constraining a non-delegated Mission-bound access token
+({{token-claims}}) likewise keeps a stolen token from being designated
+or self-exchanged.
 
 ### Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
 
