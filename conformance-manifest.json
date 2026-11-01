@@ -24601,7 +24601,7 @@
    "id": "status.response.termination-version",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "`version` is REQUIRED in every termination the Mission Issuer commits, and absent while a termination that takes effect without a request, such as `expired`, is observed but not yet committed;",
+   "text": "`version` is REQUIRED in every termination the AS commits, and absent while a termination that takes effect without a request, such as `expired`, is observed but not yet committed;",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24686,7 +24686,7 @@
    "id": "status.request.served-audience-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-request",
-   "text": "The Mission Issuer MUST honor a request's `audience` only where that configuration authorizes the authenticated caller for it, and MUST otherwise refuse the request with the not-found response of {{mission-status-errors}}.",
+   "text": "The AS MUST honor a request's `audience` only where that configuration authorizes the authenticated caller for it, and MUST otherwise refuse the request with the not-found response of {{mission-status-errors}}.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {

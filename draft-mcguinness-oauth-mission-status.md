@@ -235,7 +235,7 @@ An authenticated, authorized consumer holding a `mission_id`
 domain) resolves it without holding a token the authorization server
 (AS) issued.
 
-The Mission Issuer serves the operation at its Mission Status
+The AS serves the operation at its Mission Status
 endpoint, whose URL it publishes in authorization server metadata
 ({{as-metadata}}) as `mission_status_endpoint`. A consumer resolves
 it from the expected issuer, which comes from its own issuer trust
@@ -262,7 +262,7 @@ The request is an HTTPS POST with an
 
 `audience`:
 : CONDITIONAL. A string. The audience for which the consumer requests
-  authority, one the Mission Issuer's configuration authorizes that
+  authority, one the AS's configuration authorizes that
   consumer to request (below). An authorized consumer that is not a
   resource server (for example an auditor or an authorization server
   in another trust domain) and needs only Mission state, not
@@ -286,12 +286,11 @@ method it uses ({{mission-status-authentication}}), for example
 authentication {{RFC7523}}. A method that carries its credentials in
 HTTP header fields keeps them there.
 
-The Mission Issuer's configuration states which audiences each
+The AS's configuration states which audiences each
 authenticated caller may request: a resource server is typically
 configured for its own audience identifiers, and a consuming
-authorization server for each resource it issues tokens for. The
-Mission Issuer MUST honor a
-request's `audience` only where that configuration authorizes the
+authorization server for each resource it issues tokens for. The AS
+MUST honor a request's `audience` only where that configuration authorizes the
 authenticated caller for it, and MUST otherwise refuse the request
 with the not-found response of {{mission-status-errors}}. Entitlement
 to an audience comes only from that configuration, never from string
@@ -501,7 +500,7 @@ In this document's ERP examples, the operation contract identifies
 `https://erp.example.com` as the operation target
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). In the
 audience-scoped example below, the consumer is the ERP resource
-server, client `erp-rs`, which the Mission Issuer's configuration
+server, client `erp-rs`, which the AS's configuration
 authorizes for that audience; its client identifier is the response's
 `sub`.
 
@@ -613,7 +612,7 @@ The members are:
     companion profile defines), its `terminated_at`, the members its
     reason defines, and `version`: the state version (below) of the
     transition that committed the termination. `version` is REQUIRED
-    in every termination the Mission Issuer commits, and absent while
+    in every termination the AS commits, and absent while
     a termination that takes effect without a request, such as
     `expired`, is observed but not yet committed; once committed it
     does not change, so a metadata-only change committed later leaves
@@ -636,7 +635,7 @@ The members are:
     when it passes.
   - `version`: REQUIRED. A positive integer, the Mission's
     **state version**: a strictly
-    monotonic per-Mission counter the Mission Issuer maintains,
+    monotonic per-Mission counter the AS maintains,
     incremented on each committed lifecycle transition (the approval
     event is version 1) and each committed metadata-only change,
     current as of the reported `state`. A deadline's or expiry's
