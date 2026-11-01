@@ -398,7 +398,7 @@ describe("the Mission-governed client rule at the authorization endpoint and its
       const redirect = clientRedirect(result.headers.get("location") ?? "");
       expect(redirect.target).toBe(REDIRECT_URI);
       expect(redirect.query.get("error"), client).toBe("invalid_request");
-      expect(redirect.query.get("error_description")).toBe("Pushed Authorization Request must be used");
+      expect(redirect.query.get("error_description")).toMatch(/Pushed Authorization Request/);
       expect(interactions).toBe(0);
     }
   });

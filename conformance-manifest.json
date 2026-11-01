@@ -6265,15 +6265,9 @@
      "name": "the Mission-governed client rule at the authorization endpoint and its resume (@spec mission#mission-governed, #1448, D585) > control: a governed client's request with mission_intent passes the rule at the authorization endpoint and completes through its resume",
      "level": "endpoint",
      "surface": "authorization-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/governed-client-omission.test.ts",
-     "name": "the Mission-governed client rule at the authorization endpoint and its resume (@spec mission#mission-governed, #1448, D585) > a direct authorization request without PAR is refused invalid_request for a governed and an ungoverned client alike: the deployment requires PAR",
-     "level": "endpoint",
-     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "D585 (#1448). PAR: the governed refusal with its ungoverned and with-Intent controls (rar-carriage). Authorization endpoint: the endpoint's own check refuses a governed client's stored pushed request carrying the omission, witnessed by storing the pushed request directly so that PAR's check does not run, with ungoverned and with-Intent controls; the direct-request witness records the PAR requirement, not this rule. Resume: no refusal witness, so the row stays partial. oidc-provider 9.10.0 does not run the RAR validate hook on the resume route, which restores the parameters the authorization endpoint admitted under the same static registration, so a client cannot present the omission there; the witnesses show a refused request starts no interaction and a governed request with mission_intent completes through its resume."
+   "notes": "D585 (#1448). PAR: the governed refusal with its ungoverned and with-Intent controls (rar-carriage). Authorization endpoint: the endpoint's own check refuses a governed client's stored pushed request carrying the omission, witnessed by storing the pushed request directly so that PAR's check does not run, with ungoverned and with-Intent controls. The direct-request test in the same file (\"a direct authorization request without PAR is refused invalid_request for a governed and an ungoverned client alike\") records the PAR requirement, not this rule, and is not cited. Resume: no refusal witness, so the row stays partial. oidc-provider 9.10.0 does not run the RAR validate hook on the resume route, which restores the parameters the authorization endpoint admitted under the same static registration, so a client cannot present the omission there; the witnesses show a refused request starts no interaction and a governed request with mission_intent completes through its resume."
   },
   {
    "id": "core.authority-proposal.governed-client-token-request-not-reached",
