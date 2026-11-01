@@ -4271,6 +4271,19 @@ one of three cases, with different obligations:
   a direct read of the AS's authoritative committed token and grant
   state ({{introspected-consumption}}).
 
+The cases separate token representation from state freshness.
+Representation is where a resource server reads the token's
+authority: the JWT itself or, for an opaque token, its active
+introspection response or issuer-local resolution. Freshness is how
+recent its view of Mission state is: a JWT read alone shows only that
+the Mission was `active` when the token was issued; an introspection
+response reports the token and its Mission for one decision; and a
+state-distribution companion such as Mission Status
+({{I-D.draft-mcguinness-oauth-mission-status}}) reports the Mission's
+state, not a token's, with its own freshness. In every case the
+authority a resource server enforces is the one the token carries
+({{rs-requirements}}).
+
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, an `active: true` response
 for such a token, to a caller authorized to receive Mission data
