@@ -754,10 +754,9 @@ Unknown `mission_id` values and known-but-unauthorized references MUST
 produce indistinguishable responses (HTTP 404 with a generic
 not-found body; see {{mission-status-errors}}). The AS MUST return an
 identical HTTP status code, response body, and headers for the two
-cases. The AS SHOULD NOT vary response timing in a way that
-distinguishes the two cases. It SHOULD mitigate timing side channels
-(for example by padding response time or by taking a uniform lookup
-path for both the unknown and the unauthorized case).
+cases. The AS SHOULD keep response timing from distinguishing the two
+cases, for example by padding response time or by taking a uniform
+lookup path for both.
 
 ## Processing Order {#mission-status-processing}
 
