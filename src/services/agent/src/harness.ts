@@ -11,7 +11,6 @@
 import {
   type MissionStatusLease,
   type MissionTermination,
-  normalizeLegacyMissionState,
   readMissionTermination,
 } from "@mission/core";
 
@@ -76,17 +75,17 @@ function asMissionState(state: string): MissionState | undefined {
 }
 
 /**
- * The lease's state as the harness reads it: a legacy terminal state value is
- * read as `terminated` with that reason (the transition-period reading, a
- * local view only), and `termination` is kept only beside `terminated`. An
- * unrecognized state yields no state at all, which every caller treats as
- * non-active.
+ * @spec mission#lifecycle (the forward-compatibility rule; #1504, D1006): the
+ * lease's state as the harness reads it, as reported. `termination` is kept
+ * only beside `terminated`. An unrecognized state, a retired value
+ * (`revoked`, `expired`, `completed`, `superseded`, `cascaded`) included,
+ * yields no state and no termination, which every caller treats as
+ * non-active: it is never read as `terminated` with a reason.
  */
 function leaseState(lease: MissionStatusLease): { state?: MissionState; termination?: MissionTermination } {
-  const normalized = normalizeLegacyMissionState(lease.state);
-  const state = asMissionState(normalized.state);
+  const state = asMissionState(lease.state);
   if (state !== "terminated") return state === undefined ? {} : { state };
-  const termination = normalized.termination ?? readMissionTermination(lease.termination);
+  const termination = readMissionTermination(lease.termination);
   return termination === undefined ? { state } : { state, termination };
 }
 
@@ -96,7 +95,7 @@ function leaseState(lease: MissionStatusLease): { state?: MissionState; terminat
  * `termination.reason` exactly `superseded`, and a string
  * `termination.successor`, over a lease that is not stale. Anything else
  * (another reason with a stray `successor`, `superseded` with no successor, a
- * legacy `superseded` state string, which retained no successor, a stale
+ * retired `superseded` state value, which is no recognized state, a stale
  * lease) names none, and the harness suppresses per the stop matrix.
  */
 export function supersessionSuccessor(
