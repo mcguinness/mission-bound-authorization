@@ -31894,7 +31894,7 @@
    "surface": "transaction-authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "for an entry without a resource_contract reference, the workflow records the Operation Profile version current at admission and completes under it; the version is not read from the entry's fixed type"
+    "normative": "an admitted workflow without a resource_contract reference records the Operation Profile version current at admission; any completion uses that recorded version; the version is not read from the entry's fixed type"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -31924,7 +31924,7 @@
      "surface": "transaction-authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The registry is keyed on the Operation Profile version, never on the entry's type: a workflow records the version it was admitted under (txn_workflows.profile_version) and completes under it after a later version of the same type supersedes it. Proved by completing under the current version instead of the recorded one. A store file created before versions were recorded is migrated in place on open, idempotently, so a new admission records its version there too; rows admitted before the migration stay unversioned. Proved by skipping the migration and by a migration that redoes itself on every open. D1071: where the deployment's configuration requires a reference for the challenged operation, an entry without one is refused instead, at admission before any workflow opens and again at completion, so a workflow admitted before the requirement cannot mint after it. This is the payments deployment's configuration, not a family rule: the shipped configuration requires none, so the clause holds as stated. Witnessed in 'a missing contract reference where the challenged operation requires one, at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, D1071)'."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The registry is keyed on the Operation Profile version, never on the entry's type: a workflow records the version it was admitted under (txn_workflows.profile_version) and completes under it after a later version of the same type supersedes it. Proved by completing under the current version instead of the recorded one. A store file created before versions were recorded is migrated in place on open, idempotently, so a new admission records its version there too; rows admitted before the migration stay unversioned. Proved by skipping the migration and by a migration that redoes itself on every open. D1071: where the deployment's configuration requires a reference for the challenged operation, an entry without one is refused instead, at admission before any workflow opens and again at completion, so a workflow admitted before the requirement cannot mint after it. This is the payments deployment's configuration, not a family rule, and it does not conflict with this clause, which selects the version for an admitted workflow and does not require admission despite deployment policy (owner review of #1935). Witnessed in 'a missing contract reference where the challenged operation requires one, at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, D1071)'."
   },
   {
    "id": "txn-authorization.redemption.subject-token-audience-pop",
