@@ -315,6 +315,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -5743,7 +5751,8 @@ Verification for audit outlives validity: keeping a key resolvable for
 the audit horizon ({{audit-horizon}}) of every Mission whose tokens it
 signed lets an auditor verify those tokens later. A companion that
 anchors a longer-lived artifact to the same keys (a status assertion, a
-Mandate, registered evidence) states its own retention bound.
+Mandate {{I-D.draft-mcguinness-mission-mandate}}, registered evidence)
+states its own retention bound.
 
 Revocation for a known or suspected compromise is distinct from routine
 retirement: the issuer publishes the compromised key as revoked, or
