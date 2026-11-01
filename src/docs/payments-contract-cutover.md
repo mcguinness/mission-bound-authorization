@@ -48,8 +48,9 @@ document under a recorded version, so the version moves with the values.
 2. **Drain the transaction workflows** admitted without a reference for one
    of the five actions (below), or accept that they are refused at
    completion.
-3. **Restart the Authorization Server, and its Transaction Authorization
-   Server, first.** From then on every approval records the reference.
+3. **Restart the Authorization Server, its Transaction Authorization
+   Server, and the MAS where it issues Missions, first.** From then on every
+   approval records the reference.
    Until the PEP and the PDP restart, they still accept an unpinned entry,
    and they already perform a pinned one under exactly its contract, so
    nothing new is refused yet.
@@ -66,10 +67,12 @@ carry no reference.
   refused at completion, `access_denied`, and stay pending until their
   lifetime ends; nothing is minted. Their operation needs a new approval
   that carries the reference.
-- **Permits** decided before the PEP restart do not survive it: the PEP's
-  in-memory permit state is rebuilt, and a permit used against the new
-  declaration without a matching reference is suppressed with Execution
-  Evidence `resource_contract_unresolvable`.
+- **Permits** decided before the requirement are re-resolved before
+  release: one used against the new declaration without a matching
+  reference is suppressed with Execution Evidence
+  `resource_contract_unresolvable`, and nothing is released
+  (`services/mcp-payments/test/resource-contract-pep.test.ts`, "the
+  executing PEP re-resolves the permit's contract before release").
 
 ## Credentials and Missions approved before the cutover
 
