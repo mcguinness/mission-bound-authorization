@@ -2031,7 +2031,7 @@ authenticating at another.
 The privacy considerations of the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} apply in full.
 
-## Status and Lifecycle as Disclosure Surfaces
+## Mission Status and Introspection as Disclosure Surfaces
 
 The Mission Status operation ({{mission-status}}) and the
 introspection projection ({{introspection-projection}}) disclose
