@@ -274,8 +274,9 @@ The request is an HTTPS POST with an
 `nonce`:
 : REQUIRED. A string of 1 to 255 Unicode code points. A
   client-generated nonce binding the response to this request. It
-  MUST be unique per request within the response lifetime. A consumer
-  MUST reject a response whose `nonce` does not equal the one it sent.
+  MUST be unique per request within the response lifetime. The
+  consumer checks the response's `nonce` against it
+  ({{mission-status-response}}).
 
 The request also carries the client authentication parameters of the
 method it uses ({{mission-status-authentication}}), for example
