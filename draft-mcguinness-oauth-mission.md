@@ -6890,6 +6890,12 @@ resolve before interoperating.
 
 -02
 
+- Preparing the Approval states the direct approval steps as a
+  concise procedure, and each step's rules sit in the subsection that
+  owns its topic: Approver Authentication Strength (step 1), Subject
+  Establishment (step 2), Authority Sources (step 3) and Consent
+  Rendering, formerly Rendering Safeguards (step 5). Step numbers and
+  order are unchanged. No requirement changed (#1938).
 - The integrity anchors `intent_hash`, `authority_hash`, and
   `proposal_hash` are implied members: each is OPTIONAL on the record,
   an omitted one is its `sha-256` construction over the retained
