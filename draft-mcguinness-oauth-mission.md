@@ -4708,12 +4708,15 @@ Mission's refresh token as revoking the Mission;
 a deployment that couples token revocation to Mission revocation
 documents that behavior.
 
-Token validity and Mission validity are distinct: an issued access
-token remains valid until it expires ({{derived-token-lifetime}}). A
-deployment whose consumers rely on Mission state beyond a token's
-lifetime offers token introspection ({{introspection}}) or Mission
-Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read
-current state rather than infer it from token validity.
+Token validity and Mission validity are distinct: a consumer that
+enforces from the token alone can honor an issued access token until
+it expires ({{derived-token-lifetime}}), and one that checks Mission
+state refuses it when that check reports a non-active state, under the
+mechanism's freshness rules. A deployment whose consumers rely on
+Mission state beyond a token's lifetime offers token introspection
+({{introspection}}) or Mission Status
+({{I-D.draft-mcguinness-oauth-mission-status}}), so they read current
+state rather than infer it from token validity.
 
 # Error and Challenge Mapping {#error-mapping}
 
@@ -6906,6 +6909,12 @@ resolve before interoperating.
 
 -02
 
+- Revocation says what a token's consumer does after its Mission
+  terminates: one that enforces from the token alone can honor it until
+  it expires, and one that checks Mission state refuses it when that
+  check reports a non-active state, under the mechanism's freshness
+  rules. It no longer says an issued access token remains valid until
+  it expires. No requirement changed (#1937).
 - Preparing the Approval states the direct approval steps as a
   concise procedure, and each step's rules sit in the subsection that
   owns its topic: Approver Authentication Strength (step 1), Subject
