@@ -26143,7 +26143,7 @@
    },
    "coverage": "todo",
    "tests": [],
-   "notes": "#1864 item 6: the publication rule the conformance classes now name. Todo: the reference AS publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`, #972 item 18)."
+   "notes": "#1864 item 6: the publication rule the conformance classes now name. Todo: the reference AS publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`, #972 item 18). The quote's MUST belongs to the token-audience rule, which no row covers yet; this row's obligation is the present-tense publication, so its strength is stated."
   },
   {
    "id": "status.lifecycle.protected-resource-metadata",
@@ -26165,7 +26165,7 @@
    },
    "coverage": "todo",
    "tests": [],
-   "notes": "#1864 item 6: the Lifecycle twin of `status.auth.protected-resource-metadata`. Todo: the reference AS publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`, #972 item 18)."
+   "notes": "#1864 item 6: the Lifecycle twin of `status.auth.protected-resource-metadata`. Todo: the reference AS publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`, #972 item 18). The quote's MUST belongs to the token-audience rule, which no row covers yet; this row's obligation is the present-tense publication, so its strength is stated."
   },
   {
    "id": "status.auth.invalid-client",
