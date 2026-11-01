@@ -789,10 +789,10 @@ step 3.
 
 Mission Status outcomes are of two kinds. A success outcome is a found,
 visible, authorized Mission: the AS returns HTTP 200 with a signed
-Mission Status Response, whose `mission.state`, not a separate symbol,
-describes the outcome. A wire error is a hard failure: the AS returns
+Mission Status Response, whose `mission.state`, not a separate error
+code, describes the outcome. A wire error is a hard failure: the AS returns
 the matching HTTP status with a JSON object {{RFC8259}} body whose
-`error` member carries the symbol below.
+`error` member carries the error code below.
 
 Success outcomes:
 
@@ -1473,7 +1473,7 @@ valid request decided over stale state, a fresh `suspend` issued from
 a console that has not yet seen a newer `resume`. For that a
 lifecycle request MAY carry `expected_version`, the state version
 ({{mission-status-response}}) the caller last observed: when present,
-the AS MUST refuse the operation with HTTP 409 and error symbol
+the AS MUST refuse the operation with HTTP 409 and error code
 `stale_version`, leaving the Mission unchanged, when the Mission's
 current state version differs. The AS applies this check before the
 transition rule below, so a stale `expected_version` is refused even
@@ -1491,7 +1491,7 @@ operation not legal
 from the current state (for example `suspend` against a `terminated`
 Mission, or `revoke` against one terminated with reason `completed`)
 is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body
-whose error symbol is `conflict`, leaving the Mission state
+whose error code is `conflict`, leaving the Mission state
 unchanged. Deduplication applies independently of this rule.
 An extension operation that changes no Mission state is outside this
 rule ({{lifecycle-operations}}).

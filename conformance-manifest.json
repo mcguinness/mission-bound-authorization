@@ -22088,7 +22088,7 @@
    "id": "status.lifecycle.stale-version-refusal",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "the AS MUST refuse the operation with HTTP 409 and error symbol `stale_version`, leaving the Mission unchanged, when the Mission's current state version differs.",
+   "text": "the AS MUST refuse the operation with HTTP 409 and error code `stale_version`, leaving the Mission unchanged, when the Mission's current state version differs.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24640,7 +24640,7 @@
    "id": "status.idempotency.reason-aware-conflict",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "or `revoke` against one terminated with reason `completed`) is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body whose error symbol is `conflict`, leaving the Mission state unchanged.",
+   "text": "or `revoke` against one terminated with reason `completed`) is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body whose error code is `conflict`, leaving the Mission state unchanged.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
