@@ -1094,8 +1094,8 @@ AS may store it with the record, and a signed or exchanged Mission
 Record does not carry it. When the `suspend_until` of a current
 schedule passes, the AS MUST apply `on_expiry` (transition to
 `active` for `resume`, or to `terminated` with reason `revoked` for
-`revoke`) and emit the corresponding transition, without a further
-request, unless expiry governs (below). While the Mission
+`revoke`) and emit the corresponding transition event, without a
+further request, unless expiry governs (below). While the Mission
 is `suspended` under a deadline, both `suspend_until` and `on_expiry`
 surface in the signed Mission Status Response
 ({{mission-status-response}}) so a consumer sees the pending outcome.
@@ -1486,7 +1486,8 @@ operation whose resulting state ({{legal-transitions}}) and, for
 `terminated`, termination reason equal the Mission's current ones is
 idempotent success: the AS returns the current Mission Status
 Response, with no state change and, except for the schedule
-replacement below, no event emitted. Any other operation not legal
+replacement below, no transition event emitted. Any other
+operation not legal
 from the current state (for example `suspend` against a `terminated`
 Mission, or `revoke` against one terminated with reason `completed`)
 is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body
@@ -1506,7 +1507,7 @@ but can change its schedule. One that carries a `suspend_until` and
 pair differing from the recorded schedule, or where none is recorded,
 replaces the schedule once authorized ({{lifecycle-authorization}}):
 the AS MUST update the recorded values and their committing party,
-emitting the corresponding transition-metadata change and reporting
+emitting the transition event for that metadata-only change and reporting
 the updated values in the response; silent acceptance without effect
 is not conforming. A `suspend` that omits both members leaves the
 recorded schedule, if any, and its committing party unchanged:
@@ -1581,7 +1582,7 @@ refresh token as revoking the Mission
 AS MUST commit that revocation as the same `revoke` transition this
 endpoint applies: decided by that policy for the revoking party and
 the Mission, recorded with a new state version, and emitting the same
-transition event ({{idempotency}}). The coupling requires neither a
+transition event. The coupling requires neither a
 request to this endpoint nor an additional scope.
 
 ## Deferred Lifecycle Capabilities {#deferred-lifecycle}

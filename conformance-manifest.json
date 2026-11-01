@@ -22053,7 +22053,7 @@
    "id": "status.idempotency.idempotent-success",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "An operation whose resulting state ({{legal-transitions}}) and, for `terminated`, termination reason equal the Mission's current ones is idempotent success: the AS returns the current Mission Status Response, with no state change and, except for the schedule replacement below, no event emitted.",
+   "text": "An operation whose resulting state ({{legal-transitions}}) and, for `terminated`, termination reason equal the Mission's current ones is idempotent success: the AS returns the current Mission Status Response, with no state change and, except for the schedule replacement below, no transition event emitted.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -24212,7 +24212,7 @@
    "id": "status.lifecycle.rfc7009-coupled-revoke-transition",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "Where a deployment's revocation policy treats revoking a Mission's refresh token as revoking the Mission ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Revocation\"), the AS MUST commit that revocation as the same `revoke` transition this endpoint applies: decided by that policy for the revoking party and the Mission, recorded with a new state version, and emitting the same transition event ({{idempotency}}).",
+   "text": "Where a deployment's revocation policy treats revoking a Mission's refresh token as revoking the Mission ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Revocation\"), the AS MUST commit that revocation as the same `revoke` transition this endpoint applies: decided by that policy for the revoking party and the Mission, recorded with a new state version, and emitting the same transition event.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -26733,7 +26733,7 @@
    "id": "status.lifecycle.schedule-applied-at-deadline",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `terminated` with reason `revoked` for `revoke`) and emit the corresponding transition, without a further request, unless expiry governs (below).",
+   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `terminated` with reason `revoked` for `revoke`) and emit the corresponding transition event, without a further request, unless expiry governs (below).",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -27156,7 +27156,7 @@
    "id": "status.lifecycle.schedule-replacement",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "the AS MUST update the recorded values and their committing party, emitting the corresponding transition-metadata change and reporting the updated values in the response",
+   "text": "the AS MUST update the recorded values and their committing party, emitting the transition event for that metadata-only change and reporting the updated values in the response",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
