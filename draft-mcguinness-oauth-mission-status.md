@@ -493,7 +493,8 @@ rejects it by its `typ`.
 {{RFC9701}} is scoped to token introspection and does not apply to a
 lookup keyed by `mission_id` ({{rfc-9701-vs-media-type}}).
 Implementations MUST NOT use {{RFC9701}} for the dedicated Mission
-Status operation.
+Status operation, and MUST NOT accept an unsigned response from it in
+place of the signed form it requires.
 
 In this document's ERP examples, the operation contract identifies
 `https://erp.example.com` as the operation target
@@ -1972,10 +1973,7 @@ A signed introspection projection ({{introspection-projection}}) uses
 Mission Status operation uses its own media type
 (`application/mission-status-response+jwt`, {{iana}}) and a JWS
 {{RFC7515}}, because {{RFC9701}} does not apply to a lookup keyed by
-`mission_id`. Implementations MUST NOT use {{RFC9701}} for the
-dedicated Mission Status operation, and MUST NOT accept an unsigned
-response from the dedicated Mission Status operation in place of the
-signed form it requires.
+`mission_id` ({{mission-status-response}}).
 
 ## Signing-Key Retention for Audit {#signing-key-retention}
 
