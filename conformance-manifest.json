@@ -19,12 +19,12 @@
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "c458af82a38d4226382b48f54d69f8761b7e3fba",
-    "content_sha256": "d5628063c1a46f0a7dff0a31a29ca5ce817da60d3aaa265a578694f24f5265be"
+    "revision": "c42fc770d65cd8ed5f12608173a6e2f938fcdbf0",
+    "content_sha256": "6499eabf3f221ecd88a89146012f7fd32cce921193d679697cc5f35215b8393b"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "c458af82a38d4226382b48f54d69f8761b7e3fba",
-    "content_sha256": "86b31db4a01e53e3032daa798156e9635cab9cf25b2ae066dd611461b82da267"
+    "revision": "a96a6d7bb9afd6891db9591835bcb25b462784e0",
+    "content_sha256": "275e69961fef3a7a62d5c744344a95ba49ff12e204abd3c7244d294b4ec56bf4"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
@@ -34325,9 +34325,27 @@
      "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > an exemption stated for one class relieves only what it names: audit_only's no-freshness posture does not relieve a further write class's bound",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > takes the declaration's own class beside a mislabeled assignment: remittance.send labeled consequential_write still takes external_commitment and irreversible_action, and is refused at 45 seconds",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses phase_invalid, before evaluation, a phase on remittance.send, which the declarations name without one; an undeclared phase of a compound action still decides",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses at load a further class beside an assigned class that is not high-consequence, and a further class that is not",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement; payments:remittance.send declares irreversible_action beside its assigned external_commitment). Mutation proofs: resolving the set to the assigned class alone fails all five witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness."
+   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement; payments:remittance.send declares irreversible_action beside its assigned external_commitment). Mutation proofs: resolving the set to the assigned class alone fails all five witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness. Cold read: the set is the union of the PEP's label, the declaration's own class and its further classes, a phase on an operation declared phaseless is refused phase_invalid, and the loader admits further classes only among the high-consequence classes, so no admitted combination drops a duty. Mutation proofs: dropping the declaration's own class fails the mislabel witness; disabling the phase refusal fails the phase witness; disabling the load restriction fails the load witness."
   },
   {
    "id": "runtime.classification.multi-predicate-bounds",
@@ -34364,18 +34382,60 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
-     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > takes the tightest published execution lease across the classes that apply",
-     "level": "unit",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses when a non-comparable duty of a further class is unmet: work-item attribution claimed for irreversible_action",
+     "level": "endpoint",
      "surface": "decision-request"
     },
     {
      "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
-     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses when a non-comparable duty of a further class is unmet: work-item attribution claimed for irreversible_action",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > issues the irreversible class's 120-second permit lifetime to a remittance, where no staleness window caps it below",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#1994 (D1175): the staleness bound and the permit window resolve to the tightest across the set (30 s for remittance.send, not the external-commitment 60 s); the executing PEP takes the tightest published lease through executionLeaseMaxSecondsOver, witnessed at unit level with a statement whose two leases differ; a further class's non-comparable duty (work-item attribution) refuses when unmet. Mutation proofs: the loosest staleness window fails the 45-second and permit-window witnesses; the loosest lease fails the lease witness; attribution read from the assigned class alone fails the work-item witness."
+   "notes": "#1994 (D1175): the staleness bound and the permit window resolve to the tightest across the set (30 s for remittance.send, not the external-commitment 60 s); the permit lifetime is the irreversible class's 120 s where no staleness window caps it below; a further class's non-comparable duty (work-item attribution) refuses when unmet. The execution lease and the remote call deadline, applied by the PEP, are witnessed on runtime.classification.multi-predicate-bounds-pep. Mutation proofs: the loosest staleness window fails the 45-second and permit-window witnesses; the permit lifetime read from the assigned class fails the lifetime witness; attribution read from the assigned class fails the work-item witness."
+  },
+  {
+   "id": "runtime.classification.multi-predicate-bounds-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "Where requirements impose comparable bounds, the tighter bound applies.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an action several classes apply to, the executing PEP takes the tightest execution lease any of them publishes, and bounds its remote decision call by the tightest staleness window across them"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the executing PEP leases an action several classes apply to for the tightest lease any of them publishes (@spec runtime#classification, runtime#execution-reverification, #1994) > leases send_remittance_email for the irreversible class's 30 seconds where the statement publishes 60 for external_commitment and the permit window allows more",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > takes the tightest published execution lease across the classes that apply",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > bounds the remote decision call by the tightest window across the set: 30 seconds for remittance.send, 60 for external_commitment alone",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 cold read: the PEP-role twin of runtime.classification.multi-predicate-bounds, for the bounds the PEP applies. Mutation proofs: the payments server's lease read from the assigned class (60 s where the statement publishes 60 for external_commitment) fails the PEP lease witness; the loosest lease in the helper fails the helper witness; the channel deadline read from the assigned class fails the channel witness. The PEP witness runs the channel in remote mode, where the opened staleness bound reaches the PDP and the permit window allows more than either lease."
   },
   {
    "id": "runtime.classification.unclassifiable-defaults-to-widest",
@@ -51957,7 +52017,7 @@
    "id": "evidence.decision.action-class-and-source",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "decision-evidence-object",
-   "text": "REQUIRED. A string. The runtime action class the PDP applied to the action: one of `consequential_read`, `consequential_write`, `irreversible_action`, `external_commitment`, or `privileged_administration`",
+   "text": "REQUIRED. A string. The runtime action class assigned to the action: one of `consequential_read`, `consequential_write`, `irreversible_action`, `external_commitment`, or `privileged_administration`",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -51981,7 +52041,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md. #1994 cold read: re-quoted after action_class came to read \"assigned to the action\", matching action_classes."
   },
   {
    "id": "evidence.decision.action-classes-set",
@@ -52019,6 +52079,12 @@
     {
      "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
      "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > omits action_classes on a decision only one class applies to",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > takes the declaration's own class beside a mislabeled assignment: remittance.send labeled consequential_write still takes external_commitment and irreversible_action, and is refused at 45 seconds",
      "level": "unit",
      "surface": "evidence-emission"
     }
@@ -58314,9 +58380,15 @@
      "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > adopts no untrusted proposal: the floor over every applicable class governs",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > keeps each high class against every other high class's minimum, in all six pairings: no high class ranks below another",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1994 (D1175): deriveReversibility and enforceReversibilityFloor take every applicable runtime class and use tiers (read_only, reversible_write, then the three high classes together), so no order among the high classes is introduced; where several floors share the top tier, the first in the given order is taken, which decides nothing the rule governs. Mutation proofs: ignoring the further classes fails the raise and untrusted witnesses; restoring the old total rank (external_commitment above irreversible_action) replaces the trusted irreversible_action proposal and fails the keep witness."
+   "notes": "#1994 (D1175): deriveReversibility and enforceReversibilityFloor take every applicable runtime class and use tiers (read_only, reversible_write, then the three high classes together), so no order among the high classes is introduced; where several floors share the top tier, the first in the given order is taken, which decides nothing the rule governs. Mutation proofs: ignoring the further classes fails the raise and untrusted witnesses; restoring the old total rank (external_commitment above irreversible_action) replaces the trusted irreversible_action proposal and fails the keep witness. Cold read: the six-pairing witness keeps each high class against every other's minimum, so any total order among them fails it; proved with irreversible_action lowest and with external_commitment lowest."
   },
   {
    "id": "template.dispatch.idempotent-retry-returns-committed",
