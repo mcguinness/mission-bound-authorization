@@ -17,6 +17,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  canonicalDigest,
   type JsonValue,
   type ResourceContractRef,
   resourceContractDigest,
@@ -69,18 +70,20 @@ interface Case {
 }
 
 const read = <T>(path: string): T => JSON.parse(readFileSync(path, "utf8")) as T;
-// #813, #816 (D877): contract version 2026-10-27 (payments-runtime-profile-v16)
-// is current, so the subset frozen against it is the one checked here.
-// #1693's 2026-10-26 (v15), #252's 2026-10-24 (v14), which added the
+// #249 (D1155): contract version 2026-11-02 (payments-runtime-profile-v16, each
+// covered operation naming its evaluation-context descriptor) is current, so
+// the subset frozen against it is the one checked here. #813's 2026-10-27
+// (v16), #1693's 2026-10-26 (v15), #252's 2026-10-24 (v14), which added the
 // compensate operation, and the original 2026-10-20 (v13) stay frozen,
 // unedited, and the versions they name stay declared as superseded (checked
 // below).
-const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-10-27.json"));
+const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-11-02.json"));
 const contract = read<ContractFile>(join(SUBSET_DIR, subset.contract.file));
 const supersededContracts = ["payments-contract-2026-10-20.json", "payments-contract-2026-10-24.json"].map((f) =>
   read<ContractFile>(join(SUBSET_DIR, f)),
 );
 const supersededV15Contract = read<ContractFile>(join(SUBSET_DIR, "payments-contract-2026-10-26.json"));
+const supersededV16Contract = read<ContractFile>(join(SUBSET_DIR, "payments-contract-2026-10-27.json"));
 const sorted = (values: Iterable<string>) => [...values].sort();
 const readCases = () =>
   readdirSync(CASES_DIR)
@@ -179,24 +182,25 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(resourceContractDigest(contract.document as unknown as JsonValue)).toBe(contract.reference.digest);
   });
 
-  // #249 (D712, D865), #1693 (D889), #813 (D877): the contract's resource
-  // applicability, in files of their own beside the frozen contract and
-  // subset files. The current file (v16) names the version the payments
-  // deployment declares current; the historical ones, frozen at 2026-10-26
-  // before v16 and at 2026-10-24 before v15, each name a version the
-  // deployment still declares and performs. Each file's configuration is the
-  // one its own cases carry inline, and every case carrying a configuration
-  // carries one of the three.
-  it("names, in the current applicability file, the one resource the current contract applies to, and its contract cases carry exactly that configuration (#1693)", () => {
-    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-v16.json");
+  // #249 (D712, D865, D1155), #1693 (D889), #813 (D877): the contract's
+  // resource applicability, in files of their own beside the frozen contract
+  // and subset files. The current file (2026-11-02) names the version the
+  // payments deployment declares current; the historical ones, frozen at
+  // 2026-10-27 before 2026-11-02, at 2026-10-26 before v16 and at 2026-10-24
+  // before v15, each name a version the deployment still declares and
+  // performs. Each file's configuration is the one its own cases carry
+  // inline, and every case carrying a configuration carries one of the four.
+  it("names, in the current applicability file, the one resource the current contract applies to, and its contract cases carry exactly that configuration (#1693; #249, D1155)", () => {
+    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-2026-11-02.json");
     expect(frozen.reference).toEqual(contract.reference);
     expect(declared?.version.state).toBe("current");
     expect(declared?.version.document).toEqual(frozen.document);
-    expect(carryingCases(configured)).toEqual(["ev-rc-09", "ev-rc-10", "ev-rc-11"]);
+    expect(carryingCases(configured)).toEqual(["ev-rc-13", "ev-rc-14", "ev-rc-15"]);
   });
 
-  it("keeps, in each historical applicability file (frozen before v16, and before v15), a declared payments contract version, and its contract cases carry exactly that configuration (#1693, #813)", () => {
+  it("keeps, in each historical applicability file (frozen before 2026-11-02, before v16, and before v15), a declared payments contract version, and its contract cases carry exactly that configuration (#1693, #813; #249, D1155)", () => {
     for (const [file, version, cases] of [
+      ["payments-contract-applicability-v16.json", "2026-10-27", ["ev-rc-09", "ev-rc-10", "ev-rc-11"]],
       ["payments-contract-applicability-v15.json", "2026-10-26", ["ev-rc-05", "ev-rc-06", "ev-rc-07"]],
       ["payments-contract-applicability-2026-10-26.json", "2026-10-24", ["ev-rc-01", "ev-rc-02", "ev-rc-03"]],
     ] as const) {
@@ -211,6 +215,7 @@ describe("the supported-subset fixture freezes the payments contract and the ini
 
   it("every case carrying a contract configuration carries one of the applicability files' configurations", () => {
     const known = [
+      "payments-contract-applicability-2026-11-02.json",
       "payments-contract-applicability-v16.json",
       "payments-contract-applicability-v15.json",
       "payments-contract-applicability-2026-10-26.json",
@@ -228,6 +233,9 @@ describe("the supported-subset fixture freezes the payments contract and the ini
       "ev-rc-09",
       "ev-rc-10",
       "ev-rc-11",
+      "ev-rc-13",
+      "ev-rc-14",
+      "ev-rc-15",
     ]);
     for (const c of carrying) {
       const carried = JSON.stringify((c.input as { contracts: unknown }).contracts);
@@ -256,6 +264,50 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(declared?.version.digest).toBe(supersededV15Contract.reference.digest);
     expect(declared?.version.document).toEqual(supersededV15Contract.document);
     expect(resourceContractDigest(supersededV15Contract.document as unknown as JsonValue)).toBe(supersededV15Contract.reference.digest);
+  });
+
+  it("keeps the superseded version 2026-10-27 declared exactly as it was frozen, naming payments-runtime-profile-v16, with a declared retention, its descriptor association declared beside its bytes (#249, D1155)", () => {
+    const declared = RESOURCE_CONTRACTS.versionOf(supersededV16Contract.reference);
+    expect(declared?.version.state).toBe("superseded");
+    expect(declared?.version.retained_until).toBe("2027-11-02T00:00:00Z");
+    expect(declared?.version.operation_profile).toBe("payments-runtime-profile-v16");
+    expect(declared?.version.digest).toBe(supersededV16Contract.reference.digest);
+    expect(declared?.version.document).toEqual(supersededV16Contract.document);
+    expect(resourceContractDigest(supersededV16Contract.document as unknown as JsonValue)).toBe(supersededV16Contract.reference.digest);
+    expect(Object.keys(declared?.version.evaluation_context_descriptors ?? {}).sort()).toEqual([
+      "check_transfer",
+      "execute_wire_transfer",
+      "hold_transfer",
+      "reverse_wire_transfer",
+      "send_remittance_email",
+    ]);
+  });
+
+  // #249 (D1155, D1170): a version published before its document could name
+  // its evaluation-context descriptors carries, beside its unchanged bytes,
+  // the descriptors in force while it was current. That association is
+  // history, not configuration: frozen in its own file, keyed by the contract
+  // reference, and pinned by digest, so it can be replaced by no other
+  // descriptor, however valid and published, and no other version declares
+  // one (a new version names its descriptors in its committed document).
+  it("keeps each historical descriptor association exactly as frozen, keyed by the contract reference, and no other version declares one (#249, D1155, D1170)", () => {
+    const frozen = read<{
+      format: string;
+      associations: Array<{ contract: ResourceContractRef; descriptors: Record<string, unknown> }>;
+    }>(join(SUBSET_DIR, "payments-contract-descriptor-associations.json"));
+    expect(frozen.format).toBe("mission-resource-contract-descriptor-associations/1");
+    expect(canonicalDigest(frozen.associations as unknown as JsonValue)).toBe("sha-256:OcUDBvQ-MgGUYzljz4LCkRxpTj7G-ldULbVb5uV2X-A");
+    const declaration = RESOURCE_CONTRACTS.declarations.find((d) => d.id === frozen.associations[0]?.contract.id);
+    if (!declaration) throw new Error("the payments contract is declared");
+    const associated = declaration.versions
+      .filter((v) => v.evaluation_context_descriptors !== undefined)
+      .map((v) => ({ id: declaration.id, version: v.version, digest: v.digest }));
+    expect(associated).toEqual(frozen.associations.map((a) => a.contract));
+    for (const { contract: ref, descriptors } of frozen.associations) {
+      const declared = RESOURCE_CONTRACTS.versionOf(ref);
+      expect(declared?.version.digest, ref.version).toBe(ref.digest);
+      expect(declared?.version.evaluation_context_descriptors, ref.version).toEqual(descriptors);
+    }
   });
 
   it("lists exactly the actions the contract covers, each an explicit identifier: no action family", () => {

@@ -28,6 +28,7 @@ import {
   type AuthorityDependencyEnforcement,
   checkAuthorityDependency,
   conditionsNoBroader,
+  contractDescriptor,
   type CredentialAuthorityEntry,
   entryMatchesTarget,
   isOperationTarget,
@@ -1090,14 +1091,21 @@ function newDecisionId(): string {
  * action, the validated phase the declaration lists): both inputs, the
  * digest in the canonical-object digest form and the reference exactly
  * `{id, version, digest}` and equal to the one declared for the operation,
- * or `"invalid"`. For an operation the declaration does not cover:
- * `undefined`, the inputs neither required nor established, so nothing is
- * echoed or recorded for it. Pure, so the permit and its evidence read the
+ * or `"invalid"`. The descriptor declared for the operation is the one the
+ * request's contract names for the crossing (#249, D1155), so a retained
+ * version is decided under its own descriptor, never under the one the live
+ * declaration names now; a contract that names none for a covered crossing
+ * leaves nothing the binding can equal. With no contract, it is the live
+ * declaration's. A reference that names no declared version is left to the
+ * contract step, which denies it `resource_contract_drift`. For an operation
+ * the declaration does not cover: `undefined`, the inputs neither required
+ * nor established, so nothing is echoed or recorded for it. Pure, by
+ * reference and never by the clock, so the permit and its evidence read the
  * same values the pre-evaluation check accepted.
  */
 function evaluationContextOf(
   req: EvaluationRequest,
-  opts: Pick<EvaluateOptions, "evaluationContextBinding">,
+  opts: Pick<EvaluateOptions, "evaluationContextBinding" | "resourceContracts">,
 ): { digest: string; binding: EvaluationContextBindingRef } | "invalid" | undefined {
   const declarations = opts.evaluationContextBinding ?? EVALUATION_CONTEXT_BINDING;
   const r = req as { action?: { name?: unknown }; context?: Record<string, unknown> } | undefined;
@@ -1109,7 +1117,23 @@ function evaluationContextOf(
   const digest = r?.context?.evaluation_context_digest;
   const binding = r?.context?.evaluation_context_binding;
   if (!isEvaluationContextDigest(digest) || !isEvaluationContextBindingRef(binding)) return "invalid";
-  if (!sameEvaluationContextBinding(binding, entry.descriptor)) return "invalid";
+  const contract = (r as { resource?: { properties?: { resource_contract?: unknown } } } | undefined)?.resource?.properties
+    ?.resource_contract;
+  if (contract === undefined) {
+    if (!sameEvaluationContextBinding(binding, entry.descriptor)) return "invalid";
+  } else {
+    const named = (opts.resourceContracts ?? RESOURCE_CONTRACTS).versionOf(contract);
+    // A version without its document (retired, its bytes dropped) is left
+    // to the contract step, as an unknown one is.
+    if (
+      named !== undefined &&
+      named.version.document !== undefined &&
+      named.version.digest === (contract as { digest?: unknown }).digest
+    ) {
+      const expected = contractDescriptor(named.version, action, isActionPhase(phase) ? phase : undefined);
+      if (!sameEvaluationContextBinding(binding, expected)) return "invalid";
+    }
+  }
   return { digest, binding: { id: binding.id, version: binding.version, digest: binding.digest } };
 }
 

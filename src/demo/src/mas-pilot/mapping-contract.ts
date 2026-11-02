@@ -134,7 +134,6 @@ const keyOf = (iss: string, id: string): string => JSON.stringify([iss, id]);
 export function parseMappingContract(
   raw: unknown,
   contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
-  now: Date = new Date(),
 ): MappingContractDocument {
   const root = object(raw, "contract", TOP_LEVEL);
   const version = root.version;
@@ -205,7 +204,6 @@ export function parseMappingContract(
           throw new MappingContractError(message);
         },
         contracts,
-        now,
       );
       values[scope] = mapped.actions;
       if (mapped.resource_contract) stated[scope] = mapped.resource_contract;
@@ -408,7 +406,7 @@ export class MappingContractCache {
     const at = this.now();
     let doc: MappingContractDocument;
     try {
-      doc = parseMappingContract(raw, this.contracts, at);
+      doc = parseMappingContract(raw, this.contracts);
     } catch (e) {
       const reason = (e as Error).message;
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });

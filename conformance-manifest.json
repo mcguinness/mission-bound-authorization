@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "fa7cee104ad45e3019b8c26c2c8e87e891008f8e",
-    "content_sha256": "ededb3d81e86dfe9a82d31af1d132c515d2311a65e1b959933379911580374a8"
+    "revision": "18a785dee0f9ad6250f68002fc745c8f35c054d6",
+    "content_sha256": "306e021a786006ac85fe55f44e6c30a3ff4091abf97cddebfcf02979bcdef602"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -284,6 +284,7 @@
    "core.standing-consent-recency",
    "core.governance-record",
    "approval-governance.governed-policy",
+   "approval-governance.basis-contract",
    "deferred-approval.policy-completion",
    "deferred-approval.deferral",
    "template.dispatch",
@@ -804,9 +805,15 @@
      "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > the paid vendor's record removed between the decision and release, with the invoice on another vendor, is refused target_drift with zero reversal entries and no effective context digest",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > a change, between the decision and the release, to the descriptor the permit's contract names is refused at release, target_drift, the effective context digest computed under the committed descriptor and equal to the authorized one",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9); a changed descriptor, refused by its own check with the context recomputed under the committed descriptor and equal (X2, M1+M2); an unequal digest after a moved fact (M2); and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or committed descriptor (M4, X3, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: on the compensate crossing, a moved fact of the committed wire's record (C2 turns it into parameter_mismatch) and a record that no longer answers (C1 leaves an effective context digest) each refuse before any reversal. #252 owner review of #1663: the compensating decision also evaluates live resource facts (the invoice's issuance and classification and the current tenant of the vendor the committed wire paid (#1693), through the Common Constraints), so the compensate descriptor declares them beside the committed wire's effect facts. A reversal approved under a tenant, issuance or classification bound whose fact moves before release is refused target_drift with zero effects, the wire's parameter pair equal and the context pair unequal. Mutations: L1, L2 and L3 (each live fact frozen) each fail its test; M1+C2 (no context check at the compensate crossing's use) fails all three. #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both). #1693 (D873): with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is target_drift with zero reversal entries, the wire's parameter pair equal and the context pair unequal, and the paid vendor's record removed after the decision is target_drift with zero reversal entries and no effective context digest. Mutations: PV1 fails both; PV2 with PV3 (the recompute reads and accepts the invoice's current vendor) fails the removal witness, which then records an effective context digest."
+   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9); a changed descriptor, refused by its own check with the context recomputed under the committed descriptor and equal (X2, M1+M2); an unequal digest after a moved fact (M2); and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or committed descriptor (M4, X3, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: on the compensate crossing, a moved fact of the committed wire's record (C2 turns it into parameter_mismatch) and a record that no longer answers (C1 leaves an effective context digest) each refuse before any reversal. #252 owner review of #1663: the compensating decision also evaluates live resource facts (the invoice's issuance and classification and the current tenant of the vendor the committed wire paid (#1693), through the Common Constraints), so the compensate descriptor declares them beside the committed wire's effect facts. A reversal approved under a tenant, issuance or classification bound whose fact moves before release is refused target_drift with zero effects, the wire's parameter pair equal and the context pair unequal. Mutations: L1, L2 and L3 (each live fact frozen) each fail its test; M1+C2 (no context check at the compensate crossing's use) fails all three. #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both). #1693 (D873): with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is target_drift with zero reversal entries, the wire's parameter pair equal and the context pair unequal, and the paid vendor's record removed after the decision is target_drift with zero reversal entries and no effective context digest. Mutations: PV1 fails both; PV2 with PV3 (the recompute reads and accepts the invoice's current vendor) fails the removal witness, which then records an effective context digest. D1155: under a contract, the changed descriptor is a change to the one the permit's contract names (a retained version's association edited between decision and release): refused target_drift before any effect, the effective context digest computed under the committed descriptor. Proved by mutation: a release check that never compares the descriptor releases the effect."
   },
   {
    "id": "runtime.evaluation-context.per-phase-capture",
@@ -1008,9 +1015,15 @@
      "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > checks the phase first: a request failing both is refused once, as phase_invalid",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > a descriptor the PEP and the PDP read differently for the contract is refused before evaluation, evaluation_context_invalid, with no effect",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#773. For a covered operation the PDP refuses, before evaluation and with no decision work, both inputs missing, either missing, an unprefixed or non-string digest, a non-object reference, a reference with an extra member, and one naming another version or digest than the declaration; the phase is checked first. Mutation P13 (no refusal) fails the first."
+   "notes": "#773. For a covered operation the PDP refuses, before evaluation and with no decision work, both inputs missing, either missing, an unprefixed or non-string digest, a non-object reference, a reference with an extra member, and one naming another version or digest than the declaration; the phase is checked first. Mutation P13 (no refusal) fails the first. D1155: the declared operation binding is the descriptor the request's contract names (the live declaration's for a request with no contract); a binding the PEP captured under a descriptor the PDP's declarations do not associate with the contract is refused before evaluation, evaluation_context_invalid, with no Decision Evidence and no effect. Proved by mutation: validating against the live declaration only lets it through to an effect."
   },
   {
    "id": "authzen.response-context.evaluation-context-digest-equals-request",
@@ -1449,9 +1462,15 @@
      "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > an unresolvable fact or an unavailable salt refuses before the decision request, as a Refusal Record evaluation_context_unresolvable",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > 2026-10-20, published before the claim, names no descriptor: each covered crossing pinned to it is refused before any decision request, evaluation_context_unresolvable, never captured under another version's, with no effect; a read it covers is still performed",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 2. A declared fact the store cannot resolve (an empty payee account) and no live salt version each refuse before any decision request: one signed Refusal Record evaluation_context_unresolvable naming the invoice, no PDP request, no Decision Evidence, no Execution Evidence. Mutations: M7 (the capture failure proceeds) and M29 (mapped to state_unavailable) fail it."
+   "notes": "#773 ruling 2. A declared fact the store cannot resolve (an empty payee account) and no live salt version each refuse before any decision request: one signed Refusal Record evaluation_context_unresolvable naming the invoice, no PDP request, no Decision Evidence, no Execution Evidence. Mutations: M7 (the capture failure proceeds) and M29 (mapped to state_unavailable) fail it. D1155: a covered crossing under a contract version naming no descriptor (2026-10-20) cannot be captured, so it is refused with a pre-decision Refusal Record evaluation_context_unresolvable and no decision request."
   },
   {
    "id": "runtime.evaluation-context.primary-error",
@@ -7887,12 +7906,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -7938,7 +7954,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
@@ -7948,13 +7964,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -7989,7 +8005,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.adjudication-direct-human",
@@ -8091,12 +8107,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -8131,7 +8144,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2: the local note named only the governed path; ceiling_drawdown also populates adjudication (kind policy), and its endpoint test is cited. #1915 stage 2 mutation proof: recording the governed_policy adjudication kind as human fails \"records every governed_policy approval_basis member\". #1928 (D1064): the ceiling_drawdown record gate (assertDrawdownRecord) refuses a basis whose adjudication.kind is not policy before reading adjudication.policy, at the commit-time preparation and in the re-check; witnessed with a recognized positive control and kinds human, service, an unrecognized kind and none, and mutation-checked."
+   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2: the local note named only the governed path; ceiling_drawdown also populates adjudication (kind policy), and its endpoint test is cited. #1915 stage 2 mutation proof: recording the governed_policy adjudication kind as human fails \"records every governed_policy approval_basis member\". #1928 (D1064): the ceiling_drawdown record gate (assertDrawdownRecord) refuses a basis whose adjudication.kind is not policy before reading adjudication.policy, at the commit-time preparation and in the re-check; witnessed with a recognized positive control and kinds human, service, an unrecognized kind and none, and mutation-checked. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-policy-reference",
@@ -8142,12 +8155,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
@@ -8176,7 +8186,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: leaving dispatch_policy out of the template_hash body fails \"commits the Dispatch Policy's content digest in template_hash\"."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: leaving dispatch_policy out of the template_hash body fails \"commits the Dispatch Policy's content digest in template_hash\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-policy-verify",
@@ -8187,12 +8197,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -8257,7 +8264,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: dropping the digest comparison in verifiedActivationPolicy fails six cited tests across all three arms."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: dropping the digest comparison in verifiedActivationPolicy fails six cited tests across all three arms. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-policy-retain",
@@ -8268,12 +8275,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
@@ -8350,7 +8354,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-event-id",
@@ -8361,12 +8365,9 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
@@ -8400,7 +8401,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: giving each instance the template's approval_event_id fails \"two Dispatches under one template consent create two Missions\"."
+   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: giving each instance the template's approval_event_id fails \"two Dispatches under one template consent create two Missions\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -8861,12 +8862,9 @@
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "governance-decision",
    "assertion": "output-bound",
    "observation": {
@@ -8883,7 +8881,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that appends a model output's add entries fails \"never widen it\" (the governed-policy-approval.ts:1268 backstop alone is unreachable)."
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that appends a model output's add entries fails \"never widen it\" (the governed-policy-approval.ts:1268 backstop alone is unreachable). Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
@@ -9696,12 +9694,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9729,7 +9724,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation` rename, re-run per builder at 68f30fd4, fails \"records a template basis\", \"records a policy_drawdown basis\" and \"completes in the token-exchange response\" respectively."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation` rename, re-run per builder at 68f30fd4, fails \"records a template basis\", \"records a policy_drawdown basis\" and \"completes in the token-exchange response\" respectively. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-activation-actor-required",
@@ -9740,12 +9735,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9779,7 +9771,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation_actor` rename, re-run per builder at 68f30fd4, fails each builder's witness, the governed_policy one included."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation_actor` rename, re-run per builder at 68f30fd4, fails each builder's witness, the governed_policy one included. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-root-commitment-required",
@@ -9790,12 +9782,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9823,7 +9812,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `root_commitment` rename, re-run per builder at 68f30fd4, fails each builder's witness."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `root_commitment` rename, re-run per builder at 68f30fd4, fails each builder's witness. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-trace-to-human",
@@ -9834,12 +9823,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9891,7 +9877,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Witnessed on all four bases the reference implements (template, policy_drawdown, ceiling_drawdown, governed_policy). Gap outside the observation: a child of a standing-consent parent inherits consent_principal in code, and only its approved_at is asserted. #1915 stage 2 mutation proof: recording the Dispatcher as a template instance's consent_principal fails \"records the TEMPLATE approver as the human of record\" and \"records a template basis\"."
+   "notes": "#1915 stage 2 (D1056). Witnessed on all four bases the reference implements (template, policy_drawdown, ceiling_drawdown, governed_policy). Gap outside the observation: a child of a standing-consent parent inherits consent_principal in code, and only its approved_at is asserted. #1915 stage 2 mutation proof: recording the Dispatcher as a template instance's consent_principal fails \"records the TEMPLATE approver as the human of record\" and \"records a template basis\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-approval-instant",
@@ -9902,12 +9888,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9959,7 +9942,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). The child tests distinguish the consent instant from the activation instant on every basis, through two generations. #1915 stage 2 mutation proof: setting a child's approved_at to its Parent's created_at fails four child-approved-at cases (ceiling_drawdown, direct Parent, governed_policy, template)."
+   "notes": "#1915 stage 2 (D1056). The child tests distinguish the consent instant from the activation instant on every basis, through two generations. #1915 stage 2 mutation proof: setting a child's approved_at to its Parent's created_at fails four child-approved-at cases (ceiling_drawdown, direct Parent, governed_policy, template). Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-approved-at-required",
@@ -9970,12 +9953,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -10009,7 +9989,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Sibling of the activation, activation_actor and root_commitment REQUIRED rows. The member's verify sentence stays core.approval-basis.approved-at-standing-consent (partial). #1915 stage 2 mutation proof: renaming the template basis's approved_at key fails \"records a template basis\"."
+   "notes": "#1915 stage 2 (D1056). Sibling of the activation, activation_actor and root_commitment REQUIRED rows. The member's verify sentence stays core.approval-basis.approved-at-standing-consent (partial). #1915 stage 2 mutation proof: renaming the template basis's approved_at key fails \"records a template basis\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.policy-adjudication-policy-required",
@@ -10020,12 +10000,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -10059,7 +10036,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Two bases populate adjudication (governed_policy, ceiling_drawdown); with a separate evaluator, the policy is the evaluator, not the root. #1915 stage 2 mutation proof: dropping version from the ceiling_drawdown adjudication.policy fails \"completes in the token-exchange response\" and \"drawdown_count counts committed policy-adjudicated drawdowns\"."
+   "notes": "#1915 stage 2 (D1056). Two bases populate adjudication (governed_policy, ceiling_drawdown); with a separate evaluator, the policy is the evaluator, not the root. #1915 stage 2 mutation proof: dropping version from the ceiling_drawdown adjudication.policy fails \"completes in the token-exchange response\" and \"drawdown_count counts committed policy-adjudicated drawdowns\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.recency-evaluation-instant",
@@ -10069,13 +10046,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -10109,7 +10086,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Witnessed for the creation commit (governed_policy, recorded ceiling drawdown). No witness distinguishes a deferred flow's completion commit from its start, and none shows that a later ceiling change or elapsed time leaves an active Mission active."
+   "notes": "#1915 stage 2 (D1056). Witnessed for the creation commit (governed_policy, recorded ceiling drawdown). No witness distinguishes a deferred flow's completion commit from its start, and none shows that a later ceiling change or elapsed time leaves an active Mission active. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.recency-skew-refusal",
@@ -10119,13 +10096,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -10153,7 +10130,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Both sides of the boundary are witnessed for governed_policy, the refusal for the recorded ceiling drawdown. The template standing-payment gate has the check in code with no test, and no test refuses a skew allowance above its bound."
+   "notes": "#1915 stage 2 (D1056). Both sides of the boundary are witnessed for governed_policy, the refusal for the recorded ceiling drawdown. The template standing-payment gate has the check in code with no test, and no test refuses a skew allowance above its bound. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.recency-per-class-strictest",
@@ -10163,13 +10140,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -10233,7 +10210,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). No case makes the consumption bound's class the strictest, so none shows it takes part in the minimum. The standing-payment witnesses run only under the opt-in capability (D830)."
+   "notes": "#1915 stage 2 (D1056). No case makes the consumption bound's class the strictest, so none shows it takes part in the minimum. The standing-payment witnesses run only under the opt-in capability (D830). Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.approved-at-absent-direct",
@@ -32055,9 +32032,15 @@
      "name": "MAS pilot: a joined credential under a contract-stating scope value works end to end (@spec authority-server#mission-join, resource-access#resource-contract, #249, D967) > permits a joined, reference-required write under the contract-stating value, and refuses the legacy credential resource_contract_unresolvable before any decision, performing nothing (D1091)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot: a joined credential under a contract-stating scope value works end to end (@spec authority-server#mission-join, resource-access#resource-contract, #249, D967) > joins a credential under the retained .2026-10-27 value to a Mission approved while 2026-10-27 was current, and the read reaches the PEP within the retention under exactly that reference",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy. D340: the PEP no longer filters the joined view by the credential (a filter dropped a Mission entry broader than the credential, refusing an action it covers, and broke D335's full-set proof); bound 1 refuses on its own facts instead. #828: bound 3 is now an independently administered policy bound to the decision point, with its own resource_policy denial; the refusing-Fga-stub case is retitled as bound 2's contextual check, which is what it exercises. #818 slice 2: two [FGA] pilot citations (src/demo/test/mas-pilot-resource-policy.test.ts), skipped without a live OpenFGA; each proved by a defect that makes its assertion fail (the subject check skipped; the policy evaluated on the mapped Mission-side identity). #818 slice 3: two [FGA] pilot citations on the opaque-token path (src/demo/test/mas-pilot-introspection.test.ts): bound 1 is the scope the gateway read from the estate's RFC 7662 introspection response, and bound 3 denies resource_policy for the introspected client; each proved by a defect that makes its assertion fail (a fixed broad scope in place of the introspected one; the client check skipped). C.3a (#249, D967 test 4, D1071): one [FGA] pilot citation with all three bounds satisfied under a contract-stating mapping: the estate credential's scope value maps to an entry carrying the current payments contract, the Mission was approved against the same contract, and the read is permitted under it. Proved by a join that drops the value's stated contract, which turns the permit into resource_contract_drift. C.3b (#249, D1091): a second [FGA] pilot citation, a reference-required write (hold_transfer) permitted with all three bounds satisfied under a contract-stating execute value. Proved by a join that drops the value's stated contract, which turns the permit into a refusal."
+   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy. D340: the PEP no longer filters the joined view by the credential (a filter dropped a Mission entry broader than the credential, refusing an action it covers, and broke D335's full-set proof); bound 1 refuses on its own facts instead. #828: bound 3 is now an independently administered policy bound to the decision point, with its own resource_policy denial; the refusing-Fga-stub case is retitled as bound 2's contextual check, which is what it exercises. #818 slice 2: two [FGA] pilot citations (src/demo/test/mas-pilot-resource-policy.test.ts), skipped without a live OpenFGA; each proved by a defect that makes its assertion fail (the subject check skipped; the policy evaluated on the mapped Mission-side identity). #818 slice 3: two [FGA] pilot citations on the opaque-token path (src/demo/test/mas-pilot-introspection.test.ts): bound 1 is the scope the gateway read from the estate's RFC 7662 introspection response, and bound 3 denies resource_policy for the introspected client; each proved by a defect that makes its assertion fail (a fixed broad scope in place of the introspected one; the client check skipped). C.3a (#249, D967 test 4, D1071): one [FGA] pilot citation with all three bounds satisfied under a contract-stating mapping: the estate credential's scope value maps to an entry carrying the current payments contract, the Mission was approved against the same contract, and the read is permitted under it. Proved by a join that drops the value's stated contract, which turns the permit into resource_contract_drift. C.3b (#249, D1091): a second [FGA] pilot citation, a reference-required write (hold_transfer) permitted with all three bounds satisfied under a contract-stating execute value. Proved by a join that drops the value's stated contract, which turns the permit into a refusal. D1170: under mapping v3 a credential the estate issues under the retained invoices.read.2026-10-27 value joins a Mission approved while 2026-10-27 was current, within its retention, and the read reaches the PEP under exactly that reference. Proved by mutation: dropping the value from the mapping refuses the join, and mapping it to the current contract denies it resource_contract_drift."
   },
   {
    "id": "mas.baseline-join.join-view-commitment",
@@ -36494,7 +36477,7 @@
     "normative": "a change to any listed contract material (operation contract, Operation Profile binding items, constraint extraction, class or phase, capability digest, evaluation-context descriptor reference) yields a new version with a different digest"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
@@ -36615,9 +36598,51 @@
      "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > refuses the other crossings of the same action, whose tools the bound does not name, with no effect",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > the current 2026-11-02 document differs from 2026-10-27's only in its version and the evaluation-context descriptor each covered operation names, the one the claim declares for it",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "the evaluation-context descriptors a contract version names (@spec runtime#resource-contract, runtime#evaluation-context-binding, #249, D1155) > the shipped declarations agree: the current version names the claim's descriptor for each covered crossing, and 2026-10-20, published before the claim, none",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "the evaluation-context descriptors a contract version names (@spec runtime#resource-contract, runtime#evaluation-context-binding, #249, D1155) > refuses at load a current version naming a descriptor other than the one the claim declares for the crossing, though the claim publishes it",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "the evaluation-context descriptors a contract version names (@spec runtime#resource-contract, runtime#evaluation-context-binding, #249, D1155) > refuses at load a superseded version naming a descriptor the claim does not publish, or one of another id for the crossing",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "the evaluation-context descriptors a contract version names (@spec runtime#resource-contract, runtime#evaluation-context-binding, #249, D1155) > refuses at load a version naming a descriptor for an operation the claim does not cover",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-subset.test.ts",
+     "name": "the supported-subset fixture freezes the payments contract and the initial subset (@spec resource-access#resource-contract, #249, D676) > keeps each historical descriptor association exactly as frozen, keyed by the contract reference, and no other version declares one (#249, D1155, D1170)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > normalizes a two-vendor list read's scope, supplied in reverse canonical order, to the canonical order, and commits the digest of exactly that normal form",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. #249 box 4 (D1104, build-time correspondence): the Operation Profile material the current 2026-10-27 document states corresponds to what the resource performs. Each declared parameter form is the field set its normal-form builder produces, every optional member included, and no other form is declared, and each form's canonical digest over fixed inputs is recorded per contract version, so a normalization change (a member's encoding) needs a new version's entry; each operation binds the form it names (its live parameter_digest recomputed from that form over the same records; the reversal's live binding is compound-actions.test.ts's), accepts an idempotency key exactly where it declares one (refusing one before any decision elsewhere) and carries resolved recipients exactly where it declares them; and the declared resource_match values are exactly those the matcher enforces. Each constraint-extraction clause is witnessed where its constraint is enforced, with the named source set apart from an alternative: max_amount from the invoice record (evaluation-context-bindings) and, for the reversal, from the wire's record (compound-actions); vendors from the store-resolved vendor (token-profile, evaluation-context-bindings) and, for the reversal, the wire's vendor (evaluation-context); requires_action_approval bound to parameter_digest (evaluation-context-bindings); issuance, tenant and classification from the invoice and vendor records and, for list_invoices, each member's (common-constraints-enforcement), the reversal's tenant from the paid vendor's current record (evaluation-context); recipient_domain over every final recipient of the routing and allowed_tools on the dispatched tool (common-constraints-enforcement); time_window on each evaluating component's own clock, over the remote channel, never a time the request carries; and terminal_when on the Mission Issuer's discharge state (resource-contract-pep). Proved by mutation, each alone and each committing the violation: the invoice form dropping a field, the invoice form encoding its amount differently (failing the recorded digest alone), check_transfer binding another form with its decision proceeding, every keyed operation resolving recipients, intake accepting and dropping an undeclared key, the PEP never forwarding a key, the matcher enforcing an undeclared suffix form, the PDP evaluating on a time the request carries, the PEP evaluating the window on another clock, and the PDP not reading the discharge state each fail their witness. The PEP's ordering of a list read's vendor scope is checked here only through the per-operation digest over one vendor. Still partial: the shipped Evaluation-Context Binding claim names a descriptor for payments:payment.execute, payments:remittance.send and payments:payment.reverse, and no contract version carries those references, so a descriptor change yields no new contract version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten. #813, #816 (D877): the Operation Profile change to v16 is published as version 2026-10-27 with its own digest, differing from 2026-10-26 only in its version and profile; 2026-10-26 is not rewritten, and the supported-subset fixture tests check that the three superseded versions stay declared as frozen."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Tested (D1197) as build-time correspondence evidence for the shipped implementation: the suite compares the declared contract material with what the shipped code performs, and a change to either without a new version fails it. The shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. #249 box 4 (D1104, build-time correspondence): the Operation Profile material the current document states (2026-11-02; 2026-10-27 while it was current) corresponds to what the resource performs. Each declared parameter form is the field set its normal-form builder produces, every optional member included, and no other form is declared, and each form's canonical digest over fixed inputs is recorded per contract version, so a normalization change (a member's encoding) needs a new version's entry; each operation binds the form it names (its live parameter_digest recomputed from that form over the same records; the reversal's live binding is compound-actions.test.ts's), accepts an idempotency key exactly where it declares one (refusing one before any decision elsewhere) and carries resolved recipients exactly where it declares them; and the declared resource_match values are exactly those the matcher enforces. Each constraint-extraction clause is witnessed where its constraint is enforced, with the named source set apart from an alternative: max_amount from the invoice record (evaluation-context-bindings) and, for the reversal, from the wire's record (compound-actions); vendors from the store-resolved vendor (token-profile, evaluation-context-bindings) and, for the reversal, the wire's vendor (evaluation-context); requires_action_approval bound to parameter_digest (evaluation-context-bindings); issuance, tenant and classification from the invoice and vendor records and, for list_invoices, each member's (common-constraints-enforcement), the reversal's tenant from the paid vendor's current record (evaluation-context); recipient_domain over every final recipient of the routing and allowed_tools on the dispatched tool (common-constraints-enforcement); time_window on each evaluating component's own clock, over the remote channel, never a time the request carries; and terminal_when on the Mission Issuer's discharge state (resource-contract-pep). Proved by mutation, each alone and each committing the violation: the invoice form dropping a field, the invoice form encoding its amount differently (failing the recorded digest alone), check_transfer binding another form with its decision proceeding, every keyed operation resolving recipients, intake accepting and dropping an undeclared key, the PEP never forwarding a key, the matcher enforcing an undeclared suffix form, the PDP evaluating on a time the request carries, the PEP evaluating the window on another clock, and the PDP not reading the discharge state each fail their witness. The PEP's ordering of a list read's vendor scope is witnessed with two vendors supplied in reverse canonical order: the request carries the canonical scope and commits that normal form's digest, which the Decision Evidence records. Proved by mutation: removing or reversing the sort fails the ordering assertion and, with that assertion removed, the digest assertion alone. D1155: the claimed evaluation-context descriptors are contract material. Version 2026-11-02 names, in each covered operation's evaluation_context_descriptor, the descriptor the claim declares for it, and differs from 2026-10-27 only in its version and those members; the superseded versions carry the descriptors in force while each was current in the deployment's association beside their unchanged bytes, and 2026-10-20, published before the claim, names none. The loader refuses a current version naming another descriptor than the claim, and any version naming one the claim does not publish, of another id, or for an uncovered operation, so a descriptor change needs a new contract version. Proved by mutation: removing each load rule fails its witness. D1197: no disclosed limitation remains (the list-order one is witnessed above), and the owner ruled the row tested. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten. #813, #816 (D877): the Operation Profile change to v16 is published as version 2026-10-27 with its own digest, differing from 2026-10-26 only in its version and profile; 2026-10-26 is not rewritten, and the supported-subset fixture tests check that the three superseded versions stay declared as frozen. D1170: the historical associations are pinned independently of the live claim: vectors/mission-resource-access-subset/payments-contract-descriptor-associations.json freezes them, keyed by each version's contract reference (id, version and digest) and pinned by its own digest; the declared association of each listed version must equal its entry, and no other version declares one (a new version names its descriptors in its committed document). Proved by mutation: 2026-10-27's execute associations replaced by another valid descriptor the claim publishes load, the load guard accepting them, and fail the build check; the same replacement made in the frozen file too fails its pinned digest."
   },
   {
    "id": "runtime.resource-contract.declared-states",
@@ -36659,7 +36684,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
-     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-11-02 current under v16, and 2026-10-27 superseded under v16, 2026-10-26 under v15 and 2026-10-24 under v14, each with a retention (#813; #249, D1155)",
      "level": "unit",
      "surface": "deployment-documentation"
     },
@@ -36903,9 +36928,27 @@
      "name": "the shipped superseded 2026-10-26 version is still performed within its retention (@spec runtime#resource-contract, #813, #816, D877) > a read and a write decided under the 2026-10-26 reference are performed under the retained v15 profile within its retention, and refused before any decision past it (#813, #816, D877)",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > a new approval, pinned to the version naming the live descriptor, is captured, decided and released under it",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > a retained approval, pinned to a superseded version within its retention, is captured, decided and released under the descriptor that version names, never the one the live declaration names now: in its document (2026-11-02) or in the deployment's association beside it (2026-10-27)",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > 2026-10-20, published before the claim, names no descriptor: each covered crossing pinned to it is refused before any decision request, evaluation_context_unresolvable, never captured under another version's, with no effect; a read it covers is still performed",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under a later profile. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses. #813, #816 (D877): the shipped contract is 2026-10-27 (payments-runtime-profile-v16, current), with 2026-10-26 (v15), 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v16 changes no crossing, so the shipped retained v15 profile is every crossing of the live table: the superseded 2026-10-26 version is performed under it, a read and a write decided under the 2026-10-26 reference execute within its retention in both PEP modes and are refused before any decision past it, and an entry pinned to 2026-10-26 performs the reversal under the retained v15. Mutations: R1 (no retained v15) fails the retained-table, within-retention and 2026-10-26 reversal witnesses; R2 (retained v15 without schedule_payment) fails the retained-table and within-retention witnesses; R2b (retained v15 without the reversal) fails the retained-table and 2026-10-26 reversal witnesses; R3 (2026-10-26 retained only until 2026-10-27) fails the within-retention witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under a later profile. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses. #813, #816 (D877): the shipped contract is 2026-10-27 (payments-runtime-profile-v16, current), with 2026-10-26 (v15), 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v16 changes no crossing, so the shipped retained v15 profile is every crossing of the live table: the superseded 2026-10-26 version is performed under it, a read and a write decided under the 2026-10-26 reference execute within its retention in both PEP modes and are refused before any decision past it, and an entry pinned to 2026-10-26 performs the reversal under the retained v15. Mutations: R1 (no retained v15) fails the retained-table, within-retention and 2026-10-26 reversal witnesses; R2 (retained v15 without schedule_payment) fails the retained-table and within-retention witnesses; R2b (retained v15 without the reversal) fails the retained-table and 2026-10-26 reversal witnesses; R3 (2026-10-26 retained only until 2026-10-27) fails the within-retention witness. D1155: the evaluation-context descriptor is contract material, so the PEP captures, and the executing PEP releases, under the descriptor the resolved contract names: a new approval under the version naming the live descriptor, a retained approval (2026-11-02 in its bytes, 2026-10-27 in the deployment's association beside them) under its own though the live declaration names another, and a version naming none (2026-10-20) refuses each covered crossing before any decision rather than borrowing the live one. Proved by mutation: capturing and validating under the live declaration, or comparing the committed descriptor with it at release, fails the retained witness; a version naming none borrowing the live descriptor fails the 2026-10-20 witness."
   },
   {
    "id": "runtime.resource-contract.approval-bound-to-reference",
@@ -42114,9 +42157,15 @@
      "name": "MAS pilot: a joined credential under a contract-stating scope value works end to end (@spec authority-server#mission-join, resource-access#resource-contract, #249, D967) > denies resource_contract_drift, performing nothing, the contract-stating value against a Mission approved with no reference",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot: a joined credential under a contract-stating scope value works end to end (@spec authority-server#mission-join, resource-access#resource-contract, #249, D967) > denies resource_contract_drift, performing nothing, a credential whose value states the other version: .2026-11-02 against the Mission pinned to 2026-10-27, and .2026-10-27 against the Mission pinned to 2026-11-02",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Absent while the entry references a contract, unequal to the entry's though it resolves, unequal to the credential's, and not resolving: each is denied resource_contract_drift with no permit. Proved by relying on the first matched entry whatever its reference, and by keeping credential entries under another reference. Re-proved under #1375's narrowing: judging only the first applicable entry's reference fails the witness that relies on the applicable entry whose reference equals the request's. #1847 (D989): a joined credential's bound and the Mission entry agree only on the same contract, absence included: a pinned entry with an unpinned bound, an unpinned entry with a pinned bound, and an entry and a bound on two supported versions are each denied resource_contract_drift whichever of the two references the request presents, and an unpinned entry with an unpinned bound permits (control). Proved by mutation, each alone: ignoring the Mission entry's reference when deciding whether a contract applies, or ignoring the credential's reference, fails the witness. C.3a (#249, D967 test 4, D1071): through the MAS pilot's gateway (live OpenFGA), a joined credential under a legacy scope value against a Mission approved against the contract, and one under a contract-stating value against an unpinned Mission, are each denied resource_contract_drift, while the contract-stating value against the pinned Mission is permitted under that contract. Proved by skipping the PDP's contract step, which fails both denials."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Absent while the entry references a contract, unequal to the entry's though it resolves, unequal to the credential's, and not resolving: each is denied resource_contract_drift with no permit. Proved by relying on the first matched entry whatever its reference, and by keeping credential entries under another reference. Re-proved under #1375's narrowing: judging only the first applicable entry's reference fails the witness that relies on the applicable entry whose reference equals the request's. #1847 (D989): a joined credential's bound and the Mission entry agree only on the same contract, absence included: a pinned entry with an unpinned bound, an unpinned entry with a pinned bound, and an entry and a bound on two supported versions are each denied resource_contract_drift whichever of the two references the request presents, and an unpinned entry with an unpinned bound permits (control). Proved by mutation, each alone: ignoring the Mission entry's reference when deciding whether a contract applies, or ignoring the credential's reference, fails the witness. C.3a (#249, D967 test 4, D1071): through the MAS pilot's gateway (live OpenFGA), a joined credential under a legacy scope value against a Mission approved against the contract, and one under a contract-stating value against an unpinned Mission, are each denied resource_contract_drift, while the contract-stating value against the pinned Mission is permitted under that contract. Proved by skipping the PDP's contract step, which fails both denials. D1170: a joined credential whose value states the other contract version, .2026-11-02 against a Mission pinned to 2026-10-27 and .2026-10-27 against one pinned to 2026-11-02, is denied resource_contract_drift with nothing performed. Proved by mutation: mapping the retained value to the current contract lets it through on the current Mission."
   },
   {
    "id": "authzen.context-resource-contract.binding-and-cache-key",
@@ -52879,9 +52928,21 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > past the superseded version's retained_until, a crossing pinned to it is refused before any decision request, resource_contract_unresolvable, with no effect",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot crossing 2026-10-27's retention boundary without a restart: permitted before it, refused after it with no effect (@spec runtime#resource-contract, resource-access#resource-contract, #249, D1185) > permits the read under the retained value before the boundary, then refuses the same credential after it, before any decision and with no effect",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal. #1693 (D879): a reversal under an entry pinned to 2026-10-24, whose retained v14 profile omits the reversal, signs one Refusal Record resource_contract_unresolvable naming payments:payment.reverse, with no decision request, no suppressed Execution Evidence and no reversal entry. Mutation P1 fails it."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal. #1693 (D879): a reversal under an entry pinned to 2026-10-24, whose retained v14 profile omits the reversal, signs one Refusal Record resource_contract_unresolvable naming payments:payment.reverse, with no decision request, no suppressed Execution Evidence and no reversal entry. Mutation P1 fails it. D1155: a crossing pinned to a superseded version past its retained_until is refused before any decision request with a Refusal Record resource_contract_unresolvable and no effect. Proved by mutation: resolving past the retention performs it. D1185: past a superseded version's retention, a joined credential naming it is refused before any decision request with resource_contract_unresolvable and no effect, including in a running pilot crossing the retention boundary without a restart."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -73387,9 +73448,21 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot past 2026-10-27's retention: the shipped mapping loads, and its .2026-10-27 value authorizes nothing (@spec resource-access#resource-contract, runtime#resource-contract, #249, D1185) > refuses at use, with no effect, a credential under the lapsed value against the Mission pinned to 2026-10-27",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot crossing 2026-10-27's retention boundary without a restart: permitted before it, refused after it with no effect (@spec runtime#resource-contract, resource-access#resource-contract, #249, D1185) > permits the read under the retained value before the boundary, then refuses the same credential after it, before any decision and with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply. #1693 (D879): the payments resource no longer performs v14's reversal, so an entry pinned to 2026-10-24 authorizes no reversal: refused resource_contract_unresolvable before any decision request, with zero effects, though the same entry still performs v14's other operations. Mutation P1 (v14 mapped to the live table) performs the reversal and fails it."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply. #1693 (D879): the payments resource no longer performs v14's reversal, so an entry pinned to 2026-10-24 authorizes no reversal: refused resource_contract_unresolvable before any decision request, with zero effects, though the same entry still performs v14's other operations. Mutation P1 (v14 mapped to the live table) performs the reversal and fails it. D1185: a reference to a version superseded past its retention authorizes nothing at use, judged against the current clock: a joined credential under the lapsed .2026-10-27 scope value is refused, before any decision and with no effect, in a pilot composed after the retention ended, and in a running pilot that permitted it just before the boundary and refuses the same credential just after it, never restarted. The mapping naming it still loads (the load check is independent of the clock). Proved by mutation: resolving a superseded version past its retention lets both reads through."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -77732,7 +77805,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
    "profiles": [],
    "surface": "governance-record",
@@ -77763,7 +77836,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice. #1470 slice 2 (D626): ceiling_drawdown records."
+   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice. #1470 slice 2 (D626): ceiling_drawdown records. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "approval-governance.record.service-authority-logic-version",
@@ -78469,7 +78542,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
    "profiles": [],
    "surface": "deployment-documentation",
@@ -78480,7 +78553,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's profile clause, scoped to a profile that adopts the Contract; stated, as Governance's conformance sentence carries no keyword. An obligation on a profile's text, which no runtime test witnesses; it stays todo."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's profile clause, scoped to a profile that adopts the Contract; stated, as Governance's conformance sentence carries no keyword. An obligation on a profile's text, which no runtime test witnesses; it stays todo. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "approval-governance.contract.activating-issuer-conforms",
@@ -78491,7 +78564,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
    "profiles": [],
    "surface": "derivation",
@@ -78593,7 +78666,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's issuer clause, its witnesses and its gaps, scoped to an issuer activating under a basis that adopts the Contract (all four implemented bases do); stated, as Governance's conformance sentence carries no keyword. Predecessor gaps, unchanged: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the Contract's own partial rows carry over."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's issuer clause, its witnesses and its gaps, scoped to an issuer activating under a basis that adopts the Contract (all four implemented bases do); stated, as Governance's conformance sentence carries no keyword. Predecessor gaps, unchanged: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the Contract's own partial rows carry over. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",

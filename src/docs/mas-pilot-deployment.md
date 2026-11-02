@@ -59,13 +59,15 @@ the members MAS §mapping-contract lists:
   payments resource; a value it does not cover maps to nothing. The shipped
   contract maps the legacy values `invoices.read`, `vendors.read` and
   `remit.send`, which state no contract, and beside them
-  `invoices.read.2026-10-27`, `vendors.read.2026-10-27` and
-  `remit.send.2026-10-27`, which state the current payments contract
-  (version 2, #249). The payments resource requires a reference, so a
-  Mission approved now carries the current contract's (D989), and a
-  credential joins it only under a value stating that contract; a legacy
-  value keeps its meaning and joins only a Mission approved before the
-  cutover (`docs/payments-contract-cutover.md`).
+  `invoices.read.2026-11-02`, `vendors.read.2026-11-02` and
+  `remit.send.2026-11-02`, which state the current payments contract, and
+  the `.2026-10-27` values, which state the superseded `2026-10-27`
+  (version 3, #249, D1155). The payments resource requires a reference, so
+  a Mission approved now carries the current contract's (D989), and a
+  credential joins it only under a value stating that contract; a
+  `.2026-10-27` value joins a Mission approved under that version within
+  its retention, and a legacy value keeps its meaning and joins only a
+  Mission approved before the cutover (`docs/payments-contract-cutover.md`).
 - **Delegate policy:** the Mission clients rule 4 admits as delegates, with a
   depth ceiling.
 - **Client-instance identity:** not supported; the loader refuses a contract

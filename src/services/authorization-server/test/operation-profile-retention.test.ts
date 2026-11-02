@@ -127,7 +127,8 @@ function requiring(actions: readonly string[], base: ResourceContractDeclaration
 
 const MISSING = { ok: false, reason: "the resource requires a resource_contract reference for this operation" };
 const CURRENT = VERSIONS.find((v) => v.state === "current");
-const OLDER = VERSIONS.find((v) => v.state === "superseded");
+/** The newest supported older version naming another Operation Profile than the current one (2026-10-27 names the live v16, #249, D1155). */
+const OLDER = VERSIONS.find((v) => v.state === "superseded" && v.operation_profile !== CURRENT?.operation_profile);
 
 describe("the TAS refuses a missing reference where the challenged operation requires one, at admission and at completion (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, D1071)", () => {
   it("refuses an unpinned entry for an operation the resource requires a reference for, and admits an unpinned read it does not", () => {

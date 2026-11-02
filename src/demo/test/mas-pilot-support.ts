@@ -61,11 +61,13 @@ export const READ_ACTIONS = ["payments:invoice.read", "payments:invoice.list", "
  * and a joined credential's authority covers it only under a value whose
  * mapping states the same contract. The legacy values keep their meaning, a
  * mapping that states no contract, which joins only a Mission approved without
- * one.
+ * one. The values state the current contract, 2026-11-02 (#249, D1155); the
+ * 2026-10-27 values stay recorded, joining a Mission approved under that
+ * version within its retention.
  */
-export const INVOICES_READ = "invoices.read.2026-10-27";
-export const VENDORS_READ = "vendors.read.2026-10-27";
-export const REMIT_SEND = "remit.send.2026-10-27";
+export const INVOICES_READ = "invoices.read.2026-11-02";
+export const VENDORS_READ = "vendors.read.2026-11-02";
+export const REMIT_SEND = "remit.send.2026-11-02";
 
 export interface Credential {
   token: string;
@@ -103,11 +105,11 @@ export async function composeRecorded(
 export function approve(
   pilot: MasPilot,
   sub: string,
-  opts: { actions?: string[]; clientId?: string; delegable?: string; label: string },
+  opts: { actions?: string[]; clientId?: string; delegable?: string; label: string; expiresAt?: string },
 ): string {
   const actions = opts.actions ?? READ_ACTIONS;
   const intent = validateMissionIntent(
-    JSON.stringify({ goal: `MAS pilot: ${opts.label}`, target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
+    JSON.stringify({ goal: `MAS pilot: ${opts.label}`, target_resources: [CANONICAL_RESOURCE], expires_at: opts.expiresAt ?? LATER_EXPIRES_AT }),
   );
   return pilot.kernel.approve({
     intent,
