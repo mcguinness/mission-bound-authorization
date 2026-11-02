@@ -127,8 +127,8 @@
     "content_sha256": "304a0b321defc5907bed9769afc8f5a7fb0a8ec1cc70466cabf72a0f9c3c15ee"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
-    "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
-    "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
+    "revision": "7e7de3e7852be07ada7a4451b25df5365832f7a6",
+    "content_sha256": "955750c52b7edb71acf93222f6d4ae565a1f93077f088246c9eed4ff0df5c015"
    },
    "draft-mcguinness-mission-aauth-management.md": {
     "revision": "940972b9823bf482819c18177c7ab8dfd935a391",
@@ -92278,6 +92278,28 @@
    "notes": "#901 review: make the AS-binding check explicit in the optional Submission Evidence companion. No supported evidence type currently exercises this check; verification must include absent, wrong-AS, invalid, and valid bindings when a concrete type is implemented."
   },
   {
+   "id": "submission-evidence.verification-bounds.cost-bounded",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "verification-bounds",
+   "text": "the AS MUST bound the verification cost a submission can impose (for example, the number of signature verifications it performs), refusing a submission that exceeds the bound with the `invalid_request` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission whose evidence verification would exceed the configured verification-work bound, beyond the binding's size and count bounds, is refused invalid_request before the excess work is done"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1962 (D1119): no row covered this clause; the reference bounds evidence size and count only. Todo with #1962, which lands before the real request-provenance verifier is enabled in the reference composition."
+  },
+  {
    "id": "request-provenance.trust.no-header-key",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "trust-configuration",
@@ -92480,7 +92502,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119 (Q3): a `presenter` carrying `cnf` where the exchange established no confirmation key does not agree; no key is inferred from the assertion."
   },
   {
    "id": "request-provenance.verification.declared-bounds",
@@ -92530,7 +92552,7 @@
    "id": "request-provenance.replay.release-on-refusal",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "When the AS refuses the containing submission for any reason, including another evidence entry failing, it releases the reservation.",
+   "text": "When the AS refuses the containing submission before accepting it, for any reason, including another evidence entry failing, it releases the reservation.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -92546,7 +92568,95 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119: release applies only to a refusal before acceptance; a refusal after it releases nothing (`request-provenance.replay.no-release-after-acceptance`)."
+  },
+  {
+   "id": "request-provenance.replay.accepted-no-reverification",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "Later steps of an accepted submission, such as rendering it for approval, the approval decision, or a deferred activation, do not verify the assertion again.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.acceptance-record-required",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A step that finds no acceptance record, or one that does not match, refuses the submission.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a later step of an accepted submission whose acceptance record is missing, or does not match the submission's intended AS, exact Intent, established presenter or unchanged evidence entry, refuses the submission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.expiry-after-acceptance",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "The assertion's `exp`, or the capture passing the maximum capture age, after acceptance does not refuse the accepted submission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an accepted submission whose assertion expires, or whose capture passes the maximum capture age, before its approval completes is not refused for that reason, while its own pending-operation lifetime still applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.no-release-after-acceptance",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A refusal after acceptance, such as an approval denial, releases nothing, so an accepted assertion is never reusable.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "replay",
+   "observation": {
+    "normative": "after an accepted submission is refused later, for example by an approval denial, a new submission presenting the same assertion is refused as replay"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
   },
   {
    "id": "request-provenance.replay.committed-refused",
@@ -92596,7 +92706,7 @@
    "id": "request-provenance.replay.creation-recovery-exact-retry",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it.",
+   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -92791,6 +92901,28 @@
    "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
   },
   {
+   "id": "request-provenance.signing.revision-new-capture",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "signing",
+   "text": "The intake issues it from the same capture only while the capture is within the deployment's maximum capture age; after that, a new capture is needed",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the intake refuses to issue an assertion for a revised Intent from a capture older than the deployment's maximum capture age"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits, answering the working-group comment of 2026-10-08. Todo until the intake library (#939 slice 1) witnesses it."
+  },
+  {
    "id": "request-provenance.request-digest.construction",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "request-digest",
@@ -92811,6 +92943,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+  },
+  {
+   "id": "request-provenance.audit.departure-claim-association",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "audit",
+   "text": "Where a deployment records a claim about how far an Intent departs from the captured instruction, it MUST associate that claim with the capture's `request_digest` in access-controlled audit storage, so that an authorized audit holding the capture can test the claim.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a deployment that records a departure claim keeps it with the capture's request_digest in access-controlled audit storage, never in the assertion or the recorded facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): the working-group comment of 2026-10-12. No reference deployment records a departure claim; todo."
   },
   {
    "id": "expansion.restoration.discharge-disclosed",
