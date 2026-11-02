@@ -8,7 +8,9 @@
  * that clock instead.
  */
 export function daysFromNow(days: number): string {
-  return new Date(Math.ceil(Date.now() / 1000) * 1000 + days * 86_400_000).toISOString().replace(".000Z", "Z");
+  return new Date(Math.ceil(Date.now() / 1000) * 1000 + days * 86_400_000)
+    .toISOString()
+    .replace(".000Z", "Z");
 }
 
 /** An expiry 30 days ahead: one that falls before the default fixture expiry. */
