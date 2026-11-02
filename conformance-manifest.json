@@ -284,6 +284,7 @@
    "core.standing-consent-recency",
    "core.governance-record",
    "approval-governance.governed-policy",
+   "approval-governance.basis-contract",
    "deferred-approval.policy-completion",
    "deferred-approval.deferral",
    "template.dispatch",
@@ -7887,12 +7888,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -7938,7 +7936,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
@@ -7948,13 +7946,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -7989,7 +7987,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.adjudication-direct-human",
@@ -8091,12 +8089,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -8131,7 +8126,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2: the local note named only the governed path; ceiling_drawdown also populates adjudication (kind policy), and its endpoint test is cited. #1915 stage 2 mutation proof: recording the governed_policy adjudication kind as human fails \"records every governed_policy approval_basis member\". #1928 (D1064): the ceiling_drawdown record gate (assertDrawdownRecord) refuses a basis whose adjudication.kind is not policy before reading adjudication.policy, at the commit-time preparation and in the re-check; witnessed with a recognized positive control and kinds human, service, an unrecognized kind and none, and mutation-checked."
+   "notes": "New member (#701, revised per #716 review); OPTIONAL in this revision. Demonstrates that a Dispatcher (Template dispatch's activation_actor) or a requesting parent Agent (policy drawdown's activation_actor) is never reportable as the adjudicator, and that the Role Mapping table now names the exact policy per scenario (Template's dispatch_policy, distinct from the template's own id/version). #1185 implementation: governed_policy is the one standing-consent basis that populates adjudication (Template dispatch and policy drawdown do not), and its witness asserts kind policy naming the deciding policy, not the activation_actor. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2: the local note named only the governed path; ceiling_drawdown also populates adjudication (kind policy), and its endpoint test is cited. #1915 stage 2 mutation proof: recording the governed_policy adjudication kind as human fails \"records every governed_policy approval_basis member\". #1928 (D1064): the ceiling_drawdown record gate (assertDrawdownRecord) refuses a basis whose adjudication.kind is not policy before reading adjudication.policy, at the commit-time preparation and in the re-check; witnessed with a recognized positive control and kinds human, service, an unrecognized kind and none, and mutation-checked. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-policy-reference",
@@ -8142,12 +8137,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
@@ -8176,7 +8168,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: leaving dispatch_policy out of the template_hash body fails \"commits the Dispatch Policy's content digest in template_hash\"."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: leaving dispatch_policy out of the template_hash body fails \"commits the Dispatch Policy's content digest in template_hash\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-policy-verify",
@@ -8187,12 +8179,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -8257,7 +8246,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: dropping the digest comparison in verifiedActivationPolicy fails six cited tests across all three arms."
+   "notes": "#985 (D219); reference implementation (template dispatch, child creation). Progressive arm: #1017, proved by falling back to the registry's edited snapshot. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: dropping the digest comparison in verifiedActivationPolicy fails six cited tests across all three arms. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-policy-retain",
@@ -8268,12 +8257,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
@@ -8350,7 +8336,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged."
+   "notes": "#985 (D219, D413); reference implementation (template dispatch, child creation). Retention and Template/Child witnesses: impl/985-policy-snapshot-retention. Progressive remains with #1017. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.standing-consent.activation-event-id",
@@ -8361,12 +8347,9 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
@@ -8400,7 +8383,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: giving each instance the template's approval_event_id fails \"two Dispatches under one template consent create two Missions\"."
+   "notes": "Witnessed on the Template Dispatch basis: two Dispatches under one template consent create two Missions with distinct approval_event_ids, and a retry returns the committed Mission and its value. Proved by deriving approval_event_id from dispatch_event_id again (the distinct-activations test fails) and by disabling recovery (the retry test fails). Child Delegation's policy_drawdown is witnessed by its own row; Progressive ceiling_drawdown is witnessed at the token endpoint (#1017): distinct drawdowns under one ceiling consent record distinct values, and a retry recovers the committed one. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: giving each instance the template's approval_event_id fails \"two Dispatches under one template consent create two Missions\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.adjudication-governance-record-override",
@@ -8861,12 +8844,9 @@
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "governance-decision",
    "assertion": "output-bound",
    "observation": {
@@ -8883,7 +8863,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that appends a model output's add entries fails \"never widen it\" (the governed-policy-approval.ts:1268 backstop alone is unreachable)."
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: an evaluator that appends a model output's add entries fails \"never widen it\" (the governed-policy-approval.ts:1268 backstop alone is unreachable). Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
@@ -9696,12 +9676,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9729,7 +9706,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation` rename, re-run per builder at 68f30fd4, fails \"records a template basis\", \"records a policy_drawdown basis\" and \"completes in the token-exchange response\" respectively."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation` rename, re-run per builder at 68f30fd4, fails \"records a template basis\", \"records a policy_drawdown basis\" and \"completes in the token-exchange response\" respectively. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-activation-actor-required",
@@ -9740,12 +9717,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9779,7 +9753,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation_actor` rename, re-run per builder at 68f30fd4, fails each builder's witness, the governed_policy one included."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `activation_actor` rename, re-run per builder at 68f30fd4, fails each builder's witness, the governed_policy one included. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-root-commitment-required",
@@ -9790,12 +9764,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9823,7 +9794,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `root_commitment` rename, re-run per builder at 68f30fd4, fails each builder's witness."
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. #1915 stage 2 mutation proof: the recorded `root_commitment` rename, re-run per builder at 68f30fd4, fails each builder's witness. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-trace-to-human",
@@ -9834,12 +9805,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9891,7 +9859,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Witnessed on all four bases the reference implements (template, policy_drawdown, ceiling_drawdown, governed_policy). Gap outside the observation: a child of a standing-consent parent inherits consent_principal in code, and only its approved_at is asserted. #1915 stage 2 mutation proof: recording the Dispatcher as a template instance's consent_principal fails \"records the TEMPLATE approver as the human of record\" and \"records a template basis\"."
+   "notes": "#1915 stage 2 (D1056). Witnessed on all four bases the reference implements (template, policy_drawdown, ceiling_drawdown, governed_policy). Gap outside the observation: a child of a standing-consent parent inherits consent_principal in code, and only its approved_at is asserted. #1915 stage 2 mutation proof: recording the Dispatcher as a template instance's consent_principal fails \"records the TEMPLATE approver as the human of record\" and \"records a template basis\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-approval-instant",
@@ -9902,12 +9870,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -9959,7 +9924,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). The child tests distinguish the consent instant from the activation instant on every basis, through two generations. #1915 stage 2 mutation proof: setting a child's approved_at to its Parent's created_at fails four child-approved-at cases (ceiling_drawdown, direct Parent, governed_policy, template)."
+   "notes": "#1915 stage 2 (D1056). The child tests distinguish the consent instant from the activation instant on every basis, through two generations. #1915 stage 2 mutation proof: setting a child's approved_at to its Parent's created_at fails four child-approved-at cases (ceiling_drawdown, direct Parent, governed_policy, template). Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.standing-consent-approved-at-required",
@@ -9970,12 +9935,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -10009,7 +9971,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Sibling of the activation, activation_actor and root_commitment REQUIRED rows. The member's verify sentence stays core.approval-basis.approved-at-standing-consent (partial). #1915 stage 2 mutation proof: renaming the template basis's approved_at key fails \"records a template basis\"."
+   "notes": "#1915 stage 2 (D1056). Sibling of the activation, activation_actor and root_commitment REQUIRED rows. The member's verify sentence stays core.approval-basis.approved-at-standing-consent (partial). #1915 stage 2 mutation proof: renaming the template basis's approved_at key fails \"records a template basis\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.policy-adjudication-policy-required",
@@ -10020,12 +9982,9 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -10059,7 +10018,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Two bases populate adjudication (governed_policy, ceiling_drawdown); with a separate evaluator, the policy is the evaluator, not the root. #1915 stage 2 mutation proof: dropping version from the ceiling_drawdown adjudication.policy fails \"completes in the token-exchange response\" and \"drawdown_count counts committed policy-adjudicated drawdowns\"."
+   "notes": "#1915 stage 2 (D1056). Two bases populate adjudication (governed_policy, ceiling_drawdown); with a separate evaluator, the policy is the evaluator, not the root. #1915 stage 2 mutation proof: dropping version from the ceiling_drawdown adjudication.policy fails \"completes in the token-exchange response\" and \"drawdown_count counts committed policy-adjudicated drawdowns\". Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.recency-evaluation-instant",
@@ -10069,13 +10028,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
@@ -10109,7 +10068,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Witnessed for the creation commit (governed_policy, recorded ceiling drawdown). No witness distinguishes a deferred flow's completion commit from its start, and none shows that a later ceiling change or elapsed time leaves an active Mission active."
+   "notes": "#1915 stage 2 (D1056). Witnessed for the creation commit (governed_policy, recorded ceiling drawdown). No witness distinguishes a deferred flow's completion commit from its start, and none shows that a later ceiling change or elapsed time leaves an active Mission active. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.recency-skew-refusal",
@@ -10119,13 +10078,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -10153,7 +10112,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Both sides of the boundary are witnessed for governed_policy, the refusal for the recorded ceiling drawdown. The template standing-payment gate has the check in code with no test, and no test refuses a skew allowance above its bound."
+   "notes": "#1915 stage 2 (D1056). Both sides of the boundary are witnessed for governed_policy, the refusal for the recorded ceiling drawdown. The template standing-payment gate has the check in code with no test, and no test refuses a skew allowance above its bound. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.recency-per-class-strictest",
@@ -10163,13 +10122,13 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "capabilities",
+    "all_of": [
+     "approval-governance.basis-contract",
+     "core.standing-consent-recency"
+    ]
    },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
@@ -10233,7 +10192,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). No case makes the consumption bound's class the strictest, so none shows it takes part in the minimum. The standing-payment witnesses run only under the opt-in capability (D830)."
+   "notes": "#1915 stage 2 (D1056). No case makes the consumption bound's class the strictest, so none shows it takes part in the minimum. The standing-payment witnesses run only under the opt-in capability (D830). Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "core.approval-basis.approved-at-absent-direct",
@@ -77527,7 +77486,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
    "profiles": [],
    "surface": "governance-record",
@@ -77558,7 +77517,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice. #1470 slice 2 (D626): ceiling_drawdown records."
+   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice. #1470 slice 2 (D626): ceiling_drawdown records. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "approval-governance.record.service-authority-logic-version",
@@ -78264,7 +78223,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
    "profiles": [],
    "surface": "deployment-documentation",
@@ -78275,7 +78234,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's profile clause, scoped to a profile that adopts the Contract; stated, as Governance's conformance sentence carries no keyword. An obligation on a profile's text, which no runtime test witnesses; it stays todo."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's profile clause, scoped to a profile that adopts the Contract; stated, as Governance's conformance sentence carries no keyword. An obligation on a profile's text, which no runtime test witnesses; it stays todo. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "approval-governance.contract.activating-issuer-conforms",
@@ -78286,7 +78245,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "core.standing-consent"
+    "capability": "approval-governance.basis-contract"
    },
    "profiles": [],
    "surface": "derivation",
@@ -78388,7 +78347,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's issuer clause, its witnesses and its gaps, scoped to an issuer activating under a basis that adopts the Contract (all four implemented bases do); stated, as Governance's conformance sentence carries no keyword. Predecessor gaps, unchanged: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the Contract's own partial rows carry over."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's issuer clause, its witnesses and its gaps, scoped to an issuer activating under a basis that adopts the Contract (all four implemented bases do); stated, as Governance's conformance sentence carries no keyword. Predecessor gaps, unchanged: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the Contract's own partial rows carry over. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",
