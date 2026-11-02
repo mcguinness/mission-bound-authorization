@@ -590,7 +590,7 @@ audience is its own token endpoint, which {{Section 3 of RFC7523}}
 permits, rather than a consuming Authorization Server's issuer
 identifier.
 
-An authorization code MUST NOT be used to convey the child's grant: an
+An authorization code MUST NOT be the child's grant: an
 authorization code is redeemable by the client that obtained it, which
 is the parent, not the child. The child-bound assertion is redeemable
 only by the child actor it names, so conveying it through the parent
@@ -704,8 +704,9 @@ handoff.
   fingerprint ({{creation-idempotency}}).
 - The pushed authorization request carries no `mission_intent`, no
   `authorization_details`, and no `child_actor`. The Mission Issuer
-  takes the parent, Intent, `child_actor`, possession proof, and actor
-  context only from the recorded operation, and refuses with
+  takes the parent, Intent, proposal, Intent Submission Evidence,
+  `child_actor`, the parent's possession proof (the `subject_token`),
+  and actor context only from the recorded operation, and refuses with
   `invalid_request` a pushed request that supplies any of them with a
   different value, accepting an equal `parent` as a cross-check.
 - Redemption of the authorization code verifies the code's PKCE or
@@ -717,18 +718,20 @@ handoff.
   {{request-processing}} apply them, against the parent as it stands
   at the commit and with this child counted once, together with the
   re-verifications of step 10. A failure refuses the redemption with
-  `invalid_grant` and the corresponding denial reason
-  ({{denial-reasons}}), and creates no child.
+  `invalid_grant` and, where one applies, the corresponding denial
+  reason ({{denial-reasons}}), and creates no child.
 - A successful redemption returns the success response of
   {{grant-type}}: the child-bound JWT authorization grant, which only
   the child actor redeems, under its own client
-  ({{child-client-identity}}). The authorization code is the
-  parent's, and its redemption gives the parent no token of its own.
+  ({{child-client-identity}}). The parent's client obtains and redeems
+  the authorization code; the redemption gives the parent no token of
+  its own.
 
 Completion creates a Child Mission and supersedes nothing: the
 creation commit takes the place of the expansion profile's successor
 activation in the handoff's rules, without its predecessor
-supersession, and the completion leaves the Parent Mission unchanged.
+supersession, and the completion leaves the Parent Mission's state and
+authority unchanged.
 
 ## Protocol Flow {#protocol-flow}
 
@@ -1066,8 +1069,11 @@ accompanies `invalid_request` on the child-creation exchange
 ({{Section 2.2.2 of RFC8693}}) and `invalid_grant` on the poll or code
 redemption that completes a deferred or interactive creation;
 `delegation_not_permitted`, `child_actor_not_allowed`,
-`not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`;
-and `policy_denied` accompanies `access_denied`. In an error response
+`not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`
+on the child-creation exchange and `invalid_grant` on the code
+redemption that completes an interactive creation
+({{interactive-completion}}); and `policy_denied` accompanies
+`access_denied`. In an error response
 body the symbolic reason rides, alongside the OAuth `error` member, in
 the `mission_denial_reason` member, the shared adjudication-denial
 carrier defined and registered by the expansion profile
@@ -2520,7 +2526,9 @@ apply unchanged.
   through PAR. Code redemption re-verifies the parent's state,
   authority, and fan-out controls before the creation commit and
   returns the child-bound grant; nothing is superseded. Creation
-  recovery names the continuation (#1130).
+  recovery names the continuation. An authorization code is never the
+  child's grant, and the step 6 to 8 denial reasons accompany
+  `invalid_grant` on that code redemption (#1130).
 
 - Mission Record Requirements no longer list the child's integrity
   anchors, which the OAuth binding makes implied members; the

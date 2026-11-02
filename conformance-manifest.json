@@ -82906,7 +82906,7 @@
    "id": "child-delegation.interactive.recorded-inputs-only",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "interactive-completion",
-   "text": "takes the parent, Intent, `child_actor`, possession proof, and actor context only from the recorded operation, and refuses with `invalid_request` a pushed request that supplies any of them with a different value, accepting an equal `parent` as a cross-check.",
+   "text": "takes the parent, Intent, proposal, Intent Submission Evidence, `child_actor`, the parent's possession proof (the `subject_token`), and actor context only from the recorded operation, and refuses with `invalid_request` a pushed request that supplies any of them with a different value, accepting an equal `parent` as a cross-check.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -82972,7 +82972,7 @@
    "id": "child-delegation.interactive.pre-commit-failure-code",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "interactive-completion",
-   "text": "A failure refuses the redemption with `invalid_grant` and the corresponding denial reason ({{denial-reasons}}), and creates no child.",
+   "text": "A failure refuses the redemption with `invalid_grant` and, where one applies, the corresponding denial reason ({{denial-reasons}}), and creates no child.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
