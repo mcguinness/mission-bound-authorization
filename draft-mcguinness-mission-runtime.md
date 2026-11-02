@@ -1962,6 +1962,14 @@ cannot satisfy every applicable requirement is refused. An exception
 stated for one class or predicate relieves only the requirement it
 names, never one that another applicable predicate imposes.
 
+The classes are ordered only in part: consequential read ranks above
+non-consequential, consequential write above consequential read, and
+each of the three highest classes above consequential write, while
+the three highest classes are not ordered among themselves. An action
+is at or above a class when a class that applies to it is that class
+or ranks above it, and raising, lowering, and a stricter class refer
+to this order.
+
 Classification remains deployment-scoped: each deployment applies the
 predicates to its own actions and systems. The predicates make the
 resulting classifications comparable across deployments and auditable:
@@ -1974,9 +1982,10 @@ on its arguments. Such an argument-dependent operation is classified
 per invocation, from its normalized parameters, by a classifier the
 deployment declares in its Enforcement Scope Statement
 ({{runtime-conformance}}). An invocation the classifier cannot
-affirmatively place MUST be treated as the widest class the
-operation can reach, and the floor below applies to the classifier's
-assignments as to any other: a class the deployment cannot justify
+affirmatively place MUST be treated under every class the operation
+can reach, taking the requirements of each, and the floor below
+applies to the classifier's assignments as to any other: a class the
+deployment cannot justify
 by its predicate is not a basis to leave the invocation ungated.
 
 **Classification floor.** Four rules bound classification:
