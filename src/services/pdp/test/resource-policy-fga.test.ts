@@ -18,7 +18,7 @@ import { relationForAction, stalenessBound } from "../src/policy.js";
 import { clientObject, fgaResourcePolicy, issuerLocalClients, issuerLocalPrincipals, principalObject, type ResourcePolicy } from "../src/resource-policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
-import { withCurrentContractReference } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -127,6 +127,9 @@ const opts = (resourcePolicy: ResourcePolicy, v: MissionView = view()): Evaluate
   stateSourcePlacement: "pep",
   claims: CLAIMS,
   resourcePolicy,
+  // #1994: no operation declarations: a payments operation is decided
+  // under its assigned class alone, with no phase required.
+  operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
 });
 
 d("independent Resource policy against OpenFGA (@spec runtime#input-resource-policy, #828)", () => {
@@ -153,7 +156,13 @@ d("independent Resource policy against OpenFGA (@spec runtime#input-resource-pol
   });
 
   it("a stored entitlement permits; an external revocation of only that entitlement denies resource_policy on the next decision with signed evidence; restoring it permits", async () => {
-    const point = createEphemeralDecisionPoint({ emitterId: RESOURCE, audience: RESOURCE, claims: CLAIMS, resourcePolicy: policyOver(fga) });
+    const point = createEphemeralDecisionPoint({
+      emitterId: RESOURCE,
+      audience: RESOURCE,
+      claims: CLAIMS,
+      resourcePolicy: policyOver(fga),
+      operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
+    });
     const { resourcePolicy: _bound, claims: _claims, ...decisionOptions } = opts(policyOver(fga));
     // A separate administrator connection, attached to the same store: the
     // writer the PDP does not control.

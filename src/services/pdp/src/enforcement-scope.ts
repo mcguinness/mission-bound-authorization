@@ -870,13 +870,15 @@ export function executionCapabilityFindings(input: unknown): EnforcementScopeFin
           if (extra === actionClass) push(member, `additional_action_classes repeats the assigned class "${extra}"`);
           else if (!classes.includes(extra)) push(member, `additional action class "${extra}" is outside mediated_scope.action_classes`);
         }
-        // @spec runtime#classification (#1994, cold read): the reference
-        // resolves the write-keyed duties (the single-use default, the
-        // reversible-write key window, the claim domain's class) from the
-        // assigned class, so it admits further classes only where the
-        // assigned class and every further class are high-consequence, whose
-        // duties it resolves over the set. Any other combination is refused
-        // here rather than decided with a duty dropped or never satisfiable.
+        // @spec runtime#classification (#1994, cold read, owner review): each
+        // declared phase carries its own set, so this restriction reads only
+        // this entry's classes. The reference resolves the write-keyed duties
+        // (the single-use default, the reversible-write key window, the claim
+        // domain's class) from the assigned class, so it admits further
+        // classes only where the assigned class and every further class are
+        // high-consequence, whose duties it resolves over the set. Any other
+        // combination is refused here rather than decided with a duty dropped
+        // or never satisfiable.
         if (
           !HIGH_CONSEQUENCE_CLASSES.includes(String(actionClass)) ||
           !additional.every((extra) => HIGH_CONSEQUENCE_CLASSES.includes(extra))
@@ -977,27 +979,6 @@ export function executionCapabilityFindings(input: unknown): EnforcementScopeFin
       push(member, "claims the enforced Evaluation-Context Binding property with no declared conditional-effect support");
     }
   });
-  // @spec runtime#classification (#1994): a compound operation carries
-  // further classes alike on every phase it declares, so no declared phase
-  // takes a set its sibling phases do not; the PDP refuses a crossing of such
-  // an operation at a phase it does not declare.
-  const furtherByOperation = new Map<string, Array<{ phase: unknown; further: string }>>();
-  for (const raw of declared) {
-    if (!object(raw) || !isActionId(raw.operation)) continue;
-    const further = Array.isArray(raw.additional_action_classes) ? [...new Set(raw.additional_action_classes as string[])].sort() : [];
-    const entries = furtherByOperation.get(raw.operation) ?? [];
-    entries.push({ phase: raw.phase, further: JSON.stringify(further) });
-    furtherByOperation.set(raw.operation, entries);
-  }
-  for (const [operation, entries] of furtherByOperation) {
-    if (!entries.some((e) => e.phase !== undefined) || !entries.some((e) => e.further !== "[]")) continue;
-    if (new Set(entries.map((e) => e.further)).size > 1) {
-      push(
-        "extensions.execution_capabilities",
-        `operation "${operation}" declares phases with different additional_action_classes: every declared phase of a compound operation carries the same further classes`,
-      );
-    }
-  }
   return findings;
 }
 

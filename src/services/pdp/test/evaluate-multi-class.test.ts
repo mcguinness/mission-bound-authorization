@@ -10,8 +10,11 @@
  * class relieves only what it names. The PDP computes the class set from its
  * own operation declarations: `payments:remittance.send` is assigned
  * `external_commitment` (the class the PEP sends) and the shipped statement
- * declares `irreversible_action` beside it. A request whose assigned class
- * differs from the declared one is refused before evaluation.
+ * declares `irreversible_action` beside it; the commit phase of
+ * `payments:payment.execute` and the compensate phase of
+ * `payments:payment.reverse` are assigned `irreversible_action`, with
+ * `external_commitment` beside it. A request whose assigned class differs
+ * from the declared one is refused before evaluation.
  *
  * The clock is fixed at one instant (D1091), and no OpenFGA is needed: the
  * authority check is stubbed to allow, so each assertion is the class rule's.
@@ -55,6 +58,7 @@ const allowFga = { checkWithContext: async () => true } as unknown as Fga;
 const REMIT = "payments:remittance.send";
 const READ = "payments:invoice.read";
 const PAY = "payments:payment.execute";
+const REVERSE = "payments:payment.reverse";
 const HIGH = ["irreversible_action", "external_commitment", "privileged_administration"];
 
 const view = (actions: string[]): MissionView => ({
@@ -111,14 +115,21 @@ const options = (actions: string[], over: Partial<EvaluateOptions> = {}): Evalua
 const AMOUNT = { amount: { amount: "125.00", currency: "USD" }, parameter_digest: "sha-256:remit-pd" };
 
 describe("an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994)", () => {
-  it("declares remittance.send under external_commitment and irreversible_action, and payment.execute's commit phase under its own class alone", () => {
+  it("declares remittance.send under external_commitment and irreversible_action, payment.execute's commit and payment.reverse's compensate under irreversible_action and external_commitment, and the earlier phases under their own class alone", () => {
     expect(applicableActionClasses(RUNTIME_POSTURE, "external_commitment", REMIT)).toEqual([
       "external_commitment",
       "irreversible_action",
     ]);
-    expect(applicableActionClasses(RUNTIME_POSTURE, "irreversible_action", "payments:payment.execute", "commit")).toEqual([
+    expect(applicableActionClasses(RUNTIME_POSTURE, "irreversible_action", PAY, "commit")).toEqual([
       "irreversible_action",
+      "external_commitment",
     ]);
+    expect(applicableActionClasses(RUNTIME_POSTURE, "irreversible_action", REVERSE, "compensate")).toEqual([
+      "irreversible_action",
+      "external_commitment",
+    ]);
+    expect(applicableActionClasses(RUNTIME_POSTURE, "consequential_write", PAY, "prepare")).toEqual(["consequential_write"]);
+    expect(applicableActionClasses(RUNTIME_POSTURE, "consequential_read", PAY, "preflight")).toEqual(["consequential_read"]);
   });
 
   it("refuses remittance.send on a 45-second-old observation: the irreversible class's 30-second bound applies, although 60 seconds is the external-commitment bound", async () => {
@@ -229,21 +240,16 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
     expect(assignedClassConflicts(RUNTIME_POSTURE.extensions?.execution_capabilities ?? [], "external_commitment", REMIT)).toBe(false);
   });
 
-  it("refuses phase_invalid, before evaluation, a phase on remittance.send, which the declarations name without one; an undeclared phase of a compound action still decides", async () => {
-    const refusal = await evaluate(
-      request(REMIT, "external_commitment", 0, { ...AMOUNT, action_phase: "commit" }),
-      options([REMIT]),
-    ).then(
-      () => undefined,
-      (e: unknown) => e,
-    );
-    expect(refusal).toBeInstanceOf(DecisionRequestRefused);
-    expect((refusal as DecisionRequestRefused).denial_reason).toBe("phase_invalid");
+  it("refuses phase_invalid, before evaluation, a phase on remittance.send, which the declarations name without one; an undeclared preflight of a compound action decides under its assigned class alone", async () => {
+    refusedAs(await outcomeOf(request(REMIT, "external_commitment", 0, { ...AMOUNT, action_phase: "commit" })), "phase_invalid", "commit");
     const preflight = await evaluate(
-      request("payments:payment.execute", "consequential_read", 0, { action_phase: "preflight" }),
-      options(["payments:payment.execute"]),
+      request(PAY, "consequential_read", 0, { ...AMOUNT, action_phase: "preflight" }),
+      options([PAY], { evidence: emitter() }),
     );
-    expect(preflight.context).toHaveProperty("decision_id");
+    expect(preflight.decision).toBe(true);
+    const record = preflight.context.decision_evidence as DecisionEvidenceObject;
+    expect(record.action_class).toBe("consequential_read");
+    expect(record).not.toHaveProperty("action_classes");
   });
 
   it("refuses at load a further class beside an assigned class that is not high-consequence, and a further class that is not", () => {
@@ -262,7 +268,7 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
     expect(() => loadRuntimePosture(withFurther(REMIT, ["irreversible_action"]))).not.toThrow();
   });
 
-  it("refuses at load a compound operation whose declared phases carry different further classes; a phased operation every declared phase of which carries the same set loads", () => {
+  it("loads further classes per declared phase: commit and compensate carry external_commitment while prepare carries none, and a further class on the lower-class prepare phase is refused", () => {
     type Entry = { operation: string; phase?: string; action_class: string; additional_action_classes?: string[] };
     const withFurther = (operation: string, phase: string, further: string[]) => {
       const statement = structuredClone(RUNTIME_SCOPE_CONFIG) as { extensions: { execution_capabilities: Entry[] } };
@@ -271,14 +277,13 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
       entry.additional_action_classes = further;
       return statement;
     };
-    expect(() => loadRuntimePosture(withFurther("payments:payment.execute", "commit", ["external_commitment"]))).toThrow(
-      "every declared phase of a compound operation carries the same further classes",
-    );
-    expect(() => loadRuntimePosture(withFurther("payments:payment.reverse", "compensate", ["external_commitment"]))).not.toThrow();
+    const shipped = loadRuntimePosture(structuredClone(RUNTIME_SCOPE_CONFIG));
+    expect(applicableActionClasses(shipped, "irreversible_action", PAY, "commit")).toEqual(["irreversible_action", "external_commitment"]);
+    expect(applicableActionClasses(shipped, "consequential_write", PAY, "prepare")).toEqual(["consequential_write"]);
+    expect(() => loadRuntimePosture(withFurther(PAY, "prepare", ["external_commitment"]))).toThrow("high-consequence");
   });
 
-  it("refuses phase_invalid, before evaluation, a phase a compound operation with further classes does not declare, or no phase; a declared phase decides", async () => {
-    const PAY = "payments:payment.execute";
+  it("refuses phase_invalid, before evaluation, an effect-bearing phase a compound operation with further classes does not declare, or no phase; an undeclared preflight and a declared phase decide", async () => {
     const declarations = {
       operationDeclarations: [
         {
@@ -289,18 +294,16 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
         } as unknown as ExecutionCapabilityDeclaration,
       ],
     };
-    const refusalOf = (req: EvaluationRequest) =>
-      evaluate(req, options([PAY], declarations)).then(
-        () => undefined,
-        (e: unknown) => e,
-      );
-    for (const extra of [{ action_phase: "preflight" }, {}]) {
-      const refusal = await refusalOf(request(PAY, "consequential_read", 0, extra));
-      expect(refusal, JSON.stringify(extra)).toBeInstanceOf(DecisionRequestRefused);
-      expect((refusal as DecisionRequestRefused).denial_reason).toBe("phase_invalid");
+    for (const [label, extra] of [
+      ["no phase", AMOUNT],
+      ["prepare", { ...AMOUNT, action_phase: "prepare" }],
+    ] as const) {
+      refusedAs(await outcomeOf(request(PAY, "consequential_write", 0, extra), declarations), "phase_invalid", label);
     }
-    const declared = await evaluate(request(PAY, "irreversible_action", 0, { action_phase: "commit" }), options([PAY], declarations));
-    expect(declared.context).toHaveProperty("decision_id");
+    const preflight = await evaluate(request(PAY, "consequential_read", 0, { ...AMOUNT, action_phase: "preflight" }), options([PAY], declarations));
+    expect(preflight.decision).toBe(true);
+    const declared = await evaluate(request(PAY, "irreversible_action", 0, { ...AMOUNT, action_phase: "commit" }), options([PAY], declarations));
+    expect(declared.decision).toBe(true);
   });
 
   it("bounds the remote decision call by the tightest window across the set: 30 seconds for remittance.send, 60 for external_commitment alone", () => {
@@ -319,6 +322,51 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
     );
     expect(alone.decision).toBe(true);
     expect(Date.parse((alone.context.conditions as { valid_until: string }).valid_until)).toBe(NOW.getTime() + 300_000);
+  });
+});
+
+describe("a payment to an outside party and its reversal also satisfy External commitment (@spec runtime#classification, runtime-evidence#decision-evidence-object, #1994 owner review)", () => {
+  const COMMIT = { ...AMOUNT, action_phase: "commit" };
+  const COMPENSATE = { ...AMOUNT, action_phase: "compensate", compensates_evaluation_id: "eval_wire_1994" };
+
+  it("signs both classes on the wire's commit permit and the reversal's compensate permit, each single use, while the prepare and preflight phases of the payment keep their own class", async () => {
+    for (const [action, extra] of [
+      [PAY, COMMIT],
+      [REVERSE, COMPENSATE],
+    ] as const) {
+      const decision = await evaluate(request(action, "irreversible_action", 0, extra), options([action], { evidence: emitter() }));
+      expect(decision.decision, action).toBe(true);
+      expect((decision.context.conditions as { use_limit?: number }).use_limit, action).toBe(1);
+      const record = decision.context.decision_evidence as DecisionEvidenceObject;
+      expect(record.action_class, action).toBe("irreversible_action");
+      expect(record.action_classes, action).toEqual(["irreversible_action", "external_commitment"]);
+    }
+    for (const [label, extra] of [
+      ["consequential_write", { ...AMOUNT, action_phase: "prepare" }],
+      ["consequential_read", { ...AMOUNT, action_phase: "preflight" }],
+    ] as const) {
+      const decision = await evaluate(request(PAY, label, 0, extra), options([PAY], { evidence: emitter() }));
+      expect(decision.decision, label).toBe(true);
+      const record = decision.context.decision_evidence as DecisionEvidenceObject;
+      expect(record.action_class, label).toBe(label);
+      expect(record, label).not.toHaveProperty("action_classes");
+    }
+  });
+
+  it("applies a duty only External commitment carries to the commit and compensate crossings, which the assigned class alone would not, and never to prepare", async () => {
+    const approval = { requiresActionApproval: (_action: string, c: string | undefined) => c === "external_commitment" };
+    for (const [action, extra] of [
+      [PAY, COMMIT],
+      [REVERSE, COMPENSATE],
+    ] as const) {
+      const gated = await evaluate(request(action, "irreversible_action", 0, extra), options([action], approval));
+      expect(gated.decision, action).toBe(false);
+      expect(gated.context.denial_reason, action).toBe("action_approval_required");
+      const alone = await evaluate(request(action, "irreversible_action", 0, extra), options([action], { ...approval, operationDeclarations: [] }));
+      expect(alone.decision, action).toBe(true);
+    }
+    const prepare = await evaluate(request(PAY, "consequential_write", 0, { ...AMOUNT, action_phase: "prepare" }), options([PAY], approval));
+    expect(prepare.decision).toBe(true);
   });
 });
 

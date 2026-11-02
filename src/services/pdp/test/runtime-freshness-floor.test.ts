@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { DecisionRequestRefused, evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptions, type MissionView, relationForAction } from "../src/index.js";
 import { loadRuntimePosture, postureStalenessBound, RUNTIME_POSTURE } from "../src/runtime-posture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -34,6 +34,9 @@ describe("consequential freshness floor (@spec runtime#state-freshness)", () => 
       view, modelId: "review", now: () => new Date("2026-07-22T12:00:00Z"),
       fga: { checkWithContext: async () => true } as never,
       stalenessBound: () => ({ kind: "none" }), relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      // #1994: no operation declarations: a payments operation is decided
+      // under its assigned class alone, with no phase required.
+      operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
     };
     for (const actionClass of ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration", "unknown"]) {
       request.context.action_class = actionClass;

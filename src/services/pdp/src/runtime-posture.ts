@@ -295,9 +295,14 @@ export function phaseOnPhaselessOperation(
 /**
  * @spec authzen#context-action-phase, runtime#classification (#1994): whether
  * a request's phase, or its absence, matches no declaration of an operation
- * whose declarations name further classes. Its set would lose those classes,
- * so the PDP refuses it (`phase_invalid`). An operation that names none keeps
- * the undeclared-phase case open (a `preflight` with no effect).
+ * that names further classes on any phase. Each declared phase carries its
+ * own set, so the set of an undeclared effect-bearing phase cannot be
+ * established, and the PDP refuses it (`phase_invalid`). An undeclared
+ * `preflight` is not this: it releases no reservation or external effect
+ * (runtime#compound-actions), so it satisfies no high-consequence predicate,
+ * the only further classes the loader admits, and its set is its assigned
+ * class. An operation that names no further classes keeps every
+ * undeclared-phase case open.
  */
 export function phaseUnmatchedWithFurtherClasses(
   declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
@@ -306,6 +311,7 @@ export function phaseUnmatchedWithFurtherClasses(
 ): boolean {
   const own = declarations.filter((d) => d.operation === action);
   if (!own.some((d) => (d.additional_action_classes?.length ?? 0) > 0)) return false;
+  if (phase === "preflight") return false;
   return !own.some((d) => d.phase === phase);
 }
 
