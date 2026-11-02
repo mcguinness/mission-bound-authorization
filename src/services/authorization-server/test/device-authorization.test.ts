@@ -23,6 +23,7 @@ import {
   buildAuthorizationServer,
   type BuiltAs,
   IntentError,
+  MISSION_STATUS_SCOPE,
   type ProviderCapability,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
@@ -53,6 +54,8 @@ const REDIRECT_URI = "http://localhost:9999/cb";
 const FORM = { "content-type": "application/x-www-form-urlencoded" };
 const ALICE_BY_BOB = { sub: "bob", subject: "alice" };
 const CONFIRMED = { decision: "approve", confirm_user_code: true, confirm_started: true };
+/** A Mission Status reader (the development GET route's service-token stand-in). */
+const STATUS_TOKEN = "device-authorization-status-reader";
 
 // A test Intent Submission Evidence type (this file only; the shipped registry
 // is empty): a closed {type, assertion} entry whose verification fails for
@@ -102,7 +105,10 @@ beforeAll(async () => {
     // A trusted headless approval service exists, so the device page's
     // refusal of it is observable (#1802).
     allowHeadlessAdjudication: true,
-    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    serviceTokenPrincipals: {
+      ...TEST_APPROVAL_PRINCIPALS,
+      [STATUS_TOKEN]: { principal_id: "svc:device-status-reader", scopes: [MISSION_STATUS_SCOPE] },
+    },
     capabilities: new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "device-authorization"]),
     testClients: [
       publicClient,
@@ -367,6 +373,15 @@ async function approvedSession(
 }
 
 const missionOf = (uid: string) => as.kernel.findByApprovalEvent(`apev_${uid}`);
+
+/** The Mission as Mission Status reports it: the signed response's `mission` member. */
+async function missionStatus(missionId: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${ISSUER}/missions/${missionId}/status?nonce=${crypto.randomUUID()}`, {
+    headers: { "x-service-token": STATUS_TOKEN },
+  });
+  expect(res.status).toBe(200);
+  return decodeJwt(await res.text()).mission as Record<string, unknown>;
+}
 
 /** Lapse a device code's lifetime, as time passing would. */
 async function lapse(deviceCode: string): Promise<void> {
@@ -1109,6 +1124,27 @@ describe("Mission Device Authorization polling (@spec device-authorization#polli
     expect(res.body.error).toBe("expired_token");
     expect(res.body.access_token).toBeUndefined();
     expect(as.kernel.get(missionOf(s.uid)?.id as string)?.state).toBe("active");
+  });
+
+  // @spec device-authorization#outcomes (#1202): this deployment's one choice
+  // for an approved session whose device_code expired unredeemed is to let the
+  // Mission run to its expires_at, never revoking it
+  // (docs/provider-integration-port.md, section 3.4).
+  it("lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked", async () => {
+    const expiresAt = new Date(Math.ceil(Date.now() / 1000) * 1000 + 3000).toISOString().replace(".000Z", "Z");
+    const short = await approvedSession(PUBLIC, ALICE_BY_BOB, {
+      mission_intent: JSON.stringify({ intent: { ...INTENT, expires_at: expiresAt } }),
+    });
+    const long = await approvedSession();
+    for (const s of [short, long]) {
+      await lapse(s.deviceCode);
+      expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("expired_token");
+      expect(await missionStatus(missionOf(s.uid)?.id as string)).toMatchObject({ state: "active" });
+    }
+    await new Promise((r) => setTimeout(r, Date.parse(expiresAt) - Date.now() + 200));
+    const ended = await missionStatus(missionOf(short.uid)?.id as string);
+    expect(ended).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
+    expect(await missionStatus(missionOf(long.uid)?.id as string)).toMatchObject({ state: "active" });
   });
 
   it("refuses redemption with the issuance-gating refusal once the Mission was revoked after approval", async () => {
