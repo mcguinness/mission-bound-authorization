@@ -83070,7 +83070,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a revalidated repetition of the same (client, creation_request_id) while an interactive completion is pending returns the same mission_continuation, not a second continuation or ceremony; the same creation_request_id under another client opens nothing"
+    "normative": "a revalidated repetition of the same (client, creation_request_id) while an interactive completion is pending returns the same mission_continuation, not a second continuation or ceremony; a different authenticated client cannot recover the first client's operation or obtain its mission_continuation by presenting the same creation_request_id"
    },
    "level": "endpoint",
    "coverage": "todo",
