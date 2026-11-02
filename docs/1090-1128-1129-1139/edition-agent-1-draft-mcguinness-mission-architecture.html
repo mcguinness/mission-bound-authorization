@@ -5115,11 +5115,13 @@ the Mission Issuer while estate authorization servers redeem Mission
 Issuance Grants for Mission-bound tokens, restoring the token-layer
 chokepoint without moving approval. The MAS mints a grant only for an
 active Mission. A consuming AS with a Mission-state integration also
-checks the Mission at redemption and at every refresh; one without
-issues no refresh tokens, and its revocation latency is the summed
-residual of <a href="#validity-model" class="auto internal xref">Section 10.4</a>: the grant's remaining lifetime plus
-the lifetime of each token issued from it without a further state
-check.<a href="#section-10.5-17" class="pilcrow">¶</a></p>
+checks the Mission at redemption and at every refresh. Without a
+Mission-state integration, the consuming AS issues no refresh tokens,
+and its revocation latency, the summed residual of <a href="#validity-model" class="auto internal xref">Section 10.4</a>,
+includes every interval during which the path can proceed without
+another state check, including pending authorization requests and
+authorization codes under PAR carriage, as Issuance Grant's Security
+Considerations specifies.<a href="#section-10.5-17" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -8684,9 +8686,10 @@ with no <code>suspended</code> state and its own termination reasons, served by
           <p id="appendix-J-2.1.1">Runtime-Enforced names its normative dependencies outside the
 family: two AuthZEN working-group drafts, and, with the OAuth
 binding, an OAuth working-group draft and two individual drafts. The
-issuance-join summary states both consuming-AS modes and the summed
-revocation latency of the mode without a Mission-state integration.
-No requirement changed (#1090).<a href="#appendix-J-2.1.1" class="pilcrow">¶</a></p>
+issuance-join summary states both consuming-AS modes and, for the
+mode without a Mission-state integration, points to Issuance Grant's
+Security Considerations for every interval its revocation latency
+includes. No requirement changed (#1090).<a href="#appendix-J-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-J-2.2">
           <p id="appendix-J-2.2.1">Standing consent is cited from Approval Governance's Approval Basis
