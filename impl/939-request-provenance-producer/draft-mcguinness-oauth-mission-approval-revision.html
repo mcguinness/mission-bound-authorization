@@ -1785,7 +1785,9 @@ over that object as that profile computes it:<a href="#section-7-6" class="pilcr
     "intent_hash":
       "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
     "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "consent_rendering_hash":
+      "sha-256:3pgTrle6nKWp7a5UKN4DDiRcVGXYJzWyf8wb9Sbh8lI"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -1818,7 +1820,8 @@ over that object as that profile computes it:<a href="#section-7-6" class="pilcr
 </pre><a href="#section-7-7" class="pilcrow">¶</a>
 </div>
 <p id="section-7-8">No Mission exists yet, so the <code>mission</code> descriptor carries the
-proposal's anchors and no <code>id</code>.<a href="#section-7-8" class="pilcrow">¶</a></p>
+proposal's anchors and the reviewed disclosure's
+<code>consent_rendering_hash</code>, and no <code>id</code>.<a href="#section-7-8" class="pilcrow">¶</a></p>
 <p id="section-7-9">The agent pushes a narrowed Mission Intent, dropping the write, to PAR
 with the revision handle:<a href="#section-7-9" class="pilcrow">¶</a></p>
 <div class="lang-http sourcecode" id="section-7-10">
@@ -2141,13 +2144,18 @@ registry:<a href="#section-11-6" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The names this document registers in shared OAuth registries carry
+          <p id="appendix-A-2.1.1">The narrowed Consent Evidence example's <code>mission</code> descriptor carries
+the reviewed disclosure's <code>consent_rendering_hash</code>, as Consent
+Evidence requires for every decision (#1956).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The names this document registers in shared OAuth registries carry
 <code>mission</code>: <code>mission_revision_required</code>, <code>mission_revision_handle</code>
 (token response and authorization request),
 <code>mission_rejected_scope</code>, <code>mission_rejected_authorization_details</code>,
 the <code>mission_revision_not_narrowing</code> error, and the
 <code>mission_revisable</code> completion mode. The <code>revision_required</code> state
-keeps its name.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+keeps its name.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

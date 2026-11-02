@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-02T06:33:55Z
-Source repository commit: fcd224dd63357d62170d7e31ecf506b4549fd5ec
+Generated: 2026-11-02T06:40:59Z
+Source repository commit: 0effe21562cfdb830c19436b1b18e8403bd0b4f0
 Member count: 9
 
 Reading order:
@@ -13032,10 +13032,8 @@ Table of Contents
    stopped even when no refresh token is held).
 
    The wire shape of that revocation is out of scope for this document.
-   A deployment-defined authenticated surface satisfies this
-   requirement; Mission Status
-   ([I-D.draft-mcguinness-oauth-mission-status]) defines an
-   interoperable revoke operation.
+   A deployment-defined surface that authenticates the revoking party
+   independent of possession of any token satisfies this requirement.
 
    When the AS establishes that the principal identified by a Mission's
    recorded subject (Section 6.2.3) has been deprovisioned, it SHOULD
@@ -16662,6 +16660,12 @@ Appendix E.  Document History
       AS generates at each verification, and no other member (#1897,
       D1035).
 
+   *  Revocation: a deployment-defined surface satisfies the token-
+      independent revocation requirement when it authenticates the
+      revoking party independent of possession of any token, and the
+      section no longer names a companion's operation for it (#1895,
+      D1114).
+
    -01
 
    *Breaking wire changes*
@@ -18025,6 +18029,20 @@ Table of Contents
    mission_lifecycle_endpoint_auth_signing_alg_values_supported
    (Section 8).  Its authentication failures follow Section 3.3.
 
+   Where this endpoint is the deployment's means of revoking a Mission
+   by mission_id independent of possession of any token, which the
+   issuance profile requires ([I-D.draft-mcguinness-oauth-mission],
+   Section "Revocation"), the AS MUST accept revoke through client
+   authentication, without requiring an access token or any token issued
+   under the Mission.  Client authentication grants no revocation
+   authority by itself: the AS still authorizes the caller for revoke on
+   that Mission (Section 5.4).  A freshly signed private_key_jwt client
+   assertion is authentication proof, not a token the caller holds.
+   Where another authenticated surface provides that means, this
+   endpoint can accept only access tokens.  The requirement covers
+   revoke only; the endpoint's other operations keep whichever paths the
+   AS supports.
+
    For the sender-constrained access-token path, this endpoint is an
    OAuth protected resource exactly as the Mission Status endpoint is:
    the AS publishes, in its Protected Resource Metadata for this
@@ -19366,6 +19384,11 @@ Appendix A.  Document History
 
    *  The Lifecycle mission_id member and base-operations list point to
       the Mission Status request and the Legal Transitions table.
+
+   *  Where the Lifecycle endpoint is the issuance profile's token-
+      independent revocation means, the AS accepts revoke through client
+      authentication without requiring any token, and still authorizes
+      the caller (#1895, D1114).
 
    -00
 
@@ -34550,10 +34573,9 @@ Table of Contents
       only after an approval ([I-D.draft-mcguinness-oauth-mission]):
 
       *  When decision is approved, it contains id, issuer, intent_hash,
-         authority_hash, proposal_hash when the Mission records an
-         authority proposal, consent_rendering_hash when this profile
-         records it on the Mission, and, where the deployment computes
-         it, approval_context_commitment
+         authority_hash, consent_rendering_hash, proposal_hash when the
+         Mission records an authority proposal, and, where the
+         deployment computes it, approval_context_commitment
          ([I-D.draft-mcguinness-mission-approval-governance]): OPTIONAL,
          a string, the commitment over the created Mission's immutable
          creation facts, carried so this object and another
@@ -34561,18 +34583,19 @@ Table of Contents
          one approval transaction.
 
       *  When decision is declined, no Mission was created
-         (Section 8.1), so there is no id.  It instead contains issuer
-         and the intent_hash and authority_hash (with proposal_hash
-         where present) the disclosure corresponded to, matching the
-         disclosure object's source_hashes (Section 4).  It MUST NOT
-         contain id.
+         (Section 8.1), so there is no id.  It instead contains issuer,
+         the consent_rendering_hash of the disclosure the Approver
+         declined, and the intent_hash and authority_hash (with
+         proposal_hash where present) the disclosure corresponded to,
+         matching the disclosure object's source_hashes (Section 4).  It
+         MUST NOT contain id.
 
       *  When decision is narrowed, the review required a narrowing
          revision and no Mission was created (Section 8.2).  Like a
-         decline, it contains issuer and the reviewed disclosure's
-         intent_hash and authority_hash (with proposal_hash where
-         present), matching that disclosure's source_hashes, and MUST
-         NOT contain id.
+         decline, it contains issuer, the reviewed disclosure's
+         consent_rendering_hash, and its intent_hash and authority_hash
+         (with proposal_hash where present), matching that disclosure's
+         source_hashes, and MUST NOT contain id.
 
       approval_context_commitment appears on the approved branch only.
       A declined or narrowed descriptor MUST NOT contain it: no Mission
@@ -34608,7 +34631,8 @@ Table of Contents
 
    disclosure:  REQUIRED.  The Consent Disclosure object, or a durable
       reference to it (Section 9.1) paired with the
-      consent_rendering_hash it verifies against.
+      consent_rendering_hash it verifies against.  That paired value
+      MUST equal mission.consent_rendering_hash.
 
    co_approvals:  OPTIONAL.  An array of evidence descriptors, one per
       co-approver, each carrying the co-approver's iss and sub, its
@@ -34833,11 +34857,12 @@ Table of Contents
        key material or configured trust anchors; and
 
    6.  when decision is approved, verifies that the Mission anchors in
-       mission match the Mission record being audited.  When decision is
-       declined or narrowed there is no Mission record (Section 8.1,
-       Section 8.2); the verifier instead confirms the mission
-       descriptor carries issuer and the two source_hashes anchors and
-       no id; and
+       mission, consent_rendering_hash among them, match the Mission
+       record being audited.  When decision is declined or narrowed
+       there is no Mission record (Section 8.1, Section 8.2); the
+       verifier instead confirms the mission descriptor carries issuer,
+       consent_rendering_hash, and the two source_hashes anchors, and no
+       id; and
 
    7.  when rendering_confirmation is present (Appendix A), verifies it
        against the recorded approver's authenticator and over the
@@ -34866,13 +34891,17 @@ Table of Contents
    a failure; it means the evidence asserts no rung above the rendering
    the AS recorded.
 
-   Steps 1 through 6 establish the integrity of the evidence record
-   itself and rely only on the record, since consent_rendering_hash is
-   carried inside the signed mission.  Reconstructing the disclosure is
-   a separate step that depends on retrieval: when the disclosure object
-   is inlined, a verifier recomputes consent_rendering_hash over it and
-   compares; when it is carried by reference (Section 9.1), the verifier
-   retrieves it and verifies it against consent_rendering_hash.
+   Steps 1 through 6 do not require retrieving the Consent Disclosure
+   object.  Neither does the reference check: when disclosure is a
+   durable reference (Section 9.1), a verifier MUST compare its paired
+   consent_rendering_hash with mission.consent_rendering_hash and treat
+   unequal values as an integrity failure of the evidence record.
+   Reconstructing the disclosure is a separate step that depends on
+   retrieval: when the disclosure object is inlined, a verifier
+   recomputes consent_rendering_hash over it and compares it with the
+   mission descriptor's value; when it is carried by reference
+   (Section 9.1), the verifier retrieves it and verifies it against that
+   value.
 
    A verifier MUST NOT treat a disclosure that is merely unretrievable
    as an integrity failure of the evidence record; failure to retrieve a
@@ -35505,7 +35534,7 @@ Appendix A.  Rendering-Assurance Rungs Above the Floor
    At Rung 3 the claim that the Approver's authenticator confirmed a
    specific disclosure commitment is verifiable up to trust in that
    authenticator, rather than in an arbitrary rendering layer.  The
-   verifier obligations for these rungs are steps 7 and 8 of
+   verifier obligations for these rungs are steps 7 and 9 of
    Section 7.1; their absence asserts no rung above the ones the record
    satisfies and is never an integrity failure.
 
@@ -35778,6 +35807,20 @@ Appendix B.  Worked Disclosure and Test Vector
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Editorial: the rung-check pointer in Rendering-Assurance Rungs
+      Above the Floor cites steps 7 and 9 of Integrity and Verification.
+      No requirement changes (#1957).
+
+   *  Every decision's signed mission descriptor carries
+      consent_rendering_hash: the approved branch lists it without a
+      condition, and a declined or narrowed descriptor carries the hash
+      of the disclosure the decision was made on, still with no id or
+      approval_context_commitment.  Integrity and Verification checks
+      the member on each branch and compares a reconstructed disclosure
+      with it.  A disclosure reference's paired hash is required to
+      equal the descriptor's, and a verifier treats unequal values as an
+      integrity failure without retrieving the disclosure (#1956).
 
    *  Material Notice Requirements makes the high-risk notices and their
       acknowledgments mandatory: each high-risk condition present gets

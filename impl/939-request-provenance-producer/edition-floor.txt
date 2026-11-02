@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-02T06:33:54Z
-Source repository commit: fcd224dd63357d62170d7e31ecf506b4549fd5ec
+Generated: 2026-11-02T06:40:59Z
+Source repository commit: 0effe21562cfdb830c19436b1b18e8403bd0b4f0
 Member count: 7
 
 Reading order:
@@ -13030,10 +13030,8 @@ Table of Contents
    stopped even when no refresh token is held).
 
    The wire shape of that revocation is out of scope for this document.
-   A deployment-defined authenticated surface satisfies this
-   requirement; Mission Status
-   ([I-D.draft-mcguinness-oauth-mission-status]) defines an
-   interoperable revoke operation.
+   A deployment-defined surface that authenticates the revoking party
+   independent of possession of any token satisfies this requirement.
 
    When the AS establishes that the principal identified by a Mission's
    recorded subject (Section 6.2.3) has been deprovisioned, it SHOULD
@@ -16660,6 +16658,12 @@ Appendix E.  Document History
       AS generates at each verification, and no other member (#1897,
       D1035).
 
+   *  Revocation: a deployment-defined surface satisfies the token-
+      independent revocation requirement when it authenticates the
+      revoking party independent of possession of any token, and the
+      section no longer names a companion's operation for it (#1895,
+      D1114).
+
    -01
 
    *Breaking wire changes*
@@ -18023,6 +18027,20 @@ Table of Contents
    mission_lifecycle_endpoint_auth_signing_alg_values_supported
    (Section 8).  Its authentication failures follow Section 3.3.
 
+   Where this endpoint is the deployment's means of revoking a Mission
+   by mission_id independent of possession of any token, which the
+   issuance profile requires ([I-D.draft-mcguinness-oauth-mission],
+   Section "Revocation"), the AS MUST accept revoke through client
+   authentication, without requiring an access token or any token issued
+   under the Mission.  Client authentication grants no revocation
+   authority by itself: the AS still authorizes the caller for revoke on
+   that Mission (Section 5.4).  A freshly signed private_key_jwt client
+   assertion is authentication proof, not a token the caller holds.
+   Where another authenticated surface provides that means, this
+   endpoint can accept only access tokens.  The requirement covers
+   revoke only; the endpoint's other operations keep whichever paths the
+   AS supports.
+
    For the sender-constrained access-token path, this endpoint is an
    OAuth protected resource exactly as the Mission Status endpoint is:
    the AS publishes, in its Protected Resource Metadata for this
@@ -19364,6 +19382,11 @@ Appendix A.  Document History
 
    *  The Lifecycle mission_id member and base-operations list point to
       the Mission Status request and the Legal Transitions table.
+
+   *  Where the Lifecycle endpoint is the issuance profile's token-
+      independent revocation means, the AS accepts revoke through client
+      authentication without requiring any token, and still authorizes
+      the caller (#1895, D1114).
 
    -00
 
