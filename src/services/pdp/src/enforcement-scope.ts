@@ -262,6 +262,13 @@ export interface ExecutionCapabilityDeclaration {
   operation: string;
   phase?: (typeof COMPOUND_PHASES)[number];
   action_class: string;
+  /**
+   * @spec runtime#classification (#1735, #1994): each further runtime class
+   * whose predicate the operation satisfies, beside the assigned
+   * `action_class`. The PDP applies every listed class's requirements; the
+   * assigned class stays the one `class_source` describes.
+   */
+  additional_action_classes?: readonly string[];
   durable_idempotency: "none" | DurableIdempotencyDeclaration;
   conditional_effect: "none" | { precondition: string };
   outcome_lookup: "none" | { identifier: string; method: string };
@@ -847,6 +854,20 @@ export function executionCapabilityFindings(input: unknown): EnforcementScopeFin
       push(member, "missing the action class of the operation");
     } else if (!classes.includes(actionClass)) {
       push(member, `action_class "${actionClass}" is outside mediated_scope.action_classes`);
+    }
+    // @spec runtime#classification (#1994): a further class is one the
+    // deployment mediates, named once and never the assigned class again; a
+    // class the PDP could not gate is refused here, at load.
+    const additional = decl.additional_action_classes;
+    if (additional !== undefined) {
+      if (!isNonEmptyStringArray(additional) || new Set(additional).size !== additional.length) {
+        push(member, "additional_action_classes must be a non-empty array of distinct class names");
+      } else {
+        for (const extra of additional) {
+          if (extra === actionClass) push(member, `additional_action_classes repeats the assigned class "${extra}"`);
+          else if (!classes.includes(extra)) push(member, `additional action class "${extra}" is outside mediated_scope.action_classes`);
+        }
+      }
     }
     const identity = `${String(operation)}#${String(decl.phase ?? "")}`;
     if (seen.has(identity)) push(member, `operation "${String(operation)}" is declared twice`);

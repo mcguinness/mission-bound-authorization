@@ -218,6 +218,54 @@ export function executionLeaseMaxSeconds(posture: RuntimePosture, actionClass: s
 }
 
 /**
+ * @spec runtime#classification (#1735, #1994): every runtime action class
+ * whose requirements apply to one operation at one phase: the assigned class
+ * first, then each further class the statement declares for that operation
+ * and phase, once each. A compound action's phases carry their own classes,
+ * so one phase's further classes never reach another. No class assigned is no
+ * class set: the PDP refuses that request before evaluation
+ * (`action_class_missing`).
+ */
+export function applicableActionClasses(
+  posture: RuntimePosture,
+  actionClass: string | undefined,
+  action: string,
+  phase?: string,
+): readonly string[] {
+  if (actionClass === undefined) return [];
+  const further = (posture.extensions?.execution_capabilities ?? [])
+    .filter((d) => d.operation === action && d.phase === phase)
+    .flatMap((d) => d.additional_action_classes ?? []);
+  return [...new Set([actionClass, ...further])];
+}
+
+/**
+ * @spec runtime#classification, runtime#state-freshness (#1994): the posture
+ * for an action several classes apply to. Staleness bounds are comparable, so
+ * the tighter applies; a class the deployment does not declare leaves the
+ * whole set `undeclared`, which the PDP refuses; the set has no active
+ * freshness requirement only where no class in it has one.
+ */
+export function stalenessBoundOver(bounds: readonly StalenessBound[]): StalenessBound {
+  if (bounds.length === 0 || bounds.some((b) => b.kind === "undeclared")) return { kind: "undeclared" };
+  const windows = bounds.flatMap((b) => (b.kind === "bounded" ? [b.seconds] : []));
+  return windows.length === 0 ? { kind: "none" } : { kind: "bounded", seconds: Math.min(...windows) };
+}
+
+/**
+ * @spec runtime#classification, runtime#execution-reverification (#1994): the
+ * published execution lease maximum for an action several classes apply to:
+ * the tightest any of them publishes, or `undefined` when none publishes one.
+ */
+export function executionLeaseMaxSecondsOver(posture: RuntimePosture, classes: readonly string[]): number | undefined {
+  const leases = classes.flatMap((c) => {
+    const lease = executionLeaseMaxSeconds(posture, c);
+    return lease === undefined ? [] : [lease];
+  });
+  return leases.length === 0 ? undefined : Math.min(...leases);
+}
+
+/**
  * @spec runtime#execution-capabilities (#817): the execution capabilities the
  * statement declares for one operation and phase, or `undefined` when it
  * declares none. The loader has already refused a declaration whose claims
