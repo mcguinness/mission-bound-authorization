@@ -130,11 +130,15 @@ interface ExecutionShape {
   /** Defaults to one id per (evaluation, outcome). */
   execution_id?: string;
   outcome_at?: string;
+  /** Members signed as given, replacing the shape's own. */
+  overrides?: Record<string, unknown>;
+  /** Members left out of the signed record. */
+  omit?: string[];
 }
 
 /** A retained Execution Evidence record, signed by the trusted PEP key. */
 async function executionRecord(e: ExecutionShape): Promise<Record<string, unknown>> {
-  const unsigned = {
+  const unsigned = shaped({
     execution_id: e.execution_id ?? `exe_${e.evaluation_id}_${e.outcome}`,
     evaluation_id: e.evaluation_id,
     mission_id: e.mission ?? MISSION,
@@ -143,7 +147,7 @@ async function executionRecord(e: ExecutionShape): Promise<Record<string, unknow
     outcome_at: e.outcome_at ?? NOW.toISOString(),
     sequence: e.sequence ?? 0,
     emitter: { id: PEP_ID, role: "pep" },
-  };
+  }, e.overrides, e.omit);
   return {
     ...unsigned,
     evidence_envelope: await signEvidenceEnvelope(unsigned, EXECUTION_EVIDENCE_MEDIA_TYPE, { kid: "hist-pep", key: pepKeys.privateKey }),
@@ -368,6 +372,68 @@ describe("the History Context evaluates policy-selected predicates against verif
     const second = await evaluate(request(), options(historyBinding(orphan)));
     expect(second.decision).toBe(false);
     expect(historyOf(second)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("fails closed when a record's audience is absent: an execution without one, a permit and its execution both without one, or a deny without one", async () => {
+    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
+    const unscopedExecution = [w1, await executionRecord({ evaluation_id: "w1", outcome: "completed", omit: ["audience"] })];
+    const first = await evaluate(request(), options(historyBinding(unscopedExecution)));
+    expect(first.decision).toBe(false);
+    expect(first.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(first)?.[0]?.outcome).toBe("unavailable");
+    const bothUnscoped = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", omit: ["audience"] }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed", omit: ["audience"] }),
+    ];
+    const second = await evaluate(request(), options(historyBinding(bothUnscoped)));
+    expect(second.decision).toBe(false);
+    expect(second.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(second)?.[0]?.outcome).toBe("unavailable");
+    // A deny no execution links to still carries its REQUIRED audience.
+    const unscopedDeny = [
+      w1,
+      await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
+      await decisionRecord({ evaluation_id: "d2", action_class: "consequential_write", decision: "deny", sequence: 1, omit: ["audience"] }),
+    ];
+    const third = await evaluate(request(), options(historyBinding(unscopedDeny)));
+    expect(third.decision).toBe(false);
+    expect(third.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(third)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("fails closed when an execution's authorized digests are not its permit's: a parameter or context digest that differs, is missing, or has no permit digest to mirror", async () => {
+    const P = "sha-256:permit-parameters";
+    const C = "sha-256:permit-context";
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { parameter_digest: P, evaluation_context_digest: C } });
+    const linked = { authorized_parameter_digest: P, effective_parameter_digest: P, authorized_evaluation_context_digest: C, effective_evaluation_context_digest: C };
+    // Control: an execution mirroring both of the permit's digests links.
+    const matching = await evaluate(request(), options(historyBinding([permit, await executionRecord({ evaluation_id: "w1", outcome: "completed", overrides: linked })])));
+    expect(matching.decision, JSON.stringify(matching.context)).toBe(true);
+    const deviations: Array<[string, Record<string, unknown>, string[]]> = [
+      ["other parameter digest", { ...linked, authorized_parameter_digest: "sha-256:other", effective_parameter_digest: "sha-256:other" }, []],
+      ["missing parameter digest", linked, ["authorized_parameter_digest", "effective_parameter_digest"]],
+      ["other context digest", { ...linked, authorized_evaluation_context_digest: "sha-256:other", effective_evaluation_context_digest: "sha-256:other" }, []],
+      ["missing context digest", linked, ["authorized_evaluation_context_digest", "effective_evaluation_context_digest"]],
+    ];
+    for (const [label, overrides, omit] of deviations) {
+      const records = [permit, await executionRecord({ evaluation_id: "w1", outcome: "completed", overrides, omit })];
+      const decision = await evaluate(request(), options(historyBinding(records)));
+      expect(decision.decision, label).toBe(false);
+      expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, label).toBe("unavailable");
+    }
+    // An execution carrying digests its permit never bound.
+    const unbound = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
+    for (const [label, overrides] of [
+      ["parameter digest without a permit digest", { authorized_parameter_digest: P, effective_parameter_digest: P }],
+      ["context digest without a permit digest", { authorized_evaluation_context_digest: C, effective_evaluation_context_digest: C }],
+    ] as const) {
+      const records = [unbound, await executionRecord({ evaluation_id: "w1", outcome: "completed", overrides })];
+      const decision = await evaluate(request(), options(historyBinding(records)));
+      expect(decision.decision, label).toBe(false);
+      expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, label).toBe("unavailable");
+    }
   });
 
   it("fails closed when the store returns a record of another Mission", async () => {

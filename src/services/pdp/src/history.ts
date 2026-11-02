@@ -92,7 +92,10 @@ export const RECOGNIZED_HISTORY_PREDICATES: ReadonlySet<string> = new Set(["acti
 interface VerifiedDecision {
   evaluation_id: string;
   decision: "permit" | "deny";
-  audience: string | undefined;
+  audience: string;
+  /** The digests the decision was bound to, where it carries them. */
+  parameter_digest: string | undefined;
+  evaluation_context_digest: string | undefined;
   action_class: string;
   /** Present only when the record carries it, then an array of strings holding `action_class`. */
   action_classes: string[] | undefined;
@@ -106,13 +109,27 @@ interface VerifiedDecision {
 interface VerifiedExecution {
   execution_id: string;
   evaluation_id: string;
+  /** Absent or empty, `undefined`, which matches no permit. */
   audience: string | undefined;
+  /** The linked permit's digests as this record mirrors them, where it carries them. */
+  authorized_parameter_digest: string | undefined;
+  authorized_evaluation_context_digest: string | undefined;
   outcome: unknown;
   content: string;
 }
 
 function objectOf(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+/** A member that is absent, or else a string: `null` for anything else. */
+function optionalString(value: unknown): string | undefined | null {
+  return value === undefined || typeof value === "string" ? value : null;
+}
+
+/** A REQUIRED boundary identifier: a non-empty string. */
+function requiredAudience(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
 /** A verified record's signed content: the canonical bytes its envelope's payload equals. */
@@ -142,9 +159,10 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * records conflict (Decision Evidence of one `evaluation_id`, or Execution
  * Evidence of one `execution_id`, with different content, or one permit with
  * more than one disposition), a Decision Evidence stream has a gap or a
- * reused `sequence` position, or an Execution Evidence record links to no
- * verified Decision Evidence of the same Mission and audience. A record
- * delivered more than once with the same content counts once.
+ * reused `sequence` position, a record lacks its REQUIRED `audience`, or an
+ * Execution Evidence record links to no verified permit of the same Mission
+ * and audience or carries authorized digests other than that permit's. A
+ * record delivered more than once with the same content counts once.
  */
 async function verifiedHistory(
   binding: HistoryBinding,
@@ -197,6 +215,13 @@ async function verifiedHistory(
       ) {
         return undefined;
       }
+      // @spec runtime-evidence#decision-evidence-object `audience` (REQUIRED)
+      // and the digests an execution's link is checked against.
+      const audience = requiredAudience(record.audience);
+      if (audience === undefined) return undefined;
+      const parameterDigest = optionalString(record.parameter_digest);
+      const contextDigest = optionalString(record.evaluation_context_digest);
+      if (parameterDigest === null || contextDigest === null) return undefined;
       const content = signedContent(record);
       const prior = decisions.get(record.evaluation_id);
       if (prior !== undefined) {
@@ -206,7 +231,9 @@ async function verifiedHistory(
       decisions.set(record.evaluation_id, {
         evaluation_id: record.evaluation_id,
         decision,
-        audience: typeof record.audience === "string" ? record.audience : undefined,
+        audience,
+        parameter_digest: parameterDigest,
+        evaluation_context_digest: contextDigest,
         action_class: actionClass,
         action_classes: actionClasses as string[] | undefined,
         stream: JSON.stringify([emitter.role, emitter.id]),
@@ -221,6 +248,14 @@ async function verifiedHistory(
       // delivery is at-least-once, "so a consumer MUST deduplicate on
       // `execution_id`".
       const executionId = record.execution_id as string;
+      // @spec runtime-evidence#execution-evidence-object `audience` (REQUIRED):
+      // an absent one never equals its permit's, which is required above, so
+      // the link below fails. `authorized_parameter_digest` and
+      // `authorized_evaluation_context_digest` are strings where present.
+      const audience = requiredAudience(record.audience);
+      const authorizedParameterDigest = optionalString(record.authorized_parameter_digest);
+      const authorizedContextDigest = optionalString(record.authorized_evaluation_context_digest);
+      if (authorizedParameterDigest === null || authorizedContextDigest === null) return undefined;
       const content = signedContent(record);
       const prior = executions.get(executionId);
       if (prior !== undefined) {
@@ -230,7 +265,9 @@ async function verifiedHistory(
       executions.set(executionId, {
         execution_id: executionId,
         evaluation_id: record.evaluation_id,
-        audience: typeof record.audience === "string" ? record.audience : undefined,
+        audience,
+        authorized_parameter_digest: authorizedParameterDigest,
+        authorized_evaluation_context_digest: authorizedContextDigest,
         outcome: record.outcome,
         content,
       });
@@ -257,12 +294,20 @@ async function verifiedHistory(
   }
   // Linkage: every execution names a verified decision of this Mission by its
   // `evaluation_id`, for the same audience, and that decision is a permit.
-  // One permit's executions agree on its disposition: a `completed` record
-  // beside a `failed` one leaves what happened unestablished.
+  // @spec runtime-evidence#execution-evidence-object: its
+  // `authorized_parameter_digest` is REQUIRED when the permit carries
+  // `parameter_digest`, "MUST equal it", and is absent otherwise, and its
+  // `authorized_evaluation_context_digest` likewise against the permit's
+  // `evaluation_context_digest`: a record that deviates is not linked to what
+  // the permit authorized. One permit's executions agree on its disposition:
+  // a `completed` record beside a `failed` one leaves what happened
+  // unestablished.
   const dispositions = new Map<string, unknown>();
   for (const execution of executions.values()) {
     const linked = decisions.get(execution.evaluation_id);
     if (!linked || linked.decision !== "permit" || linked.audience !== execution.audience) return undefined;
+    if (execution.authorized_parameter_digest !== linked.parameter_digest) return undefined;
+    if (execution.authorized_evaluation_context_digest !== linked.evaluation_context_digest) return undefined;
     if (dispositions.has(execution.evaluation_id) && dispositions.get(execution.evaluation_id) !== execution.outcome) return undefined;
     dispositions.set(execution.evaluation_id, execution.outcome);
   }
