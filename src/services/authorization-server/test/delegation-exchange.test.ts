@@ -10,7 +10,15 @@ import { ApprovalSessionStore } from "../src/index.js";
 
 import { type Server } from "node:http";
 import { NARROWING_UNDECLARED } from "@mission/core";
-import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
+import {
+  AUTHORITY_SOURCES,
+  CANONICAL_RESOURCE,
+  contractsRequiring,
+  currentContractRef,
+  DERIVATION_POLICY,
+  SCOPE_PROJECTION,
+  TOPOLOGY,
+} from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -1985,5 +1993,51 @@ describe("a delegate matcher naming both members needs both, at the designation 
     const both = await designate(h, accessToken, SUBAGENT);
     expect(both.status, JSON.stringify(both.body)).toBe(200);
     expect((decodeJwt(both.body.access_token as string) as Body).aud).toBe(SUBAGENT);
+  });
+});
+
+/**
+ * @spec resource-access#resource-contract, mission#designation (#249, D1104):
+ * a designation and its redemption take the presented token's entries as the
+ * Mission record carries them. They carry an entry's reference exactly, and an
+ * entry approved before the payments resource required one gains none, though
+ * the configuration now requires it.
+ */
+describe("a designation and its redemption carry the entry's resource contract reference exactly, and an entry approved without one gains none (@spec resource-access#resource-contract, mission#designation, #249, D1104)", () => {
+  const SHIPPED = currentContractRef({ resource: RESOURCE, actions: ["payments:invoice.read"] });
+  type Entries = { authorization_details?: Array<{ resource_contract?: unknown }> };
+  const referencesOf = (jwt: string) => ((decodeJwt(jwt) as Entries).authorization_details ?? []).map((e) => e.resource_contract);
+  const approvedReferences = (missionId: string) =>
+    (on.as.kernel.get(missionId) as { authority_set: Array<{ resource_contract?: unknown }> }).authority_set.map((e) => e.resource_contract);
+
+  it("a Mission approved against the contract: the designation and the delegated token carry its reference unchanged", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    expect(SHIPPED).toBeDefined();
+    expect(approvedReferences(missionId)).toEqual([SHIPPED]);
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(referencesOf(designation.body.access_token as string)).toEqual([SHIPPED]);
+    const delegated = await redeem(on, designation.body.access_token as string);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(referencesOf(delegated.body.access_token as string)).toEqual([SHIPPED]);
+  });
+
+  it("a Mission approved before the cutover, with no reference: the designation and the delegated token carry none, the configuration now requiring one", async () => {
+    // Approved under the configuration before the cutover, which required no reference.
+    const before = vi.spyOn(on.as.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+    let base: Awaited<ReturnType<typeof baseMission>>;
+    try {
+      base = await baseMission(on);
+    } finally {
+      before.mockRestore();
+    }
+    expect(approvedReferences(base.missionId)).toEqual([undefined]);
+    const designation = await designate(on, base.accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(referencesOf(designation.body.access_token as string)).toEqual([undefined]);
+    const delegated = await redeem(on, designation.body.access_token as string);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(referencesOf(delegated.body.access_token as string)).toEqual([undefined]);
+    expect(approvedReferences(base.missionId)).toEqual([undefined]);
   });
 });
