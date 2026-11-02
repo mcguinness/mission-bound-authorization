@@ -220,4 +220,17 @@ describe("the Evaluation-Context Binding declaration is refused at load unless c
       ),
     ).toThrow(/covered class \W+external_commitment\W+ is outside mediated_scope.action_classes/);
   });
+
+  // @spec runtime#resource-contract, runtime#evaluation-context-binding (#249,
+  // D1155): a PDP loading its own statement checks its contract versions
+  // against its claim, as the shipped loader does.
+  it("refuses at load a contract version naming a descriptor of another id than the claim's for the crossing, and loads the shipped statement", () => {
+    expect(() => loadRuntimePosture(RUNTIME_SCOPE_CONFIG)).not.toThrow();
+    const s = structuredClone(RUNTIME_SCOPE_CONFIG) as any;
+    const versions = s.extensions.resource_contracts[0].versions as any[];
+    const retained = versions.find((v) => v.version === "2026-10-27");
+    const remittance = s.extensions.evaluation_context_binding.operations.find((o: any) => o.operation === "payments:remittance.send").descriptor;
+    retained.evaluation_context_descriptors.execute_wire_transfer = remittance;
+    expect(() => loadRuntimePosture(s)).toThrow(/must name a descriptor of the claim's id/);
+  });
 });

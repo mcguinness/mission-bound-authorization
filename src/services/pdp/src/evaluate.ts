@@ -1123,7 +1123,13 @@ function evaluationContextOf(
     if (!sameEvaluationContextBinding(binding, entry.descriptor)) return "invalid";
   } else {
     const named = (opts.resourceContracts ?? RESOURCE_CONTRACTS).versionOf(contract);
-    if (named !== undefined && named.version.digest === (contract as { digest?: unknown }).digest) {
+    // A version without its document (retired, its bytes dropped) is left
+    // to the contract step, as an unknown one is.
+    if (
+      named !== undefined &&
+      named.version.document !== undefined &&
+      named.version.digest === (contract as { digest?: unknown }).digest
+    ) {
       const expected = contractDescriptor(named.version, action, isActionPhase(phase) ? phase : undefined);
       if (!sameEvaluationContextBinding(binding, expected)) return "invalid";
     }

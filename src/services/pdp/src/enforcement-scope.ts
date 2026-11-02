@@ -18,6 +18,7 @@
  */
 
 import {
+  assertContractDescriptors,
   type AuthorityDependencyDeclaration,
   EVALUATION_CONTEXT_BINDING_EXTENSION,
   EvaluationContextBindingDeclarations,
@@ -751,7 +752,11 @@ export function authorityDependencyFindings(input: unknown): EnforcementScopeFin
  * `evaluation_context_enforced` ("The **enforced** property MUST NOT be
  * claimed without an atomic resource-side comparison coupled to the effect";
  * that assertion itself needs a declared precondition). A declaration present
- * without the claim is checked the same way and covers nothing.
+ * without the claim is checked the same way and covers nothing. With both
+ * declared, the contract versions and the claim are checked against each
+ * other (#249, D1155): a current version naming another descriptor than the
+ * claim, and any version naming one the claim does not publish, of another
+ * `id`, or for an uncovered operation, is refused at load.
  */
 export function evaluationContextBindingFindings(input: unknown): EnforcementScopeFinding[] {
   const stmt = object(input) ? input : {};
@@ -784,6 +789,22 @@ export function evaluationContextBindingFindings(input: unknown): EnforcementSco
         member,
         problem: `declares the enforced property for ${o.operation} with no execution capability asserting evaluation_context_enforced`,
       });
+    }
+  }
+  // A contract declaration that does not parse is resourceContractFindings'.
+  if (extensions.resource_contracts !== undefined) {
+    let contracts: ResourceContractDeclarations | undefined;
+    try {
+      contracts = new ResourceContractDeclarations(extensions.resource_contracts);
+    } catch {
+      contracts = undefined;
+    }
+    if (contracts !== undefined) {
+      try {
+        assertContractDescriptors(contracts, declared);
+      } catch (e) {
+        findings.push({ member: "extensions.resource_contracts", problem: (e as Error).message });
+      }
     }
   }
   return findings;
