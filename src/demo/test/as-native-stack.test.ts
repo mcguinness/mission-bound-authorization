@@ -1800,7 +1800,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
             intent: {
               goal: "Read approved Acme invoices and send their remittance",
               target_resources: [CANONICAL_RESOURCE],
-              expires_at: "2027-01-01T00:00:00Z",
+              expires_at: FIXTURE_EXPIRES_AT,
             },
           }),
           authorizationDetails: JSON.stringify([
