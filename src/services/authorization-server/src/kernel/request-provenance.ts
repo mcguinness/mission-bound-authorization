@@ -24,7 +24,7 @@
  */
 
 import { createPublicKey, type KeyObject } from "node:crypto";
-import { canonicalize, type JsonValue, parseStrictJson } from "@mission/core";
+import { type JsonValue, parseStrictJson } from "@mission/core";
 import type {
   RequestProvenanceConfig,
   RequestProvenanceKeyConfig,
@@ -142,12 +142,59 @@ function isNumericDate(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
 }
 
+/**
+ * A JSON value exactly as its text states it: every number finite (the strict
+ * parser reads an overflowing number such as `1e400` as Infinity), and every
+ * object a plain one.
+ */
+function isExactJson(v: unknown): boolean {
+  if (v === null || typeof v === "string" || typeof v === "boolean") return true;
+  if (typeof v === "number") return Number.isFinite(v);
+  if (Array.isArray(v)) return v.every(isExactJson);
+  return isPlainObject(v) && Object.keys(v).every((k) => isExactJson(own(v, k)));
+}
+
+/**
+ * Exact JSON equality: the same own members with the same values, compared
+ * structurally, so it never throws on any value.
+ */
+function sameJson(a: unknown, b: unknown): boolean {
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return a === b;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((x, i) => sameJson(x, b[i]))
+    );
+  }
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return (
+    keys.length === Object.keys(right).length &&
+    keys.every((k) => Object.hasOwn(right, k) && sameJson(own(left, k), own(right, k)))
+  );
+}
+
 const UTF8 = new TextDecoder("utf-8", { fatal: true });
+
+/**
+ * One base64url segment, decoded strictly: the unpadded alphabet with no other
+ * characters (RFC 7515 Section 2), and the one canonical encoding of its bytes,
+ * so a segment with non-zero trailing bits refuses too.
+ */
+function decodeBase64url(segment: string): Uint8Array | undefined {
+  if (!BASE64URL.test(segment) || segment.length % 4 === 1) return undefined;
+  const bytes = Buffer.from(segment, "base64url");
+  return bytes.toString("base64url") === segment ? new Uint8Array(bytes) : undefined;
+}
 
 /** Decode one base64url segment of the compact serialization to its JSON object. */
 function decodeSegment(segment: string): { bytes: Uint8Array; value: Record<string, unknown> } | undefined {
-  if (segment.length === 0 || !BASE64URL.test(segment) || segment.length % 4 === 1) return undefined;
-  const bytes = new Uint8Array(Buffer.from(segment, "base64url"));
+  if (segment.length === 0) return undefined;
+  const bytes = decodeBase64url(segment);
+  if (bytes === undefined) return undefined;
   let value: JsonValue;
   try {
     value = parseStrictJson(UTF8.decode(bytes));
@@ -167,11 +214,7 @@ function decodeSegment(segment: string): { bytes: Uint8Array; value: Record<stri
  */
 function isRequestDigest(v: unknown): v is string {
   if (typeof v !== "string" || !v.startsWith(REQUEST_DIGEST_PREFIX)) return false;
-  const encoded = v.slice(REQUEST_DIGEST_PREFIX.length);
-  // The round trip refuses padding, characters outside the base64url
-  // alphabet, and non-zero trailing bits alike.
-  const bytes = Buffer.from(encoded, "base64url");
-  return bytes.length === REQUEST_DIGEST_BYTES && bytes.toString("base64url") === encoded;
+  return decodeBase64url(v.slice(REQUEST_DIGEST_PREFIX.length))?.length === REQUEST_DIGEST_BYTES;
 }
 
 /** A NumericDate as an RFC 3339 timestamp in UTC, its fraction (if any) kept exactly. */
@@ -237,7 +280,7 @@ export async function verifyRequestProvenance(
   // none, kid present, and none of jku, x5u, jwk or x5c.
   const segments = assertion.split(".");
   if (segments.length !== 3) return refuse(2, "the assertion is not a JWS in compact serialization");
-  const [headerSegment, payloadSegment] = segments as [string, string, string];
+  const [headerSegment, payloadSegment, signatureSegment] = segments as [string, string, string];
   const decodedHeader = decodeSegment(headerSegment);
   if (decodedHeader === undefined) return refuse(2, "the protected header is not a JSON object");
   const header = decodedHeader.value;
@@ -259,6 +302,11 @@ export async function verifyRequestProvenance(
   const decodedClaims = decodeSegment(payloadSegment);
   if (decodedClaims === undefined) return refuse(2, "the claims set is not a JSON object");
   const claims = decodedClaims.value;
+  // The signature segment is held to the same decoding before step 4 reads
+  // it (RFC 7515 Section 5.2): a padded spelling never reaches the verifier.
+  if (signatureSegment.length === 0 || decodeBase64url(signatureSegment) === undefined) {
+    return refuse(2, "the signature is not unpadded base64url in its canonical encoding");
+  }
 
   // 3. The signer by the iss claim and kid, in configuration only; the key
   // mapped to this evidence type; alg permitted for that key.
@@ -279,7 +327,9 @@ export async function verifyRequestProvenance(
   // the one algorithm the configuration permits and the header names.
   try {
     const verified = await compactVerify(assertion, configuredKey(key), { algorithms: [alg] });
-    // The claims steps 3 and later read are exactly the verified payload.
+    // The claims steps 3 and later read are exactly the verified payload. A
+    // JWS whose payload is unencoded (b64 false) signs other bytes, and a JWT
+    // never uses one (RFC 7797 Section 7).
     if (Buffer.compare(Buffer.from(verified.payload), Buffer.from(decodedClaims.bytes)) !== 0) {
       return refuse(4, "the verified payload is not the decoded claims set");
     }
@@ -310,8 +360,8 @@ export async function verifyRequestProvenance(
   const presenterClientId = own(presenter, "client_id");
   if (!isNonEmptyString(presenterClientId)) return refuse(5, "presenter.client_id is not a string");
   const presenterCnf = own(presenter, "cnf");
-  if (presenterCnf !== undefined && !isPlainObject(presenterCnf)) {
-    return refuse(5, "presenter.cnf is not a confirmation-method object");
+  if (presenterCnf !== undefined && !(isPlainObject(presenterCnf) && isExactJson(presenterCnf))) {
+    return refuse(5, "presenter.cnf is not a confirmation-method object of exact JSON values");
   }
   if (!isPlainObject(originator)) return refuse(5, "originator is not an object");
   const originatorIss = own(originator, "iss");
@@ -391,13 +441,12 @@ export async function verifyRequestProvenance(
     }
   } else {
     // cnf is REQUIRED where the presenter uses proof of possession, and is
-    // compared exactly: the same members with the same values.
+    // compared exactly: the same own members, `__proto__` among them, with
+    // the same values.
     if (presenterCnf === undefined) {
       return refuse(9, "presenter carries no cnf where the exchange established a confirmation key");
     }
-    if (
-      canonicalize(presenterCnf as JsonValue) !== canonicalize(established as unknown as JsonValue)
-    ) {
+    if (!sameJson(presenterCnf, established)) {
       return refuse(9, "presenter.cnf is not the confirmation key the exchange established");
     }
   }
