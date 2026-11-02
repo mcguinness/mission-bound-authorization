@@ -678,6 +678,14 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     }
     perChildMaxima.push(committed.maximum);
   }
+  // @spec derivation-limits#effective-limit (#2018): a finite per-child
+  // maximum the parent's approval committed stays in force where this AS no
+  // longer implements Derivation Limits. The creation is refused, as for a
+  // per-child figure that cannot be read, rather than recorded with no limit.
+  const unestablishable = kernel.standingConsentMaximumRefusal(strictestMaximum(perChildMaxima));
+  if (unestablishable) {
+    throw new ChildDelegationError("policy_denied", unestablishable, makeEvidence("denied", "strict_subset", "policy_denied"));
+  }
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
   // permitted by every justifying entry, under the SAME shared matcher as the

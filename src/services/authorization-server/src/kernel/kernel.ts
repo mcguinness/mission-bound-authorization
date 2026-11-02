@@ -1664,13 +1664,37 @@ export class MissionKernel {
   /**
    * @spec derivation-limits#effective-limit (#1119, D327, #2018): the
    * `derivation_limit` a Mission created under a standing consent records:
-   * its own resolved limit, never above a finite committed maximum. None
-   * where this AS does not implement Derivation Limits, whose rule a Mission
-   * Template or Child Delegation consent then neither states nor renders.
+   * its own resolved limit, never above a finite committed maximum. Where
+   * this AS does not implement Derivation Limits, none for a consent that
+   * guarantees no finite maximum. A finite committed maximum is never turned
+   * into no limit: only a fresh human approval replaces it, so turning the
+   * capability off does not remove it. Each creating path refuses such a
+   * creation first ({@link MissionKernel.standingConsentMaximumRefusal});
+   * reaching here with one is a defect, refused.
    */
   standingConsentDerivationLimit(requested: number | null | undefined, maximum: StandingConsentMaximum): number | null {
-    if (!this.derivationLimitsEnabled()) return null;
+    if (!this.derivationLimitsEnabled()) {
+      if (maximum.finite !== null) {
+        throw new Error(
+          `a standing consent committed a finite derivation_limit maximum of ${maximum.finite}, which this deployment cannot record: Derivation Limits is off`,
+        );
+      }
+      return null;
+    }
     return withinStandingConsentMaximum(this.resolveDerivationLimit(requested), maximum);
+  }
+
+  /**
+   * @spec derivation-limits#effective-limit (#2018): whether a Mission can be
+   * created under a standing consent committing `maximum`. Where this AS does
+   * not implement Derivation Limits it cannot establish the limit a finite
+   * committed maximum requires, and recording none would lift a bound only a
+   * fresh human approval replaces, so the creation is refused: the returned
+   * reason, or undefined where the creation can proceed.
+   */
+  standingConsentMaximumRefusal(maximum: StandingConsentMaximum): string | undefined {
+    if (this.derivationLimitsEnabled() || maximum.finite === null) return undefined;
+    return `the standing consent committed a per-Mission derivation limit of at most ${maximum.finite}, which this deployment cannot establish because it does not implement Derivation Limits; disabling the capability does not remove the commitment, which only a fresh human approval replaces`;
   }
 
   /**

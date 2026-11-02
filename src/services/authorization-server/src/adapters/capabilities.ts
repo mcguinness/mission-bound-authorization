@@ -80,6 +80,15 @@ export type ProviderCapability =
    * defines, no Mission establishes a `derivation_limit`, and no approval or
    * consent page renders a derivation limit. Construction refuses a
    * deployment policy that sets `derivation_limit_ceiling`.
+   *
+   * Turning it off is not permission to remove an earlier commitment. A
+   * Mission created while it was on keeps its own `derivation_limit`, still
+   * enforced. A finite per-Mission maximum a standing consent committed (a
+   * Child Delegation entry's figure, a Mission Template's Dispatch Policy)
+   * stays in force, and only a fresh human approval replaces it, so a Child
+   * Mission or a dispatched instance created under one is refused
+   * (`policy_denied`, `dispatch_policy_changed`) rather than created with no
+   * limit. A consent guaranteeing no finite maximum still creates.
    */
   | "derivation-limits"
   /**
