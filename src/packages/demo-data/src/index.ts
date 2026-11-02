@@ -16,6 +16,7 @@ import {
   type AuthorityDependencyDeclaration,
   type AuthorityEntry,
   actionOutsideGrammar,
+  assertContractDescriptors,
   carriesHttpUserinfo,
   computeAnchor,
   containmentSelectorViolation,
@@ -664,6 +665,9 @@ export function contractsRequiring(
           digest: v.digest,
           ...(v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
           ...(v.document !== undefined ? { document: v.document } : {}),
+          ...(v.evaluation_context_descriptors !== undefined
+            ? { evaluation_context_descriptors: v.evaluation_context_descriptors }
+            : {}),
         })),
       };
     }),
@@ -800,6 +804,17 @@ export const EVALUATION_CONTEXT_BINDING: EvaluationContextBindingDeclarations = 
     throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
   }
 })();
+/**
+ * @spec runtime#resource-contract, runtime#evaluation-context-binding (#249,
+ * D1155): the contract versions and the claim agree at load, so no
+ * deployment ships a supported version whose descriptors the claim
+ * contradicts or does not publish.
+ */
+try {
+  assertContractDescriptors(RESOURCE_CONTRACTS, EVALUATION_CONTEXT_BINDING);
+} catch (e) {
+  throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
+}
 const runtimeStateSource = asObject(
   "enforcement-scope.json",
   asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement").state_source,

@@ -17,6 +17,7 @@ import {
   type AuthorityDependencyEnforcement,
   canonicalDigest,
   checkAuthorityDependency,
+  contractDescriptor,
   type CollectionMemberFacts,
   type ConstraintFacts,
   type CredentialAuthorityEntry,
@@ -26,6 +27,7 @@ import {
   entryMatchesTarget,
   establishOperationTarget,
   type EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
   type IdempotencyScope,
   sameEvaluationContextBinding,
   idempotencyScopeDigest,
@@ -2222,6 +2224,25 @@ export class Pep {
     return this.deps.evaluationContextBinding?.() ?? EVALUATION_CONTEXT_BINDING;
   }
 
+  /**
+   * @spec runtime#resource-contract rule 3, runtime#evaluation-context-binding
+   * (#249, D1155): the descriptor a covered crossing is captured and released
+   * under. Under a contract, the one that contract names for the crossing, so
+   * a retained version is performed under its own descriptor whatever the
+   * live declaration names now; with no contract, the live declaration's.
+   * `undefined` when the contract names none: the crossing is refused, never
+   * captured under another version's descriptor.
+   */
+  private contextDescriptorFor(
+    contract: ResourceContractRef | undefined,
+    action: string,
+    phase: string | undefined,
+  ): EvaluationContextBindingRef | undefined {
+    if (contract === undefined) return this.contextDeclarations().operation(action, phase)?.descriptor;
+    const declared = this.contracts().versionOf(contract)?.version;
+    return declared === undefined ? undefined : contractDescriptor(declared, action, phase);
+  }
+
   /** @spec runtime#evaluation-context-binding (#773): the salt keeper, read now. */
   private contextSalts(): EvaluationContextSalts {
     return this.deps.evaluationContextSalts?.() ?? this.defaultContextSalts;
@@ -2325,12 +2346,16 @@ export class Pep {
     // A missing condition, or one other than the binding this PEP sent.
     if (attempt.permitEvaluationContextDigest !== bound.held.digest) return "target_drift";
     if (observed !== bound.held.digest) return "target_drift";
-    // The descriptor-change check, independent of the digests: the operation's
-    // live declaration must still name the descriptor the binding committed.
-    // A crossing no longer covered, or now covered under another descriptor,
-    // is refused though its facts are unchanged.
-    const live = this.contextDeclarations().operation(bound.held.operation.action, bound.held.operation.phase);
-    return live && sameEvaluationContextBinding(live.descriptor, bound.held.reference) ? undefined : "target_drift";
+    // The descriptor-change check, independent of the digests: the crossing
+    // must still be covered, and the contract the permit was decided under
+    // (the live declaration, with no contract) must still name the descriptor
+    // the binding committed (#249, D1155). A crossing no longer covered, or
+    // whose contract now names another descriptor, is refused though its
+    // facts are unchanged.
+    const { action, phase } = bound.held.operation;
+    if (!this.contextDeclarations().covers(action, phase)) return "target_drift";
+    const expected = this.contextDescriptorFor(attempt.performedContract, action, phase);
+    return sameEvaluationContextBinding(expected, bound.held.reference) ? undefined : "target_drift";
   }
 
   /**
@@ -2790,16 +2815,21 @@ export class Pep {
       // wire's, not the invoice's (#252): it captures below, once its link is
       // established.
       if (contextCovered && !mapping.compensates) {
-        const captured = captureEvaluationContext({
-          declarations: contextDeclarations,
-          salts: this.contextSalts(),
-          mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
-          operation: { action: mapping.action, ...(mapping.phase !== undefined ? { phase: mapping.phase } : {}) },
-          invoiceId: invoice.id,
-          payments: this.deps.payments,
-          records,
-        });
-        if (!captured.ok) {
+        const descriptor = this.contextDescriptorFor(performedContract, mapping.action, mapping.phase);
+        const captured =
+          descriptor === undefined
+            ? undefined
+            : captureEvaluationContext({
+                declarations: contextDeclarations,
+                salts: this.contextSalts(),
+                mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
+                operation: { action: mapping.action, ...(mapping.phase !== undefined ? { phase: mapping.phase } : {}) },
+                descriptor,
+                invoiceId: invoice.id,
+                payments: this.deps.payments,
+                records,
+              });
+        if (!captured?.ok) {
           return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
             resource: { type: "invoice", id: invoice.id },
           });
@@ -2999,21 +3029,26 @@ export class Pep {
       // now. With the link established, a context this PEP still cannot
       // capture is refused before the decision request, as any other.
       if (contextCovered) {
-        const captured = captureEvaluationContext({
-          declarations: contextDeclarations,
-          salts: this.contextSalts(),
-          mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
-          operation: { action: mapping.action, phase: mapping.phase },
-          invoiceId: established.wire.invoiceId,
-          payments: this.deps.payments,
-          compensates: { opKey: established.link.opKey, evaluationId: established.link.evaluationId },
-          ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
-          // Exactly the records the decision's properties above and its
-          // effect parameters came from: no second read.
-          records: snapshot,
-          wire: established.wire,
-        });
-        if (!captured.ok) {
+        const descriptor = this.contextDescriptorFor(performedContract, mapping.action, mapping.phase);
+        const captured =
+          descriptor === undefined
+            ? undefined
+            : captureEvaluationContext({
+                declarations: contextDeclarations,
+                salts: this.contextSalts(),
+                mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
+                operation: { action: mapping.action, phase: mapping.phase },
+                descriptor,
+                invoiceId: established.wire.invoiceId,
+                payments: this.deps.payments,
+                compensates: { opKey: established.link.opKey, evaluationId: established.link.evaluationId },
+                ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
+                // Exactly the records the decision's properties above and its
+                // effect parameters came from: no second read.
+                records: snapshot,
+                wire: established.wire,
+              });
+        if (!captured?.ok) {
           return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
             resource: resourceObj,
           });

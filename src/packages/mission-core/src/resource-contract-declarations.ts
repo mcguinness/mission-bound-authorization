@@ -44,6 +44,12 @@
 import { ACTION_VALUE, resourceWithin } from "./authority-subset.js";
 import type { JsonValue } from "./canonicalize.js";
 import {
+  type EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
+  isEvaluationContextBindingRef,
+  sameEvaluationContextBinding,
+} from "./evaluation-context.js";
+import {
   entryMatchesTarget,
   isAbsoluteUri,
   isEnforceablePrefixBase,
@@ -77,6 +83,15 @@ export interface DeclaredContractVersion {
   readonly operations: readonly string[];
   /** The Operation Profile version the document names (`operation_profile`). */
   readonly operation_profile?: string;
+  /**
+   * @spec runtime#resource-contract, runtime#evaluation-context-binding (#249,
+   * D1155): for a version whose document names no evaluation-context
+   * descriptor, the deployment's explicit association, keyed by the
+   * document's operation names: the descriptor each covered operation was
+   * performed under while the version was current, declared beside the
+   * document and never inside its bytes. {@link contractDescriptor} reads it.
+   */
+  readonly evaluation_context_descriptors?: Readonly<Record<string, EvaluationContextBindingRef>>;
 }
 
 /** One contract a resource serves, with every version it declares. */
@@ -181,13 +196,80 @@ function readDocument(
   for (const name of names) {
     const op = obj(ops[name], `${path}.operations.${name}`);
     actions.add(nonEmpty(op.action, `${path}.operations.${name}.action`));
+    if (
+      op.evaluation_context_descriptor !== undefined &&
+      !isEvaluationContextBindingRef(op.evaluation_context_descriptor)
+    ) {
+      throw new ResourceContractConfigError(
+        `${path}.operations.${name}.evaluation_context_descriptor`,
+        "must be an evaluation-context descriptor reference {id, version, digest}",
+      );
+    }
   }
   return { operations: [...actions], operation_profile };
 }
 
+/** The document's operations by name, as `{ action, phase, descriptor }`; empty for a version without a document. */
+function documentOperations(
+  document: JsonValue | undefined,
+): Array<{ name: string; action: string; phase: string | undefined; descriptor: unknown }> {
+  const ops =
+    (document as { operations?: Record<string, Record<string, unknown>> } | undefined)
+      ?.operations ?? {};
+  return Object.entries(ops).map(([name, op]) => ({
+    name,
+    action: op.action as string,
+    phase: typeof op.phase === "string" ? op.phase : undefined,
+    descriptor: op.evaluation_context_descriptor,
+  }));
+}
+
+/**
+ * The deployment's explicit descriptor association for a version
+ * (`evaluation_context_descriptors`): an object from the document's operation
+ * names to descriptor references, declared only for a current or superseded
+ * version whose document names no descriptor itself, so each operation has
+ * one source.
+ */
+function parseAssociation(
+  raw: unknown,
+  document: JsonValue,
+  path: string,
+): Record<string, EvaluationContextBindingRef> {
+  const a = obj(raw, path);
+  const ops = documentOperations(document);
+  if (ops.some((o) => o.descriptor !== undefined)) {
+    throw new ResourceContractConfigError(
+      path,
+      "is declared only for a version whose document names no descriptor",
+    );
+  }
+  const out: Record<string, EvaluationContextBindingRef> = {};
+  for (const [name, ref] of Object.entries(a)) {
+    if (!ops.some((o) => o.name === name)) {
+      throw new ResourceContractConfigError(
+        `${path}.${name}`,
+        "must name an operation the version's document defines",
+      );
+    }
+    if (!isEvaluationContextBindingRef(ref)) {
+      throw new ResourceContractConfigError(
+        `${path}.${name}`,
+        "must be an evaluation-context descriptor reference {id, version, digest}",
+      );
+    }
+    out[name] = { id: ref.id, version: ref.version, digest: ref.digest };
+  }
+  return out;
+}
+
 function parseVersion(raw: unknown, id: string, path: string): DeclaredContractVersion {
   const v = obj(raw, path);
-  only(v, ["version", "state", "retained_until", "digest", "document"], path);
+  only(
+    v,
+    ["version", "state", "retained_until", "digest", "document", "evaluation_context_descriptors"],
+    path,
+  );
   const version = nonEmpty(v.version, `${path}.version`);
   const state = v.state;
   if (
@@ -228,6 +310,12 @@ function parseVersion(raw: unknown, id: string, path: string): DeclaredContractV
         "is required for a current or superseded version",
       );
     }
+    if (v.evaluation_context_descriptors !== undefined) {
+      throw new ResourceContractConfigError(
+        `${path}.evaluation_context_descriptors`,
+        "is declared only for a current or superseded version",
+      );
+    }
     return { version, state, digest, operations: [] };
   }
   const { operations, operation_profile } = readDocument(
@@ -247,6 +335,14 @@ function parseVersion(raw: unknown, id: string, path: string): DeclaredContractV
       `does not commit the declared document (computed ${computed}); a changed contract is a new version with its own digest`,
     );
   }
+  const association =
+    v.evaluation_context_descriptors === undefined
+      ? undefined
+      : parseAssociation(
+          v.evaluation_context_descriptors,
+          v.document as JsonValue,
+          `${path}.evaluation_context_descriptors`,
+        );
   return {
     version,
     state: state as ResourceContractState,
@@ -255,7 +351,99 @@ function parseVersion(raw: unknown, id: string, path: string): DeclaredContractV
     document: structuredClone(v.document) as JsonValue,
     operations,
     operation_profile,
+    ...(association !== undefined ? { evaluation_context_descriptors: association } : {}),
   };
+}
+
+/**
+ * @spec runtime#resource-contract, runtime#evaluation-context-binding (#249,
+ * D1155): the evaluation-context descriptor `version` names for a crossing of
+ * `action` (and, for a compound action, `phase`): the document's own
+ * `evaluation_context_descriptor` member of every operation performing that
+ * crossing, or the deployment's explicit association for each. `undefined`
+ * when the version names none for it, or names different descriptors for
+ * operations performing the same crossing: a covered crossing under such a
+ * version is refused, never captured under the descriptor another version
+ * names.
+ */
+export function contractDescriptor(
+  version: DeclaredContractVersion,
+  action: string,
+  phase: string | undefined,
+): EvaluationContextBindingRef | undefined {
+  const crossing = documentOperations(version.document).filter(
+    (o) => o.action === action && o.phase === phase,
+  );
+  if (crossing.length === 0) return undefined;
+  const named = crossing.map((o) =>
+    o.descriptor !== undefined ? o.descriptor : version.evaluation_context_descriptors?.[o.name],
+  );
+  const [first] = named;
+  if (
+    !isEvaluationContextBindingRef(first) ||
+    !named.every((r) => sameEvaluationContextBinding(r, first))
+  )
+    return undefined;
+  return { id: first.id, version: first.version, digest: first.digest };
+}
+
+/**
+ * @spec runtime#resource-contract, runtime#evaluation-context-binding (#249,
+ * D1155): the load-time guard over the two declarations, so a deployment
+ * never ships contract versions whose descriptors disagree with its claim.
+ * For every operation of a current or superseded version that the claim
+ * covers: the current version names exactly the descriptor the claim
+ * declares for it; any version that names one names a descriptor the claim
+ * publishes, of the same `id` as the claim's for that crossing, whose
+ * document hashes to the reference; and no version names a descriptor for an
+ * operation the claim does not cover. A superseded version may name none for
+ * a covered operation: that crossing is then refused under it. A descriptor
+ * a supported version names cannot leave the claim while that version
+ * resolves.
+ */
+export function assertContractDescriptors(
+  contracts: ResourceContractDeclarations,
+  binding: EvaluationContextBindingDeclarations,
+): void {
+  contracts.declarations.forEach((d, di) => {
+    d.versions.forEach((v, vi) => {
+      if (v.state === "retired") return;
+      for (const o of documentOperations(v.document)) {
+        const path = `resource_contracts[${di}].versions[${vi}] (${v.version}), operation ${o.name}`;
+        const named =
+          o.descriptor !== undefined ? o.descriptor : v.evaluation_context_descriptors?.[o.name];
+        const declared = binding.claimed ? binding.operation(o.action, o.phase) : undefined;
+        if (declared === undefined) {
+          if (named !== undefined) {
+            throw new ResourceContractConfigError(
+              path,
+              "names a descriptor for an operation the Evaluation-Context Binding claim does not cover",
+            );
+          }
+          continue;
+        }
+        if (v.state === "current" && !sameEvaluationContextBinding(named, declared.descriptor)) {
+          throw new ResourceContractConfigError(
+            path,
+            "must name the descriptor the Evaluation-Context Binding claim declares for the operation",
+          );
+        }
+        if (named === undefined) continue;
+        if (!isEvaluationContextBindingRef(named) || named.id !== declared.descriptor.id) {
+          throw new ResourceContractConfigError(
+            path,
+            "must name a descriptor of the claim's id for the operation",
+          );
+        }
+        if (!binding.descriptor(named).ok) {
+          throw new ResourceContractConfigError(
+            path,
+            "names a descriptor the claim does not publish under that reference",
+          );
+        }
+      }
+    });
+  });
 }
 
 function parseDeclaration(raw: unknown, path: string): ResourceContractDeclaration {

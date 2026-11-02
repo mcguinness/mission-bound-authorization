@@ -433,9 +433,10 @@ function commit(
 
 /**
  * @spec runtime#evaluation-context-binding: capture before the decision
- * request. The descriptor is the one the live declaration names for the
- * covered crossing, verified against its reference; the salt is the current
- * version's. A crossing the declaration does not cover is `not_covered`, for
+ * request. The descriptor is `descriptor`, the one the contract the crossing
+ * is performed under names (#249, D1155), verified against its reference;
+ * the declaration decides only whether the crossing is covered. The salt is
+ * the current version's. A crossing the declaration does not cover is `not_covered`, for
  * the caller to skip; any other failure means the context cannot be captured,
  * which refuses before the decision request.
  */
@@ -445,18 +446,20 @@ export function captureEvaluationContext(
     salts: EvaluationContextSalts;
     mission: { issuer: string; id: string };
     operation: ContextOperation;
+    /** The descriptor the performed contract names for the crossing. */
+    descriptor: EvaluationContextBindingRef;
   },
 ): ContextCapture {
   const entry = input.declarations.operation(input.operation.action, input.operation.phase);
   if (!entry) return { ok: false, reason: "not_covered" };
-  const resolved = input.declarations.descriptor(entry.descriptor);
+  const resolved = input.declarations.descriptor(input.descriptor);
   if (!resolved.ok) return { ok: false, reason: "descriptor_unrecoverable" };
   const saltVersion = input.salts.current();
   const salt = saltVersion === undefined ? undefined : input.salts.saltFor(saltVersion, input.mission);
   if (saltVersion === undefined || salt === undefined) return { ok: false, reason: "salt_unavailable" };
   const committed = commit({
     descriptor: resolved.document,
-    reference: entry.descriptor,
+    reference: input.descriptor,
     mission: input.mission,
     operation: input.operation,
     invoiceId: input.invoiceId,
@@ -474,7 +477,7 @@ export function captureEvaluationContext(
     digest: committed.digest,
     held: {
       digest: committed.digest,
-      reference: { ...entry.descriptor },
+      reference: { ...input.descriptor },
       saltVersion,
       mission: { issuer: input.mission.issuer, id: input.mission.id },
       operation: { ...input.operation },
