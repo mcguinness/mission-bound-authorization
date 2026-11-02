@@ -420,6 +420,31 @@ The AS refuses a token whose audiences span both modes. That is an
 implementation restriction (one `scope` claim is shared by every audience),
 not a protocol rule.
 
+## `standing-payment.json`
+
+DRAFT ENABLEMENT (D1122, not for merge): the shared demo composition's
+standing-payment configuration (#813, #816, D830). `dispatch_policies`
+holds each Dispatch Policy designating the standing payment, its snapshot
+the compact JSON of `content`: the committed destinations, the per-payment
+bound, the budget `{owner, id, currency, limit, per_instance_max}` and the
+Approval Governance recency terms. `budget_metering` is the Enforcement
+Scope Statement extension the composition claims beside
+`config/enforcement-scope.json`, each budget naming its committed policies
+by `id` and `version`; the composition computes each `digest` for its own
+issuer.
+
+- **Selection.** Only `composeStack` with the AS and no `target` reads it,
+  enabling `standing-payment-dispatch` there. The as-native target, the
+  issuance-only deployment and the MAS pilot do not.
+- **Owner.** The payments operator, who owns the budget.
+- **Integrity.** Repository review; the AS refuses to start when a
+  designating policy's budget is not declared here under the Exact profile
+  with the policy's currency, limit and committed version, and the PDP's
+  loader refuses a malformed declaration.
+- **Updating.** Edit, review, and restart. A changed policy needs a new
+  `version` in both places: a template commits the consented snapshot's
+  digest, so a snapshot edited under the same version authorizes nothing.
+
 ## `transformation-capabilities.json`
 
 The transformation capabilities the AS declares per supported

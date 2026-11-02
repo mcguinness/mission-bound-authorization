@@ -2437,6 +2437,62 @@ export const DEMO_DISPATCH_POLICIES: Readonly<
   },
 };
 
+/**
+ * @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+ * (#813, #816, D830, D1122 draft enablement): the shared demo composition's
+ * standing-payment configuration, `config/standing-payment.json`. Its
+ * Dispatch Policies designate the standing payment; each snapshot's exact
+ * bytes are the compact JSON of the file's `content` object. Its
+ * `budget_metering` declaration is what the composition adds to its
+ * Enforcement Scope Statement; each budget names its committed policies by
+ * `id` and `version`, and the composition computes each `digest` as its
+ * issuer does. Checked structurally here; the authorization server and the
+ * PDP refuse a declaration they cannot run.
+ */
+export interface StandingPaymentDeployment {
+  dispatch_policies: Readonly<
+    Record<string, { version: string; content_type: string; content: string }>
+  >;
+  budget_metering: Record<string, unknown> & {
+    budgets: Array<Record<string, unknown> & { policies: Array<{ id: string; version: string }> }>;
+  };
+}
+
+function loadStandingPaymentDeployment(): StandingPaymentDeployment {
+  const file = "standing-payment.json";
+  const raw = asObject(file, readJson(file), "file");
+  const policies = asObject(file, raw.dispatch_policies, "dispatch_policies");
+  const dispatch_policies: Record<
+    string,
+    { version: string; content_type: string; content: string }
+  > = {};
+  for (const [id, entry] of Object.entries(policies)) {
+    const p = asObject(file, entry, `dispatch_policies.${id}`);
+    dispatch_policies[id] = {
+      version: reqString(file, p, "version", `dispatch_policies.${id}`),
+      content_type: reqString(file, p, "content_type", `dispatch_policies.${id}`),
+      content: JSON.stringify(asObject(file, p.content, `dispatch_policies.${id}.content`)),
+    };
+  }
+  const declared = asObject(file, raw.budget_metering, "budget_metering");
+  const budgets = asArray(file, declared.budgets, "budget_metering.budgets").map((b, i) => {
+    const budget = asObject(file, b, `budget_metering.budgets[${i}]`);
+    const refs = asArray(file, budget.policies, `budget_metering.budgets[${i}].policies`).map(
+      (r, j) => {
+        const ref = asObject(file, r, `budget_metering.budgets[${i}].policies[${j}]`);
+        const at = `budget_metering.budgets[${i}].policies[${j}]`;
+        return { id: reqString(file, ref, "id", at), version: reqString(file, ref, "version", at) };
+      },
+    );
+    return { ...budget, policies: refs };
+  });
+  return { dispatch_policies, budget_metering: { ...declared, budgets } };
+}
+
+/** The shared demo composition's standing-payment configuration ({@link StandingPaymentDeployment}). */
+export const STANDING_PAYMENT_DEPLOYMENT: StandingPaymentDeployment =
+  loadStandingPaymentDeployment();
+
 export interface SeededClient {
   metadata: Record<string, unknown>;
   privateJwk: Record<string, unknown>;
