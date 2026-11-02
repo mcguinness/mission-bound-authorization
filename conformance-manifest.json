@@ -36672,7 +36672,7 @@
     },
     {
      "file": "src/packages/mission-core/test/resource-contract.test.ts",
-     "name": "the evaluation-context descriptors a contract version names (@spec runtime#resource-contract, runtime#evaluation-context-binding, #249, D1155) > the shipped declarations agree: the current version names the claim's descriptor for each covered crossing, each superseded version the one in force while it was current, and 2026-10-20, published before the claim, none",
+     "name": "the evaluation-context descriptors a contract version names (@spec runtime#resource-contract, runtime#evaluation-context-binding, #249, D1155) > the shipped declarations agree: the current version names the claim's descriptor for each covered crossing, and 2026-10-20, published before the claim, none",
      "level": "unit",
      "surface": "deployment-documentation"
     },
