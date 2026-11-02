@@ -1891,6 +1891,10 @@ exists.
 
 \[\[ To be removed from the final specification ]]
 
+- Decision-API Composition: the PDP requires taint context on every action
+  to which the External commitment class applies, not only one whose
+  assigned class is `external_commitment` (#1994).
+
 - Harness Evidence: the imported sequence indicator is per emitter for
   each Mission, as the runtime profile scopes it. No requirement
   changed (#821).

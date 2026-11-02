@@ -4316,6 +4316,13 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Classes are ordered only in part, and the three highest are not
+  ordered among themselves; an invocation the classifier cannot place
+  is treated under every class the operation can reach. Trifecta
+  containment's external-communication leg reaches every action that
+  satisfies the external-communication or External commitment
+  predicate, whatever its class (#1994).
+
 - Changes a requirement (#1735, D1153, D1164): an action that
   satisfies more than one class predicate takes the requirements of
   every class whose predicate it satisfies, and classification under

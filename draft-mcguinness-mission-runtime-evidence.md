@@ -2715,6 +2715,10 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Decision Evidence: `action_classes` records every class whose
+  requirements the PDP applied, when more than one applies;
+  `action_class` stays the assigned class (#1994).
+
 - Refusal Record: `action_class_missing` records a PDP refusal of a
   mediated request with no action class established, where the runtime
   Enforcement Scope Statement declares classes, with no class recorded
