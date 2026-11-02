@@ -110,11 +110,15 @@ export async function par(h: SwitchedAs, intentExtra: Json = {}): Promise<{ stat
 }
 
 /**
- * Redeem a pushed request through the approval interaction: the trusted
+ * Take a pushed request through the approval interaction: the trusted
  * approval service (Bob, for Alice) reads the approval page and approves.
- * Returns the page it read, the code, and the Mission the approval created.
+ * Returns the page it read, the front channel's final redirect, and the
+ * Missions the decision created.
  */
-export async function approve(h: SwitchedAs, requestUri: string): Promise<{ page: string; code: string; missionId: string }> {
+export async function decideApproval(
+  h: SwitchedAs,
+  requestUri: string,
+): Promise<{ page: string; location: URL; created: string[] }> {
   const cookies = new Map<string, string>();
   const store = (res: Response) => {
     for (const line of res.headers.getSetCookie()) {
@@ -148,11 +152,17 @@ export async function approve(h: SwitchedAs, requestUri: string): Promise<{ page
     store(res);
     location = res.headers.get("location") ?? "";
   }
-  const code = new URL(location).searchParams.get("code");
-  if (!code) throw new Error(`approval did not yield a code: ${location}`);
   const created = h.as.kernel.allMissions().filter((m) => !before.has(m.id));
+  return { page, location: new URL(location), created: created.map((m) => m.id) };
+}
+
+/** {@link decideApproval}, requiring a code and exactly one created Mission. */
+export async function approve(h: SwitchedAs, requestUri: string): Promise<{ page: string; code: string; missionId: string }> {
+  const { page, location, created } = await decideApproval(h, requestUri);
+  const code = location.searchParams.get("code");
+  if (!code) throw new Error(`approval did not yield a code: ${location}`);
   if (created.length !== 1) throw new Error(`expected one Mission, found ${created.length}`);
-  return { page, code, missionId: (created[0] as { id: string }).id };
+  return { page, code, missionId: created[0] as string };
 }
 
 /** Redeem `code` at the token endpoint, DPoP-bound to a fresh key. */
