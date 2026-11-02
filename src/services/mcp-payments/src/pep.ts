@@ -2354,6 +2354,12 @@ export class Pep {
     // facts are unchanged.
     const { action, phase } = bound.held.operation;
     if (!this.contextDeclarations().covers(action, phase)) return "target_drift";
+    // A contract version this resource no longer declares with its document
+    // is the permit's contract no longer resolving: rule 5 refuses it as
+    // `resource_contract_unresolvable`, never as a descriptor change.
+    if (attempt.performedContract !== undefined && this.contracts().versionOf(attempt.performedContract)?.version.document === undefined) {
+      return undefined;
+    }
     const expected = this.contextDescriptorFor(attempt.performedContract, action, phase);
     return sameEvaluationContextBinding(expected, bound.held.reference) ? undefined : "target_drift";
   }

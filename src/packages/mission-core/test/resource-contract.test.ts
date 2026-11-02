@@ -9,8 +9,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
+  assertContractDescriptors,
   authorityHash,
+  contractDescriptor,
   credentialEntriesFromAuthority,
+  EvaluationContextBindingDeclarations,
   entryCoversFacts,
   entryWithinCeiling,
   isAuthorityEntry,
@@ -379,5 +382,257 @@ describe("scope projection condition 4 preserves the contract (@spec resource-ac
     expect(scopeValueSafeForEntry(value(), entry)).toBe(true);
     expect(scopeValueSafeForEntry(value({ resource_contract: V1 }), entry)).toBe(true);
     expect(scopeValueSafeForEntry(value({ requires_resource_contract: true }), entry)).toBe(false);
+  });
+});
+
+// @spec runtime#resource-contract, runtime#evaluation-context-binding (#249,
+// D1155): a contract version names the evaluation-context descriptor each
+// covered crossing is performed under, in its document or, for a version
+// published before its document could, in the deployment's association beside
+// it; the two declarations are checked against each other at load.
+describe("the evaluation-context descriptors a contract version names (@spec runtime#resource-contract, runtime#evaluation-context-binding, #249, D1155)", () => {
+  type Statement = {
+    claims: string[];
+    extensions: {
+      resource_contracts: Array<{
+        id: string;
+        versions: Array<{
+          version: string;
+          state: string;
+          digest: string;
+          retained_until?: string;
+          evaluation_context_descriptors?: Record<string, unknown>;
+          document: { operations: Record<string, Record<string, unknown>> } & Record<
+            string,
+            unknown
+          >;
+        }>;
+      }>;
+      evaluation_context_binding: {
+        operations: Array<{
+          operation: string;
+          phases?: string[];
+          descriptor: { id: string; version: string; digest: string };
+        }>;
+      };
+    };
+  };
+  const shipped = (): Statement =>
+    JSON.parse(
+      readFileSync(new URL("../../../config/enforcement-scope.json", import.meta.url), "utf8"),
+    ) as Statement;
+  const versionOf = (st: Statement, version: string) => {
+    const v = st.extensions.resource_contracts[0]?.versions.find((x) => x.version === version);
+    if (!v) throw new Error(`${version} is declared`);
+    return v;
+  };
+  const load = (st: Statement) => ({
+    contracts: new ResourceContractDeclarations(st.extensions.resource_contracts),
+    binding: new EvaluationContextBindingDeclarations(st),
+  });
+  const declaredVersion = (contracts: ResourceContractDeclarations, version: string) => {
+    const v = contracts.declarations[0]?.versions.find((x) => x.version === version);
+    if (!v) throw new Error(`${version} is declared`);
+    return v;
+  };
+  const claimDescriptor = (st: Statement, operation: string) =>
+    st.extensions.evaluation_context_binding.operations.find((o) => o.operation === operation)
+      ?.descriptor;
+  /** Re-commit a version's edited document under its digest, as a new publication would. */
+  const recommit = (v: { digest: string; document: unknown }) => {
+    v.digest = resourceContractDigest(v.document as never);
+  };
+
+  it("the shipped declarations agree: the current version names the claim's descriptor for each covered crossing, each superseded version the one in force while it was current, and 2026-10-20, published before the claim, none", () => {
+    const st = shipped();
+    const { contracts, binding } = load(st);
+    expect(() => assertContractDescriptors(contracts, binding)).not.toThrow();
+    const execute = claimDescriptor(st, "payments:payment.execute");
+    const reverse = claimDescriptor(st, "payments:payment.reverse");
+    for (const version of ["2026-11-02", "2026-10-27", "2026-10-26", "2026-10-24"]) {
+      for (const phase of ["preflight", "prepare", "commit"]) {
+        expect(
+          contractDescriptor(
+            declaredVersion(contracts, version),
+            "payments:payment.execute",
+            phase,
+          ),
+          `${version} ${phase}`,
+        ).toEqual(execute);
+      }
+    }
+    expect(
+      contractDescriptor(
+        declaredVersion(contracts, "2026-11-02"),
+        "payments:payment.reverse",
+        "compensate",
+      ),
+    ).toEqual(reverse);
+    expect(
+      contractDescriptor(
+        declaredVersion(contracts, "2026-10-26"),
+        "payments:payment.reverse",
+        "compensate",
+      ),
+    ).toEqual(reverse);
+    // 2026-10-24's reversal is not performed under its retained v14 profile.
+    expect(
+      contractDescriptor(
+        declaredVersion(contracts, "2026-10-24"),
+        "payments:payment.reverse",
+        "compensate",
+      ),
+    ).toBeUndefined();
+    for (const phase of ["preflight", "prepare", "commit"]) {
+      expect(
+        contractDescriptor(
+          declaredVersion(contracts, "2026-10-20"),
+          "payments:payment.execute",
+          phase,
+        ),
+        phase,
+      ).toBeUndefined();
+    }
+    // The 2026-11-02 descriptors are in its bytes; 2026-10-27's association is beside them.
+    expect(declaredVersion(contracts, "2026-11-02").evaluation_context_descriptors).toBeUndefined();
+    expect(declaredVersion(contracts, "2026-10-27").evaluation_context_descriptors).toBeDefined();
+  });
+
+  it("refuses at load a current version naming a descriptor other than the one the claim declares for the crossing", () => {
+    const st = shipped();
+    const current = versionOf(st, "2026-11-02");
+    const op = current.document.operations.execute_wire_transfer as Record<string, unknown>;
+    op.evaluation_context_descriptor = {
+      ...(op.evaluation_context_descriptor as object),
+      version: "2026-10-23",
+    };
+    recommit(current);
+    const { contracts, binding } = load(st);
+    expect(() => assertContractDescriptors(contracts, binding)).toThrow(
+      /must name the descriptor the Evaluation-Context Binding claim declares/,
+    );
+  });
+
+  it("refuses at load a superseded version naming a descriptor the claim does not publish, or one of another id for the crossing", () => {
+    const unpublished = shipped();
+    const v16 = versionOf(unpublished, "2026-10-27");
+    v16.evaluation_context_descriptors = {
+      ...v16.evaluation_context_descriptors,
+      execute_wire_transfer: {
+        ...(v16.evaluation_context_descriptors?.execute_wire_transfer as object),
+        version: "2026-10-23",
+      },
+    };
+    const a = load(unpublished);
+    expect(() => assertContractDescriptors(a.contracts, a.binding)).toThrow(
+      /names a descriptor the claim does not publish/,
+    );
+
+    const otherId = shipped();
+    const v16b = versionOf(otherId, "2026-10-27");
+    v16b.evaluation_context_descriptors = {
+      ...v16b.evaluation_context_descriptors,
+      execute_wire_transfer: claimDescriptor(otherId, "payments:remittance.send"),
+    };
+    const b = load(otherId);
+    expect(() => assertContractDescriptors(b.contracts, b.binding)).toThrow(
+      /must name a descriptor of the claim's id/,
+    );
+  });
+
+  it("refuses at load a version naming a descriptor for an operation the claim does not cover", () => {
+    const st = shipped();
+    const v16 = versionOf(st, "2026-10-27");
+    v16.evaluation_context_descriptors = {
+      ...v16.evaluation_context_descriptors,
+      get_invoice: claimDescriptor(st, "payments:payment.execute"),
+    };
+    const { contracts, binding } = load(st);
+    expect(() => assertContractDescriptors(contracts, binding)).toThrow(/does not cover/);
+  });
+
+  it("refuses at parse an association beside a document that names its own descriptors, one naming an operation the document does not define, one on a retired version, and a malformed reference", () => {
+    const cases: Array<[string, (st: Statement) => void, RegExp]> = [
+      [
+        "beside descriptors in the document",
+        (st) => {
+          versionOf(st, "2026-11-02").evaluation_context_descriptors = {
+            execute_wire_transfer: claimDescriptor(st, "payments:payment.execute"),
+          };
+        },
+        /is declared only for a version whose document names no descriptor/,
+      ],
+      [
+        "an undefined operation",
+        (st) => {
+          versionOf(st, "2026-10-27").evaluation_context_descriptors = {
+            wire_everything: claimDescriptor(st, "payments:payment.execute"),
+          };
+        },
+        /must name an operation the version's document defines/,
+      ],
+      [
+        "a retired version",
+        (st) => {
+          const v = versionOf(st, "2026-10-20");
+          v.state = "retired";
+          delete v.retained_until;
+          v.evaluation_context_descriptors = {
+            execute_wire_transfer: claimDescriptor(st, "payments:payment.execute"),
+          };
+        },
+        /is declared only for a current or superseded version/,
+      ],
+      [
+        "a malformed reference",
+        (st) => {
+          versionOf(st, "2026-10-27").evaluation_context_descriptors = {
+            execute_wire_transfer: { id: "not a uri" },
+          };
+        },
+        /must be an evaluation-context descriptor reference/,
+      ],
+    ];
+    for (const [label, edit, message] of cases) {
+      const st = shipped();
+      edit(st);
+      expect(
+        () => new ResourceContractDeclarations(st.extensions.resource_contracts),
+        label,
+      ).toThrow(ResourceContractConfigError);
+      expect(
+        () => new ResourceContractDeclarations(st.extensions.resource_contracts),
+        label,
+      ).toThrow(message);
+    }
+  });
+
+  it("names no descriptor for a crossing whose operations name different ones", () => {
+    const st = shipped();
+    const v16 = versionOf(st, "2026-10-27");
+    // A second commit-phase operation naming the remittance descriptor.
+    v16.document.operations.execute_wire_transfer_again = {
+      ...(v16.document.operations.execute_wire_transfer as object),
+    };
+    recommit(v16);
+    v16.evaluation_context_descriptors = {
+      ...v16.evaluation_context_descriptors,
+      execute_wire_transfer_again: claimDescriptor(st, "payments:remittance.send"),
+    };
+    const contracts = new ResourceContractDeclarations(st.extensions.resource_contracts);
+    expect(
+      contractDescriptor(
+        declaredVersion(contracts, "2026-10-27"),
+        "payments:payment.execute",
+        "commit",
+      ),
+    ).toBeUndefined();
+    expect(
+      contractDescriptor(
+        declaredVersion(contracts, "2026-10-27"),
+        "payments:payment.execute",
+        "prepare",
+      ),
+    ).toEqual(claimDescriptor(st, "payments:payment.execute"));
   });
 });

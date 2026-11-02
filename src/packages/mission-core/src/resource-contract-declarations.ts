@@ -296,6 +296,12 @@ function parseVersion(raw: unknown, id: string, path: string): DeclaredContractV
       "is declared only for a superseded version",
     );
   }
+  if (state === "retired" && v.evaluation_context_descriptors !== undefined) {
+    throw new ResourceContractConfigError(
+      `${path}.evaluation_context_descriptors`,
+      "is declared only for a current or superseded version",
+    );
+  }
   const digest = nonEmpty(v.digest, `${path}.digest`);
   if (!isResourceContractRef({ id, version, digest })) {
     throw new ResourceContractConfigError(
@@ -308,12 +314,6 @@ function parseVersion(raw: unknown, id: string, path: string): DeclaredContractV
       throw new ResourceContractConfigError(
         `${path}.document`,
         "is required for a current or superseded version",
-      );
-    }
-    if (v.evaluation_context_descriptors !== undefined) {
-      throw new ResourceContractConfigError(
-        `${path}.evaluation_context_descriptors`,
-        "is declared only for a current or superseded version",
       );
     }
     return { version, state, digest, operations: [] };
