@@ -3632,7 +3632,9 @@ export interface RequestProvenanceKeyConfig {
 /**
  * An originator a signer may attest for. With `sub`, the signer is a
  * user-device signer, and this entry, its only one, is the AS's own binding
- * of the signer's keys to that originator.
+ * of the signer's keys to that originator. That shape is this reference's
+ * representation, not a protocol rule: it cannot express a service signer
+ * narrowed to several specific principals, which the draft permits.
  */
 export interface RequestProvenanceOriginatorConfig {
   iss: string;
@@ -3672,20 +3674,23 @@ const RP_ROOT_MEMBERS = new Set([
 const RP_SIGNER_MEMBERS = new Set(["iss", "keys", "originators", "channel_types"]);
 const RP_KEY_MEMBERS = new Set(["kid", "public_jwk", "evidence_types", "algs"]);
 const RP_ORIGINATOR_MEMBERS = new Set(["iss", "sub"]);
-/** Public JWK members a configured key may carry; `use` and `key_ops` are accepted and ignored. */
+/** Public JWK members a configured key may carry; `use` and `key_ops` are validated, then dropped. */
 const RP_JWK_MEMBERS = new Set(["kty", "crv", "x", "y", "alg", "kid", "use", "key_ops"]);
 /** JWK members that carry private or symmetric key material (RFC 7518 Section 6). */
 const RP_PRIVATE_JWK_MEMBERS = ["d", "p", "q", "dp", "dq", "qi", "oth", "k"];
+/** The key operations of a signature key (RFC 7517 Section 4.3): the only combination it may name. */
+const RP_SIGNATURE_KEY_OPS = new Set(["sign", "verify"]);
 
 /**
  * Parse a request-provenance trust configuration from its JSON value. Refuses
  * an unknown member at any level; a duplicate signer `iss`, or a `kid`
  * repeated within one signer; a JWK with private members, a `kty` or `crv`
  * that does not fit ES256, or coordinates that are not a P-256 point; any alg
- * other than ES256; an empty key, originator, channel-type or evidence-type
- * list; an originator carrying `sub` beside another originator; and a bound
- * that is not a positive integer or exceeds its cap
- * ({@link REQUEST_PROVENANCE_BOUND_CAPS}).
+ * other than ES256; a JWK `use` other than `sig`, or `key_ops` that is not an
+ * array of distinct strings naming `verify` and only `sign` and `verify`; an
+ * empty key, originator, channel-type or evidence-type list; an originator
+ * carrying `sub` beside another originator; and a bound that is not a
+ * positive integer or exceeds its cap ({@link REQUEST_PROVENANCE_BOUND_CAPS}).
  */
 export function parseRequestProvenanceConfig(
   raw: unknown,
@@ -3747,6 +3752,24 @@ export function parseRequestProvenanceConfig(
     }
     if (Object.hasOwn(jwk, "kid") && jwk.kid !== kid) {
       throw new ConfigError(file, `${ctx}.kid must equal the key's kid`);
+    }
+    // RFC 7517 Sections 4.2 and 4.3: a supplied use or key_ops must agree with
+    // the one use this key has, verifying signatures, and so with each other.
+    // Validated, they are dropped: neither establishes the evidence-type mapping.
+    if (Object.hasOwn(jwk, "use") && jwk.use !== "sig") {
+      throw new ConfigError(file, `${ctx}.use must be sig, the use of a key that verifies signatures`);
+    }
+    if (Object.hasOwn(jwk, "key_ops")) {
+      const ops = jwk.key_ops;
+      if (!Array.isArray(ops) || ops.some((op) => typeof op !== "string")) {
+        throw new ConfigError(file, `${ctx}.key_ops must be an array of strings`);
+      }
+      if (new Set(ops).size !== ops.length) {
+        throw new ConfigError(file, `${ctx}.key_ops names an operation twice`);
+      }
+      if (!ops.includes("verify") || ops.some((op) => !RP_SIGNATURE_KEY_OPS.has(op))) {
+        throw new ConfigError(file, `${ctx}.key_ops must name verify and only signature operations (sign, verify)`);
+      }
     }
     const key = {
       kty: "EC" as const,
