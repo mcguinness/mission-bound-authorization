@@ -7696,7 +7696,8 @@ hashing the bare object, so the domain separation and issuer binding
 hold uniformly. A <code>mission</code> descriptor embedded in such an object
 uses the <code>mission</code> claim shape (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>), optionally
 extended with collision-resistantly named members, and is never
-authority-bearing on its own.<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
+authority-bearing on its own. An AS without such a profile produces
+and verifies none of its commitments.<a href="#section-14.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-14.1-2.5">
             <p id="section-14.1-2.5.1"><strong>The <code>mission</code> claim.</strong> It is an open object: additional,
@@ -7738,10 +7739,9 @@ authorization response, as
 back-channel carriage profile
 (<a href="#submission-other-carriages" class="auto internal xref">Section 4.2.3</a>) <span class="bcp14">MAY</span> instead couple the approval
 decision to establishing the Mission grant binding and activating for
-redemption a grant the profile defines, such as a device code issued
-while the request was pending, the Mission then binding to that
-profile-defined reusable grant (<a href="#grant-binding-resolution" class="auto internal xref">Section 6.4.1</a>),
-provided in either case that the steps and their atomicity with the
+redemption a grant the profile defines, the Mission then binding to
+that profile-defined reusable grant (<a href="#grant-binding-resolution" class="auto internal xref">Section 6.4.1</a>),
+provided in either case the steps and their atomicity with the
 approval decision hold unchanged and no Mission reference exists
 before the record is <code>active</code>.<a href="#section-14.1-2.9.1" class="pilcrow">¶</a></p>
 </li>
