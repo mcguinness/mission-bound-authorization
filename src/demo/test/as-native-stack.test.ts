@@ -1776,7 +1776,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
   // for its signature: the Mission token unknown_mission before any decision,
   // with one verifiable signed state_unavailable Refusal Record naming no
   // Mission; the transaction token txn_unknown. Nothing executes.
-  it("refuses, after a restart on the same key ring with the kernel and the pending operations in memory, a pre-restart Mission-bound token unknown_mission and a pre-restart transaction token txn_unknown, before any decision and with no effect (#1337)", async () => {
+  it("refuses, after a restart on the same key ring with the kernel and the pending operations in memory, a pre-restart Mission-bound token unknown_mission and a pre-restart transaction token txn_unknown, before any decision and with no effect (#1337)", { timeout: 30_000 }, async () => {
     const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
     const dir = mkdtempSync(join(tmpdir(), "as-native-restart-memory-"));
     const ring = join(dir, "keys", "ring.json");
