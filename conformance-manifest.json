@@ -94303,9 +94303,15 @@
      "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > refuses as replay an assertion whose accepted push the Approver then denied",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > the replay store releases only a reservation: releasing a committed pair's token keeps its acceptance record and its pair",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. After a push is accepted and the Approver denies it at the decision, a new push of the same assertion is refused invalid_mission_intent_evidence as replay: nothing releases a committed admission scope (SubmissionAdmission), and no later step holds one. Mutation: a committed scope that still releases accepts the new push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. After a push is accepted and the Approver denies it at the decision, a new push of the same assertion is refused invalid_mission_intent_evidence as replay: nothing releases a committed admission scope (SubmissionAdmission), and no later step holds one. Mutation: a committed scope that still releases accepts the new push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. The store itself releases only a reservation, so a release that reaches a committed pair's token keeps its acceptance record and its pair; deleting by token whatever the state fails that unit test."
   },
   {
    "id": "request-provenance.replay.committed-refused",
