@@ -45,8 +45,8 @@ informative and its own invariants stated in the profile (D645).
 
 Mission Approval Governance is not a member. Since `0d7c3a8b` (#1920,
 D1056) the core cites it normatively, so it belongs to the core's
-normative dependency closure (In-family normative dependency, below), and
-its posting is sequenced with the core's next revision (Release
+normative dependency closure at the bound commit (In-family normative
+dependency, below). Its posting is sequenced separately (Release
 sequencing, below).
 
 ## Record binding
@@ -346,15 +346,14 @@ What this establishes:
 
 ## Release sequencing
 
-Under the dependency graph at the bound commit, Approval Governance
-`-00` is prepared for posting before, or alongside, the core's `-02`, so
-that the core's next posted revision cites a posted Internet-Draft
-normatively (#1944). This is the author's release decision: RFC 7322
-Section 4.8.6 concerns RFC publication, not Internet-Draft posting.
-Preparing the posting does not authorize pushing either tag; each
-posting stays the owner's act. If work toward the core's independence
-removes its normative dependency on Approval Governance first, this
-prerequisite is reassessed against the actual release tree.
+The OAuth binding's `-02` release waits for the core-independence work,
+including removal of its normative dependency on Approval Governance.
+Publishing Governance does not substitute for that work. Governance's
+posting is sequenced separately and must cite an accessible binding
+revision containing every rule it imports. Neither tag is authorized
+here.
+
+The direction is D1100; #1944 tracks Governance's posting.
 
 ## What the submission set omits, and why
 
