@@ -31,6 +31,7 @@ import {
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
 import {
   EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+  OPERATION_DECLARATIONS_NONE_FIXTURE,
   RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   RESOURCE_POLICY_REFUSES_ALL_FIXTURE,
   RESOURCE_POLICY_UNAVAILABLE_FIXTURE,
@@ -102,6 +103,9 @@ const opts = (over: Partial<EvaluateOptions> & Pick<EvaluateOptions, "resourcePo
   // file's subject is another input, and the claimed path has its own
   // witnesses (evaluate-evaluation-context.test.ts).
   evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+  // #1994: no operation declarations: a payments operation is decided
+  // under its assigned class alone, with no phase required.
+  operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
   ...over,
 });
 

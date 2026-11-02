@@ -78,7 +78,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
@@ -409,6 +409,9 @@ function options(claims: IdempotencyClaimDomain, c: Clock, v: MissionView, over:
     ...(budgets ? { budgets } : {}),
     requester: REQUESTER,
     evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+    // #1994: no operation declarations: a payments operation is decided
+    // under its assigned class alone, with no phase required.
+    operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
     ...over,
   };
 }

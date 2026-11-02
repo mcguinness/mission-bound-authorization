@@ -24,9 +24,13 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, createExpansion, validateMissionIntent } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+import { openScenarioClaims, pepDecisionInputs } from "./pep-decision-inputs.helper.js";
 import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withMissionContractReference } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
 import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+
+/** #1994: the claim domain this scenario's high-consequence permits are claimed in. */
+const SCENARIO_CLAIMS = openScenarioClaims(() => new Date());
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it, with the contract
@@ -108,13 +112,17 @@ function viewFor(missionId: string): MissionView {
 
 const evalAction = async (missionId: string, action: string) => {
   const view = viewFor(missionId);
+  const inputs = pepDecisionInputs(action, view.state, new Date());
   return evaluate(
     {
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
-      action: { name: action },
+      action: { name: action, ...(inputs.actionProperties ? { properties: inputs.actionProperties } : {}) },
       context: {
         ...capabilityPresentationFor(action),
+        // #1994: the class the payments PEP assigns, with what that class's
+        // gates require (a fresh observation; a digest and key where high).
+        ...inputs.context,
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
         // The matched Authority Set entry (authority() above) binds a
         // max_amount, for invoice.read and remittance.send alike, so the
@@ -134,6 +142,8 @@ const evalAction = async (missionId: string, action: string) => {
       // #773: this direct PDP call stands for a deployment that does not claim
       // Evaluation-Context Binding; the claimed path has its own witnesses.
       evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      stateSourcePlacement: "pep",
+      claims: SCENARIO_CLAIMS,
     },
   );
 };

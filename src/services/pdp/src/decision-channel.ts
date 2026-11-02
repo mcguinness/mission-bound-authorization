@@ -6,6 +6,7 @@ import type { DecisionFn, DecisionOptions, EvaluationRequest } from "./evaluate.
 import type { ClaimRequester, ConsumptionStatusFn, RedeemingExecutionFn } from "./idempotency-claims.js";
 import { createPdpHttpServer } from "./server.js";
 import { stalenessBound } from "./policy.js";
+import { applicableActionClasses, RUNTIME_POSTURE, stalenessBoundOver } from "./runtime-posture.js";
 
 /**
  * @spec authzen#transport-behavior — "A PEP MUST bound each evaluation call
@@ -16,9 +17,12 @@ import { stalenessBound } from "./policy.js";
  * transport does not classify the action, and the PDP refuses an undeclared
  * class on its own (@spec authzen#runtime-denial-classification).
  */
-export function channelDeadlineMs(actionClass: string | undefined, configuredMs?: number): number {
+export function channelDeadlineMs(actionClass: string | undefined, configuredMs?: number, action?: string, phase?: string): number {
   const configured = Math.max(1, configuredMs ?? 5000);
-  const declared = stalenessBound(actionClass);
+  // @spec runtime#classification (#1994): where the operation's declaration
+  // names further classes, the tightest window across them caps the call.
+  const classes = action === undefined ? [] : applicableActionClasses(RUNTIME_POSTURE, actionClass, action, phase);
+  const declared = classes.length > 1 ? stalenessBoundOver(classes.map((c) => stalenessBound(c))) : stalenessBound(actionClass);
   return declared.kind === "bounded" ? Math.max(1, Math.min(configured, declared.seconds * 1000)) : configured;
 }
 
@@ -125,7 +129,12 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
     // Caller's options are deliberately not forwarded across this boundary.
     decide: (request: EvaluationRequest) => evaluateRemote(request, {
       ...client,
-      timeoutMs: channelDeadlineMs(request.context.action_class, config.timeoutMs),
+      timeoutMs: channelDeadlineMs(
+        request.context.action_class,
+        config.timeoutMs,
+        request.action.name,
+        typeof request.context.action_phase === "string" ? request.context.action_phase : undefined,
+      ),
     }),
     claims: remoteClaimChannel({ ...client, audience: config.claimAudience ?? config.audience, ...(config.timeoutMs !== undefined ? { timeoutMs: config.timeoutMs } : {}) }),
     remoteDecisionChannels: [{ boundary: `${config.pepId} -> ${server.url}`, trust_mode: "per-PEP MAC request/response; scope-authorized PEP; PDP-signed Decision Evidence" }],

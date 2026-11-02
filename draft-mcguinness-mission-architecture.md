@@ -62,6 +62,13 @@ informative:
     author:
       - org: OpenID Foundation
     date: 2026
+  AuthZEN.Obligations:
+    title: "OpenID AuthZEN Obligations Profile 1.0"
+    target: https://openid.github.io/authzen/authzen-obligations-profile-1_0.html
+    author:
+      - org: OpenID Foundation
+    date: 2026
+  I-D.draft-mcguinness-oauth-actor-profile:
   RFC9943:
   RFC8693:
   I-D.draft-mcguinness-oauth-client-instance-id:
@@ -3011,8 +3018,16 @@ from a lesser one: the MAS remains a peer binding, not a staging area
 Between those two architectures sits the issuance join
 ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}): the MAS remains
 the Mission Issuer while estate authorization servers redeem Mission
-Issuance Grants for Mission-bound, state-gated tokens, restoring the
-token-layer chokepoint without moving approval.
+Issuance Grants for Mission-bound tokens, restoring the token-layer
+chokepoint without moving approval. The MAS mints a grant only for an
+active Mission. A consuming AS with a Mission-state integration also
+checks the Mission at redemption and at every refresh. Without a
+Mission-state integration, the consuming AS issues no refresh tokens,
+and its revocation latency, the summed residual of {{validity-model}},
+includes every interval during which the path can proceed without
+another state check, including pending authorization requests and
+authorization codes under PAR carriage, as Issuance Grant's Security
+Considerations specifies.
 
 # Mission Assurance Levels {#assurance-levels}
 
@@ -3145,9 +3160,19 @@ Each level includes the one before it:
   and the summed residual of {{validity-model}} where it does not).
 
   Runtime-Enforced is the smallest deployment that turns a Mission
-  from governed issuance into action-time defense. Every normative
-  dependency it needs is a family document intended for the Standards
-  Track. It is a substantial build, not a wedge: a deployment sizes
+  from governed issuance into action-time defense. Every family
+  document it depends on normatively is intended for the Standards
+  Track. Outside the family, the level's documents cite normatively
+  two AuthZEN working-group drafts, from the AuthZEN profile
+  ({{AuthZEN.ARAP}}, {{AuthZEN.Obligations}}), and, with the OAuth
+  binding, an OAuth working-group draft
+  ({{I-D.draft-ietf-oauth-rar-metadata-remediation}}) and two
+  individual drafts ({{I-D.draft-mcguinness-oauth-actor-profile}} and,
+  also cited by the AuthZEN profile,
+  {{I-D.draft-mcguinness-oauth-client-instance-id}}). A family
+  document they cite, such as Cross-Domain Projection, carries its own
+  dependencies. The level is a substantial build, not a wedge: a
+  deployment sizes
   the effort from the runtime profile's conformance section rather
   than from this level's one-line summary.
 
@@ -5108,6 +5133,14 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Runtime-Enforced names its normative dependencies outside the
+  family: two AuthZEN working-group drafts, and, with the OAuth
+  binding, an OAuth working-group draft and two individual drafts. The
+  issuance-join summary states both consuming-AS modes and, for the
+  mode without a Mission-state integration, points to Issuance Grant's
+  Security Considerations for every interval its revocation latency
+  includes. No requirement changed (#1090).
 
 - Standing consent is cited from Approval Governance's Approval Basis
   Contract. No requirement changed (#1915).

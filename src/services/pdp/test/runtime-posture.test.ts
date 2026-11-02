@@ -213,9 +213,12 @@ describe("the Evaluation-Context Binding declaration is refused at load unless c
           s.extensions.transaction_assurance = s.extensions.transaction_assurance.filter(
             (d: any) => d.mediated_class_or_scope !== "external_commitment",
           );
-          s.extensions.execution_capabilities = s.extensions.execution_capabilities.filter(
-            (d: any) => d.action_class !== "external_commitment",
-          );
+          s.extensions.execution_capabilities = s.extensions.execution_capabilities
+            .filter((d: any) => d.action_class !== "external_commitment")
+            .map(({ additional_action_classes: further = [], ...d }: any) => {
+              const kept = further.filter((c: string) => c !== "external_commitment");
+              return kept.length > 0 ? { ...d, additional_action_classes: kept } : d;
+            });
         }),
       ),
     ).toThrow(/covered class \W+external_commitment\W+ is outside mediated_scope.action_classes/);

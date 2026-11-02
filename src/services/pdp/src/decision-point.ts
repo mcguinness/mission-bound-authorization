@@ -21,6 +21,7 @@
  * author of a record.
  */
 
+import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import type { AuthorityDependencyEnforcement, EvaluationContextBindingDeclarations, ResourceContractDeclarations } from "@mission/core";
 import {
@@ -219,6 +220,13 @@ export interface DecisionPointConfig {
    * deployment's statement.
    */
   evaluationContextBinding?: EvaluationContextBindingDeclarations;
+  /**
+   * @spec runtime#classification (#1994): this decision point's operation
+   * declarations, the source of the action class set, bound here for the
+   * reason the contract declarations are. Absent, `evaluate` reads the
+   * deployment's statement.
+   */
+  operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
 }
 
 export interface DecisionPoint {
@@ -262,6 +270,7 @@ interface PointBindings {
   durationLeases?: DurationLeaseDomain | undefined;
   phasedActions?: ReadonlySet<string> | undefined;
   evaluationContextBinding?: EvaluationContextBindingDeclarations | undefined;
+  operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration> | undefined;
 }
 
 /**
@@ -316,6 +325,7 @@ function bindDecide(
     durationLeases,
     phasedActions,
     evaluationContextBinding,
+    operationDeclarations,
   } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
@@ -334,6 +344,7 @@ function bindDecide(
     delete forwarded.durationLeases;
     delete forwarded.phasedActions;
     delete forwarded.evaluationContextBinding;
+    delete forwarded.operationDeclarations;
     if (emitter) forwarded.evidence = emitter;
     if (durationLeases) forwarded.durationLeases = durationLeases;
     if (claims) forwarded.claims = claims;
@@ -343,6 +354,7 @@ function bindDecide(
     if (resourceContracts) forwarded.resourceContracts = resourceContracts;
     if (phasedActions) forwarded.phasedActions = phasedActions;
     if (evaluationContextBinding) forwarded.evaluationContextBinding = evaluationContextBinding;
+    if (operationDeclarations) forwarded.operationDeclarations = operationDeclarations;
     if (forwarded.view !== undefined) forwarded.view = attachBudgetBinding(forwarded.view, bindings.budgetBindings);
     forwarded.requester = requester;
     if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
@@ -413,6 +425,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     durationLeases: config.durationLeases,
     phasedActions: config.phasedActions,
     evaluationContextBinding: config.evaluationContextBinding,
+    operationDeclarations: config.operationDeclarations,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),
@@ -477,6 +490,8 @@ export function createEphemeralDecisionPoint(options: {
   phasedActions?: ReadonlySet<string>;
   /** @spec authzen#context-evaluation-binding (#773): bound exactly as in {@link createDecisionPoint}. */
   evaluationContextBinding?: EvaluationContextBindingDeclarations;
+  /** @spec runtime#classification (#1994): bound exactly as in {@link createDecisionPoint}. */
+  operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
   /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
   authorizesAudience?: (audience: string) => boolean;
 }): EphemeralDecisionPoint {
@@ -493,6 +508,7 @@ export function createEphemeralDecisionPoint(options: {
     durationLeases,
     phasedActions,
     evaluationContextBinding,
+    operationDeclarations,
   } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const emitter = createDecisionEvidenceEmitter({
@@ -511,6 +527,7 @@ export function createEphemeralDecisionPoint(options: {
     durationLeases,
     phasedActions,
     evaluationContextBinding,
+    operationDeclarations,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),

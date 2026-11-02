@@ -27,6 +27,7 @@
  * demonstrates is not obscured by an unbounded read.
  */
 
+import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
 import { contractCanEstablish, type EvaluationContextBindingDeclarations, type OperationContract } from "@mission/core";
@@ -183,6 +184,13 @@ export interface PdpRemoteServerConfig {
    * the deployment's statement.
    */
   evaluationContextBinding?: EvaluationContextBindingDeclarations;
+  /**
+   * @spec runtime#classification (#1994): this PDP's operation declarations,
+   * the source of the action class set, bound on this side of the network
+   * hop exactly as `evaluationContextBinding` is. Absent, `evaluate` reads
+   * the deployment's statement.
+   */
+  operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
   /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
@@ -441,9 +449,11 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     delete opts.durationLeases;
     delete opts.phasedActions;
     delete (opts as Partial<EvaluateOptions>).evaluationContextBinding;
+    delete (opts as Partial<EvaluateOptions>).operationDeclarations;
     if (config.evidence) opts.evidence = config.evidence;
     if (config.phasedActions) opts.phasedActions = config.phasedActions;
     if (config.evaluationContextBinding) opts.evaluationContextBinding = config.evaluationContextBinding;
+    if (config.operationDeclarations) (opts as Partial<EvaluateOptions>).operationDeclarations = config.operationDeclarations;
     if (config.durationLeases) opts.durationLeases = config.durationLeases;
     if (config.refusals) opts.refusals = config.refusals;
     if (config.claims) opts.claims = config.claims;

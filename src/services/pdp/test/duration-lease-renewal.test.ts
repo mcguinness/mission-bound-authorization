@@ -36,7 +36,7 @@ import {
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { operationIdentity } from "../src/projections.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
@@ -324,6 +324,9 @@ function keyedHarness(
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     durationLeases: ledger,
     claims: over.wrapClaims ? over.wrapClaims(claims) : claims,
+    // #1994: no operation declarations: a payments operation is decided
+    // under its assigned class alone, with no phase required.
+    operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
   });
   const decideFor = point.decideAs(REQUESTER, consumption);
   const decide = (req: EvaluationRequest, at: number): Promise<Decision> =>
