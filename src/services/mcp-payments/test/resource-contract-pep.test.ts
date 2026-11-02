@@ -22,6 +22,7 @@
 import {
   type ActionPhase,
   establishOperationTarget,
+  matchResource,
   RESOURCE_CONTRACT_STATES,
   ResourceContractDeclarations,
   type ResourceContractRef,
@@ -44,6 +45,9 @@ import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it } from "vitest";
 import {
   type ActionMapping,
+  buildEffectiveParams,
+  buildListEffectiveParams,
+  buildReversalParams,
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
@@ -54,6 +58,7 @@ import {
   openEphemeralWriteReservationStore,
   PAYMENTS_INVOICE_CONTRACT,
   PAYMENTS_PROFILE_VERSION,
+  parameterDigest,
   PaymentsStore,
   PaymentsToolCatalog,
   Pep,
@@ -145,6 +150,8 @@ interface Built {
   /** The transaction tier's connectors and the write tier's reservations: every effect a tool can leave. */
   connectors: Connectors;
   writeReservations: ReturnType<typeof openEphemeralWriteReservationStore>;
+  /** The store the operations read, as seeded. */
+  payments: PaymentsStore;
   decided: EvaluationRequest[];
   records: () => ReturnType<EvidenceStore["forMission"]>;
   setPepContracts: (d: ResourceContractDeclarations) => void;
@@ -161,6 +168,8 @@ async function build(
     requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
     /** Perform under the shipped `RETAINED_OPERATION_PROFILES` rather than this file's retained table. */
     shippedRetainedProfiles?: boolean;
+    /** Further records, after the shared seed. */
+    seed?: (payments: PaymentsStore) => void;
   } = {},
 ): Promise<Built> {
   const now = opts.now ?? NOW;
@@ -184,6 +193,7 @@ async function build(
       status: "payable",
     })),
   );
+  opts.seed?.(payments);
   const fga = { checkWithContext: async () => true } as unknown as Fga;
   const loadView = (r: { id: string; issuer: string }) =>
     r.id === view.id && r.issuer === view.issuer
@@ -242,6 +252,7 @@ async function build(
     pep,
     connectors,
     writeReservations,
+    payments,
     decided,
     records: () => evidence.forMission(view.id),
     setPepContracts: (d) => {
@@ -278,6 +289,96 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       const resolved = catalog.resolve(tool);
       if (!resolved.catalog_sourced) throw new Error(`${tool} is catalog-sourced`);
       expect(op.capability, tool).toEqual({ tool_id: resolved.binding.tool_id, source_digest: resolved.binding.source_digest });
+    }
+  });
+
+  // @spec runtime#resource-contract (#249, D1104): the Operation Profile
+  // material the document states, the parameter forms and the matcher values,
+  // corresponds to what the resource performs, so a change to it without a
+  // new version fails here.
+  it("each declared parameter form is the fields its normal form carries, every optional member included, and no other form is declared", () => {
+    const forms = (current?.document as { parameter_forms: Record<string, string[]> }).parameter_forms;
+    const vendor = { id: "acme", name: "Acme", status: "approved", version: 1 };
+    const invoice = { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable", version: 1 };
+    const built: Record<string, object | undefined> = {
+      invoice: buildEffectiveParams({ action: "payments:payment.schedule", invoice, vendor, resource: CANONICAL_RESOURCE, recipients: ["ap@acme.example"] }),
+      list: buildListEffectiveParams({ action: "payments:invoice.list", resource: CANONICAL_RESOURCE, vendor_scope: ["acme"], vendor_scope_source: "all", members: [] }),
+      none: undefined,
+      reversal: buildReversalParams({
+        action: "payments:payment.reverse",
+        wire: { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD" },
+        resource: CANONICAL_RESOURCE,
+        reverses: "op-1",
+      }),
+    };
+    expect(Object.keys(forms).sort()).toEqual(Object.keys(built).sort());
+    for (const [form, params] of Object.entries(built)) {
+      expect([...(forms[form] ?? [])].sort(), form).toEqual(params === undefined ? [] : Object.keys(params).sort());
+    }
+  });
+
+  it("the declared resource_match values are exactly those the matcher enforces", () => {
+    const declaredMatches = (current?.document as { resource_match: string[] }).resource_match;
+    const candidates = ["exact", "prefix", "suffix", "regex", "glob", "template", "wildcard"];
+    const enforced = candidates.filter((form) => matchResource({ resource: `${CANONICAL_RESOURCE}/`, resource_match: form }, `${CANONICAL_RESOURCE}/`) !== "unsupported");
+    expect([...declaredMatches].sort()).toEqual(enforced.sort());
+  });
+
+  it("each operation binds the parameter form the document names, accepts an idempotency key and carries resolved recipients exactly where it declares them, and the none form binds no digest", async () => {
+    const operations = (current?.document as {
+      operations: Record<string, { parameters: string; idempotency_key?: boolean; recipients?: boolean }>;
+    }).operations;
+    const pinned = viewOf([entry({ id: CONTRACT, version: current?.version as string, digest: current?.digest as string })]);
+    const routed = (payments: PaymentsStore) => payments.seedRemittance("acme", ["ap@acme.example", "ar@acme.example"]);
+    const callOn = (x: Built, tool: string, mapping: ActionMapping) => {
+      const path = dispatchPathFor(mapping, true);
+      return path === "read"
+        ? x.server.callReadTool.bind(x.server)
+        : path === "write"
+          ? x.server.callWriteTool.bind(x.server)
+          : x.server.callTransactionTool.bind(x.server);
+    };
+    for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
+      if (tool === "reverse_wire_transfer") continue;
+      const declaredOp = operations[tool] as { parameters: string; idempotency_key?: boolean; recipients?: boolean };
+      const base: Record<string, unknown> = tool === "list_invoices" ? {} : tool === "lookup_vendor" ? { vendor_id: "acme" } : { invoice_id: "inv-1" };
+      const key = `idem_${crypto.randomUUID()}`;
+      if (declaredOp.idempotency_key !== true) {
+        // An operation that declares no idempotency key refuses one before any decision.
+        const offered = await build("co-resident", pinned, RESOURCE_CONTRACTS, { shippedRetainedProfiles: true, seed: routed });
+        try {
+          const res = await callOn(offered, tool, mapping)(tool, { ...base, idempotency_key: key }, tokenFor(pinned));
+          expect(res.ok, tool).toBe(false);
+          expect(offered.decided, tool).toHaveLength(0);
+        } finally {
+          await offered.close();
+        }
+      }
+      const x = await build("co-resident", pinned, RESOURCE_CONTRACTS, { shippedRetainedProfiles: true, seed: routed });
+      try {
+        await callOn(x, tool, mapping)(tool, declaredOp.idempotency_key === true ? { ...base, idempotency_key: key } : base, tokenFor(pinned));
+        const req = x.decided[0] as { action: { properties?: Record<string, unknown> }; context: Record<string, unknown> } | undefined;
+        expect(req, tool).toBeDefined();
+        const invoice = x.payments.getInvoice("inv-1");
+        const vendor = x.payments.getVendor("acme");
+        if (!invoice || !vendor) throw new Error("seeded records");
+        const recipients = x.payments.remittanceRecipients("acme")?.recipients;
+        const expected: Record<string, string | undefined> = {
+          invoice: parameterDigest(
+            buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE, ...(declaredOp.recipients ? { recipients } : {}) }),
+          ),
+          list: parameterDigest(
+            buildListEffectiveParams({ action: mapping.action, resource: CANONICAL_RESOURCE, vendor_scope: ["acme"], vendor_scope_source: "all" }),
+          ),
+          none: undefined,
+        };
+        expect(Object.keys(expected), tool).toContain(declaredOp.parameters);
+        expect(req?.context.parameter_digest, tool).toBe(expected[declaredOp.parameters]);
+        expect(req?.action.properties?.idempotency_key, tool).toBe(declaredOp.idempotency_key === true ? key : undefined);
+        expect(req?.action.properties?.recipients, tool).toEqual(declaredOp.recipients ? recipients : undefined);
+      } finally {
+        await x.close();
+      }
     }
   });
 
