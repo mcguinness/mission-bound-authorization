@@ -22,6 +22,7 @@
  */
 
 import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
+import type { HistoryBinding } from "./history.js";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import type { AuthorityDependencyEnforcement, EvaluationContextBindingDeclarations, ResourceContractDeclarations } from "@mission/core";
 import {
@@ -227,6 +228,12 @@ export interface DecisionPointConfig {
    * deployment's statement.
    */
   operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
+  /**
+   * @spec authzen#context-history (#2015): this decision point's history
+   * policy, retained-evidence reader and key resolver, bound here for the
+   * reason the operation declarations are. Absent, no predicate is selected.
+   */
+  history?: HistoryBinding;
 }
 
 export interface DecisionPoint {
@@ -271,6 +278,7 @@ interface PointBindings {
   phasedActions?: ReadonlySet<string> | undefined;
   evaluationContextBinding?: EvaluationContextBindingDeclarations | undefined;
   operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration> | undefined;
+  history?: HistoryBinding | undefined;
 }
 
 /**
@@ -326,6 +334,7 @@ function bindDecide(
     phasedActions,
     evaluationContextBinding,
     operationDeclarations,
+    history,
   } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
@@ -345,6 +354,7 @@ function bindDecide(
     delete forwarded.phasedActions;
     delete forwarded.evaluationContextBinding;
     delete forwarded.operationDeclarations;
+    delete forwarded.history;
     if (emitter) forwarded.evidence = emitter;
     if (durationLeases) forwarded.durationLeases = durationLeases;
     if (claims) forwarded.claims = claims;
@@ -355,6 +365,7 @@ function bindDecide(
     if (phasedActions) forwarded.phasedActions = phasedActions;
     if (evaluationContextBinding) forwarded.evaluationContextBinding = evaluationContextBinding;
     if (operationDeclarations) forwarded.operationDeclarations = operationDeclarations;
+    if (history) forwarded.history = history;
     if (forwarded.view !== undefined) forwarded.view = attachBudgetBinding(forwarded.view, bindings.budgetBindings);
     forwarded.requester = requester;
     if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
@@ -426,6 +437,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     phasedActions: config.phasedActions,
     evaluationContextBinding: config.evaluationContextBinding,
     operationDeclarations: config.operationDeclarations,
+    history: config.history,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),
@@ -492,6 +504,8 @@ export function createEphemeralDecisionPoint(options: {
   evaluationContextBinding?: EvaluationContextBindingDeclarations;
   /** @spec runtime#classification (#1994): bound exactly as in {@link createDecisionPoint}. */
   operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
+  /** @spec authzen#context-history (#2015): bound exactly as in {@link createDecisionPoint}. */
+  history?: HistoryBinding;
   /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
   authorizesAudience?: (audience: string) => boolean;
 }): EphemeralDecisionPoint {
@@ -509,6 +523,7 @@ export function createEphemeralDecisionPoint(options: {
     phasedActions,
     evaluationContextBinding,
     operationDeclarations,
+    history,
   } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const emitter = createDecisionEvidenceEmitter({
@@ -528,6 +543,7 @@ export function createEphemeralDecisionPoint(options: {
     phasedActions,
     evaluationContextBinding,
     operationDeclarations,
+    history,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),

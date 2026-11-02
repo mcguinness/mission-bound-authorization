@@ -131,6 +131,13 @@ import {
 import { type MissionStateObservation, parseStateObservation, rfc3339Ms, verifyStateAssertion } from "./state-observation.js";
 import { ownReadCeiling } from "./own-read-ceiling.js";
 import { parseWorkItem } from "./work-item.js";
+import {
+  type HistoryBinding,
+  type HistoryPredicate,
+  type HistoryPredicateResult,
+  evaluateHistory,
+  unavailableHistory,
+} from "./history.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -497,6 +504,13 @@ export type DenialReason =
    * malformed one is the pre-evaluation refusal `work_item_invalid` instead.
    */
   | "work_item_context_missing"
+  /**
+   * @spec authzen#context-history, authzen#runtime-denial-classification
+   * (#2015): "Where deployment or Resource policy requires a history
+   * predicate that is unsatisfied or cannot be established, the PDP MUST deny
+   * with `history_not_satisfied`."
+   */
+  | "history_not_satisfied"
   /**
    * @spec authzen#pdp-request rule 6, authzen#context-credential (#825, D312) —
    * the PEP-supplied credential facts are expired, inconsistent, or otherwise
@@ -983,6 +997,15 @@ export interface EvaluateOptions {
    * nothing without its claim.
    */
   evaluationContextBinding?: EvaluationContextBindingDeclarations;
+  /**
+   * @spec authzen#context-history (#2015, D1223): this PDP's own history
+   * policy, the retained evidence it reads, and the key resolver that
+   * verifies each record. A PDP-side binding, like the operation
+   * declarations: an enforcement component that could supply it could select
+   * favorable predicates or vouch for its own history. Absent, no history
+   * predicate is selected.
+   */
+  history?: HistoryBinding;
 }
 
 /**
@@ -1036,6 +1059,9 @@ export type DecisionOptions = Omit<
   // @spec runtime#classification (#1994): so are the operation declarations
   // the class set comes from, for the reason the contract declarations are.
   | "operationDeclarations"
+  // @spec authzen#context-history (#2015): so is the history binding, for
+  // the reason the operation declarations are.
+  | "history"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -1075,6 +1101,18 @@ interface BoundTrace {
 
 interface JoinTrace {
   viewId?: string;
+}
+
+/**
+ * @spec authzen#context-history, runtime-evidence#evidence-extensions
+ * `mission_history` (#2015): the predicates this PDP's policy selected for
+ * the decision and their outcomes, recorded on its Decision Evidence whatever
+ * the decision. Each starts `unavailable` and takes its evaluated outcome
+ * once the Mission is established.
+ */
+interface HistoryTrace {
+  selected: HistoryPredicate[];
+  results: HistoryPredicateResult[];
 }
 
 /**
@@ -1326,7 +1364,8 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       const claim: ClaimContext = {};
       const join: JoinTrace = {};
       const bound: BoundTrace = {};
-      const decision = await evaluateInner(req, opts, operationTarget, contributions, claim, join, bound);
+      const history: HistoryTrace = { selected: [], results: [] };
+      const decision = await evaluateInner(req, opts, operationTarget, contributions, claim, join, bound, history);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
@@ -1347,6 +1386,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
             requestDigest,
             join,
             bound,
+            history,
             claim.metering,
           );
         }
@@ -1386,6 +1426,7 @@ async function emitDecisionEvidence(
   requestDigest: string,
   join: Readonly<JoinTrace>,
   bound: Readonly<BoundTrace>,
+  history: Readonly<HistoryTrace>,
   metering?: readonly DecisionMeteringEntry[],
 ): Promise<DecisionEvidenceObject> {
   const { view } = opts;
@@ -1495,6 +1536,10 @@ async function emitDecisionEvidence(
     // @spec metering#metering-evidence (#816): "a Decision Evidence record
     // emitted for a metered evaluation, permit or refusal, MUST carry it".
     ...(metering !== undefined ? { metering } : {}),
+    // @spec runtime-evidence#evidence-extensions `mission_history` (#2015):
+    // REQUIRED "when policy selected any history predicate for the decision",
+    // permit or denial; computed here, never copied from the request.
+    ...(history.results.length > 0 ? { mission_history: history.results } : {}),
     ...(decision.context.entry_digest !== undefined
       ? { entry_digest: decision.context.entry_digest as string }
       : {}),
@@ -1529,8 +1574,23 @@ async function evaluateInner(
   claim: ClaimContext,
   join: JoinTrace,
   bound: BoundTrace,
+  history: HistoryTrace,
 ): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
+  // @spec authzen#context-history (#2015): the predicates this PDP's own
+  // policy selects for the operation; the request selects none. Each is
+  // recorded `unavailable` until the Mission is established below.
+  if (opts.history) {
+    history.selected = [
+      ...opts.history.policy({
+        action: req.action.name,
+        ...(isActionPhase(req.context.action_phase) ? { actionPhase: req.context.action_phase } : {}),
+        resource: { type: req.resource.type, id: req.resource.id },
+        mission: { id: req.context.mission.id, issuer: req.context.mission.issuer },
+      }),
+    ];
+    history.results = unavailableHistory(history.selected);
+  }
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
   // @spec runtime#classification (#1735, #1994): every class whose
@@ -1655,6 +1715,14 @@ async function evaluateInner(
     (req.context.mission.policy_view_id !== undefined && req.context.mission.policy_view_id !== pvid)
   ) {
     return deny("view_inconsistent");
+  }
+
+  // 1-hist. History (@spec authzen#context-history, #2015): with the Mission
+  // established, each selected predicate is evaluated against the retained
+  // evidence, verified and linked, for this Mission. Recorded on every
+  // decision from here; the deny is taken after Resource policy (step 6b).
+  if (opts.history && history.selected.length > 0) {
+    history.results = await evaluateHistory(opts.history, history.selected, { id: view.id, issuer: view.issuer });
   }
 
   // 1a. Credential facts (@spec authzen#pdp-request rule 6, authzen#context-
@@ -2589,6 +2657,11 @@ async function evaluateInner(
     // SHOULD carry `next_action: none`".
     return { decision: false, context: base({ denial_reason: "resource_policy", reason: "resource_policy", next_action: "none" }) };
   }
+
+  // 6b. History (@spec authzen#context-history, #2015): a policy-required
+  // predicate that is unsatisfied or cannot be established denies
+  // `history_not_satisfied`. No outcome comes from any request member.
+  if (history.results.some((r) => r.outcome !== "satisfied")) return deny("history_not_satisfied");
 
   // 7. Numeric constraint (overlay, O-6): per-payment cap.
   // @spec runtime#input-parameters: keyed on the constraint's OWN presence

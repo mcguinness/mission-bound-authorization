@@ -28,6 +28,7 @@
  */
 
 import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
+import type { HistoryBinding } from "./history.js";
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
 import { contractCanEstablish, type EvaluationContextBindingDeclarations, type OperationContract } from "@mission/core";
@@ -191,6 +192,12 @@ export interface PdpRemoteServerConfig {
    * the deployment's statement.
    */
   operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
+  /**
+   * @spec authzen#context-history (#2015): this PDP's history policy,
+   * retained-evidence reader and key resolver, bound on this side of the
+   * network hop exactly as `operationDeclarations` is.
+   */
+  history?: HistoryBinding;
   /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
@@ -450,10 +457,12 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     delete opts.phasedActions;
     delete (opts as Partial<EvaluateOptions>).evaluationContextBinding;
     delete (opts as Partial<EvaluateOptions>).operationDeclarations;
+    delete (opts as Partial<EvaluateOptions>).history;
     if (config.evidence) opts.evidence = config.evidence;
     if (config.phasedActions) opts.phasedActions = config.phasedActions;
     if (config.evaluationContextBinding) opts.evaluationContextBinding = config.evaluationContextBinding;
     if (config.operationDeclarations) (opts as Partial<EvaluateOptions>).operationDeclarations = config.operationDeclarations;
+    if (config.history) (opts as Partial<EvaluateOptions>).history = config.history;
     if (config.durationLeases) opts.durationLeases = config.durationLeases;
     if (config.refusals) opts.refusals = config.refusals;
     if (config.claims) opts.claims = config.claims;

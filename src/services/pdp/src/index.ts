@@ -318,3 +318,14 @@ export {
   type WorkItemAttribution,
   type WorkItemRef,
 } from "./work-item.js";
+export {
+  evaluateHistory,
+  RECOGNIZED_HISTORY_PREDICATES,
+  type HistoryBinding,
+  type HistoryEvidenceReader,
+  type HistoryOutcome,
+  type HistoryPolicy,
+  type HistoryPredicate,
+  type HistoryPredicateResult,
+  type HistorySelectionInput,
+} from "./history.js";
