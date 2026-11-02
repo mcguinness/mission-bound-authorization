@@ -17,17 +17,7 @@ import type { EvaluationRequest } from "@mission/pdp";
 import type { MasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
 import { revokeEstateToken } from "../src/mas-pilot/estate-client.js";
-import {
-  admin,
-  approve,
-  call,
-  composeRecorded,
-  estateToken,
-  handshakeStatus,
-  openfgaReachable,
-  READ_ACTIONS,
-  relocateEstate,
-} from "./mas-pilot-support.js";
+import { admin, approve, call, composeRecorded, estateToken, handshakeStatus, INVOICES_READ, openfgaReachable, READ_ACTIONS, relocateEstate, REMIT_SEND, VENDORS_READ } from "./mas-pilot-support.js";
 
 const up = await openfgaReachable();
 const d = up ? describe : describe.skip;
@@ -125,7 +115,7 @@ d("MAS pilot introspection: opaque estate tokens at the gateway (#818 slice 3)",
     cacheClockOffsetMs = 0;
   });
 
-  const opaque = (account = "u-1001", scope = "invoices.read", resource?: string) =>
+  const opaque = (account = "u-1001", scope = INVOICES_READ, resource?: string) =>
     resource === undefined
       ? estateToken(pilot, OPAQUE_CLIENT, account, scope)
       : estateTokenFor(pilot, account, scope, resource);
@@ -142,13 +132,13 @@ d("MAS pilot introspection: opaque estate tokens at the gateway (#818 slice 3)",
   });
 
   it("bounds the opaque token by its introspected scope: an action that scope does not carry is refused out_of_authority, and a scope that carries it permits", async () => {
-    const narrow = await opaque("u-1001", "invoices.read");
+    const narrow = await opaque("u-1001", INVOICES_READ);
     const decided = requests.length;
     const refused = await call(pilot, narrow, aliceMission, "lookup_vendor", { vendor_id: "acme" });
     expect(refused.ok).toBe(false);
     expect(refused.refusal_reason).toBe("out_of_authority");
     expect(requests.length).toBe(decided);
-    const wide = await opaque("u-1001", "invoices.read vendors.read");
+    const wide = await opaque("u-1001", `${INVOICES_READ} ${VENDORS_READ}`);
     const permitted = await call(pilot, wide, aliceMission, "lookup_vendor", { vendor_id: "acme" });
     expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
   });
@@ -240,7 +230,7 @@ d("MAS pilot introspection: opaque estate tokens at the gateway (#818 slice 3)",
   });
 
   it("applies the same class reservation: a remittance under an opaque token is denied though scope, Mission and Resource policy allow it", async () => {
-    const credential = await opaque("u-1001", "invoices.read remit.send");
+    const credential = await opaque("u-1001", `${INVOICES_READ} ${REMIT_SEND}`);
     await admin(pilot, "grant", "--iss", config.estate.issuer, "--sub", "u-1001", "--relation", "payer", "--vendor", "acme");
     try {
       const res = await call(pilot, credential, remitMission, "send_remittance_email", {

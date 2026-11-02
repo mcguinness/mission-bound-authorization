@@ -36,6 +36,7 @@ import {
   currentContractProfileVersion,
   demoReconciliationTemplate,
   DEV_SERVICE_TOKEN,
+  pinnedToCurrentContract,
   TOPOLOGY,
 } from "@mission/demo-data";
 import {
@@ -443,7 +444,9 @@ const PATHS: Path[] = [
         subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
         resource: RESOURCE,
         creation_request_id: crypto.randomUUID(),
-        authorization_details: JSON.stringify([entry(["payments:invoice.read"])]),
+        // Pinned as the grant is: the payments resource requires a reference,
+        // so a fresh approval records it (#249 C.3b, D989).
+        authorization_details: JSON.stringify([pinnedToCurrentContract(entry(["payments:invoice.read"]))]),
       }),
     succeeded: ({ status, body }) => {
       expect(status, JSON.stringify(body)).toBe(200);

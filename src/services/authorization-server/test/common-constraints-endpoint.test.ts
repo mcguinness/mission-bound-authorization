@@ -46,7 +46,7 @@ const hoisted = await vi.hoisted(async () => {
 
 import { rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { DERIVATION_POLICY, SCOPE_PROJECTION } from "@mission/demo-data";
+import { DERIVATION_POLICY, pinnedToCurrentContract, SCOPE_PROJECTION } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -209,7 +209,13 @@ async function introspect(tokenValue: string, hint?: string): Promise<Json> {
   return (await res.json()) as Json;
 }
 
-/** The async-delegation Token Exchange over the base token's delegation handle. */
+/**
+ * The async-delegation Token Exchange over the base token's delegation handle.
+ * Each requested entry carries the reference the grant's entries carry: the
+ * payments resource requires one, so a fresh approval records the current
+ * reference in every entry on it (#249 C.3b, D989), and a request naming the
+ * grant's authority names it too.
+ */
 async function exchange(base: string, keys: Keys, requested?: AuthorityEntry[]): Promise<{ status: number; body: Json }> {
   const handle = await token(delegationHandleParams(base, "ap-agent"), keys);
   expect(handle.status, JSON.stringify(handle.body)).toBe(200);
@@ -221,7 +227,9 @@ async function exchange(base: string, keys: Keys, requested?: AuthorityEntry[]):
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: RESOURCE,
       creation_request_id: crypto.randomUUID(),
-      ...(requested ? { authorization_details: JSON.stringify(requested) } : {}),
+      ...(requested
+        ? { authorization_details: JSON.stringify(requested.map((e) => pinnedToCurrentContract(e))) }
+        : {}),
     },
     keys,
   );

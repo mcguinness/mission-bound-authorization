@@ -24,7 +24,7 @@
  */
 
 import { type Server } from "node:http";
-import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, pinnedToCurrentContract, TOPOLOGY } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   type CryptoKey,
@@ -663,10 +663,12 @@ describe("child-actor eligibility with retained provenance at the child-creation
     it("a list the presented token carries restricts the policy decision: refused where it omits the actor, created where it names it", async () => {
       const parent = approve(hooked, [pEntry()]);
       permits.creation.add("child-a");
+      // Each token entry is pinned as the parent's is: the payments resource
+      // requires a reference, so a fresh approval records it (#249 C.3b, D989).
       const withList = (actors: unknown[]) =>
         accessToken(hooked, parent, hooked.agent, [
           pEntry({ max_children: 1, max_child_depth: 2, allowed_child_actors: actors }),
-        ].map((e) => ({ ...e, delegation: { ...e.delegation, allowed_delegates: [{ sub_profile: "ai_agent" }] } as AuthorityEntry["delegation"] })));
+        ].map((e) => pinnedToCurrentContract({ ...e, delegation: { ...e.delegation, allowed_delegates: [{ sub_profile: "ai_agent" }] } as AuthorityEntry["delegation"] })));
       const before = sideEffects(hooked, parent.id);
       await refused(await createChild(hooked, parent, "child-a", { token: await withList([{ sub: "child-b" }]) }));
       await refused(await createChild(hooked, parent, "child-a", { token: await withList([]) }));

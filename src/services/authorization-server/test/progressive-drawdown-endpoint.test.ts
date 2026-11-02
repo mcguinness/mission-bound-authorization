@@ -858,7 +858,8 @@ describe("ceiling consent (@spec progressive#progressive-authorization)", () => 
     const body = (await res.json()) as Completed;
     expect(res.status, JSON.stringify(body)).toBe(200);
     const successor = as.kernel.get(body.mission_id) as MissionRecord;
-    expect(successor.authority_ceiling).toEqual(READ_CEILING);
+    // The consented ceiling, as the consent records it (#249 C.3b).
+    expect(successor.authority_ceiling).toEqual(consented(READ_CEILING));
     expect(successor.drawdown_policy).toEqual(rootRecord.drawdown_policy);
     expect(successor.ceiling_hash).toBe(rootRecord.ceiling_hash);
     expect(successor.ceiling_consented_at).toBe(rootRecord.ceiling_consented_at);
@@ -2041,7 +2042,8 @@ describe("the ceiling consent disclosure (@spec progressive#progressive-authoriz
   it("the approval page renders the offered ceiling and that in-ceiling expansion is adjudicated by its drawdown policy", async () => {
     currentOffer = ceilingOf("drawdown-std", READ_CEILING);
     const page = await approvalPage(ISSUER, ap);
-    expect(page).toContain(`<pre class="authority-ceiling">${JSON.stringify(READ_CEILING, null, 2)}</pre>`);
+    // The offer as the page renders it: assembled with the contract reference (#249 C.3b).
+    expect(page).toContain(`<pre class="authority-ceiling">${JSON.stringify(consented(READ_CEILING), null, 2)}</pre>`);
     expect(page).toContain(
       "Within this ceiling, expansions of this Mission are adjudicated by drawdown policy drawdown-std version 1, without a further approval from you.",
     );
@@ -2090,7 +2092,8 @@ describe("the ceiling consent disclosure (@spec progressive#progressive-authoriz
       method: "POST",
       redirect: "manual",
       headers: { ...decideHeaders, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve", render_revision, ...decided }),
+      // `decided` as the page would render it, so a refusal is for the ceiling or policy it names (#249 C.3b).
+      body: JSON.stringify({ decision: "approve", render_revision, ...renderedOfferOf(ISSUER, decided) }),
     });
     storeCookies(res, jar);
     let location = res.headers.get("location") as string;
@@ -2703,7 +2706,9 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
   });
 
   it("a derived successor set changed since rendering approves nothing", async () => {
-    const { code } = await pending();
+    // An offer of its own, not the policy entries edited below, so only the
+    // derived successor changes: the assembled offer copies its entries (#249 C.3b).
+    const { code } = await pending(undefined, ceilingOf("drawdown-std", structuredClone(FULL_CEILING)));
     const bob = browserApprovalHeaders(store(), code, BOB, "");
     const first = await page(code, bob.cookie);
     const given = structuredClone(DERIVATION_POLICY.ceiling);
