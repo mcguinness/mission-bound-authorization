@@ -118,6 +118,7 @@ import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type Ups
 import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
 import { kernelBudgetBinding, kernelMissionView, kernelMissionViewFor } from "./kernel-mission-view.js";
+import { defaultMissionExpiry } from "./mission-expiry.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -1765,7 +1766,7 @@ export function approveDemoMission(stack: DemoStack): { id: string } {
     JSON.stringify({
       goal: "Pay approved Acme invoices for Q3",
       target_resources: [DERIVATION_POLICY.ceiling[0].resource],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: defaultMissionExpiry(stack.kernel.nowDate()),
     }),
   );
   // The authority proposal: what the wire submits as the standard RFC 9396
