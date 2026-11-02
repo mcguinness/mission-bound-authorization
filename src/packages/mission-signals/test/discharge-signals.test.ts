@@ -50,13 +50,14 @@ import {
   MissionSignalReceiver,
   SSF_STREAM_UPDATED_EVENT_URI,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const DECLARED_AUD = "https://declared.consumer.test";
 const UNDECLARED_AUD = "https://undeclared.consumer.test";
 const RESOURCE = "https://payments.test/mcp";
 const NOW = new Date("2026-08-20T12:00:00Z");
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 const CLOSE_EVENT = "accounting-period-closed";
 const CLOSE_POLICY = "close-management-2026-q3";
 /** The issuer's advertised `mission_max_stale_seconds` in these tests. */

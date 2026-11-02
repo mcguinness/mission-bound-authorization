@@ -38,12 +38,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ALL_PROVIDER_CAPABILITIES, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14779;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "governed-client-verifier-0123456789-0123456789-0123456";
 /** A client registered as Mission-governed, holding the code, refresh and exchange grants. */
 const GOVERNED = "test-governed-agent";

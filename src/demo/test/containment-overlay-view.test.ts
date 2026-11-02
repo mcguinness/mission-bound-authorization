@@ -21,6 +21,7 @@ import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { kernelMissionView } from "../src/kernel-mission-view.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.overlay-view.test";
 const SERVICE = "https://payments.test/mcp";
@@ -52,7 +53,7 @@ function approvedMission(proposed?: AuthorityEntry[]) {
   const entry: AuthorityEntry = { type: "mission_resource_access", resource: INV1, actions: [READ, LIST] };
   const mission = kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read invoice 1", target_resources: [INV1], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read invoice 1", target_resources: [INV1], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: proposed ?? [entry],
     subject: { iss: ISS, sub: "alice" },

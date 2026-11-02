@@ -9,6 +9,7 @@ import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, EvidenceStore, McpPaym
 import { startResourceMetadataServer } from "../src/resource-metadata.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const text = TRUSTED_TOOL_CATALOGS.find(c => c.service_id === "payments")!.text;
 const token: TokenFacts = { sub: "alice", clientId: "ap-agent", mission: { id: "msn_catalog", issuer: "https://as.test", authority_hash: "sha-256:test" }, cnfJkt: "key", credentialAuthority: ALL_ACTIONS_CREDENTIAL };
@@ -37,7 +38,7 @@ describe("one catalog snapshot from discovery to invocation", () => {
   it("a served definition edited after real approval denies capability_drift and retains the compared evidence", async () => {
     const key = (await generateKeyPair("ES256")).privateKey;
     const kernel = new MissionKernel({ issuer: "https://as.test", policy: DERIVATION_POLICY as never, authoritySourceCatalog: AUTHORITY_SOURCES as never, capabilityResolver: trustedCapabilityResolver(), statusKey: key, statusKid: "status" });
-    const record = kernel.approve({ intent: validateMissionIntent(JSON.stringify({ goal: "Read invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" })), proposedAuthority: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } })], subject: { iss: "https://as.test", sub: "alice" }, approver: { iss: "https://as.test", sub: "bob" }, clientId: "ap-agent", approvalEventId: "catalog-e2e" });
+    const record = kernel.approve({ intent: validateMissionIntent(JSON.stringify({ goal: "Read invoice", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT })), proposedAuthority: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } })], subject: { iss: "https://as.test", sub: "alice" }, approver: { iss: "https://as.test", sub: "bob" }, clientId: "ap-agent", approvalEventId: "catalog-e2e" });
     let current = text;
     const f = fixture(() => current);
     Object.assign(f.view, { id: record.id, authority_hash: record.authority_hash, authority_set: record.authority_set });

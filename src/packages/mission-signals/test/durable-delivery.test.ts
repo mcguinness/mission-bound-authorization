@@ -28,6 +28,7 @@ import {
   SET_TYP,
   signLifecycleEvent,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const AUD = "https://erp.consumer.test";
@@ -53,7 +54,7 @@ function commitFixture(over: Partial<LifecycleCommit> = {}): LifecycleCommit {
       : {}),
     version: 2,
     committed_at: "2026-08-02T12:00:00Z",
-    expires_at: "2027-01-01T00:00:00Z",
+    expires_at: FIXTURE_EXPIRES_AT,
     ...over,
   };
 }
@@ -137,7 +138,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
           prior_state: "active",
           version: 2,
           committed_at: "2026-08-02T12:00:00Z",
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
         },
       },
     })
@@ -449,7 +450,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
           JSON.stringify({
             goal: "Read approved invoices",
             target_resources: [resource],
-            expires_at: "2027-01-01T00:00:00Z",
+            expires_at: FIXTURE_EXPIRES_AT,
           }),
         ),
         subject: { iss: ISS, sub: "alice" },
@@ -507,7 +508,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
       prior_state: "active",
       version: 1,
       committed_at: "2026-08-02T12:00:00Z",
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
       event_id,
       ...over,
     });
@@ -530,7 +531,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
           prior_state: "active",
           version: 1,
           committed_at: "2026-08-02T12:00:00Z",
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
           carried_to: "msn_replacement",
         },
       },
@@ -580,7 +581,7 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     expect(receiver.viewState("msn_legacy_cascaded")).toEqual({
       state: "cascaded",
       version: 1,
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     });
     expect(receiver.retainedSet("msn_legacy_cascaded")).toBe(signedLegacy);
     emitter.close();

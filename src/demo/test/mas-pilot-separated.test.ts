@@ -41,6 +41,7 @@ import {
   relocateEstate,
   VENDORS_READ,
 } from "./mas-pilot-support.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 /** A kernel store's recovery witness, created before the MAS first starts on it (#250 step 3). */
 function kernelWitnessFor(storeFile: string, witnessFile: string): string {
@@ -169,7 +170,7 @@ async function advance(ms: number): Promise<void> {
 /** A Mission the MAS approves for `sub` under `ap-agent`, through its operator channel. */
 function approveAtMas(sub: string, label: string, actions: string[] = READ_ACTIONS): Promise<string> {
   return mas.approve({
-    intent: JSON.stringify({ goal: `Separated MAS pilot: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" }),
+    intent: JSON.stringify({ goal: `Separated MAS pilot: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
     proposedAuthority: [
       {
         type: "mission_resource_access",

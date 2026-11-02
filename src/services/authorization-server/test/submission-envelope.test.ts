@@ -45,6 +45,7 @@ import {
 import {
   buildAuthorizationServer,
   DEFAULT_MAX_EVIDENCE_ENTRIES,
+  DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK,
   INTENT_SUBMISSION_EVIDENCE_TYPES,
   IntentError,
   type BuiltAs,
@@ -56,6 +57,7 @@ import {
   validateMissionIntentSubmission,
   verifyIntentSubmissionEvidence,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.example.com";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -63,7 +65,7 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const TASK_INTENT = {
   goal: "Reconcile Q3 invoices",
   target_resources: [RESOURCE],
-  expires_at: "2027-01-01T00:00:00Z",
+  expires_at: FIXTURE_EXPIRES_AT,
 };
 
 /** An UNREGISTERED type: every use below must be refused as unknown. */
@@ -112,6 +114,53 @@ registerIntentSubmissionEvidenceType(TEST_TYPE, {
 afterAll(() => unregisterIntentSubmissionEvidenceType(TEST_TYPE));
 
 const TEST_ENTRY = { type: TEST_TYPE, assertion: "stub-assertion-artifact" };
+
+// @spec submission-evidence#verification-bounds (#1962): a type whose
+// verification fans out, one signature verification per `signatures`. The
+// dispatch charges the first before calling verify; the type charges each
+// further one before doing it. With `swallow`, the type catches a refused
+// charge and returns. `fanoutWork` records every verification actually done.
+const FANOUT_TYPE = "urn:test:intent-evidence:fanout";
+let fanoutWork: string[] = [];
+registerIntentSubmissionEvidenceType(FANOUT_TYPE, {
+  validate(entry) {
+    const n = entry.signatures;
+    if (typeof entry.id !== "string" || typeof n !== "number" || !Number.isSafeInteger(n) || n < 1) {
+      throw new IntentError("invalid_mission_intent_evidence", "fanout: id (string) and signatures (positive integer) required");
+    }
+    for (const k of Object.keys(entry)) {
+      if (!["type", "id", "signatures", "swallow"].includes(k)) {
+        throw new IntentError("invalid_mission_intent_evidence", `fanout: unknown member: ${k}`);
+      }
+    }
+  },
+  async verify(input) {
+    const n = input.entry.signatures as number;
+    for (let i = 1; i <= n; i++) {
+      if (i > 1) {
+        if (input.entry.swallow === true) {
+          try {
+            input.work.charge(1);
+          } catch {
+            return { signatures_verified: i - 1 };
+          }
+        } else {
+          input.work.charge(1);
+        }
+      }
+      fanoutWork.push(`${String(input.entry.id)}#${i}`);
+    }
+    return { signatures_verified: n };
+  },
+});
+afterAll(() => unregisterIntentSubmissionEvidenceType(FANOUT_TYPE));
+
+const fanout = (id: string, signatures: number, swallow = false) => ({
+  type: FANOUT_TYPE,
+  id,
+  signatures,
+  ...(swallow ? { swallow: true } : {}),
+});
 
 function refusal(fn: () => unknown): IntentError {
   try {
@@ -470,6 +519,86 @@ afterAll(() => {
   requiredServer?.close();
 });
 
+describe("the verification-work bound (@spec submission-evidence#verification-bounds, #1962)", () => {
+  const CTX = {
+    intentHash: intentHash(ISS, TASK_INTENT as never),
+    issuer: ISS,
+    presenter: { clientId: "ap-agent" },
+    now: new Date(),
+  };
+
+  it("does every unit of work within the bound and lands the facts", async () => {
+    fanoutWork = [];
+    const facts = await verifyIntentSubmissionEvidence([fanout("a", 2), fanout("b", 2)] as never, CTX, [], {
+      maxVerificationWork: 4,
+    });
+    expect(facts?.map((f) => f.facts)).toEqual([{ signatures_verified: 2 }, { signatures_verified: 2 }]);
+    expect(fanoutWork).toEqual(["a#1", "a#2", "b#1", "b#2"]);
+  });
+
+  it("refuses invalid_request at the charge that would pass the bound, before that work is done", async () => {
+    fanoutWork = [];
+    const e = await asyncRefusal(() =>
+      verifyIntentSubmissionEvidence([fanout("a", 3), fanout("b", 3)] as never, CTX, [], { maxVerificationWork: 4 }),
+    );
+    expect(e.code).toBe("invalid_request");
+    expect(fanoutWork).toEqual(["a#1", "a#2", "a#3", "b#1"]);
+  });
+
+  it("charges each entry one unit before its verify, so entries whose types charge nothing are bounded too", async () => {
+    fanoutWork = [];
+    const e = await asyncRefusal(() =>
+      verifyIntentSubmissionEvidence([fanout("a", 1), fanout("b", 1), fanout("c", 1)] as never, CTX, [], {
+        maxVerificationWork: 2,
+      }),
+    );
+    expect(e.code).toBe("invalid_request");
+    expect(fanoutWork).toEqual(["a#1", "b#1"]);
+  });
+
+  it("refuses the submission when a type catches the refused charge and returns", async () => {
+    fanoutWork = [];
+    const e = await asyncRefusal(() =>
+      verifyIntentSubmissionEvidence([fanout("a", 3, true)] as never, CTX, [], { maxVerificationWork: 2 }),
+    );
+    expect(e.code).toBe("invalid_request");
+    expect(fanoutWork).toEqual(["a#1", "a#2"]);
+  });
+
+  it(`bounds a submission at ${DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK} units by default`, async () => {
+    fanoutWork = [];
+    await verifyIntentSubmissionEvidence([fanout("a", DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK)] as never, CTX);
+    expect(fanoutWork).toHaveLength(DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK);
+    fanoutWork = [];
+    const e = await asyncRefusal(() =>
+      verifyIntentSubmissionEvidence([fanout("b", DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK + 1)] as never, CTX),
+    );
+    expect(e.code).toBe("invalid_request");
+    expect(fanoutWork).toHaveLength(DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK);
+  });
+
+  it("takes the bound from the authorization server's configuration, and a malformed bound refuses construction", async () => {
+    const narrow = await buildAuthorizationServer({
+      issuer: "https://narrow.as.example",
+      submissionEvidenceVerificationWork: 2,
+    });
+    const intent = narrow.kernel.validateIntent(JSON.stringify(TASK_INTENT));
+    const presenter = { clientId: "ap-agent" };
+    fanoutWork = [];
+    await narrow.kernel.verifySubmissionEvidence({ intent, evidence: [fanout("a", 2)] as never, presenter });
+    const e = await asyncRefusal(() =>
+      narrow.kernel.verifySubmissionEvidence({ intent, evidence: [fanout("b", 3)] as never, presenter }),
+    );
+    expect(e.code).toBe("invalid_request");
+    expect(fanoutWork).toEqual(["a#1", "a#2", "b#1", "b#2"]);
+    for (const bad of [-1, 1.5, Number.NaN]) {
+      await expect(
+        buildAuthorizationServer({ issuer: "https://malformed.as.example", submissionEvidenceVerificationWork: bad }),
+      ).rejects.toThrow("submissionEvidenceVerificationWork must be a non-negative integer");
+    }
+  });
+});
+
 describe("end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence)", () => {
   it("PAR-submitted evidence is verified, RENDERED to the Approver, and landed request-derived on submission_evidence — outside all anchors", async () => {
     verifierMode = "ok";
@@ -660,6 +789,34 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
       mission_intent: JSON.stringify({ intent: TASK_INTENT, evidence: [TEST_ENTRY] }),
     });
     expect(present.status, await present.clone().text()).toBe(201);
+  });
+});
+
+describe("the verification-work bound at PAR (@spec submission-evidence#verification-bounds, #1962)", () => {
+  it("refuses invalid_request a submission whose evidence verification would pass the configured bound, beyond the size and count bounds, before the excess work is done, and accepts one at the bound", async () => {
+    fanoutWork = [];
+    const over = await pushPar(ISSUER_E2E, agentKey, {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({
+        intent: TASK_INTENT,
+        evidence: [fanout("over", DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK + 1)],
+      }),
+    });
+    const body = await over.clone().text();
+    expect(over.status, body).toBe(400);
+    expect(JSON.parse(body)).toMatchObject({ error: "invalid_request" });
+    expect(fanoutWork, "work past the bound was done").toHaveLength(DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK);
+
+    fanoutWork = [];
+    const at = await pushPar(ISSUER_E2E, agentKey, {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({
+        intent: TASK_INTENT,
+        evidence: [fanout("at", DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK)],
+      }),
+    });
+    expect(at.status, await at.clone().text()).toBe(201);
+    expect(fanoutWork).toHaveLength(DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK);
   });
 });
 

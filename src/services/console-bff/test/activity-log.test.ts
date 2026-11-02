@@ -20,6 +20,7 @@ import { buildEvidenceKeyResolver, EvidenceStore } from "@mission/mcp-payments";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { activityByTrace, AuthzError, buildActivityLog, ConsoleBff } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const M = "msn_run_1";
 const TRACE = "trace-abc";
@@ -418,7 +419,7 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
         JSON.stringify({
           goal: "Pay",
           target_resources: [DERIVATION_POLICY.ceiling[0].resource],
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
         }),
       ),
       subject: { iss: "https://as.test", sub: "alice" },

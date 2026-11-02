@@ -27,6 +27,7 @@ import {
   MISSION_LIFECYCLE_SCOPE,
   validateMissionIntent,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const env = process.env;
 const issuer = env.CRASH_ISSUER as string;
@@ -60,7 +61,7 @@ let missionId: string | undefined;
 if (env.CRASH_APPROVE === "1") {
   missionId = as.kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }],
     subject: { iss: issuer, sub: "alice" },

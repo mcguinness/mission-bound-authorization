@@ -69,6 +69,7 @@ import {
   newLifecycleClient,
   readAnswer,
 } from "./lifecycle-endpoint.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) => evaluateRequest(withCredential(req), opts);
 
@@ -152,7 +153,7 @@ async function observe(records: unknown): Promise<boolean> {
 /** A user-delegated Mission for `sub`, approved at the kernel by `approver`. */
 function approve(target: BuiltAs, sub: string, approver = "bob"): MissionRecord {
   return target.kernel.approve({
-    intent: validateMissionIntent(JSON.stringify({ goal: `Pay Acme invoices for ${sub}`, target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+    intent: validateMissionIntent(JSON.stringify({ goal: `Pay Acme invoices for ${sub}`, target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT })),
     proposedAuthority: [
       {
         type: "mission_resource_access",
@@ -462,7 +463,7 @@ describe("the reconciler across a restart of a file-backed authorization server 
     new AuthorityDependencyResolver({ issuer: RESTART_ISSUER, read, parse: (raw) => parseIdentityState(raw), now: () => nowMs });
   const approveThere = (target: BuiltAs, sub: string) =>
     target.kernel.approve({
-      intent: validateMissionIntent(JSON.stringify({ goal: `Pay Acme invoices for ${sub}`, target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+      intent: validateMissionIntent(JSON.stringify({ goal: `Pay Acme invoices for ${sub}`, target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT })),
       proposedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: [READ], constraints: { vendors: ["acme"] } }],
       subject: { iss: RESTART_ISSUER, sub },
       approver: { iss: RESTART_ISSUER, sub: "bob" },
@@ -535,7 +536,7 @@ describe("an unresolved Subject under lifecycle-only enforcement is an uncertain
     });
     try {
       const mission = lifecycleAs.kernel.approve({
-        intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices for alice", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+        intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices for alice", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT })),
         proposedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: [READ, SEND], constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] } }],
         subject: { iss: LIFECYCLE_ISSUER, sub: "alice" },
         approver: { iss: LIFECYCLE_ISSUER, sub: "bob" },
@@ -761,7 +762,7 @@ describe("an invalidating change the declaration does not map to a lifecycle ope
       authorityDependency: { declaration, resolver: assemblyResolver, evidence: assemblyEvidence, now: () => nowMs },
     });
     const mission = built_.kernel.approve({
-      intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices for alice", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+      intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices for alice", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT })),
       proposedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: [READ], constraints: { vendors: ["acme"] } }],
       subject: { iss: issuer, sub: "alice" },
       approver: { iss: issuer, sub: "bob" },

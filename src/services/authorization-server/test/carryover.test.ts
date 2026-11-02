@@ -53,13 +53,14 @@ import {
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT, LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const LEDGER = TOPOLOGY.resources.saas;
 const ACTORS = aiAgents("child-a", "child-b", "child-c", "grandchild-a", "other-agent");
-const PRED_EXP = "2027-01-01T00:00:00Z";
-const LATE_EXP = "2027-06-01T00:00:00Z";
+const PRED_EXP = FIXTURE_EXPIRES_AT;
+const LATE_EXP = LATER_EXPIRES_AT;
 
 const ALL_OR_NOTHING: CarryoverExclusionPolicy = { mode: "all_or_nothing" };
 const DISCLOSED: CarryoverExclusionPolicy = {

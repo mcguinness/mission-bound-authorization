@@ -50,6 +50,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { withCredential } from "../../pdp/test/with-credential.js";
 import { type BuiltAs, buildAuthorizationServer, type MissionRecord, validateMissionIntent } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) => evaluateRequest(withCredential(req), opts);
 
@@ -69,7 +70,7 @@ function built<T>(value: T | undefined, what: string): T {
 
 function approve(as: BuiltAs, sub: string): MissionRecord {
   return as.kernel.approve({
-    intent: validateMissionIntent(JSON.stringify({ goal: `Read Acme invoices for ${sub}`, target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+    intent: validateMissionIntent(JSON.stringify({ goal: `Read Acme invoices for ${sub}`, target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT })),
     proposedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: [READ], constraints: { vendors: ["acme"] } }],
     subject: { iss: ISSUER, sub },
     approver: { iss: ISSUER, sub: "bob" },

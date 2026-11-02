@@ -32,6 +32,7 @@ import {
 import { aiAgents } from "./actor-profiles.helper.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14376;
 const ISSUER = `http://localhost:${PORT}`;
@@ -40,7 +41,7 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const TASK_INTENT = {
   goal: "Pay Acme invoices for Q3",
   target_resources: [RESOURCE],
-  expires_at: "2027-01-01T00:00:00Z",
+  expires_at: FIXTURE_EXPIRES_AT,
 };
 const READ = "payments:invoice.read";
 
@@ -259,8 +260,8 @@ describe("entry validation at PAR (@spec resource-access#entry-validation, #1376
 
   it("accepts ordinary timestamps around the leap second in each member (positive control)", async () => {
     for (const v of ["2016-12-31T23:59:59Z", "2017-01-01T00:00:00Z", "2017-01-01T00:59:59+01:00"]) {
-      await expectAccepted(entry({ constraints: { resource_issued_after: v, resource_issued_before: "2027-01-01T00:00:00Z" } }));
-      await expectAccepted(entry({ constraints: { time_window: { not_before: v, not_after: "2027-01-01T00:00:00Z" } } }));
+      await expectAccepted(entry({ constraints: { resource_issued_after: v, resource_issued_before: FIXTURE_EXPIRES_AT } }));
+      await expectAccepted(entry({ constraints: { time_window: { not_before: v, not_after: FIXTURE_EXPIRES_AT } } }));
     }
   });
 
@@ -394,7 +395,7 @@ describe("max_depth 0 and an empty allowed_delegates (@spec resource-access#entr
   function approve(kernel: MissionKernel, proposal: AuthorityEntry[]) {
     return kernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Read invoices", target_resources: [ERP], expires_at: "2099-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Read invoices", target_resources: [ERP], expires_at: FAR_EXPIRES_AT }),
       ),
       proposedAuthority: proposal,
       subject: { iss: ISS, sub: "alice" },
@@ -432,7 +433,7 @@ describe("max_depth 0 and an empty allowed_delegates (@spec resource-access#entr
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Extract invoices", target_resources: [ERP], expires_at: "2099-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Extract invoices", target_resources: [ERP], expires_at: FAR_EXPIRES_AT }),
       ),
       proposedAuthority: [erpEntry()],
       childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },

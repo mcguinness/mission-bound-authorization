@@ -54,6 +54,7 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14940;
 const ISSUER = `http://localhost:${PORT}`;
@@ -67,7 +68,7 @@ const REPORTS = `${PLAIN}/reports`;
 const REPORT_READ = "reports:report.read";
 /** The live mapping the AS reads at every issuance. */
 const MAPPING = structuredClone(SCOPE_PROJECTION);
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "prefix-ceiling-verifier-0123456789-0123456789-0123456";
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };

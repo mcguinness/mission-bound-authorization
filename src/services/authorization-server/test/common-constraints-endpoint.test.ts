@@ -53,6 +53,7 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14866;
 const ISSUER = `http://localhost:${PORT}`;
@@ -62,7 +63,7 @@ const REPORTS = DERIVATION_POLICY.ceiling[3]?.resource as string;
 /** The scope-projection mapping, mutable so one case can narrow the keys the payments audience is known to enforce. */
 const MAPPING = structuredClone(SCOPE_PROJECTION);
 const SHIPPED_PAYMENTS = structuredClone(SCOPE_PROJECTION.audiences[RESOURCE]);
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "common-constraints-verifier-0123456789-0123456789-01";
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
 

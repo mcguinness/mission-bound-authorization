@@ -64,6 +64,7 @@ import {
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 /** Fail-closed EvidenceStore (issue #649): every `evidence:` fixture below needs a signer. */
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per test
@@ -262,7 +263,7 @@ beforeAll(async () => {
       JSON.stringify({
         goal: "Reconcile invoices",
         target_resources: [CANONICAL_RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     proposedAuthority: POLICY.ceiling.map((e) => pinnedToCurrentContract(e)) as never,

@@ -127,8 +127,8 @@
     "content_sha256": "304a0b321defc5907bed9769afc8f5a7fb0a8ec1cc70466cabf72a0f9c3c15ee"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
-    "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
-    "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
+    "revision": "124f20a493e72f0c19e3b39348f1c6370fcede38",
+    "content_sha256": "1d8dc744be1e8c9092a00ec69754626f8baf66dfaf33bf1fb16321c9bc61ddf6"
    },
    "draft-mcguinness-mission-aauth-management.md": {
     "revision": "940972b9823bf482819c18177c7ab8dfd935a391",
@@ -12748,7 +12748,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a decision delivered after the lifetime of the interaction, deferral or activation it decides creates no Mission, and the identifier of a committed decision is still found for as long as that decision could be delivered",
-    "local": "the reference never prunes Mission rows, so the identifier outlives every decision lifetime"
+    "local": "the reference never prunes Mission rows, so a committed decision's identifier outlives every decision lifetime; an approval reservation, which holds no committed identifier, is pruned once older than the interaction lifetime plus the declared clock skew, never less than oidc-provider's clock tolerance (#1922)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -12770,9 +12770,15 @@
      "name": "Expansion (deferred): the horizon runs from initiation (@spec mission#approval-idempotency, #1915) > with the shipped horizon, an identical reuse after it and after the first deferral's lifetime starts a new operation: a new deferral, never the dead handle, completed under a new approval_event_id (@spec mission#approval-idempotency, #1915)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "a decision on an expired interaction (@spec mission#approval-idempotency, #1922) > is refused before any approval reservation is consulted and creates no reservation and no Mission, while an interaction opened after the same clock advance decides",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1915 event identity (D1056). Witnessed: a device decision after the session expired; a deferred Mission approval past its lifetime; an expansion deferral polled past its lifetime. Not witnessed: a direct decision after its interaction expired, and an expansion approval recorded after the deferral's lifetime."
+   "notes": "#1915 event identity (D1056). Witnessed: a device decision after the session expired; a deferred Mission approval past its lifetime; an expansion deferral polled past its lifetime; a direct decision after its interaction expired, refused before any reservation is consulted (#1922). Not witnessed: an expansion approval recorded after the deferral's lifetime."
   },
   {
    "id": "core.mission-record.request-key-retention-contract",
@@ -92729,6 +92735,36 @@
    "notes": "#901 review: make the AS-binding check explicit in the optional Submission Evidence companion. No supported evidence type currently exercises this check; verification must include absent, wrong-AS, invalid, and valid bindings when a concrete type is implemented."
   },
   {
+   "id": "submission-evidence.verification-bounds.cost-bounded",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "verification-bounds",
+   "text": "the AS MUST bound the verification cost a submission can impose (for example, the number of signature verifications it performs), refusing a submission that exceeds the bound with the `invalid_request` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission whose evidence verification would exceed the configured verification-work bound, beyond the binding's size and count bounds, is refused invalid_request before the excess work is done",
+    "local": "the evidence dispatch meters verification work in units of one signature verification: one charged before each entry's verify, each further one charged by the type before doing it; the bound is the authorization server's submissionEvidenceVerificationWork, 16 by default, and every carrier's verification passes the same dispatch"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "the verification-work bound at PAR (@spec submission-evidence#verification-bounds, #1962) > refuses invalid_request a submission whose evidence verification would pass the configured bound, beyond the size and count bounds, before the excess work is done, and accepts one at the bound",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work."
+  },
+  {
    "id": "request-provenance.trust.no-header-key",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "trust-configuration",
@@ -92931,7 +92967,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119 (Q3): a `presenter` carrying `cnf` where the exchange established no confirmation key does not agree; no key is inferred from the assertion."
   },
   {
    "id": "request-provenance.verification.declared-bounds",
@@ -92981,7 +93017,7 @@
    "id": "request-provenance.replay.release-on-refusal",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "When the AS refuses the containing submission for any reason, including another evidence entry failing, it releases the reservation.",
+   "text": "When the AS refuses the containing submission before accepting it, for any reason, including another evidence entry failing, it releases the reservation.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -92992,12 +93028,100 @@
    "surface": "par",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "After a submission carrying a valid assertion is refused for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
+    "normative": "After a submission carrying a valid assertion is refused before acceptance for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119: release applies only to a refusal before acceptance; a refusal after it releases nothing (`request-provenance.replay.no-release-after-acceptance`)."
+  },
+  {
+   "id": "request-provenance.replay.accepted-no-reverification",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "Later steps of an accepted submission, such as rendering it for approval, the approval decision, or a deferred activation, do not verify the assertion again.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts; the AS's authorization, required-evidence and approval checks still apply at each step"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.acceptance-record-required",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A step that finds no acceptance record, or one that does not match, refuses the submission.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a later step of an accepted submission whose acceptance record is missing, or does not match the submission's intended AS, exact Intent, established presenter or unchanged evidence entry, refuses the submission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.expiry-after-acceptance",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "The assertion's `exp`, or the capture passing the maximum capture age, after acceptance does not refuse the accepted submission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an accepted submission whose assertion expires, or whose capture passes the maximum capture age, before its approval completes is not refused for that reason, while its own pending-operation lifetime still applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.no-release-after-acceptance",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A refusal after acceptance, such as an approval denial, releases nothing, so an accepted assertion is never reusable.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "replay",
+   "observation": {
+    "normative": "after an accepted submission is refused later, for example by an approval denial, a new submission presenting the same assertion is refused as replay"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
   },
   {
    "id": "request-provenance.replay.committed-refused",
@@ -93047,7 +93171,7 @@
    "id": "request-provenance.replay.creation-recovery-exact-retry",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it.",
+   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it; the surface's other recovery conditions still apply",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -93058,7 +93182,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
+    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation, only where the surface's other recovery conditions hold, and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -93127,9 +93251,16 @@
     "normative": "An assertion the intake emits carries none of jku, x5u, jwk, or x5c in its protected header."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/assertion.test.ts",
+     "name": "the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The intake library builds the protected header itself, as exactly typ, alg (ES256) and kid; the cited test decodes emitted assertions for two audiences and asserts the header equals those three members and carries none of jku, x5u, jwk or x5c. Mutations: H1 (jku added) and H2 (the public jwk added) each fail it. The AS refusal of such a header is request-provenance.trust.no-header-key, still todo (slice 2)."
   },
   {
    "id": "request-provenance.assertion.no-content-commitment",
@@ -93149,9 +93280,34 @@
     "normative": "An assertion the intake emits carries no claim beyond those the document defines that carries or commits to the instruction, its media type, the capture secret, or Shaping Evidence; in particular no shaping hash."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "the assertion commits to no request content (@spec request-provenance#assertion, request-provenance#privacy-considerations, #939) > the claim set is exactly the defined claims, and no public artifact carries the secret, the instruction, the media type or an unsalted digest of either",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "the assertion commits to no request content (@spec request-provenance#assertion, request-provenance#privacy-considerations, #939) > changing only the instruction, the media type or the secret changes only request_digest",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "a dictionary probe over a low-entropy instruction (@spec request-provenance#privacy-considerations, #939) > without the secret no member other than intent_hash confirms a candidate; with the secret request_digest does",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > refuses a sign request carrying an intent_hash, a digest, an originator or channel facts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The emitted claim set is exactly the draft's claims, and no public artifact (the capture receipt, the signed result, the JWS, its decoded header and claims, the intake object, a refusal) carries the secret, the instruction, the media type, the HMAC input, or an unsalted SHA-256 of any of them. A differential over fixed random values shows that changing only the instruction, only the media type, or only the secret changes request_digest and no other member, so no other claim carries or commits to them, directly or through a hash. Shaping Evidence has no way in: capture and sign inputs are closed, and a sign request carrying Shaping Evidence or a shaping hash is refused with no assertion. The dictionary probe shows that no secretless commitment to a low-entropy candidate appears in any member other than intent_hash, and that request_digest confirms the true candidate only with the secret. intent_hash is outside the claim (privacy-considerations); a separate, uncited test shows it confirms a candidate when shaping copies the wording into the Intent. These tests check this implementation's outputs; they are not a proof of secrecy. Mutations: N1 (an instruction_sha256 claim) fails the first three; N2 (a media_type claim) fails the first two; N3 (jti from an unsalted instruction digest, no new claim) fails the first three; N4 (jti from a truncated hash of the secret) fails the differential; I2 (sign input opened) fails the fourth."
   },
   {
    "id": "request-provenance.assertion.capture-id-random",
@@ -93171,9 +93327,57 @@
     "normative": "Two captures of the same instruction and media type yield distinct capture_id values, neither computable from the request content."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "capture_id (@spec request-provenance#assertion, #939) > two captures of the same instruction and media type yield distinct capture_id values of at least 128 bits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). Four captures of identical bytes, media type, origin facts and workflow, two in each of two intakes, yield four distinct capture_id values, each the base64url of 16 bytes (128 bits) from node:crypto randomBytes and none found in a secretless encoding of the request content; each emitted capture_id claim equals its receipt's. Distinct values for identical content show capture_id is not a function of the content. Mutations: C1 (capture_id from SHA-256 of the instruction, duplicate guard off) and C2 (64 random bits) each fail it."
+  },
+  {
+   "id": "request-provenance.assertion.presenter-of-capture",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "assertion",
+   "text": "the presenter of the workflow in which the instruction was captured",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the presenter an assertion carries is the authenticated presenter of the workflow that captured the instruction: one captured with the request, never one a signing request supplies"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > emits the captured presenter whether or not the signing request names it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > refuses a signing request naming %s, after the same capture and workflow signed for the captured presenter",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > refuses at capture a presenter with %s, where the vector's presenter is accepted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1, #1971 review: capture() takes and retains the workflow's authenticated presenter and sign() emits that presenter; a presenter in a signing request is only a checked cross-reference, refused presenter_mismatch where it changes the client, changes the confirmation key, or removes the confirmation binding. At capture, a confirmation object is validated before it is copied and checked as copied: an undefined thumbprint, alone or beside a valid one, an empty object, an empty thumbprint or a non-object is refused. Mutations: skipping the cross-reference fails the three mismatch cases; dropping an undefined member, accepting an empty confirmation object, or accepting an empty thumbprint each fails a capture case. partial: unit tests in which the test supplies the presenter an intake would authenticate. The cross-component witness, a shaper's signing request crossing an isolated intake, awaits the demo intake service (D1119 Q6)."
   },
   {
    "id": "request-provenance.signing.own-capture-only",
@@ -93193,9 +93397,22 @@
     "normative": "A signing request naming a capture record from another workflow, or carrying no capture record of the intake's own, yields no assertion."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses an unknown capture and yields no assertion",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses another workflow's capture and yields no assertion",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The library refuses, with no assertion, a sign request naming a capture this intake does not hold (an unminted identifier, or a real capture another intake made) and one naming another workflow's capture, while it holds a capture of its own for the requesting workflow; each capture signs from its own intake and workflow. Mutations: S1 (workflow comparison removed) and S2 (an unknown capture falling back to the latest capture) each fail the matching test. partial: unit tests in which the test supplies the workflow identifiers an intake would establish. The row's cross-component witness, a shaper's signing request crossing an isolated intake boundary, awaits the demo intake service; per D1119 Q6, isolation and authenticated-origin rows are not promoted on unit tests with trusted-looking inputs."
   },
   {
    "id": "request-provenance.signing.own-intent-hash",
@@ -93215,9 +93432,34 @@
     "normative": "The emitted intent_hash equals the intake's own computation over the candidate Intent for the AS that aud names; an intent_hash, digest, originator, or channel fact supplied by the shaper does not change the emitted claims."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > the emitted intent_hash is the integrity anchor over the candidate Intent for the AS aud names",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > refuses a sign request carrying an intent_hash, a digest, an originator or channel facts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939) > refuses an Intent carrying %s and signs nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939) > signs an exact-JSON Intent, nested values and a member named __proto__ included, over which intent_hash is unchanged",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). sign() takes the candidate Intent, never an intent_hash, and computes the OAuth binding's integrity anchor with iss the AS that aud names; the first test compares the emitted value with the generator's independent computation (vectors/mission-request-provenance/assertion.json) and a JCS computation written in the test, for two audiences. A sign request carrying an intent_hash, a request digest, an originator, channel facts, captured_at, claims, Shaping Evidence or a shaping hash is refused with no assertion, and a clean request carries the capture's originator, channel, digest and captured_at: supplied facts cannot change the emitted claims because they are refused. Mutations: I1 (anchor bound to the intake's iss) fails the first; I2 (input opened, a supplied intent_hash used) fails the second. partial: unit level, with test-supplied inputs. The cross-component witness, a shaper's request through an isolated intake, awaits the demo intake service (D1119 Q6). #1971 review: the candidate Intent is validated before it is copied (a non-finite number, NaN, an undefined member, a Date or a sparse array is refused, where a JSON copy had silently changed it), and an accepted Intent is preserved exactly, so intent_hash is computed over the Intent as given. Mutations: keeping a non-finite number, or dropping an undefined member, each fails the refusal witness. Still partial for the cross-component witness."
   },
   {
    "id": "request-provenance.signing.fresh-per-intent",
@@ -93237,9 +93479,44 @@
     "normative": "After the candidate Intent changes, the intake's next assertion carries the new intent_hash and a jti it has not used before."
    },
    "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "a fresh assertion per Intent (@spec request-provenance#signing, #939) > every call mints a fresh jti, and a changed Intent gets its new intent_hash",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "a fresh assertion per Intent (@spec request-provenance#signing, #939) > refuses to issue a jti the intake has issued before, even from a repeating random source",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). Five signatures from two captures, the Intent revised between them, carry five distinct jti values (each 128 random bits), and each carries intent_hash over its own Intent; the revised Intent's hash differs while the capture's request digest is reused, as signing permits. The intake records every jti it issues and refuses to issue one again, even from a repeating random source. Mutations: J1 (jti cached per capture, guard off) fails the first; J2 (guard off) fails the second."
+  },
+  {
+   "id": "request-provenance.signing.revision-new-capture",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "signing",
+   "text": "The intake issues it from the same capture only while the capture is within the deployment's maximum capture age; after that, a new capture is needed",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the intake refuses to issue an assertion for a revised Intent from a capture older than the deployment's maximum capture age"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 (D1119): stated by the scoped draft edits, answering the working-group comment of 2026-10-08. Todo until the intake library (#939 slice 1) witnesses it."
   },
   {
    "id": "request-provenance.request-digest.construction",
@@ -93259,9 +93536,72 @@
     "normative": "Over the Appendix test vectors, the intake's request_digest reproduces each published value, and differs when the instruction, the media type, or the secret changes."
    },
    "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > reproduces every published and low-entropy vector, HMAC input included",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > the intake's captured request_digest reproduces every vector under its secret",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > changing the instruction, the media type or the secret changes the digest",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The library's digest reproduces the draft appendix's four published values and six low-entropy and edge vectors (vectors/mission-request-provenance/request-digest.json), exact HMAC input included; the intake's capture path reproduces each vector under its secret; and changing the instruction, the media type (case included) or the secret changes the digest. An independent computation in the same file agrees on every vector; per D1119 Q6 that supports the vectors' correctness only, not an interoperability or secrecy claim, and it is not cited. Mutations: R1 (a 4-byte instruction length) and R2 (no zero byte after the label) fail the first two; R3 (media type case-folded) fails the third."
+  },
+  {
+   "id": "request-provenance.audit.departure-claim-association",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "audit",
+   "text": "Where a deployment records a claim about how far an Intent departs from the captured instruction, it MUST associate that claim with the capture's `request_digest` in access-controlled audit storage, so that an authorized audit holding the capture can test the claim.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a deployment that records a departure claim keeps it with the capture's request_digest in access-controlled audit storage, never in the assertion or the recorded facts"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 (D1119): the working-group comment of 2026-10-12. The duty binds whichever component records a departure claim: this row for the intake, `request-provenance.audit.departure-claim-association-as` for the AS. No reference component records a departure claim; todo."
+  },
+  {
+   "id": "request-provenance.audit.departure-claim-association-as",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "audit",
+   "text": "Where a deployment records a claim about how far an Intent departs from the captured instruction, it MUST associate that claim with the capture's `request_digest` in access-controlled audit storage, so that an authorized audit holding the capture can test the claim.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a deployment that records a departure claim keeps it with the capture's request_digest in access-controlled audit storage, never in the assertion or the recorded facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): the AS twin of `request-provenance.audit.departure-claim-association`; the duty binds whichever component records a departure claim. No reference component records one; todo."
   },
   {
    "id": "expansion.restoration.discharge-disclosed",

@@ -72,12 +72,13 @@ import {
   type MatcherList,
   WELL_FORMED_MATCHER,
 } from "./malformed-matcher.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE; // served by ISSUER (intra-domain target)
-const FAR_EXP = "2027-01-01T00:00:00Z";
+const FAR_EXP = FIXTURE_EXPIRES_AT;
 /**
  * @spec async-delegation (#651): the TEST-ONLY child actor client, with the
  * jwt-bearer, token-exchange and refresh_token grant types, so a Child Mission

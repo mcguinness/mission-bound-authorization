@@ -25,6 +25,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { type LifecycleTestClient, lifecycleRequest, newLifecycleClient } from "./lifecycle-endpoint.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const STATUS_SURFACES: readonly ProviderCapability[] = ["status", "status-list", "discharge", "containment"];
 const without = (off: readonly ProviderCapability[]): Set<ProviderCapability> =>
@@ -51,7 +52,7 @@ function approve(r: Running): MissionRecord {
   approvals += 1;
   return r.as.kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }],
     subject: { iss: r.issuer, sub: "alice" },

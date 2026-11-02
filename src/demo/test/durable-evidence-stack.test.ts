@@ -21,6 +21,15 @@ import { type DecisionEvidenceObject, Fga } from "@mission/pdp";
 import { initEvidenceKeyFile } from "../src/evidence-key-files.js";
 import { approveDemoMission, composeStack, type DemoStack } from "../src/stack.js";
 
+// The stack approves its demo Mission with a fixed expires_at, so the file runs
+// on a controlled clock before it (#1968, D1133; D1091), installed before the
+// modules that read the time at load.
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+afterAll(() => controlledClock.restore());
+
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
 const tempReservationsFile = (): string =>
   join(mkdtempSync(join(tmpdir(), "demo-reservations-")), "write-reservations.sqlite");

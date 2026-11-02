@@ -24,6 +24,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ALL_PROVIDER_CAPABILITIES, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14313;
 const ISSUER = `http://localhost:${PORT}`;
@@ -111,7 +112,7 @@ async function submitAndApprove(): Promise<string> {
       code_challenge: challenge,
       code_challenge_method: "S256",
       mission_intent: JSON.stringify({
-        intent: { goal: "Read Acme invoices for accounts payable", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Read Acme invoices for accounts payable", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
       }),
       authorization_details: JSON.stringify(READ),
       ...(await clientAuth()),

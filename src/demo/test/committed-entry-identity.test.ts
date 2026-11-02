@@ -15,8 +15,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { entryDigest } from "@mission/authorization-server";
 import { committedEntryDigest, Fga, viewHoldsCommittedSet } from "@mission/pdp";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { approveDemoMission, composeStack } from "../src/stack.js";
+
+// The stack approves its demo Mission with a fixed expires_at, so the file runs
+// on a controlled clock before it (#1968, D1133; D1091), installed before the
+// modules that read the time at load.
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+afterAll(() => controlledClock.restore());
 
 const tempFile = (prefix: string, name: string): string => join(mkdtempSync(join(tmpdir(), prefix)), name);
 

@@ -22,6 +22,7 @@ import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { MissionKernel, type MissionRecord, validateMissionIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -44,7 +45,7 @@ beforeAll(async () => {
       JSON.stringify({
         goal: "Pay Acme invoices for Q3",
         target_resources: [RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     subject: { iss: ISS, sub: "alice" },
