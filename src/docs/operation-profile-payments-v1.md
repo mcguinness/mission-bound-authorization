@@ -229,12 +229,13 @@ Resource Access, Resource Contracts). Its declaration is the Enforcement Scope
 Statement's `extensions.resource_contracts`: one contract, `id`
 `https://payments.example/contracts/payments`, served for the canonical
 resource URI under `resource_match: prefix` (so a finer target beneath the
-service, such as an argument-derived invoice target, is covered), with four
+service, such as an argument-derived invoice target, is covered), with five
 versions, each frozen in `vectors/mission-resource-access-subset/`:
 
 | Version | State | Operation Profile | Retained until |
 |---|---|---|---|
-| `2026-10-27` | `current` | `payments-runtime-profile-v16` | |
+| `2026-11-02` | `current` | `payments-runtime-profile-v16` | |
+| `2026-10-27` | `superseded` | `payments-runtime-profile-v16` | `2027-11-02T00:00:00Z` |
 | `2026-10-26` | `superseded` | `payments-runtime-profile-v15` | `2027-10-27T00:00:00Z` |
 | `2026-10-24` | `superseded` | `payments-runtime-profile-v14` | `2027-10-26T00:00:00Z` |
 | `2026-10-20` | `superseded` | `payments-runtime-profile-v13` | `2027-10-24T00:00:00Z` |
@@ -251,10 +252,37 @@ versions, each frozen in `vectors/mission-resource-access-subset/`:
   Refusal Record and no effect, unless another applicable entry covers it;
   it never gets v15's semantics silently. Every other crossing pinned to
   `2026-10-24` performs exactly as under v14, since v15 changes no other
-  crossing. An unpinned entry, and one pinned to `2026-10-26` or
-  `2026-10-27`, reverses under v15's semantics. v16 changes no crossing, so
-  the retained v15 profile names every crossing, each performed exactly as
-  under v16, within the `2026-10-26` retention.
+  crossing. An unpinned entry, and one pinned to `2026-10-26`,
+  `2026-10-27` or `2026-11-02`, reverses under v15's semantics. v16 changes
+  no crossing, so the retained v15 profile names every crossing, each
+  performed exactly as under v16, within the `2026-10-26` retention.
+  `2026-10-27` names the live v16 profile and is performed under it.
+
+- **Evaluation-context descriptors** (#249, D1155). The descriptor each
+  covered crossing is captured, decided and released under is contract
+  material: `2026-11-02` names it in each covered operation's
+  `evaluation_context_descriptor` (`check_transfer`, `hold_transfer`,
+  `execute_wire_transfer`, `send_remittance_email`,
+  `reverse_wire_transfer`), each the descriptor the Evaluation-Context
+  Binding claim declares for the operation. A version published before its
+  document could name one carries, beside its unchanged bytes, the
+  deployment's `evaluation_context_descriptors`: the descriptors in force
+  while it was current (`2026-10-27`, `2026-10-26`, and `2026-10-24`
+  without the reversal it does not perform). The PEP captures, the PDP
+  validates and the executing PEP releases under the descriptor the
+  resolved contract names, never under the one the live declaration names
+  if they differ; an unpinned crossing uses the live declaration's. The
+  loader refuses a current version naming another descriptor than the
+  claim, and any version naming one the claim does not publish, of another
+  `id`, or for an uncovered operation, so a published descriptor cannot
+  leave the claim while a supported version names it.
+- **`2026-10-20` and covered crossings.** `2026-10-20` was published before
+  the claim and names no descriptor. Its reads and its uncovered writes are
+  performed within its retention, but each covered crossing pinned to it
+  (`payments:payment.execute` and `payments:remittance.send`) is refused
+  `evaluation_context_unresolvable` before any decision request, with a
+  Refusal Record and no effect: it is never captured under another
+  version's descriptor. Such authority needs a new approval.
 
 - **Contract material.** The version's document assembles, for each tool:
   its action identifier and phase, its minimum action class, its
@@ -263,9 +291,10 @@ versions, each frozen in `vectors/mission-resource-access-subset/`:
   takes an idempotency key, and its catalog capability (`tool_id` and the
   extracted-definition `source_digest`). It names, per constraint key, the
   fact the resource reads, and the Operation Profile version it assembles
-  (`operation_profile`: `payments-runtime-profile-v16` for `2026-10-27`).
-  `2026-10-27` differs from `2026-10-26` only in its version and its
-  profile; `2026-10-26` differs from `2026-10-24` only in its version, its
+  (`operation_profile`: `payments-runtime-profile-v16` for `2026-11-02` and
+  `2026-10-27`). `2026-11-02` differs from `2026-10-27` only in its version
+  and the descriptor each covered operation names; `2026-10-27` differs from
+  `2026-10-26` only in its version and its profile; `2026-10-26` differs from `2026-10-24` only in its version, its
   profile and the `tenant` fact it names for `reverse_wire_transfer`.
   It overrides none of
   those definitions. Resource policy, Mission state, entitlements,
