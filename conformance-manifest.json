@@ -34342,6 +34342,52 @@
    "notes": "Tested the PDP's own share: action_class is opaque to evaluateInner (used only to pick a staleness bound, permit TTL/single_use, and approval-required dispatch) and no value of it skips or loosens the authority-entry-match, containment, FGA, amount, or approval gates. NOT tested: that a PEP actually invokes the PDP at all for a consequential-write-or-higher action (a PEP-placement / complete-mediation concern outside evaluate()'s pure-function boundary), and the parameter-binding half (\"and bound\") is tracked separately under runtime.permit-binding.must-bind-list (already partial)."
   },
   {
+   "id": "runtime.classification.multi-predicate-no-waiver",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "Every requirement of each class whose predicate the action satisfies applies to it: classification under one class MUST NOT waive a requirement arising from another applicable predicate.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an action that satisfies more than one class predicate is decided under the requirements of every class whose predicate it satisfies (PDP gate, parameter binding, freshness, action-bound approval, evidence); none is dropped because the action is assigned one of those classes, and an exception stated for one class or predicate relieves only the requirement it names"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Not implemented: the reference carries one action class per operation (src/config/enforcement-scope.json operation profiles' action_class; the static per-tool label in mcp-payments/src/pep.ts) and looks up posture by that single class (services/pdp/src/runtime-posture.ts postureStalenessBound and executionLeaseMaxSeconds). payments:remittance.send is external_commitment (max_staleness_seconds 60) although a sent remittance also satisfies the irreversible predicate (irreversible_action, 30), so its decision takes the looser bound. Planned surface: an operation profile declares every class whose predicate it satisfies and the PDP applies each class's requirements; witness: a two-predicate operation decided under the tighter staleness bound and every class's approval and evidence requirements, mutation-proved by restoring single-class lookup."
+  },
+  {
+   "id": "runtime.classification.multi-predicate-bounds",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "Where requirements impose comparable bounds, the tighter bound applies. Where they are not comparable, each applies, and an action that cannot satisfy every applicable requirement is refused.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for an action that satisfies more than one class predicate, comparable bounds (a staleness bound, a permit validity window, an execution lease) resolve to the tighter one; requirements that are not comparable all apply, and the action is refused when it cannot satisfy every one of them"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Depends on the multi-class declaration planned under runtime.classification.multi-predicate-no-waiver: the reference resolves one class per action, so there is no set of applicable requirements to compare or refuse on."
+  },
+  {
    "id": "runtime.classification.unclassifiable-defaults-to-widest",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "classification",
@@ -58198,6 +58244,27 @@
     }
    ],
    "notes": "#1269: the Conformance list applied post-completion behavior, which can be compensate, to unknown outcomes; it now routes them to human review."
+  },
+  {
+   "id": "orchestration.reversibility.multi-class-minimum",
+   "spec": "draft-mcguinness-mission-orchestration.md",
+   "anchor": "reversibility",
+   "text": "A step whose operation satisfies more than one runtime class predicate ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\") meets the minimum each of those classes maps to.",
+   "role": "orchestrator",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a step whose operation satisfies more than one runtime class predicate carries a reversibility class that meets the minimum each of those runtime classes maps to; among irreversible_action, external_commitment and privileged_administration, any one meets the minimum of another"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference's deriveReversibility and enforceReversibilityFloor (src/packages/orchestration/src/reversibility.ts) floor from a single runtimeActionClass, so a step has no input naming a second satisfied class. The three high classes are ranked there only to break ties, which raises an irreversible_action proposal for an external_commitment operation: stricter than this text requires, not a violation. Planned: accept the set of satisfied runtime classes and floor against each."
   },
   {
    "id": "template.dispatch.idempotent-retry-returns-committed",
