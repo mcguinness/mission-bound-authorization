@@ -44,6 +44,17 @@ import { TokenIssuanceStore } from "../src/kernel/token-issuance-store.js";
 import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
 
+/**
+ * The controlled clock every component here reads, installed before any
+ * import runs, so module-level timestamps (the approval fixture's login) are
+ * taken on it too (#249, D1091; review of #1959). A test that installs fake
+ * timers and restores real ones returns to this clock, the Date it replaced.
+ */
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const SUBAGENT = "subagent-invoice-extractor";
@@ -451,6 +462,7 @@ beforeAll(async () => {
 });
 afterAll(() => {
   for (const h of [on, off, only, deferring, injected]) h?.server.close();
+  controlledClock.restore();
 });
 
 describe("delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation)", () => {

@@ -483,6 +483,16 @@ async function shippedClient(id: string, kid: string, jwk: Record<string, unknow
   return { id, kid, key, dpop: await generateKeyPair("ES256", { extractable: true }) };
 }
 
+/**
+ * The controlled clock every component here reads, installed before any
+ * import runs, so module-level timestamps (the approval fixture's login) are
+ * taken on it too (#249, D1091; review of #1959).
+ */
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+
 beforeAll(async () => {
   const secondPair = await generateKeyPair("ES256", { extractable: true });
   second = {
@@ -612,6 +622,7 @@ describe("recorded ceiling drawdowns at the token endpoint (@spec approval-gover
 
 afterAll(() => {
   for (const s of servers) s.close();
+  controlledClock.restore();
 });
 
 /** PAR -> /auth -> GET the approval page at `issuer`, the Intent carrying `intentExtra`. */

@@ -324,6 +324,16 @@ const containEvent = (id: string) => ({
 /** The injected AS token signing key: the possession cases re-sign a real token's claims (#1210). */
 let asSigningKey: CryptoKey;
 
+/**
+ * The controlled clock every component here reads, installed before any
+ * import runs, so module-level timestamps (the approval fixture's login) are
+ * taken on it too (#249, D1091; review of #1959).
+ */
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+
 beforeAll(async () => {
   const carryActorKeys = await generateKeyPair("ES256", { extractable: true });
   carryActorKey = carryActorKeys.privateKey;
@@ -366,6 +376,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   asServer?.close();
+  controlledClock.restore();
 });
 
 describe("expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154)", () => {
