@@ -1893,7 +1893,7 @@ and a floor it MUST observe.
 | Consequential read | reading user data, querying logged APIs | MUST | not required |
 | Consequential write | updating records, posting messages | MUST | MUST |
 | Irreversible action | sending mail, payment, deletion | MUST | MUST, with TOCTOU reverification and evidence |
-| External commitment | signing, accepting terms for the user | MUST | MUST, with TOCTOU reverification and evidence |
+| External commitment | signing, accepting terms for the user, payment, sending mail | MUST | MUST, with TOCTOU reverification and evidence |
 | Privileged administration | granting access, changing policy | MUST | MUST, with TOCTOU and evidence |
 
 The table's per-class requirements (the PDP gate and parameter
