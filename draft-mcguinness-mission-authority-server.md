@@ -1201,10 +1201,12 @@ the following members:
 
 `delegate_depth`:
 : An integer. The joining client's depth under the Mission, from the
-  deployment's actor records, which rule 5 of {{join-rules}} evaluates.
-  Present when the joining client is a delegate; the Mission's own
-  client is depth 0. On the assertion path, the assertion's `join`
-  claim governs ({{join-assertion-pdp}}).
+  deployment's actor records, which rule 5 of {{join-rules}} evaluates;
+  the Mission's own client is depth 0. On a mapping join, it is present
+  when the joining client is a delegate. On the assertion path, the
+  assertion's `join` claim supplies the depth, so the member is
+  optional, and a reported value is compared with that claim
+  ({{join-assertion-pdp}}).
 
 `assertion`:
 : A string. A Mission Join Assertion ({{join-assertion-artifact}}) for
@@ -1680,8 +1682,9 @@ It responds in the error format of {{submission-errors}}, as follows:
   `join_failed` error code.
 
 Visibility on this endpoint is bounded: a Mission is visible to its
-`client_id`, its recorded delegates, and the PEPs and PDPs enrolled
-for the Mission's enforcement scope. Any other caller MUST receive
+`client_id`, each delegate with an actor record under the Mission
+({{join-rules}}), and the PEPs and PDPs enrolled for the Mission's
+enforcement scope. Any other caller MUST receive
 `not_found`, so the `join_failed` (403) and `not_found` (404) split
 never acts as a mapping oracle for callers outside that set.
 Visibility alone does not establish a caller's role.

@@ -244,12 +244,9 @@
    "summary": "Extracts approval-authority provenance into the Approval Governance Record: an issuer-retained, issuer-signed record of who approved, under which authority, and why the decision satisfied governance.",
    "pull_when": "Approval authority itself needs authenticated, policy-backed provenance.",
    "normative_references": [
-    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission"
    ],
-   "adoption_requires": [
-    "draft-mcguinness-mission-substrate"
-   ],
+   "adoption_requires": [],
    "requires_when": [
     {
      "when": "the Approval Context Manifest is computed for a Mission whose record carries a Progressive ceiling",
