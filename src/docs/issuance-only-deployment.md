@@ -380,11 +380,15 @@ No test restarts the assembled AS as a new process. In one process,
 `issuance-only-kernel-store.test.ts` restarts this deployment's composition
 on a key ring and a kernel file and finds the kernel reopened; the other
 file-backed outcomes come from the code (port §4.5). Recovery this
-deployment does not support is unsupported, not partially durable:
-cross-store recovery and multi-process fencing wait on #641's deployment
-trigger (D885). A key ring keeps the AS's
-signing keys across a restart, and `pnpm keys` rotates, retires and
-withdraws them as compromised (#831; `channel-key-matrix.md`).
+deployment does not support is unsupported, not partially durable. Its
+restart recovery is accepted with a stated scope (D874, D885): kernel
+projections recover; unsupported provider state is invalidated or refused;
+and no refresh continuity or recovery from lost storage is established.
+#641 owns multi-process claiming and
+fencing of the kernel outbox, parked until a second AS process shares one
+kernel store. A key ring keeps the AS's signing keys across a restart, and
+`pnpm keys` rotates, retires and withdraws them as compromised (#831;
+`channel-key-matrix.md`).
 
 ## 5. Deployment Profile instance
 

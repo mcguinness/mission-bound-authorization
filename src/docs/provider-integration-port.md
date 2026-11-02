@@ -60,9 +60,12 @@ boot under `MISSION_EPHEMERAL_KEYS=1`. `server.ts`, `pnpm issuance-only` and
 the tests and the shared demo do, generates them per boot
 (`buildAuthorizationServer`). A ring keeps the keys across a restart and
 holds each role's generations: `pnpm keys` rotates, retires and withdraws
-them as compromised, and the AS's consumers hold its keys through
-`IssuerKeys`, refreshed within the freshness `/jwks` declares (#831;
-`channel-key-matrix.md`).
+them as compromised (#831; `channel-key-matrix.md`). Several reference
+consumers, the payments PEP, the PDP and the Signals receiver among them,
+hold the AS's keys through `IssuerKeys`, refreshed within the freshness
+`/jwks` declares. Not every consumer does: the reference Lifecycle client
+fetches `/jwks` at every verification and keeps no copy, and other consumers
+keep their own copies (§4.5).
 
 ## 2. Desired contract
 
