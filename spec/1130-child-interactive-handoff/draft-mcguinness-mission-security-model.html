@@ -1573,50 +1573,57 @@ does not prevent it
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.13">Mission state source:</dt>
+<dt id="section-6-2.13">Materialized policy view:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.14">
-          <p id="section-6-2.14.1">Reports current Mission state for the freshness the runtime layer
-requires, whether by introspection, the Status surface, pushed
-Signals, or a materialized policy view. It must report accurately
-within the staleness bound and be
+          <p id="section-6-2.14.1">Carries the Mission's compiled authority where the PDP evaluates
+one, never its lifecycle state, so it is not a Mission state source:
+the PDP takes Mission state from a state source. It must be
+integrity-protected, bound to the Mission by its identifier and
+<code>authority_hash</code>, and never broader than the current effective
+authority. A stale or tampered view feeds the PDP wrong authority
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-6-2.15">Mission state source:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.16">
+          <p id="section-6-2.16.1">Reports current Mission state for the freshness the runtime layer
+requires, whether by introspection, the Status surface, or pushed
+Signals. It must report accurately within the staleness bound and be
 authenticated and integrity-protected. A compromised or spoofed state
 source can report <code>active</code> for a Mission that is revoked, defeating the
 kill switch; the runtime layer fails closed when state cannot be
-established within the bound. The materialized policy view carries
-authority as well as state, so a stale or tampered view feeds the
-PDP wrong authority; its integrity and staleness bounds are part of
-the trusted base
+established within the bound
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.14.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.15">Harness:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.16">
-          <p id="section-6-2.16.1">Establishes the execution environment in which governed work has no
+<dt id="section-6-2.17">Harness:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.18">
+          <p id="section-6-2.18.1">Establishes the execution environment in which governed work has no
 unmediated path to the actions the PEP mediates, and binds sessions,
 queues, and caches to Mission state. It must ensure no unmediated
 egress and must re-check state. A compromised harness can hand the
 agent an unmediated path, which defeats mediated execution for the
 classes that path reaches
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6-2.16.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.17">Orchestrator:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.18">
-          <p id="section-6-2.18.1">When multi-step unwinding is used, it drives compensation of in-flight
+<dt id="section-6-2.19">Orchestrator:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.20">
+          <p id="section-6-2.20.1">When multi-step unwinding is used, it drives compensation of in-flight
 work after a Mission stops. It must derive each step's reversibility
 class from a trusted source, and must compensate only under a
 documented authority basis: resource policy (<code>resource_policy</code>) or a
 separate remedial Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>). Its compromise
 converts the kill switch into a channel for unauthorized remedial
-actions, driving compensating writes under the guise of unwinding.<a href="#section-6-2.18.1" class="pilcrow">¶</a></p>
+actions, driving compensating writes under the guise of unwinding.<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.19">Metering state:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.20">
-          <p id="section-6-2.20.1">When consumption metering is used, the PDP and the metering state
+<dt id="section-6-2.21">Metering state:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.22">
+          <p id="section-6-2.22.1">When consumption metering is used, the PDP and the metering state
 behind it enforce the consented consumption bounds by atomic
 check-and-decrement, with reserve-and-commit postures and duration
 leases. The metering must count every governed action exactly once
@@ -1631,12 +1638,12 @@ silently voids a consented separation-of-duty, an exposure distinct
 from counter drift. Under a multi-PDP topology
 the published consistency bound is the honest statement of the
 undercounting exposure
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6-2.20.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-6-2.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.21">Management Client and endpoint:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.22">
-          <p id="section-6-2.22.1">When fleet management is used, an authorized Management Client
+<dt id="section-6-2.23">Management Client and endpoint:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.24">
+          <p id="section-6-2.24.1">When fleet management is used, an authorized Management Client
 enumerates the Missions a Mission Issuer holds and applies bulk
 lifecycle operations through a dry-run-then-execute exchange whose
 bulk token pins the evaluated membership. The endpoint must
@@ -1647,23 +1654,23 @@ whole fleet: bulk revoke or suspend is fleet-wide work stoppage,
 bulk resume re-enables suspended authority wholesale, and
 enumeration yields the existence knowledge the status profile's
 anti-oracle rules deny to ordinary consumers
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6-2.22.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-management" class="cite xref">I-D.draft-mcguinness-oauth-mission-management</a>]</span>).<a href="#section-6-2.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.23">Consent rendering layer:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.24">
-          <p id="section-6-2.24.1">Renders the approved authority to the Approver at the approval event.
+<dt id="section-6-2.25">Consent rendering layer:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.26">
+          <p id="section-6-2.26.1">Renders the approved authority to the Approver at the approval event.
 It must render faithfully what is committed. A compromised renderer can
 display something other than the committed disclosure; the rendering
 assurance ladder bounds this by degree, up to an Approver authenticator
 signing the disclosure commitment, but no server-side commitment proves
 what a human perceived
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-2.24.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-6-2.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.25">Access-request and approval workflow:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.26">
-          <p id="section-6-2.26.1">When requestable denials are used, this workflow adjudicates an agent's
+<dt id="section-6-2.27">Access-request and approval workflow:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.28">
+          <p id="section-6-2.28.1">When requestable denials are used, this workflow adjudicates an agent's
 request for authority it discovers it needs, integrating the AuthZEN
 Access Request and Approval Profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). It must not
@@ -1671,12 +1678,12 @@ auto-approve a high-consequence escalation without an independent
 approver. A compromised approval service can grant escalations the
 model would otherwise route to a human, so it is in the trusted base
 wherever the access-request flow is enabled
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.26.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-6-2.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.27">Transparency Service:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.28">
-          <p id="section-6-2.28.1">When audit transparency is used, it is an append-only, non-equivocating
+<dt id="section-6-2.29">Transparency Service:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.30">
+          <p id="section-6-2.30.1">When audit transparency is used, it is an append-only, non-equivocating
 log that issues inclusion receipts. It must not equivocate. A single
 compromised service can present different histories to different
 auditors; registering with more than one service makes equivocation
@@ -1685,18 +1692,18 @@ detectable, but the non-equivocation guarantee is per-service
 no compromise: a service operated by the producer whose records it
 holds returns the auditor to trusting that producer's
 infrastructure, so the audit profile's cross-domain claim rests on
-operator independence or a second, independent service.<a href="#section-6-2.28.1" class="pilcrow">¶</a></p>
+operator independence or a second, independent service.<a href="#section-6-2.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.29">Event source:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.30">
-          <p id="section-6-2.30.1">When completion or trigger-based discharge is used, it reports whether
+<dt id="section-6-2.31">Event source:</dt>
+        <dd style="margin-left: 1.5em" id="section-6-2.32">
+          <p id="section-6-2.32.1">When completion or trigger-based discharge is used, it reports whether
 a completion event has occurred. It must report accurately and be
 authenticated. A compromised event source can keep a discharged entry
 derivable or falsely discharge one; the authorization server fails
 closed when it cannot determine the event status
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>, Section
-"Mission Entry Discharge").<a href="#section-6-2.30.1" class="pilcrow">¶</a></p>
+"Mission Entry Discharge").<a href="#section-6-2.32.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2884,11 +2891,11 @@ handles.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-client-attesters">[I-D.draft-mcguinness-oauth-client-attesters]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Attester Endorsement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-attesters-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-00</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Attester Endorsement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-attesters-01</span>, <time datetime="2026-11-02" class="refDate">2 November 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Client Instance Identification for Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Identifiers"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-01</span>, <time datetime="2026-11-02" class="refDate">2 November 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-domain-authorized-issuer">[I-D.draft-mcguinness-oauth-domain-authorized-issuer]</dt>
         <dd>
@@ -3191,93 +3198,99 @@ model and pipeline layers, and saying so is the point:<a href="#appendix-A-5" cl
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">The Untrusted Agent states the three legs of injection-driven
+          <p id="appendix-B-2.1.1">The Trusted Base gives a materialized policy view its own entry: it
+carries compiled authority, never Mission lifecycle state, and is no
+longer listed as a Mission state source, as the runtime core states
+(#1129).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">The Untrusted Agent states the three legs of injection-driven
 exfiltration and which of them issuance constrains; the bypass entry
 of the adversary model names a decision-time join as one realization
 of the OAuth binding's trusted enforcement path, and the
 effective-ceiling entry notes an out-of-band global cap. The OAuth
 binding's Security Considerations point here for this analysis. No
-requirement changed (#1892).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+requirement changed (#1892).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Mission bypass through source authority held outside any Mission
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Mission bypass through source authority held outside any Mission
 follows the OAuth binding's governed rule: no token outside a Mission
 on any grant type for a Mission-governed resource, classified by the
 deployment or by its authenticated metadata, with no open-ended
-exception (#1531).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Prose-member references follow the OAuth binding, which removed
-<code>success_criteria</code>: the inert-input assumption names <code>task_bounds</code>,
-and the prompt-injection entry names <code>goal</code> and <code>task_bounds</code>
-(replacing the retired <code>constraints</code>).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+exception (#1531).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">The inert-input assumption separates <code>purpose</code> from inert material:
-it selects candidate authority only as a configured-mapping lookup
-key, and any other use can only refuse or apply stricter treatment,
-as the OAuth binding states (#1102).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.4.1">Prose-member references follow the OAuth binding, which removed
+<code>success_criteria</code>: the inert-input assumption names <code>task_bounds</code>,
+and the prompt-injection entry names <code>goal</code> and <code>task_bounds</code>
+(replacing the retired <code>constraints</code>).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Revocation-to-Action Latency states that revoking a Mission does not
-prohibit equivalent authority under a separately approved Mission,
-and that preventing re-approval takes policy over the relevant
-approval paths.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.5.1">The inert-input assumption separates <code>purpose</code> from inert material:
+it selects candidate authority only as a configured-mapping lookup
+key, and any other use can only refuse or apply stricter treatment,
+as the OAuth binding states (#1102).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">The emergent-authority residual points at the Architecture's
-statement that cross-issuer joint authorization is outside the
-family's scope.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.6.1">Revocation-to-Action Latency states that revoking a Mission does not
+prohibit equivalent authority under a separately approved Mission,
+and that preventing re-approval takes policy over the relevant
+approval paths.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">The effective-ceiling composition residual states that the
-per-Mission figures do not compose into a lifetime total, and
-points at the child-delegation profile's distinct-figures
-rendering.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.7.1">The emergent-authority residual points at the Architecture's
+statement that cross-issuer joint authorization is outside the
+family's scope.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">The issuance-only residuals state issuance-time bounding and
-per-request introspection rather than audit only.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.8.1">The effective-ceiling composition residual states that the
+per-Mission figures do not compose into a lifetime total, and
+points at the child-delegation profile's distinct-figures
+rendering.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.9.1">The issuance-only residuals state issuance-time bounding and
+per-request introspection rather than audit only.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.10">
+          <p id="appendix-B-2.10.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id} and
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
 cited. The trusted-base note
-names the Client Attester and its endorsement.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">Named agent-invokable approval resolution as a bypass distinct from
-evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+names the Client Attester and its endorsement.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
-adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.11.1">Named agent-invokable approval resolution as a bypass distinct from
+evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.12">
-          <p id="appendix-B-2.12.1">Pointed the Availability limit at Runtime's Operational Considerations
-for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.12.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
+adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.13">
-          <p id="appendix-B-2.13.1">Failure taxonomy crosswalk (#671): an informative subsection added
+          <p id="appendix-B-2.13.1">Pointed the Availability limit at Runtime's Operational Considerations
+for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.14">
+          <p id="appendix-B-2.14.1">Failure taxonomy crosswalk (#671): an informative subsection added
 to <a href="#cross-cutting" class="auto internal xref">Section 7</a>, mapping the Mandate, Audit, Consent Evidence,
 and Transaction Authorization failure classes onto the
 fail-closed/fail-safe axis, and stating that the axis depends on how
 the artifact is used rather than on the class label alone. Every
 source document's terms are preserved. No normative content,
-guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
+guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.14">
-          <p id="appendix-B-2.14.1">Controls taxonomy retirement (#636): the Approver-compromise row's
+        <li class="normal" id="appendix-B-2.15">
+          <p id="appendix-B-2.15.1">Controls taxonomy retirement (#636): the Approver-compromise row's
 <code>controls.acr</code> reference updated to the standard <code>acr_values</code>/<code>max_age</code>
 step-up request carriage; the effective-ceiling-composition row's
 <code>max_derivations</code> renamed <code>derivation_limit</code>. No adversary-model
-change.<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
+change.<a href="#appendix-B-2.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.15">
-          <p id="appendix-B-2.15.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-B-2.16">
+          <p id="appendix-B-2.16.1">Editorial density pass on this Informational document: the
 Transparency Service entry of <a href="#trusted-base" class="auto internal xref">Section 6</a> kept as the one
 full statement of the single-service-equivocation point, with the
 Ten Residuals restatement compressed to a pointer at it; the
@@ -3288,14 +3301,14 @@ explicit citation to the Mission Mandate document it shares the
 issuer-key-compromise concern with. Several over-long paragraphs in
 <a href="#guarantees" class="auto internal xref">Section 8</a> split for one idea per paragraph. No normative
 content, anchor, or adversary-model row, mitigation, or residual
-changed.<a href="#appendix-B-2.15.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-B-2.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.16">
-          <p id="appendix-B-2.16.1">The adversary model adds four moves for an agent acting without a
+        <li class="normal" id="appendix-B-2.17">
+          <p id="appendix-B-2.17.1">The adversary model adds four moves for an agent acting without a
 delegating person: its own credential as the Subject's only
 authentication root, Mission bypass through source authority held
 outside any Mission, standing-authority creep through the source
-ceiling, and no human at runtime with operator change (#1196).<a href="#appendix-B-2.16.1" class="pilcrow">¶</a></p>
+ceiling, and no human at runtime with operator change (#1196).<a href="#appendix-B-2.17.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

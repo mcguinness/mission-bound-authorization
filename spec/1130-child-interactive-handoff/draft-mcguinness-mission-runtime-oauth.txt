@@ -549,28 +549,43 @@ Table of Contents
    bounds how long a credential stays usable with no state check at
    action time:
 
-   +================+===============+============+=====================+
-   | Mechanism      | Revocation    | Per-action | Cannot provide      |
-   |                | latency       | cost       |                     |
-   |                | floor         |            |                     |
-   +================+===============+============+=====================+
-   | Token-lifetime | maximum       | local      | suspend, complete,  |
-   | expiry         | token         | clock      | or any revocation   |
-   |                | lifetime      | check      | inside the lifetime |
-   +----------------+---------------+------------+---------------------+
-   | Refresh gated  | the token     | none at    | anything between    |
-   | on active      | lifetime      | action     | refreshes           |
-   |                |               | time       |                     |
-   +----------------+---------------+------------+---------------------+
+   +=================+================+============+===================+
+   | Mechanism       | Revocation     | Per-action | Cannot provide    |
+   |                 | latency floor  | cost       |                   |
+   +=================+================+============+===================+
+   | Token-lifetime  | maximum token  | local      | suspend,          |
+   | expiry          | lifetime       | clock      | complete, or any  |
+   |                 |                | check      | revocation inside |
+   |                 |                |            | the lifetime      |
+   +-----------------+----------------+------------+-------------------+
+   | Refresh gated   | the token      | none at    | anything between  |
+   | on active       | lifetime       | action     | refreshes         |
+   |                 |                | time       |                   |
+   +-----------------+----------------+------------+-------------------+
+   | Token-lifetime  | the            | local      | anything since    |
+   | expiry, minted  | observation's  | clock      | that observation  |
+   | from an earlier | age plus the   | check      |                   |
+   | observation     | token          |            |                   |
+   |                 | lifetime       |            |                   |
+   +-----------------+----------------+------------+-------------------+
 
                                   Table 3
 
-   Where derivation and refresh of a Mission-bound token are gated on
-   active ([I-D.draft-mcguinness-oauth-mission]), token-lifetime expiry
-   conforms to the runtime core's Credential-lifetime freshness rule,
-   and the refresh cycle to its rule for a refresh cycle gated on live
-   Mission state, each at the token lifetime as its revocation latency
-   floor.
+   Where every issuance, refresh, and exchange path for a Mission-bound
+   token checks Mission state when it mints
+   ([I-D.draft-mcguinness-oauth-mission]), token-lifetime expiry and the
+   refresh cycle gated on live Mission state conform to the runtime
+   core's Credential-lifetime freshness rule as its two forms, each at
+   the token lifetime as its revocation latency floor.  Where a path
+   mints from an earlier observation without a fresh check, such as an
+   issuance grant redeemed at a consuming AS without a Mission-state
+   integration ([I-D.draft-mcguinness-oauth-mission-issuance-grant]),
+   the observation's age adds to the token lifetime.  Either form
+   conforms only while, on every issuance, refresh, and exchange path,
+   the age of the observation a token is minted from plus the token
+   lifetime stays within the published staleness bound
+   ([I-D.draft-mcguinness-mission-runtime], Section "Mission State and
+   Freshness").
 
    Mission freshness bounds how stale an observation of Mission state
    can be.  The sources are token introspection [RFC7662] at the Mission
@@ -791,12 +806,11 @@ Table of Contents
               draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -915,6 +929,13 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission State Sources follows the runtime core's Credential-
+      lifetime freshness rule: token-lifetime expiry and state-gated
+      refresh conform where every issuance, refresh, and exchange path
+      checks Mission state when it mints, and a token minted from an
+      earlier observation adds that observation's age to its lifetime,
+      within the published staleness bound (#1128).
 
    *  The sender-constraint, audience and exp cap citations name the
       OAuth binding's Mission-Bound Token Issuance chapter, the retitled

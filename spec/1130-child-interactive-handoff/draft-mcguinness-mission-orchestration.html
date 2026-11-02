@@ -1596,7 +1596,7 @@ reliance interest.<a href="#section-5-2.8.1" class="pilcrow">¶</a></p>
 <p id="section-5-3"><code>irreversible_action</code>, <code>external_commitment</code>, and
 <code>privileged_administration</code> are the identically-named action classes of
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> (Section
-"Action classification"). A step's reversibility class <span class="bcp14">MUST</span> be at least
+"Action Classification"). A step's reversibility class <span class="bcp14">MUST</span> be at least
 the minimum this table maps from the runtime action class the runtime
 profile assigns the same operation:<a href="#section-5-3" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
@@ -1648,11 +1648,17 @@ profile assigns the same operation:<a href="#section-5-3" class="pilcrow">¶</a>
       </table>
 <p id="section-5-5"><code>read_only</code> and <code>reversible_write</code> are a reversibility refinement this
 profile adds that the runtime classification does not separately track.<a href="#section-5-5" class="pilcrow">¶</a></p>
-<p id="section-5-6">The class <span class="bcp14">MAY</span> be raised by Resource policy or operation profile. As
+<p id="section-5-6">A step whose operation satisfies more than one runtime class predicate
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action
+Classification") meets the minimum each of those classes maps to.
+<code>irreversible_action</code>, <code>external_commitment</code>, and
+<code>privileged_administration</code> carry the same requirements in this
+profile, so any one of them meets the minimum of another.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">The class <span class="bcp14">MAY</span> be raised by Resource policy or operation profile. As
 with the runtime classification floor
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), it <span class="bcp14">MUST NOT</span> be lowered
 by the orchestrator at runtime to avoid review or compensation
-requirements.<a href="#section-5-6" class="pilcrow">¶</a></p>
+requirements.<a href="#section-5-7" class="pilcrow">¶</a></p>
 <div id="action-class-source">
 <section id="section-5.1">
         <h3 id="name-action-class-source">
@@ -2825,27 +2831,33 @@ and avoid recording raw user content when identifiers are sufficient.<a href="#s
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Record Integrity and Retention (<a href="#evidence-integrity" class="auto internal xref">Section 11.1</a>): the
-imported sequence indicator is per emitter for each Mission, as the
-runtime profile scopes it. No requirement changed (#821).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Reversibility Classes (<a href="#reversibility" class="auto internal xref">Section 5</a>): a step whose operation
+satisfies more than one runtime class predicate meets the minimum
+each of those classes maps to, and the three highest classes meet
+one another's minimum (#1735).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">In-Flight Requests (<a href="#in-flight" class="auto internal xref">Section 8</a>): <code>committed</code> requires evidence
+          <p id="appendix-A-2.2.1">Record Integrity and Retention (<a href="#evidence-integrity" class="auto internal xref">Section 11.1</a>): the
+imported sequence indicator is per emitter for each Mission, as the
+runtime profile scopes it. No requirement changed (#821).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">In-Flight Requests (<a href="#in-flight" class="auto internal xref">Section 8</a>): <code>committed</code> requires evidence
 that the effect occurred, and an outcome the deployment cannot
 establish is <code>unknown</code>, the runtime profile's undetermined outcome.
 Post-completion behavior, including <code>compensate</code>, applies to
 <code>committed</code> outcomes only; an <code>unknown</code> outcome goes to human review
-(#1269).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+(#1269).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The non-active states are <code>terminated</code>, with its termination
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">The non-active states are <code>terminated</code>, with its termination
 reason, and <code>suspended</code>. Orchestration Evidence carries
 <code>mission_termination</code> beside a <code>terminated</code> <code>mission_state</code>, and
 continued work after reason <code>superseded</code> proceeds under the
-<code>termination.successor</code> (#705).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+<code>termination.successor</code> (#705).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
 State-Change Behavior trigger, independent of the non-active and
 staleness sequences, for a <code>mission.lifecycle-change</code> event's
 generic <code>authority_changed</code> true at unchanged <code>state</code>. The
@@ -2857,7 +2869,7 @@ is suppressed or paused, a denied <code>dispatched_not_committed</code> step
 follows its existing <code>in_flight_behavior</code>, and a <code>committed</code> step is
 never compensated on narrowing alone. <code>step_id</code> is <span class="bcp14">REQUIRED</span> on
 Orchestration Evidence reporting this trigger. Signals promoted from
-an informative to a normative reference (#670).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+an informative to a normative reference (#670).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

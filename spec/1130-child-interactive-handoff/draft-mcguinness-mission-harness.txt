@@ -864,23 +864,31 @@ Table of Contents
 
    mission_binding:  REQUIRED.  The Mission binding from Section 6.
 
-   action_class:  REQUIRED when known.  The runtime action class.
+   action_class:  REQUIRED when known.  The runtime action class
+      assigned to the item's action.  A rule below that names a class
+      applies when that class applies to the action, whether assigned or
+      another class whose predicate the action satisfies
+      ([I-D.draft-mcguinness-mission-runtime], Section "Action
+      Classification").
 
    not_before:  OPTIONAL.  An RFC 3339 timestamp.
 
    expires_at:  An RFC 3339 timestamp after which the item MUST NOT run.
-      REQUIRED for a high-consequence action class
-      ([I-D.draft-mcguinness-mission-runtime]) unless the deployment
-      sets a maximum queue age for that class; OPTIONAL otherwise.
+      REQUIRED where a high-consequence action class applies to the
+      item's action ([I-D.draft-mcguinness-mission-runtime]), unless the
+      deployment sets a maximum queue age for each such class; OPTIONAL
+      otherwise.  Where several applicable classes set a maximum queue
+      age, the shortest applies.
 
    retry_of:  OPTIONAL.  Identifier of the prior attempt.
 
    work_item, work_item_issuer:  REQUIRED where the Enforcement Scope
-      Statement claims work-item attribution for the item's class,
-      OPTIONAL otherwise.  The qualified work-item identifier of the
-      work the item performs (Section 6.2).  It is the same across
-      retries: queue_item_id names the attempt and retry_of the attempt
-      before it, while work_item names the work every attempt performs.
+      Statement claims work-item attribution for a class that applies to
+      the item's action, OPTIONAL otherwise.  The qualified work-item
+      identifier of the work the item performs (Section 6.2).  It is the
+      same across retries: queue_item_id names the attempt and retry_of
+      the attempt before it, while work_item names the work every
+      attempt performs.
 
    idempotency_key:  REQUIRED when retrying an action whose runtime
       profile requires one.
@@ -888,11 +896,11 @@ Table of Contents
    When expires_at has passed, the harness MUST suppress the queue item
    even if Mission state remains active.
 
-   A queued item in a high-consequence action class that crossed a non-
-   active period before dispatch MUST obtain a fresh action-bound
-   approval ([I-D.draft-mcguinness-mission-runtime]) before it runs.
-   Its earlier place in the queue is not a standing approval across a
-   Mission non-active interval.
+   A queued item to which a high-consequence action class applies that
+   crossed a non-active period before dispatch MUST obtain a fresh
+   action-bound approval ([I-D.draft-mcguinness-mission-runtime]) before
+   it runs.  Its earlier place in the queue is not a standing approval
+   across a Mission non-active interval.
 
    Example: a queued journal-entries.write posting under a Q3 invoice-
    reconciliation Mission (not the issuance profile's worked example),
@@ -1408,10 +1416,13 @@ Table of Contents
    Enforcement Scope Statement declares PDP-enforced taint for an action
    class ([I-D.draft-mcguinness-mission-runtime]):
 
-   *  The PDP MUST require context.taint on every decision in that class
-      whose action.properties.external_communication is true or whose
-      action_class is external_commitment, and MUST deny with the
-      decision-API binding's taint_context_missing classification
+   *  The PDP MUST require context.taint on every decision on an action
+      to which that class applies and whose
+      action.properties.external_communication is true or to which the
+      External commitment class applies
+      ([I-D.draft-mcguinness-mission-runtime], Section "Action
+      Classification"), and MUST deny with the decision-API binding's
+      taint_context_missing classification
       ([I-D.draft-mcguinness-mission-authzen]) when it is absent.
 
    *  When taint is present with tainted true on such an action, the PDP
@@ -1979,12 +1990,11 @@ Table of Contents
               draft-mcguinness-mission-security-model.html>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
@@ -2076,6 +2086,16 @@ Appendix A.  Mapping to Durable-Execution Engines
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Decision-API Composition: the PDP requires taint context on every
+      action to which the External commitment class applies, not only
+      one whose assigned class is external_commitment (#1994).
+
+   *  Queue Item Object: work-item attribution, expires_at or a maximum
+      queue age, and the fresh approval after a non-active interval
+      apply when any class that applies to the item's action calls for
+      them; action_class is the assigned class, and the shortest
+      applicable maximum queue age applies (#1994).
 
    *  Harness Evidence: the imported sequence indicator is per emitter
       for each Mission, as the runtime profile scopes it.  No

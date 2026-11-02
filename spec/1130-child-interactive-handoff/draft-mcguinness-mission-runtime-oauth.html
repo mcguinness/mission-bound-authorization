@@ -1768,14 +1768,29 @@ long a credential stays usable with no state check at action time:<a href="#sect
               <td class="text-left" rowspan="1" colspan="1">none at action time</td>
               <td class="text-left" rowspan="1" colspan="1">anything between refreshes</td>
             </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Token-lifetime expiry, minted from an earlier observation</td>
+              <td class="text-left" rowspan="1" colspan="1">the observation's age plus the token lifetime</td>
+              <td class="text-left" rowspan="1" colspan="1">local clock check</td>
+              <td class="text-left" rowspan="1" colspan="1">anything since that observation</td>
+            </tr>
           </tbody>
         </table>
-<p id="section-5.2-3">Where derivation and refresh of a Mission-bound token are gated on
-<code>active</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), token-lifetime
-expiry conforms to the runtime core's Credential-lifetime freshness
-rule, and the refresh cycle to its rule for a refresh cycle gated on
-live Mission state, each at the token lifetime as its revocation
-latency floor.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<p id="section-5.2-3">Where every issuance, refresh, and exchange path for a Mission-bound
+token checks Mission state when it mints
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), token-lifetime expiry and
+the refresh cycle gated on live Mission state conform to the runtime
+core's Credential-lifetime freshness rule as its two forms, each at
+the token lifetime as its revocation latency floor. Where a path
+mints from an earlier observation without a fresh check, such as an
+issuance grant redeemed at a consuming AS without a Mission-state
+integration (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-issuance-grant" class="cite xref">I-D.draft-mcguinness-oauth-mission-issuance-grant</a>]</span>),
+the observation's age adds to the token lifetime. Either form
+conforms only while, on every issuance, refresh, and exchange path,
+the age of the observation a token is minted from plus the token
+lifetime stays within the published staleness bound
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Mission State and
+Freshness").<a href="#section-5.2-3" class="pilcrow">¶</a></p>
 <p id="section-5.2-4">Mission freshness bounds how stale an observation of Mission state can
 be. The sources are token introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> at the Mission
 issuer, the Mission Status profile
@@ -2045,7 +2060,7 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Client Instance Identification for Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Identifiers"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-01</span>, <time datetime="2026-11-02" class="refDate">2 November 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
@@ -2157,12 +2172,20 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The sender-constraint, audience and <code>exp</code> cap citations name the
-OAuth binding's Mission-Bound Token Issuance chapter, the retitled
-Mission-Bound Access Tokens. No requirement changed (#1892).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Mission State Sources follows the runtime core's Credential-lifetime
+freshness rule: token-lifetime expiry and state-gated refresh
+conform where every issuance, refresh, and exchange path checks
+Mission state when it mints, and a token minted from an earlier
+observation adds that observation's age to its lifetime, within the
+published staleness bound (#1128).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Boundary and Audience: the runtime core's boundary identifier is the
+          <p id="appendix-A-2.2.1">The sender-constraint, audience and <code>exp</code> cap citations name the
+OAuth binding's Mission-Bound Token Issuance chapter, the retitled
+Mission-Bound Access Tokens. No requirement changed (#1892).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Boundary and Audience: the runtime core's boundary identifier is the
 protected resource's resource identifier, spelled as its RFC 9728
 <code>resource</code> value, which trusted static configuration can supply.
 <code>aud</code>, a string or an array, names it directly or through an
@@ -2172,28 +2195,28 @@ by order. An absent, malformed, or nonmatching audience, or an
 ambiguous alias, is refused before any decision, and a stricter
 token profile keeps its rule. The input mapping names the boundary
 identifier and no longer calls the protected resource the target of
-the action. Adds RFC 7519 as a normative reference (#853).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+the action. Adds RFC 7519 as a normative reference (#853).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Credential Authority and Current Effective Authority: a
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Credential Authority and Current Effective Authority: a
 <code>mission_resource_access</code> entry's <code>resource</code> matches the operation
 target the PEP establishes from its trusted operation contract,
 under Resource Access's Resource Matching rules; the token's
-audience remains a separate check (#1276).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Runtime Input Mapping and Mission State Sources: a state source
-reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
-and the Status List cannot provide the termination reason or its
-references (#705).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+audience remains a separate check (#1276).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Establishing Validated Credential Context: the OAuth realization of
+          <p id="appendix-A-2.5.1">Runtime Input Mapping and Mission State Sources: a state source
+reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
+and the Status List cannot provide the termination reason or its
+references (#705).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Establishing Validated Credential Context: the OAuth realization of
 the runtime core's sender-constraint requirement for high-consequence
 actions: the <code>cnf</code> binding of the validated credential context (a
 JWT's claim, or an opaque token's introspection response), with a
 proof the PEP verified; a context with no binding is a bearer token.
-Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

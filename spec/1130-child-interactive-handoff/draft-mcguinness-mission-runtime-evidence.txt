@@ -446,13 +446,21 @@ Table of Contents
       The PDP computes and records it directly; no decision-API wire
       echo is required.
 
-   action_class:  REQUIRED.  A string.  The runtime action class the PDP
-      applied to the action: one of consequential_read,
+   action_class:  REQUIRED.  A string.  The runtime action class
+      assigned to the action: one of consequential_read,
       consequential_write, irreversible_action, external_commitment, or
       privileged_administration, naming the classes of
       [I-D.draft-mcguinness-mission-runtime].  Every decision this
       document records is on a consequential action, so the member is
       always present.
+
+   action_classes:  REQUIRED when more than one runtime action class
+      applies to the action ([I-D.draft-mcguinness-mission-runtime],
+      Section "Action Classification"); omitted otherwise.  An array of
+      distinct strings from the value space of action_class: every class
+      whose requirements the PDP applied, action_class among them.
+      action_class remains the class assigned to the action, which
+      class_source describes.
 
    class_source:  REQUIRED when action_class is present.  A string.  How
       the applied class was assigned: default (the runtime profile's
@@ -706,18 +714,20 @@ Table of Contents
       requesting PEP is authorized for
       ([I-D.draft-mcguinness-mission-authzen]),
       operation_target_invalid; for a mediated request with no action
-      class established, where the runtime Enforcement Scope Statement
-      declares action classes, action_class_missing, recorded with no
-      class; for one whose action phase is outside the defined set, or
-      is absent where the PDP's trusted operation declaration requires a
-      phase, phase_invalid; for a compensate-phase request with no
-      compensates_evaluation_id, or a request whose
-      compensates_evaluation_id is malformed, compensation_link_invalid;
-      for one whose evaluation-context binding inputs are missing,
-      malformed, or incompatible with the declared binding, for an
-      operation the runtime profile's Evaluation-Context Binding
-      extension covers, evaluation_context_invalid; and for one carrying
-      a work-item context that is not well-formed (the harness profile,
+      class established (none carried or assigned, or a carried class
+      other than the one the PDP's trusted declaration assigns), where
+      the runtime Enforcement Scope Statement declares action classes,
+      action_class_missing, recorded with no class; for one whose action
+      phase is outside the defined set, or is absent where the PDP's
+      trusted operation declaration requires a phase, phase_invalid; for
+      a compensate-phase request with no compensates_evaluation_id, or a
+      request whose compensates_evaluation_id is malformed,
+      compensation_link_invalid; for one whose evaluation-context
+      binding inputs are missing, malformed, or incompatible with the
+      declared binding, for an operation the runtime profile's
+      Evaluation-Context Binding extension covers,
+      evaluation_context_invalid; and for one carrying a work-item
+      context that is not well-formed (the harness profile,
       [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
       last four describe decision inputs the PDP cannot use, not an
       evaluated policy denial; evaluation_context_unresolvable is
@@ -2956,6 +2966,14 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Decision Evidence: action_classes records every class whose
+      requirements the PDP applied, when more than one applies;
+      action_class is defined as the assigned class (#1994).
+
+   *  Refusal Record: action_class_missing also records a mediated
+      request carried with a class other than the one the PDP's trusted
+      declaration assigns (#1994).
 
    *  Refusal Record: action_class_missing records a PDP refusal of a
       mediated request with no action class established, where the

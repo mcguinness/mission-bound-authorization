@@ -2258,7 +2258,12 @@ this section. A governed queue item carries:<a href="#section-9.1-1" class="pilc
 <dt id="section-9.1-2.5">
 <code>action_class</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-9.1-2.6">
-            <p id="section-9.1-2.6.1"><span class="bcp14">REQUIRED</span> when known. The runtime action class.<a href="#section-9.1-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-9.1-2.6.1"><span class="bcp14">REQUIRED</span> when known. The runtime action class assigned to the
+item's action. A rule below that names a class applies when that
+class applies to the action, whether assigned or another class
+whose predicate the action satisfies
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action
+Classification").<a href="#section-9.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-9.1-2.7">
@@ -2270,11 +2275,12 @@ this section. A governed queue item carries:<a href="#section-9.1-1" class="pilc
 <dt id="section-9.1-2.9">
 <code>expires_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-9.1-2.10">
-            <p id="section-9.1-2.10.1">An RFC 3339 timestamp after which the item <span class="bcp14">MUST NOT</span> run. <span class="bcp14">REQUIRED</span> for
-a high-consequence action class
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) unless the
-deployment sets a maximum queue age for that class; <span class="bcp14">OPTIONAL</span>
-otherwise.<a href="#section-9.1-2.10.1" class="pilcrow">¶</a></p>
+            <p id="section-9.1-2.10.1">An RFC 3339 timestamp after which the item <span class="bcp14">MUST NOT</span> run. <span class="bcp14">REQUIRED</span>
+where a high-consequence action class applies to the item's action
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), unless the deployment
+sets a maximum queue age for each such class; <span class="bcp14">OPTIONAL</span> otherwise.
+Where several applicable classes set a maximum queue age, the
+shortest applies.<a href="#section-9.1-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-9.1-2.11">
@@ -2287,9 +2293,9 @@ otherwise.<a href="#section-9.1-2.10.1" class="pilcrow">¶</a></p>
 <code>work_item</code>, <code>work_item_issuer</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-9.1-2.14">
             <p id="section-9.1-2.14.1"><span class="bcp14">REQUIRED</span> where the Enforcement Scope Statement claims work-item
-attribution for the item's class, <span class="bcp14">OPTIONAL</span> otherwise. The qualified
-work-item identifier of the work the item performs
-(<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>). It is the same across retries:
+attribution for a class that applies to the item's action, <span class="bcp14">OPTIONAL</span>
+otherwise. The qualified work-item identifier of the work the item
+performs (<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>). It is the same across retries:
 <code>queue_item_id</code> names the attempt and <code>retry_of</code> the attempt before
 it, while <code>work_item</code> names the work every attempt performs.<a href="#section-9.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2303,11 +2309,11 @@ it, while <code>work_item</code> names the work every attempt performs.<a href="
 </dl>
 <p id="section-9.1-3">When <code>expires_at</code> has passed, the harness <span class="bcp14">MUST</span> suppress the queue item
 even if Mission state remains active.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
-<p id="section-9.1-4">A queued item in a high-consequence action class that crossed a
-non-active period before dispatch <span class="bcp14">MUST</span> obtain a fresh action-bound
-approval (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) before it
-runs. Its earlier place in the queue is not a standing approval across
-a Mission non-active interval.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
+<p id="section-9.1-4">A queued item to which a high-consequence action class applies that
+crossed a non-active period before dispatch <span class="bcp14">MUST</span> obtain a fresh
+action-bound approval (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>)
+before it runs. Its earlier place in the queue is not a standing
+approval across a Mission non-active interval.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
 <p id="section-9.1-5">Example: a queued <code>journal-entries.write</code> posting under a Q3
 invoice-reconciliation Mission (not the issuance profile's worked
 example), retried once. <code>expires_at</code> is present because the posting
@@ -2986,9 +2992,12 @@ Enforcement Scope Statement declares PDP-enforced taint for an action
 class (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>):<a href="#section-14.1-7" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-14.1-8.1">
-            <p id="section-14.1-8.1.1">The PDP <span class="bcp14">MUST</span> require <code>context.taint</code> on every decision in that
-class whose <code>action.properties.external_communication</code> is <code>true</code>
-or whose <code>action_class</code> is <code>external_commitment</code>, and <span class="bcp14">MUST</span> deny
+            <p id="section-14.1-8.1.1">The PDP <span class="bcp14">MUST</span> require <code>context.taint</code> on every decision on an
+action to which that class applies and whose
+<code>action.properties.external_communication</code> is <code>true</code> or to which
+the External commitment class applies
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action
+Classification"), and <span class="bcp14">MUST</span> deny
 with the decision-API binding's <code>taint_context_missing</code>
 classification (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) when it
 is absent.<a href="#section-14.1-8.1.1" class="pilcrow">¶</a></p>
@@ -3739,7 +3748,7 @@ of <a href="#harness-evidence" class="auto internal xref">Section 15</a> is loca
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Client Instance Identification for Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Identifiers"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-01</span>, <time datetime="2026-11-02" class="refDate">2 November 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-child-delegation">[I-D.draft-mcguinness-oauth-mission-child-delegation]</dt>
         <dd>
@@ -3868,51 +3877,63 @@ exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Harness Evidence: the imported sequence indicator is per emitter for
-each Mission, as the runtime profile scopes it. No requirement
-changed (#821).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">Decision-API Composition: the PDP requires taint context on every action
+to which the External commitment class applies, not only one whose
+assigned class is <code>external_commitment</code> (#1994).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Work-Item Identity: the harness assigns a qualified work-item
+          <p id="appendix-B-2.2.1">Queue Item Object: work-item attribution, <code>expires_at</code> or a maximum
+queue age, and the fresh approval after a non-active interval apply
+when any class that applies to the item's action calls for them;
+<code>action_class</code> is the assigned class, and the shortest applicable
+maximum queue age applies (#1994).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Harness Evidence: the imported sequence indicator is per emitter for
+each Mission, as the runtime profile scopes it. No requirement
+changed (#821).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Work-Item Identity: the harness assigns a qualified work-item
 identifier (<code>work_item_issuer</code> and <code>work_item</code>), binds it to one
 Mission, and attaches it as extension members of the propagated
 Mission reference, with mapping, inheritance, retry, and concurrency
 rules. A PEP carries it to the decision only from that attachment.
 The Queue Item Object and Harness Evidence carry it, and a
-<code>mission_superseded</code> record names it (#815).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+<code>mission_superseded</code> record names it (#815).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">The taint baseline, taint reset and egress direction no longer key
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">The taint baseline, taint reset and egress direction no longer key
 on the Subject. Content from the Approver or from the delegating
 person of a user-delegated Mission does not taint, and a workload or
 organizational Subject confers no baseline trust. A reset or an
 egress direction is a trusted direction, given through a surface the
 governed agent cannot invoke; being the Subject, identity alone, and
 administrative metadata authorize none. Inherited taint and the
-transformed-content rule are unchanged (#1193).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+transformed-content rule are unchanged (#1193).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">The Mission binding and Harness Evidence carry <code>termination</code> beside
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">The Mission binding and Harness Evidence carry <code>termination</code> beside
 a <code>terminated</code> state. The stop-behavior matrix is keyed on
 <code>terminated</code> and <code>termination.reason</code>, with a row for an
 unrecognized or absent termination, and continuation by rebinding
 keys on reason <code>superseded</code> and follows <code>termination.successor</code>
-(#705).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+(#705).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Interaction with Mission Containment keys the residual on the
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">Interaction with Mission Containment keys the residual on the
 action class's containment property, not on a deployment's level.
-No requirement changed.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+No requirement changed.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1"><code>status_checked_at</code> is the harness's observation as its own clock
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1"><code>status_checked_at</code> is the harness's observation as its own clock
 read it, preceding the relied-on status's <code>iat</code> by no more than the
 published maximum clock skew; <code>status_expires_at</code> is its reliance
 end, never later than a Mission Status Response's
-<code>mission.fresh_until</code>.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-B-2.9">
+          <p id="appendix-B-2.9.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -3922,13 +3943,13 @@ Context's <code>iss</code> and <code>id</code>, instead of <code>agent_instance_
 instance <code>sub</code>. The retired profile's
 guarantee that sub-agent chains cannot shed identity now depends on
 the harness's own durable association between each sub-agent handle
-and its instance.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+and its instance.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Linked the limits of provenance-backed taint control to the Security
+        <li class="normal" id="appendix-B-2.10">
+          <p id="appendix-B-2.10.1">Linked the limits of provenance-backed taint control to the Security
 Model's Enforcement Perimeter and distinguished the per-channel
 egress disposition from the runtime profile's per-entry perimeter
-disposition; no taint requirement changed (#758).<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+disposition; no taint requirement changed (#758).<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
