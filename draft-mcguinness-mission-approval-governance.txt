@@ -188,9 +188,10 @@ Table of Contents
    the Mission Record's accountable approval_basis.consent_principal is
    fully conformant to its Mission binding and unaffected by this
    document, except that a deployment activating Missions under a
-   standing-consent basis meets the Approval Basis Contract
-   (Section 12), which records nothing.  A profile can require the
-   record; Section 4 defines the conditions under which one does.
+   standing-consent basis whose defining profile adopts the Approval
+   Basis Contract meets that Contract (Section 12), which records
+   nothing.  A profile can require the record; Section 4 defines the
+   conditions under which one does.
 
    The record is independent of the approval ceremony.  It applies alike
    to synchronous approval, to deferred approval
@@ -228,9 +229,10 @@ Table of Contents
    section this document imports normatively
    ([I-D.draft-mcguinness-oauth-mission], Section "Commitment
    Mechanisms"): approval_policy.digest, approval_context_commitment,
-   and submission_evidence_commitment are envelope anchors, and the
-   record digest (Section 9) is a canonical-object digest.  That
-   construction instantiates the default commitment construction of
+   submission_evidence_commitment, and an activation policy reference's
+   digest (Section 12.3) are envelope anchors, and the record digest
+   (Section 9) is a canonical-object digest.  That construction
+   instantiates the default commitment construction of
    [I-D.draft-mcguinness-mission-substrate], which is informative here.
 
    The terms Mission, Mission Record, Mission Issuer, Approver, Subject,
@@ -1272,15 +1274,19 @@ Table of Contents
 
 12.  Approval Basis Contract
 
-   This section is the contract every standing-consent approval basis
-   meets: the bases themselves, their instances, the activation policy
-   commitment, standing-consent recency, and policy adjudication.  A
-   profile that defines a standing-consent basis for the issuance
-   profile ([I-D.draft-mcguinness-oauth-mission]) conforms to it, and so
-   does an issuer that activates a Mission under such a basis
-   (Section 17).  It is adoptable on its own: it neither requires nor
-   implies recording an Approval Governance Record, and none of its
-   requirements depends on one.
+   This section is a contract for standing-consent approval bases: the
+   bases themselves, their instances, the activation policy commitment,
+   standing-consent recency, and policy adjudication.  A profile that
+   defines a standing-consent basis for the issuance profile
+   ([I-D.draft-mcguinness-oauth-mission]) and adopts this Contract
+   conforms to it, and so does an issuer that activates a Mission under
+   such a basis (Section 17).  The issuance profile's own requirements
+   on every standing-consent basis
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Creating
+   Paths") apply whether or not a profile adopts this Contract.  It is
+   adoptable on its own: it neither requires nor implies recording an
+   Approval Governance Record, and none of its requirements depends on
+   one.
 
 12.1.  Standing-Consent Bases
 
@@ -1995,11 +2001,12 @@ Table of Contents
    *  retain the record and the referenced policy for the Mission's
       audit horizon ([I-D.draft-mcguinness-oauth-mission]).
 
-   A profile that defines a standing-consent basis, and an issuer that
-   activates a Mission under one, conform to the Approval Basis Contract
-   (Section 12).  That conformance is independent of the Recording
-   Issuer and Relying Auditor roles: it neither requires nor implies
-   recording an Approval Governance Record.
+   A profile that defines a standing-consent basis and adopts the
+   Approval Basis Contract, and an issuer that activates a Mission under
+   such a basis, conform to that Contract (Section 12).  That
+   conformance is independent of the Recording Issuer and Relying
+   Auditor roles: it neither requires nor implies recording an Approval
+   Governance Record.
 
    A Relying Auditor MUST verify the envelope by byte equality, MUST
    validate the mission binding, and MUST obtain the retained policy
@@ -2691,6 +2698,17 @@ Appendix B.  Portable Approval-Binding Check Vectors
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Approval Basis Contract binds a profile that adopts it, and an
+      issuer activating under such a profile's basis, rather than every
+      standing-consent basis: the OAuth binding states its own
+      requirements for every basis and cites this document
+      informatively.  The Contract's requirements are unchanged, and
+      Template, Progressive, Child Delegation and governed_policy still
+      adopt it.  The activation policy reference's digest, which the
+      OAuth binding no longer lists among its anchors, is classified
+      here as an envelope anchor, with its construction unchanged
+      (#1967).
 
    *  The digest classification imports the OAuth binding's Commitment
       Mechanisms section normatively, in place of the substrate's
