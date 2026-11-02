@@ -48,7 +48,7 @@ namespace tests in §7 run against real estate registrations.
 
 ## 2. The mapping contract
 
-The contract is `config/mas-pilot.json` `mapping_contract`, version 1, with
+The contract is `config/mas-pilot.json` `mapping_contract`, version 2, with
 the members MAS §mapping-contract lists:
 
 - **Subject namespace mapping:** issuer-qualified estate subjects to Mission
@@ -56,7 +56,16 @@ the members MAS §mapping-contract lists:
 - **Client namespace mapping:** issuer-qualified estate clients to Mission
   clients, each `active` or `disabled`.
 - **Scope mapping:** per estate issuer, each `scope` value to actions at the
-  payments resource; a value it does not cover maps to nothing.
+  payments resource; a value it does not cover maps to nothing. The shipped
+  contract maps the legacy values `invoices.read`, `vendors.read` and
+  `remit.send`, which state no contract, and beside them
+  `invoices.read.2026-10-27`, `vendors.read.2026-10-27` and
+  `remit.send.2026-10-27`, which state the current payments contract
+  (version 2, #249). The payments resource requires a reference, so a
+  Mission approved now carries the current contract's (D989), and a
+  credential joins it only under a value stating that contract; a legacy
+  value keeps its meaning and joins only a Mission approved before the
+  cutover (`docs/payments-contract-cutover.md`).
 - **Delegate policy:** the Mission clients rule 4 admits as delegates, with a
   depth ceiling.
 - **Client-instance identity:** not supported; the loader refuses a contract
@@ -422,7 +431,7 @@ contract alone, unchanged. By party:
   enforcement scope. A digest-only request is refused: the estate resolves
   no token by digest. The joins are evaluated under the mapping contract,
   installed when the MAS starts under the same `mapping_cache` bound as
-  the gateway's, which supplies `mapping_version` (`mas-pilot-identity@1`).
+  the gateway's, which supplies `mapping_version` (`mas-pilot-identity@2`).
   A delegate joins under the contract's delegate policy, at its depth in
   the MAS's own actor records. Those records are the one source of a
   delegate's standing on this path (#1561): the endpoint's visibility set

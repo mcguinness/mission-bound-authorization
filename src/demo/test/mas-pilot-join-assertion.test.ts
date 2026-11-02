@@ -34,7 +34,7 @@ import { launchMasPilot, masPilotLaunchOptions } from "../src/mas-pilot/launcher
 import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
 import { composeSeparatedMasPilot, type SeparatedMasPilot } from "../src/mas-pilot/separated.js";
-import { call, type Credential, estateToken, OPENFGA, openfgaReachable, READ_ACTIONS, relocateEstate } from "./mas-pilot-support.js";
+import { call, estateToken, INVOICES_READ, OPENFGA, openfgaReachable, READ_ACTIONS, relocateEstate, type Credential } from "./mas-pilot-support.js";
 
 const fgaReachable = await openfgaReachable();
 const d = fgaReachable ? describe : describe.skip;
@@ -320,7 +320,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
       ["estate-ap-bot-7f3", "jwt"],
       ["estate-opaque-bot-4e2", "opaque"],
     ] as const) {
-      const credential = await estateToken(pilot, clientId, "u-1001", "invoices.read");
+      const credential = await estateToken(pilot, clientId, "u-1001", INVOICES_READ);
       // The MAS introspects first: the estate answers unsupported_token_type
       // for its JWTs, which the MAS then validates locally, and introspects
       // its opaque tokens.
@@ -344,7 +344,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
         mission: { id: missionId, issuer: MAS_URL },
         token: { sha256: missionJoin.token_sha256, jkt: missionJoin.token_jkt },
         join: { client_id: "ap-agent", disposition: "client" },
-        mapping_version: "mas-pilot-identity@1",
+        mapping_version: "mas-pilot-identity@2",
       });
       const evidence = decisions(missionId).at(-1)?.content as Record<string, unknown> | undefined;
       expect(evidence, format).toMatchObject({ decision: "permit" });
@@ -357,7 +357,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     const missionId = await approveAtMas("delegate", true);
     // One actor-record source: the MAS's. The PEP on this path keeps none.
     expect(pilot.actorRecords).toBeUndefined();
-    const credential = await estateToken(pilot, "estate-extractor-2c1", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-extractor-2c1", "u-1001", INVOICES_READ);
     // Unrecorded: the MAS mints nothing, so no assertion rides the request, and
     // the PDP denies the read the configuration requires one for.
     const unrecorded = await read(credential, missionId);
@@ -391,7 +391,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     const recordedFor = await approveAtMas("delegate-visibility");
     const notRecordedFor = await approveAtMas("delegate-visibility-other");
     const pdpAudience = config.separated_mas.pdp_client_id;
-    const token = (await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read")).token;
+    const token = (await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ)).token;
     const asDelegate = (missionId: string) => mintAt({ mission_id: missionId, audience: pdpAudience, access_token: token }, MAS_URL, DELEGATE_PEP);
     // Enrolled for nothing and not yet recorded: outside the set.
     expect(await asDelegate(recordedFor)).toMatchObject({ status: 404, body: { error: "not_found" } });
@@ -428,9 +428,9 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
 
   it("denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none", async () => {
     const missionId = await approveAtMas("refusals");
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     // Another token bound to the same key: only its digest differs.
-    const other = await tokenFor("estate-ap-bot-7f3", "u-1001", "invoices.read", CANONICAL_RESOURCE, credential.dpopKeys);
+    const other = await tokenFor("estate-ap-bot-7f3", "u-1001", INVOICES_READ, CANONICAL_RESOURCE, credential.dpopKeys);
     const otherJkt = await calculateJwkThumbprint(await exportJWK((await generateKeyPair("ES256", { extractable: true })).publicKey));
     const b64 = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
     const cases: Array<[string, NonNullable<typeof substitute>]> = [
@@ -458,7 +458,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
 
   it("denies a joined read that carries no assertion where the configuration requires one, though the mapping join alone would admit it", async () => {
     const missionId = await approveAtMas("required");
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     substitute = async () => undefined;
     const res = await read(credential, missionId);
     // The PEP keeps no actor records on this path (#1561), so it carries no depth.
@@ -470,7 +470,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
   it("takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none", async () => {
     const missionId = await approveAtMas("roles");
     const pdpClient = config.separated_mas.pdp_client_id;
-    const token = (await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read")).token;
+    const token = (await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ)).token;
     // The PEP-only enrollee: visible as a caller, for the PDP's audience.
     const asCaller = await mintAt({ mission_id: missionId, audience: pdpClient, access_token: token }, MAS_URL, PEP_ONLY);
     expect(asCaller.status, JSON.stringify(asCaller.body)).toBe(200);
@@ -499,7 +499,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
       const res = await mintAt({ mission_id: missionId, audience: pdpAudience, access_token: accessToken });
       expect(res, label).toMatchObject({ status: 403, body: { error: "join_failed" } });
     };
-    const bot = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const bot = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     expect((await mintAt({ mission_id: missionId, audience: pdpAudience, access_token: bot.token })).status).toBe(200);
     // The caller's client assertion names the MAS's issuer, never the endpoint (D685, D690).
     const endpointAud = await mintAt({ mission_id: missionId, audience: pdpAudience, access_token: bot.token }, ENDPOINT);
@@ -513,9 +513,9 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     expect(digest, "digest form").toMatchObject({ status: 403, body: { error: "join_failed" } });
     await refused("a JWT for the ledger", (await tokenFor("estate-ap-bot-7f3", "u-1001", "invoices.read", LEDGER)).token);
     await refused("an opaque token for the ledger", (await tokenFor("estate-opaque-bot-4e2", "u-1001", "invoices.read", LEDGER)).token);
-    await refused("a disabled subject row", (await estateToken(pilot, "estate-ap-bot-7f3", "u-1003", "invoices.read")).token);
-    await refused("another person", (await estateToken(pilot, "estate-ap-bot-7f3", "alice", "invoices.read")).token);
-    const extractor = (await estateToken(pilot, "estate-extractor-2c1", "u-1001", "invoices.read")).token;
+    await refused("a disabled subject row", (await estateToken(pilot, "estate-ap-bot-7f3", "u-1003", INVOICES_READ)).token);
+    await refused("another person", (await estateToken(pilot, "estate-ap-bot-7f3", "alice", INVOICES_READ)).token);
+    const extractor = (await estateToken(pilot, "estate-extractor-2c1", "u-1001", INVOICES_READ)).token;
     await refused("a delegate with no actor record", extractor);
     expect((await recordDelegate(mission.id, "relay-agent", "ap-agent")).status).toBe(201);
     expect((await recordDelegate(mission.id, DELEGATE, "relay-agent")).status).toBe(201);
@@ -612,7 +612,7 @@ d("the separated launcher runs the declared Join Assertion path (#1454)", () => 
       };
       const missionId = (await request(launch.consoles.mas as string, "/missions", { subject: "alice", label: "join-launcher" })).mission_id;
       for (const client of ["estate-ap-bot-7f3", "estate-opaque-bot-4e2"]) {
-        const credential = await request(launch.consoles.pilot, "/estate-tokens", { client_id: client, account: "u-1001", scope: "invoices.read" });
+        const credential = await request(launch.consoles.pilot, "/estate-tokens", { client_id: client, account: "u-1001", scope: INVOICES_READ });
         const read = await request(launch.consoles.pilot, "/calls", {
           credential_id: credential.credential_id,
           mission_id: missionId,
@@ -659,7 +659,7 @@ d("the separated launcher runs the declared Join Assertion path (#1454)", () => 
       const missionId = (await consoleCall(masConsole, "POST", "/missions", { subject: "alice", label: "join-launcher-delegate", delegate: DELEGATE }))
         .body.mission_id as string;
       const credential = (
-        await consoleCall(launch.consoles.pilot, "POST", "/estate-tokens", { client_id: "estate-extractor-2c1", account: "u-1001", scope: "invoices.read" })
+        await consoleCall(launch.consoles.pilot, "POST", "/estate-tokens", { client_id: "estate-extractor-2c1", account: "u-1001", scope: INVOICES_READ })
       ).body;
       const readInvoice = async () =>
         (await consoleCall(launch.consoles.pilot, "POST", "/calls", {

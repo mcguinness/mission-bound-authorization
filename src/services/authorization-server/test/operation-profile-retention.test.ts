@@ -63,7 +63,8 @@ describe("the TAS registry holds every declared contract version's Operation Pro
 
   it("admits an unpinned entry under the current version's profile", () => {
     const current = VERSIONS.find((v) => v.state === "current");
-    expect(contractOperationProfiles(RESOURCE).admit(RESOURCE, entry("payments:remittance.send"), NOW)).toMatchObject({
+    // A read: the shipped configuration requires a reference for the five non-read actions only (#249 C.3b).
+    expect(contractOperationProfiles(RESOURCE).admit(RESOURCE, entry("payments:invoice.read"), NOW)).toMatchObject({
       ok: true,
       version: current?.operation_profile,
     });
@@ -144,7 +145,8 @@ describe("the TAS refuses a missing reference where the challenged operation req
   });
 
   it("refuses at completion an unpinned workflow admitted before the requirement, which completes without it", () => {
-    const before = contractOperationProfiles(RESOURCE);
+    // The configuration before the cutover: the same declarations, requiring no reference.
+    const before = contractOperationProfiles(RESOURCE, requiring([]));
     const admitted = before.admit(RESOURCE, entry("payments:remittance.send"), NOW);
     expect(admitted).toMatchObject({ ok: true, version: CURRENT?.operation_profile });
     const version = admitted.ok ? admitted.version : "";
@@ -156,7 +158,7 @@ describe("the TAS refuses a missing reference where the challenged operation req
   it("refuses at completion a workflow admitted before versions were recorded where its operation now requires a reference", () => {
     const legacyOf = (contracts: ResourceContractDeclarations) =>
       contractOperationProfiles(RESOURCE, contracts).bindLegacyType(RESOURCE, "mission_resource_access", CURRENT?.operation_profile as string);
-    expect(legacyOf(RESOURCE_CONTRACTS).completeLegacy(RESOURCE, "mission_resource_access", entry("payments:remittance.send"))).toMatchObject({ ok: true });
+    expect(legacyOf(requiring([])).completeLegacy(RESOURCE, "mission_resource_access", entry("payments:remittance.send"))).toMatchObject({ ok: true });
     expect(legacyOf(requiring(CUTOVER)).completeLegacy(RESOURCE, "mission_resource_access", entry("payments:remittance.send"))).toEqual(MISSING);
   });
 

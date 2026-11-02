@@ -27,7 +27,7 @@ import { type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { prefixAdmits } from "@mission/core";
-import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, pinnedToCurrentContract, TOPOLOGY } from "@mission/demo-data";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import {
   calculateJwkThumbprint,
@@ -1118,13 +1118,15 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
 
   it("(h) a requested authorization_details within the Mission's authority for the audience is issued as requested (ICA -02 5.5.3 rule 7)", async () => {
     const { handle } = newLineage("apev-h");
+    // Pinned as the approved entry is: the payments resource requires a
+    // reference, so a fresh approval records it (#249 C.3b, D989).
     const requested = [
-      {
+      pinnedToCurrentContract({
         type: "mission_resource_access",
         resource: RESOURCE,
         actions: ["payments:invoice.read"],
         constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] },
-      },
+      }),
     ];
     const res = await tokenExchange({
       subjectToken: await mintICA(handle),
@@ -1156,12 +1158,13 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       [[{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.pay"] }], /exceed/],
       [
         [
-          {
+          // Pinned as the approved entry is (#249 C.3b), so only the amount exceeds it.
+          pinnedToCurrentContract({
             type: "mission_resource_access",
             resource: RESOURCE,
             actions: ["payments:invoice.read"],
             constraints: { max_amount: { amount: "900.00", currency: "USD" }, vendors: ["acme"] },
-          },
+          }),
         ],
         /exceed/,
       ],
@@ -1205,7 +1208,8 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
   it("(h2c) a request against a Mission whose approved entry carries an unsupported top-level member -> invalid_authorization_details, with no hop and no derivation", async () => {
     const { missionId, handle } = newLineage("apev-h2c");
     const hops = as.continuationStore.handlesForMission(missionId).length;
-    const extra = { authorization_details: JSON.stringify([READ_ENTRY]) };
+    // Pinned as the approved entry is (#249 C.3b), so only the stored member refuses it.
+    const extra = { authorization_details: JSON.stringify([pinnedToCurrentContract(READ_ENTRY)]) };
     const subjectToken = await mintICA(handle);
     const res = await withStoredUnsupportedMember(as.kernel.db, missionId, () => tokenExchange({ subjectToken, extra }));
     const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };

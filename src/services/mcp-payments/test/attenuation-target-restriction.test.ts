@@ -22,6 +22,7 @@
 import { deriveAttenuationRoot, MissionKernel, validateMissionIntent } from "@mission/authorization-server";
 import { type AttenuationOperations, aatToolId } from "@mission/core";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { exportJWK, generateKeyPair } from "jose";
@@ -172,8 +173,10 @@ function pepUnder(profile: Record<string, ActionMapping>): Pep {
 describe("an attenuation root keeps a finer entry's target restriction at a coarser audience (@spec attenuation#root-mapping, #1276)", () => {
   it("the root's tool names the entry's invoice, and at the service audience it covers that invoice alone, never the service or another invoice", async () => {
     expect(Object.keys(tools)).toEqual([`${INV1}#${READ_ACTION}`]);
+    // The entry as a fresh approval records it: the payments resource requires
+    // a reference, so it carries the current one (#249 C.3b, D989).
     expect(facts.mission !== undefined && facts.credentialAuthority).toEqual([
-      { type: "mission_resource_access", resource: INV1, actions: [READ_ACTION] },
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: INV1, actions: [READ_ACTION] }),
     ]);
     // Under the invoice contract: inv-1 is the entry's target and permits.
     const invoicePep = pepUnder(INVOICE_PROFILE);

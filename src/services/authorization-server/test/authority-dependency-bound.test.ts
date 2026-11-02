@@ -43,7 +43,7 @@ import {
   Pep,
   type TokenFacts,
 } from "@mission/mcp-payments";
-import { AUTHORITY_DEPENDENCIES, CANONICAL_RESOURCE, parseIdentityState, readIdentitySource } from "@mission/demo-data";
+import { AUTHORITY_DEPENDENCIES, CANONICAL_RESOURCE, parseIdentityState, pinnedToCurrentContract, readIdentitySource } from "@mission/demo-data";
 import { evaluate as evaluateRequest, type EvaluationRequest, type Fga, relationForAction, stalenessBound } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { afterAll, describe, expect, it } from "vitest";
@@ -80,10 +80,22 @@ function approve(as: BuiltAs, sub: string): MissionRecord {
 
 async function decide(as: BuiltAs, id: string, nowMs: number) {
   const r = as.kernel.applyExpiry(built(as.kernel.get(id), `mission ${id}`));
+  // The reference the Mission's read entry carries, as its PEP binds it: the
+  // payments resource requires one, so a fresh approval records it (#249 C.3b, D989).
+  const contract = r.authority_set[0]?.resource_contract;
   return evaluate(
     {
       subject: { id: r.subject.sub, properties: { iss: ISSUER } },
-      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
+      resource: {
+        type: "invoice",
+        id: "inv-1",
+        properties: {
+          audience: RESOURCE,
+          operation_target: RESOURCE,
+          vendor_id: "acme",
+          ...(contract !== undefined ? { resource_contract: contract } : {}),
+        },
+      },
       action: { name: READ },
       context: {
         ...capabilityPresentationFor(READ),
@@ -180,7 +192,8 @@ function paymentsPep(as: BuiltAs, clock: () => number) {
       clientId: "ap-agent",
       cnfJkt: "jkt-830-bound",
       mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
-      credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: RESOURCE, actions: [READ] }]),
+      // Pinned as the Mission's entry is (#249 C.3b).
+      credentialAuthority: credentialAuthorityFrom([pinnedToCurrentContract({ type: "mission_resource_access", resource: RESOURCE, actions: [READ] })]),
     };
     const intake = await pep.intake("get_invoice", { invoice_id: "inv-1" }, token);
     if (!intake.ok) throw new Error(`intake refused: ${intake.refusal_reason}`);

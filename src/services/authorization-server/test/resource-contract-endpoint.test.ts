@@ -257,7 +257,14 @@ describe("the resource contract reference survives every issuance path exactly (
   });
 
   it("a Token Exchange that adds a reference to an entry approved without one is refused: an unpinned approval never gains one", async () => {
-    const unpinned = await issue(read());
+    // Approved under the configuration before the cutover: the same declarations, requiring no reference.
+    const unrequired = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+    let unpinned: Awaited<ReturnType<typeof issue>>;
+    try {
+      unpinned = await issue(read());
+    } finally {
+      unrequired.mockRestore();
+    }
     expect(contractsOf(claims(unpinned.at).authorization_details)).toEqual([undefined]);
     const res = await exchange(unpinned.at, unpinned.keys, read(SHIPPED));
     expect(res.status).toBe(400);
