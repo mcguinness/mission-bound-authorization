@@ -127,8 +127,8 @@
     "content_sha256": "304a0b321defc5907bed9769afc8f5a7fb0a8ec1cc70466cabf72a0f9c3c15ee"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
-    "revision": "124f20a493e72f0c19e3b39348f1c6370fcede38",
-    "content_sha256": "1d8dc744be1e8c9092a00ec69754626f8baf66dfaf33bf1fb16321c9bc61ddf6"
+    "revision": "34bc4386fa257e5144fd3ee9c9cfa99e0c38bd06",
+    "content_sha256": "8f898a10d8a3e78e342044fa301128b29045cebcfba2bcacca1b20da02f54a49"
    },
    "draft-mcguinness-mission-aauth-management.md": {
     "revision": "940972b9823bf482819c18177c7ab8dfd935a391",
@@ -92991,12 +92991,12 @@
     },
     {
      "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
-     "name": "the request-provenance trust configuration loader (@spec request-provenance#trust-configuration, request-provenance#verification, #939) > loads the vector's trust configuration, keeping only each key's curve and coordinates, and accepts use and key_ops without giving them effect",
+     "name": "the request-provenance trust configuration loader (@spec request-provenance#trust-configuration, request-provenance#verification, #939) > loads the vector's trust configuration, keeping only each key's curve and coordinates, and accepts a consistent use and key_ops without giving them effect",
      "level": "unit",
      "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. A configured key whose evidence_types does not name mission-request-provenance is refused at step 3 although its JWK carries use sig and key_ops verify; the loader accepts use and key_ops and keeps only kty, crv, x and y, and the module imports the key from those alone. Mutations: skipping the evidence_types check accepts the case; returning the JWK as configured instead of its curve and coordinates fails the loader test. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. A configured key whose evidence_types does not name mission-request-provenance is refused at step 3 although its JWK carries use sig and key_ops verify; the loader validates a supplied use and key_ops before dropping them (use sig; key_ops an array of distinct strings naming verify and only sign and verify, RFC 7517 Sections 4.2 and 4.3; refusals tested beside the loader's and not cited here), keeps only kty, crv, x and y, and the module imports the key from those alone. Mutations: skipping the evidence_types check accepts the case; returning the JWK as configured instead of its curve and coordinates fails the loader test. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.entry-shape",
@@ -93086,7 +93086,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 2 compares typ exactly, refuses alg none and an absent kid, and decodes the header and claims strictly (UTF-8, base64url, no duplicated member names). Mutations: skipping the typ comparison accepts both typ cases; skipping the alg none or kid check moves the refusal to step 3, failing the step assertion. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 2 compares typ exactly, refuses alg none and an absent kid, and decodes all three segments strictly. Tested in the same block and not cited here, since the row observes the header checks only: unpadded base64url with no other characters (RFC 7515 Sections 2 and 5.2), so a padded or empty signature segment refuses at step 2; each segment's one canonical spelling, so non-zero trailing bits refuse (reference policy); UTF-8; and no duplicated member names. Dropping the signature segment check accepts the padded signature; dropping the round trip accepts the trailing-bits spellings. Mutations: skipping the typ comparison accepts both typ cases; skipping the alg none or kid check moves the refusal to step 3, failing the step assertion. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.signer-and-key-scope",
@@ -93144,9 +93144,15 @@
      "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-altered-claim: refused at step 4",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 4, the signature (@spec request-provenance#verification, #939) > refuses at step 4 a JWS whose signed payload is not the claims set the later steps read (b64 false)",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 3 looks the signer up by the iss claim and the protected kid in configuration only, refuses a key not mapped to this type, and checks alg against the key's algs before step 4 verifies with jose under that one algorithm. Strictness the draft implies, tested in the same block and not cited here: step 4 confirms the verified payload is the claims set the later steps read, which refuses a b64 false JWS. Mutations: taking the first signer or first key regardless of iss or kid accepts the unknown-iss and unmapped-kid cases; skipping the alg check moves neg-alg-hs256 to step 4; bypassing signature verification accepts neg-altered-claim; skipping the payload comparison accepts the (uncited) b64 false JWS. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 3 looks the signer up by the iss claim and the protected kid in configuration only, refuses a key not mapped to this type, and checks alg against the key's algs before step 4 verifies with jose under that one algorithm. Step 4 also confirms the verified payload is the claims set the later steps read, which refuses a JWS with an unencoded payload (b64 false): a JWT MUST NOT use one (RFC 7797 Section 7), so its signature does not verify the claims set. Mutations: taking the first signer or first key regardless of iss or kid accepts the unknown-iss and unmapped-kid cases; skipping the alg check moves neg-alg-hs256 to step 4; bypassing signature verification accepts neg-altered-claim; skipping the payload comparison accepts the b64 false JWS. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.claims-and-audience",
@@ -93308,7 +93314,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 5 checks every required claim's presence and defined type (aud a string, NumericDates finite numbers, presenter, originator and channel objects with their typed members, capture_id a string when present) and step 6 compares aud exactly. An absent iss refuses at step 3, where the signer lookup by iss finds no signer (the vector case moved from step 5; see signer-and-key-scope). Strictness the draft implies, tested in the same block and not cited here: non-empty strings, and request_digest as hmac-sha-256: and the canonical unpadded base64url of 32 bytes. Mutations: removing each claim's check accepts its case or moves the refusal to a later step (or makes verification throw), failing the step assertion; removing the aud comparison accepts neg-aud-other-as. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 5 checks every required claim's presence and defined type (aud a string, NumericDates finite numbers, presenter, originator and channel objects with their typed members, capture_id a string when present) and step 6 compares aud exactly. An absent iss refuses at step 3, where the signer lookup by iss finds no signer (the vector case moved from step 5; see signer-and-key-scope). Strictness the draft implies, tested in the same block and not cited here: non-empty strings, request_digest as hmac-sha-256: and the canonical unpadded base64url of 32 bytes, and a presenter.cnf of exact JSON values, so one holding 1e400 refuses at step 5 rather than throwing (dropping the check moves the refusal to step 9; restoring a comparison that throws rejects the verification). Mutations: removing each claim's check accepts its case or moves the refusal to a later step (or makes verification throw), failing the step assertion; removing the aud comparison accepts neg-aud-other-as. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.time-window",
@@ -93326,7 +93332,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "Outside the declared clock-skew allowance, an assertion with iat in the future, exp passed, exp minus iat above the declared maximum lifetime, captured_at later than iat, or iat minus captured_at above the declared maximum capture age, is refused with invalid_mission_intent_evidence."
+    "normative": "An assertion with iat in the future or exp passed, beyond the declared clock-skew allowance, or, with no allowance, with exp minus iat above the declared maximum lifetime, captured_at later than iat, or iat minus captured_at above the declared maximum capture age, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -93380,7 +93386,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. The clock-skew allowance applies where the AS's clock meets the signer's (iat not in the future, exp not passed); the lifetime, the capture age and captured_at against iat compare the signer's own claims and take none, a reading of the step's opening clause. Strictness the draft implies, tested in the same block and not cited here: exp strictly after iat, or the lifetime check would pass a negative difference. Mutations: removing each check accepts its case; exp > instead of >= at the skew edge, iat >= instead of >, and >= instead of > at the lifetime and capture-age maxima each fail the edge tests; allowing skew on captured_at fails the one-second case; dropping exp after iat accepts both (uncited) ordering cases. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 7 applies the clock-skew allowance only to iat and exp against the AS's current time, and none to the lifetime, the capture age or captured_at against iat. Strictness the draft implies, tested in the same block and not cited here: exp strictly after iat, or the lifetime check would pass a negative difference. Mutations: removing each check accepts its case; exp > instead of >= at the skew edge, iat >= instead of >, and >= instead of > at the lifetime and capture-age maxima each fail the edge tests; allowing skew on captured_at fails the one-second case; dropping exp after iat accepts both (uncited) ordering cases. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.signer-scope",
@@ -93428,7 +93434,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. An originator entry matches on iss and, where it carries sub, on sub; a signer whose one originator carries sub is a user-device signer, and that entry is the AS's own binding of its keys to that originator (the loader refuses sub beside another originator). channel.type must be in the signer's channel_types. Mutations: dropping the originator check accepts neg-originator-out-of-scope and the other-sub case; matching on iss alone fails both user-device tests; dropping the channel check accepts neg-channel-out-of-scope. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. An originator entry matches on iss and, where it carries sub, on sub; a signer whose one originator carries sub is a user-device signer, and that entry is the AS's own binding of its keys to that originator (the loader refuses sub beside another originator). That shape is this reference's representation of a user-device signer, not a protocol rule: the configuration cannot express a service signer narrowed to several specific principals, which the draft permits. channel.type must be in the signer's channel_types. Mutations: dropping the originator check accepts neg-originator-out-of-scope and the other-sub case; matching on iss alone fails both user-device tests; dropping the channel check accepts neg-channel-out-of-scope. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.intent-and-presenter",
@@ -93498,9 +93504,39 @@
      "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > refuses at step 9 a cnf that carries a member beyond the established key, compared exactly",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 9, cnf compared exactly as signed (@spec request-provenance#verification, #939) > refuses at step 9 a signed cnf carrying a __proto__ member valued null beside the established key",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 9, cnf compared exactly as signed (@spec request-provenance#verification, #939) > refuses at step 9 a signed cnf carrying a __proto__ member valued a scalar beside the established key",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 9, cnf compared exactly as signed (@spec request-provenance#verification, #939) > refuses at step 9 a signed cnf carrying a __proto__ member valued an empty object beside the established key",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 9, cnf compared exactly as signed (@spec request-provenance#verification, #939) > refuses at step 9 a signed cnf carrying a __proto__ member valued an object naming the established key beside the established key",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 9, cnf compared exactly as signed (@spec request-provenance#verification, #939) > refuses at step 9 a signed cnf naming the established key only inside a __proto__ member",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. intent_hash must equal the provisional intent_hash of the submitted Intent and presenter.client_id the client the exchange established. D1119 (Q3): a presenter carrying cnf where the exchange established no confirmation key does not agree, and no key is inferred; where it established one, the assertion's cnf is required and compared exactly. Assertions minted live by @mission/request-provenance, with and without cnf, are accepted where they match (controls in the same block). Mutations: removing each comparison accepts its cases; comparing jkt alone accepts the extra-member case; dropping the required-cnf check makes verification throw instead of resolving to a step 9 refusal. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. intent_hash must equal the provisional intent_hash of the submitted Intent and presenter.client_id the client the exchange established. D1119 (Q3): a presenter carrying cnf where the exchange established no confirmation key does not agree, and no key is inferred; where it established one, the assertion's cnf is required and compared exactly, own members only, a __proto__ member among them. Assertions minted live by @mission/request-provenance, with and without cnf, are accepted where they match (controls in the same block). Mutations: removing each comparison accepts its cases; comparing jkt alone accepts the extra-member case; restoring parseStrictJson's member assignment, which let a __proto__ member set the cnf object's prototype instead of being an own member, accepts or misplaces every __proto__ case; dropping the required-cnf check makes verification throw instead of resolving to a step 9 refusal. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.declared-bounds",
@@ -93814,9 +93850,15 @@
      "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > accepts an assertion without cnf where the exchange established the client alone, as a PAR does, and records its facts",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > accepts, recording nothing from them, an undefined claim and undefined members of originator and channel holding 1e400",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. On acceptance the module returns facts built afresh from the defined members only: signer {iss, kid}, originator {iss, sub}, channel limited to type, acr, amr and auth_time, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti) and capture_id when present; undefined claims and undefined nested members record nothing. Mutations: adding a member, dropping capture_id, emitting capture_id when absent, recording channel or originator as given, recording undefined claims, recording captured_at as a NumericDate, and dropping the signer kid each fail a cited test. partial: the module returns the facts; the Mission Record element that lands them (submission_evidence, artifact_hash, verified_at) is the dispatch's and is witnessed with the wiring PR at the endpoint."
+   "notes": "#939 slice 2a-1. On acceptance the module returns facts built afresh from the defined members only: signer {iss, kid}, originator {iss, sub}, channel limited to type, acr, amr and auth_time, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti) and capture_id when present; undefined claims and undefined nested members record nothing, even holding a number no JSON value represents (1e400). Mutations: adding a member, dropping capture_id, emitting capture_id when absent, recording channel or originator as given, recording undefined claims, recording captured_at as a NumericDate, and dropping the signer kid each fail a cited test; requiring every claim to be exact JSON refuses the 1e400 case. partial: the module returns the facts; the Mission Record element that lands them (submission_evidence, artifact_hash, verified_at) is the dispatch's and is witnessed with the wiring PR at the endpoint."
   },
   {
    "id": "request-provenance.recorded-facts.no-content",
