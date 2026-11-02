@@ -13,8 +13,9 @@
  * without the AS. The enabled composition refuses to start, before it
  * connects to anything or listens, on a missing file, invalid content, a
  * designating policy whose budget the declaration does not meter, and an
- * operator digest pin that does not match; a matching pin starts. Only the
- * OpenFGA client is stubbed, in each fresh graph.
+ * operator digest pin that does not match, whether or not a statement is
+ * supplied; a matching pin starts. Only the OpenFGA client is stubbed, in
+ * each fresh graph.
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
@@ -24,6 +25,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import type { RuntimePosture } from "@mission/pdp";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SHIPPED_CONFIG = join(SRC, "config");
@@ -105,8 +107,8 @@ type DemoStack = Awaited<ReturnType<StackModule["composeStack"]>>;
 
 const tempFile = (prefix: string, name: string): string => join(mkdtempSync(join(tmpdir(), prefix)), name);
 
-/** The shared composition, with the AS (the enabled path) or without it. */
-function composeShared(stack: StackModule, withAuthServer: boolean, asPort: number): Promise<DemoStack> {
+/** The shared composition, with the AS (the enabled path) or without it, under `statement` where one is supplied. */
+function composeShared(stack: StackModule, withAuthServer: boolean, asPort: number, statement?: RuntimePosture): Promise<DemoStack> {
   return stack.composeStack({
     openfgaUrl: "http://unused.test",
     presharedKey: "unused",
@@ -115,7 +117,36 @@ function composeShared(stack: StackModule, withAuthServer: boolean, asPort: numb
     claimsFile: tempFile("sp-selection-claims-", "claims.sqlite"),
     writeReservationsFile: tempFile("sp-selection-reservations-", "write-reservations.sqlite"),
     resourcePolicyStore: { bootstrap: "development" },
+    ...(statement ? { statement } : {}),
   });
+}
+
+/**
+ * A valid statement the enabled composition at `issuer` accepts in place of
+ * the one it would publish: the shipped statement claiming the shipped
+ * file's `budget_metering`, its policy referenced by `pin`, the digest
+ * `issuer` computes over the shipped snapshot.
+ */
+async function suppliedStatement(issuer: string): Promise<{ statement: RuntimePosture; pin: Json }> {
+  const shipped = JSON.parse(readFileSync(join(SHIPPED_CONFIG, "standing-payment.json"), "utf8")) as Shipped;
+  const policy = shipped.dispatch_policies[POLICY_ID] as { version: string; content_type: string; content: Json };
+  const { mintActivationPolicyRef } = await import("@mission/authorization-server");
+  const { RUNTIME_POSTURE } = await import("@mission/pdp");
+  const pin = mintActivationPolicyRef(
+    issuer,
+    { [POLICY_ID]: { version: policy.version, content_type: policy.content_type, content: JSON.stringify(policy.content) } },
+    POLICY_ID,
+    "1",
+  );
+  if (!pin) throw new Error("the shipped Dispatch Policy is not held");
+  const [budget] = shipped.budget_metering.budgets;
+  const base = structuredClone(RUNTIME_POSTURE);
+  const statement = {
+    ...base,
+    claims: [...(base.claims ?? []), "budget_metering"],
+    extensions: { ...base.extensions, budget_metering: { ...shipped.budget_metering, budgets: [{ ...budget, policies: [pin] }] } },
+  } as RuntimePosture;
+  return { statement, pin: pin as unknown as Json };
 }
 
 async function closeStack(stack: DemoStack): Promise<void> {
@@ -286,10 +317,10 @@ describe("config/standing-payment.json absent: every disabled deployment starts 
 });
 
 describe("config/standing-payment.json invalid or pinned: the enabled composition refuses before it connects or listens, and a matching pin starts (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816, D1143 blocker 2, ruling 2)", () => {
-  /** Compose the enabled composition over `dir` at `asPort` and return its refusal; nothing connected, nothing listens. */
-  async function refusal(dir: string, asPort: number): Promise<string> {
+  /** Compose the enabled composition over `dir` at `asPort`, under `statement` where one is supplied, and return its refusal; nothing connected, nothing listens. */
+  async function refusal(dir: string, asPort: number, statement?: RuntimePosture): Promise<string> {
     const { bootstrap, stack } = await freshGraph(dir);
-    const outcome = await composeShared(stack, true, asPort).then(
+    const outcome = await composeShared(stack, true, asPort, statement).then(
       async (composed) => {
         await closeStack(composed);
         return undefined;
@@ -393,6 +424,55 @@ describe("config/standing-payment.json invalid or pinned: the enabled compositio
       expect(claims).toContain("budget_metering");
       const declared = extensions.budget_metering as { budgets: Array<{ policies: unknown[] }> };
       expect(declared.budgets[0]?.policies).toEqual([pin]);
+    } finally {
+      await closeStack(composed);
+    }
+  });
+
+  it("refuses an operator digest pin that does not match although a valid statement is supplied: the file is validated whenever it is read, and a supplied statement replaces only what is published (@spec metering#aggregate-bounds, D1156)", async () => {
+    const issuer = "http://localhost:15163";
+    const wrongPin = "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const { statement } = await suppliedStatement(issuer);
+    const dir = configDir((s) => {
+      const [budget] = s.budget_metering.budgets;
+      return {
+        ...s,
+        budget_metering: { ...s.budget_metering, budgets: [{ ...budget, policies: [{ id: POLICY_ID, version: "1", digest: wrongPin }] }] },
+      };
+    });
+    expect(await refusal(dir, 15163, statement)).toMatch(
+      new RegExp(
+        `^config/standing-payment\\.json pins Dispatch Policy ${POLICY_ID} version 1 at digest ${wrongPin}, but issuer ${issuer} computes sha-256:[A-Za-z0-9_-]{43} over the snapshot the file holds$`,
+      ),
+    );
+  });
+
+  it("refuses a designating policy whose budget the file's own declaration does not meter although a supplied statement meters it (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, D1156)", async () => {
+    const { statement } = await suppliedStatement("http://localhost:15164");
+    const otherBudget = configDir((s) => {
+      const [budget] = s.budget_metering.budgets;
+      return { ...s, budget_metering: { ...s.budget_metering, budgets: [{ ...budget, budget_id: "another-budget" }] } };
+    });
+    expect(await refusal(otherBudget, 15164, statement)).toBe(
+      `Dispatch Policy ${POLICY_ID} designates a standing payment, but the Enforcement Scope Statement's budget_metering declares no budget payments-operator/ap-standing-payments: its budget is not metered under the Exact profile`,
+    );
+  });
+
+  it("starts with a supplied statement beside an operator digest pin equal to the digest this issuer computes, and publishes the supplied statement's budget_metering (@spec metering#aggregate-bounds, D1156)", { timeout: 120_000 }, async () => {
+    const issuer = "http://localhost:15165";
+    const { statement, pin } = await suppliedStatement(issuer);
+    const dir = configDir((s) => {
+      const [budget] = s.budget_metering.budgets;
+      return { ...s, budget_metering: { ...s.budget_metering, budgets: [{ ...budget, policies: [pin] }] } };
+    });
+    const { bootstrap, stack } = await freshGraph(dir);
+    const composed = await composeShared(stack, true, 15165, statement);
+    try {
+      expect(bootstrap).toHaveBeenCalled();
+      expect(composed.authServer?.capabilities?.has("standing-payment-dispatch")).toBe(true);
+      const { claims, extensions } = published(composed);
+      expect(claims).toEqual(statement.claims);
+      expect(extensions.budget_metering).toEqual(statement.extensions?.budget_metering);
     } finally {
       await closeStack(composed);
     }

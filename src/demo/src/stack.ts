@@ -383,7 +383,8 @@ function withJoinAudienceAlias(statement: RuntimePosture, join: { issuer: string
  * Dispatch Policy, so the computed digest is no independent integrity check.
  * A `digest` the file does name is an operator pin: it must equal the
  * computed one, or the composition refuses to start; it is never dropped.
- * Validated as the PDP loads a statement.
+ * Validated as the PDP loads a statement, whether or not the composition
+ * publishes the result.
  */
 function withStandingPaymentMetering(
   statement: RuntimePosture,
@@ -587,21 +588,31 @@ export async function composeStack(opts: {
   // (#813, #816, D830, D1122 draft enablement, D1143): the shared composition
   // with the AS, and only it, enables standing-payment dispatch. It reads
   // config/standing-payment.json here, when it is composed, so no other
-  // deployment requires the file, and a missing or invalid file, a pin that
-  // does not match, or a designating policy whose budget the statement does
-  // not meter refuses before anything listens or connects. Its Dispatch
-  // Policies are registered (the test fixture's in their place), and unless a
-  // statement is supplied the published one claims budget_metering as the
-  // file declares it, for this AS's issuer. The as-native target never does
-  // (D830): its capability set and statement stay as published.
+  // deployment requires the file. Every check on the file runs whenever it is
+  // read, whether or not a statement is supplied: a missing or invalid file, a
+  // declaration the PDP would not load, a pin that does not match, or a
+  // designating policy whose budget the file's declaration does not meter
+  // refuses before anything listens or connects. Its Dispatch Policies are
+  // registered (the test fixture's in their place), and unless a statement is
+  // supplied the published one claims budget_metering as the file declares
+  // it, for this AS's issuer; a supplied statement replaces only what is
+  // published. The as-native target never does (D830): its capability set and
+  // statement stay as published.
   let baseStatement: RuntimePosture = opts.statement ?? RUNTIME_POSTURE;
   let standingPaymentPolicies: DispatchPolicies | undefined;
   if (opts.withAuthServer && !asNative) {
     const asUrl = `http://localhost:${opts.asPort ?? TOPOLOGY.ports.as}`;
-    const deployment =
-      opts.testStandingPaymentDispatch && opts.statement !== undefined ? undefined : loadStandingPaymentDeployment();
+    // TEST FIXTURE ONLY: a test supplying both its own Dispatch Policies and
+    // its own statement (the e2e case) uses nothing from the file, so the file
+    // is not read. This is the one composition that skips it.
+    const fixtureOnly = opts.testStandingPaymentDispatch !== undefined && opts.statement !== undefined;
+    const deployment = fixtureOnly ? undefined : loadStandingPaymentDeployment();
+    if (deployment) {
+      const declared = withStandingPaymentMetering(RUNTIME_POSTURE, asUrl, deployment);
+      assertStandingPaymentExactProfile(asUrl, deployment.dispatch_policies, declared);
+      if (opts.statement === undefined) baseStatement = declared;
+    }
     standingPaymentPolicies = opts.testStandingPaymentDispatch?.dispatchPolicies ?? deployment?.dispatch_policies;
-    if (opts.statement === undefined && deployment) baseStatement = withStandingPaymentMetering(RUNTIME_POSTURE, asUrl, deployment);
     if (standingPaymentPolicies) assertStandingPaymentExactProfile(asUrl, standingPaymentPolicies, baseStatement);
   }
   // @spec #831 (D901): durable evidence key files load first, each as its own
