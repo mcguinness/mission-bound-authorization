@@ -5272,8 +5272,7 @@ that supports none of them is still conformant:
   This bar is self-contained in this document. The companion Mission
   Cross-Domain Projection profile
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies the
-  interoperable mechanism that satisfies it, and implementations that
-  interoperate across the hop implement that companion.
+  interoperable mechanism that satisfies it.
 
 Mission Approved-Set Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
