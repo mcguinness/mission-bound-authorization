@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "65037204039a9db7a234ed095700bf63461827fd",
-    "content_sha256": "4bc3eb7abad97d503099fa82f52b82923fe8e698fbca57f50bdb55a9c49229ff"
+    "revision": "51b76c81e54d7042d1b1aa59207dfab43e7f9036",
+    "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "f7db738441843285b69c35b2e12cf14195c3b02b",
@@ -25411,6 +25411,28 @@
    "notes": "#1724 D1 (D847), normative. Mutation: ignoring the coverage answers the uncovered Mission 200 and fails the test."
   },
   {
+   "id": "status.auth.token-audience-rejected",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "The AS MUST reject a token whose audience does not name that identifier.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status-access-token-auth"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an access token at Mission Status whose audience is not the endpoint's published protected-resource identifier, the issuer identifier included, is rejected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#972 (D1088): no row quoted this clause. The reference does not claim the access-token path, which the draft permits: both endpoints accept `private_key_jwt` client authentication only. Todo with #1946."
+  },
+  {
    "id": "status.response.effective-set-entries",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
@@ -26042,6 +26064,28 @@
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
   },
   {
+   "id": "status.lifecycle.token-audience",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "a presented access token MUST be audience-restricted to this endpoint's protected-resource identifier, exactly as at the Mission Status endpoint",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle-access-token-auth"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an access token at the Lifecycle endpoint whose audience is not that endpoint's published protected-resource identifier is rejected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#972 (D1088): no row quoted this clause. The reference does not claim the access-token path, which the draft permits: both endpoints accept `private_key_jwt` client authentication only. Todo with #1946."
+  },
+  {
    "id": "status.errors.nonce-echo",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-errors",
@@ -26158,7 +26202,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#1946, moved from #972 item 18 by D1088). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.challenge-no-token",
@@ -26183,7 +26227,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#1946, moved from #972 item 18 by D1088). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.challenge-resource-metadata",
@@ -26208,7 +26252,51 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#1946, moved from #972 item 18 by D1088). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
+  },
+  {
+   "id": "status.auth.protected-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "role": "AS",
+   "strength": "stated",
+   "profiles": [],
+   "surface": "verification",
+   "level": "endpoint",
+   "anchor": "mission-status-authentication",
+   "text": "the AS publishes, in its Protected Resource Metadata for this resource {{RFC9728}}, the `resource` identifier the token's audience MUST name, the `mission_status` scope it requires (`scopes_supported`), and the presentation and sender constraints it accepts",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status-access-token-auth"
+   },
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the Mission Status endpoint accepts the access-token path, its Protected Resource Metadata lists the endpoint's `resource` identifier, `mission_status` in `scopes_supported`, and the bearer methods and sender constraints it accepts"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#972 (D1088): no row quoted this clause before. The reference does not claim the access-token path, which the draft permits, and publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`); todo with #1946. The quote's MUST belongs to the token-audience rule, which `status.auth.token-audience-rejected` covers; this row's obligation is the present-tense publication, so its strength is stated. #1948 (#1864 item 6) defines the same row."
+  },
+  {
+   "id": "status.lifecycle.protected-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "role": "AS",
+   "strength": "stated",
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "level": "endpoint",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "the AS publishes, in its Protected Resource Metadata for this resource {{RFC9728}}, the `resource` identifier the token's audience MUST name and the scopes it requires (`scopes_supported`)",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle-access-token-auth"
+   },
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the Lifecycle endpoint accepts the access-token path, its Protected Resource Metadata lists the endpoint's `resource` identifier and, in `scopes_supported`, `mission_lifecycle` and any scope an adopted extension operation defines"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#972 (D1088): no row quoted this clause before. The reference does not claim the access-token path, which the draft permits, and publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`); todo with #1946. The quote's MUST belongs to the token-audience rule, which `status.lifecycle.token-audience` covers; this row's obligation is the present-tense publication, so its strength is stated. #1948 (#1864 item 6) defines the same row."
   },
   {
    "id": "status.auth.invalid-client",
@@ -86137,7 +86225,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1561: on the assertion path the PEP carries no depth of its own beside the assertion, so a second actor-record store cannot contradict the MAS's. Proved by restoring the PEP's own depth beside an obtained assertion: the cited #1561 test then sees delegate_depth 2. D770: the omission is reference behavior, recorded in the local observation; the member is optional on the assertion path (#972 clarifies the draft)."
+   "notes": "#1561: on the assertion path the PEP carries no depth of its own beside the assertion, so a second actor-record store cannot contradict the MAS's. Proved by restoring the PEP's own depth beside an obtained assertion: the cited #1561 test then sees delegate_depth 2. D770: the omission is reference behavior, recorded in the local observation; the member is optional on the assertion path (the draft states it: #972, D770, D1088)."
   },
   {
    "id": "mas.join-inputs.mission-bound-never-carries",
@@ -86578,9 +86666,16 @@
     "normative": "MAS metadata always carries mission_max_stale_seconds"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference composition publishes no MAS metadata document. Todo (#972)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-metadata.test.ts",
+     "name": "the pilot MAS's metadata (@spec authority-server#discovery, #972) > carries mission_max_stale_seconds, a positive integer",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#972 (D1088): the MAS pilot's MAS is the reference authorization server, which publishes `mission_max_stale_seconds` in its metadata unconditionally, and the separated pilot's PDP reads it. Proved by mutation: removing the member fails the witness."
   },
   {
    "id": "mas.metadata.submission-auth-methods-required",
@@ -86601,7 +86696,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo with the submission endpoint (#1947, moved from #972 by D1088)."
   },
   {
    "id": "mas.metadata.submission-auth-methods-no-shared-secret",
@@ -86622,7 +86717,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo with the submission endpoint (#1947, moved from #972 by D1088)."
   },
   {
    "id": "mas.join-assertion.mint-requires-active",
@@ -86763,7 +86858,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 by D1088)."
   },
   {
    "id": "mas.submission.interval-wait",
@@ -86784,7 +86879,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 by D1088)."
   },
   {
    "id": "mas.submission.status-parameter",
@@ -86805,7 +86900,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 by D1088)."
   },
   {
    "id": "mas.join-assertion.signs-with-listed-alg",
@@ -87450,7 +87545,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 item 13 by D1088)."
   },
   {
    "id": "mas.submission.derivation-limit-refusal-code",
@@ -87471,7 +87566,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 item 13 by D1088)."
   },
   {
    "id": "mas.native.subject-mismatch-denied",
@@ -87493,7 +87588,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 item 13 by D1088)."
   },
   {
    "id": "mas.native.unresolved-reference-not-found",
@@ -87515,7 +87610,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1177. The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+   "notes": "#1177. The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 item 13 by D1088)."
   },
   {
    "id": "mas.native.refused-state-conflict",
@@ -87537,7 +87632,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1177. The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+   "notes": "#1177. The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 item 13 by D1088)."
   },
   {
    "id": "mas.reference.missing-required-refusal",
@@ -87610,7 +87705,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 item 13 by D1088)."
   },
   {
    "id": "mas.submission.denied-carries-reason",
@@ -87632,7 +87727,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+   "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#1947, moved from #972 item 13 by D1088)."
   },
   {
    "id": "mas.errors.unauthorized-challenges",
@@ -87653,7 +87748,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18)."
+   "notes": "The MAS's Join Assertion endpoint (#1554) authenticates clients and accepts no access-token scheme, so it answers no 401, and the reference has no MAS submission endpoint (#1947). Todo with the access-token path (#1946, moved from #972 item 18 by D1088)."
   },
   {
    "id": "mas.submission.assertion-audience",
