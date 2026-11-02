@@ -3021,11 +3021,13 @@ the Mission Issuer while estate authorization servers redeem Mission
 Issuance Grants for Mission-bound tokens, restoring the token-layer
 chokepoint without moving approval. The MAS mints a grant only for an
 active Mission. A consuming AS with a Mission-state integration also
-checks the Mission at redemption and at every refresh; one without
-issues no refresh tokens, and its revocation latency is the summed
-residual of {{validity-model}}: the grant's remaining lifetime plus
-the lifetime of each token issued from it without a further state
-check.
+checks the Mission at redemption and at every refresh. Without a
+Mission-state integration, the consuming AS issues no refresh tokens,
+and its revocation latency, the summed residual of {{validity-model}},
+includes every interval during which the path can proceed without
+another state check, including pending authorization requests and
+authorization codes under PAR carriage, as Issuance Grant's Security
+Considerations specifies.
 
 # Mission Assurance Levels {#assurance-levels}
 
@@ -5135,9 +5137,10 @@ with no `suspended` state and its own termination reasons, served by
 - Runtime-Enforced names its normative dependencies outside the
   family: two AuthZEN working-group drafts, and, with the OAuth
   binding, an OAuth working-group draft and two individual drafts. The
-  issuance-join summary states both consuming-AS modes and the summed
-  revocation latency of the mode without a Mission-state integration.
-  No requirement changed (#1090).
+  issuance-join summary states both consuming-AS modes and, for the
+  mode without a Mission-state integration, points to Issuance Grant's
+  Security Considerations for every interval its revocation latency
+  includes. No requirement changed (#1090).
 
 - Standing consent is cited from Approval Governance's Approval Basis
   Contract. No requirement changed (#1915).
