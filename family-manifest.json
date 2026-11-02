@@ -2470,9 +2470,7 @@
    "pull_when": "Start here for OAuth issuance: any agent's approval must bind durably to the tokens it later uses.",
    "datatracker_url": "https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/",
    "adoption_alias": "core",
-   "normative_references": [
-    "draft-mcguinness-mission-approval-governance"
-   ],
+   "normative_references": [],
    "adoption_requires": [],
    "references": [
     "draft-mcguinness-mission-approval-governance",

@@ -1800,7 +1800,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
             intent: {
               goal: "Read approved Acme invoices and send their remittance",
               target_resources: [CANONICAL_RESOURCE],
-              expires_at: "2027-01-01T00:00:00Z",
+              expires_at: FIXTURE_EXPIRES_AT,
             },
           }),
           authorizationDetails: JSON.stringify([
@@ -1918,9 +1918,15 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
 
       // The transaction token verifies, and its pending operation went with the
       // process. The HTTP gate verifies a transaction credential in full before
-      // any transport, so it answers 401 invalid_token; the resource's own
-      // verification names why.
-      await expect(createHttpMediatedClient(CANONICAL_RESOURCE, txnToken, issued.dpopKeys)).rejects.toThrow(/invalid_token/);
+      // any transport, so it answers 401 invalid_token, described neutrally:
+      // the proof was valid, and the cause stays internal (#1970). The
+      // resource's own verification names it.
+      const gate = await createHttpMediatedClient(CANONICAL_RESOURCE, txnToken, issued.dpopKeys).then(
+        () => "admitted",
+        (e: unknown) => String(e),
+      );
+      expect(gate).toContain('"error":"invalid_token","error_description":"the presented credential is not valid"');
+      expect(gate).not.toMatch(/txn_/);
       const htu = canonicalHtu(new URL(CANONICAL_RESOURCE));
       const verified = await second.stack.server.verifyTransactionCredential(txnToken, {
         proof: await dpopProofFor(issued.dpopKeys, htu, "POST", txnToken),
