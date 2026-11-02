@@ -129,11 +129,11 @@ def main():
         )
     lines += [
         "", "## Regeneration", "",
-        "Run this from the repository root, supplying the exact revision to compare:",
+        "Run this from the repository root, supplying the exact revision to compare and a scratch output directory:",
         "", "```sh",
-        f"python3 notes/audits/2026-10-31-core-independence/inventory.py {revision}",
+        f"python3 notes/audits/2026-10-31-core-independence/inventory.py {revision} --output /tmp/core-independence-comparison",
         "```", "",
-        "Use `--output /tmp/core-independence-comparison` for a later revision to preserve this baseline. The generator reads git objects and writes only its output files; it does not switch branches or fetch.", "",
+        "`--output` is required: the inventory files beside the generator are the pinned baseline, and no run may overwrite them. The generator reads git objects and writes only its output files; it does not switch branches or fetch.", "",
     ]
     (args.output / "CITATIONS.md").write_text("\n".join(lines))
     print(json.dumps({k: result[k] for k in ["base_commit", "family_occurrences", "family_documents", "adjacent_occurrences"]}))

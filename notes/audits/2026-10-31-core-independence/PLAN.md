@@ -43,6 +43,15 @@ Supporting files:
 - [Machine-readable citation inventory](citations.json) records the same occurrences for subsequent comparison.
 - [Inventory generator](inventory.py) regenerates the inventory from an explicit git revision without changing the checkout. It requires `--output`; the inventory files beside it are the pinned baseline.
 
+Run the generator from the repository root, always with a scratch output directory. To reproduce the baseline, or to inventory a later revision for comparison:
+
+```sh
+python3 notes/audits/2026-10-31-core-independence/inventory.py b2b6c052d7a0987c4822d534587b23bdc2b17a6f --output /tmp/core-independence-comparison
+python3 notes/audits/2026-10-31-core-independence/inventory.py origin/main --output /tmp/core-independence-current
+```
+
+The pinned `CITATIONS.md` keeps its original regeneration section, which predates the required `--output`; use the commands above.
+
 ## The implementation boundary
 
 The standalone implementation consists of the OAuth binding, its underlying OAuth and JOSE standards, and an authorization-details type the deployment supports. That type supplies the application's authorization semantics. It need not be Mission Resource Access.
