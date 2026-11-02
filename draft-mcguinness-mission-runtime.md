@@ -686,10 +686,12 @@ class, adopted absent a documented, consequence-specific analysis:
 | Consequential read | Token lifetime or a short state lease; tighter for privacy-sensitive, cross-tenant, or bulk reads |
 | Consequential write | A short state lease, typically measured in minutes |
 | Irreversible action | Active source required; immediate check or single-use permit, target under 300 s |
-| External commitment | Active source required; immediate check or single-use permit, plus an egress PEP for external communication, target under 300 s |
+| External commitment | Active source required; immediate check or single-use permit, target under 300 s |
 | Privileged administration | Active source required; immediate check, suitable for composition with local step-up, target under 300 s |
 | Audit-only | No active freshness required |
 
+An external-communication action ({{classification}}), whatever its
+class, adds an egress PEP to its class's posture ({{pep-placement}}).
 A deployment justifies any looser value for a high-consequence class
 in its Enforcement Scope Statement.
 
