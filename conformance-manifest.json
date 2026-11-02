@@ -64552,7 +64552,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the deployment reviews its drawdown policy and versions every change, as it does approval policy",
-    "local": "Versioning is enforced: every ceiling consent and re-consent pins the policy's (issuer, id, version) to the digest it commits, in the consent's own transaction, and a consent naming a pinned version with other content is refused and commits nothing, so a changed policy takes a new version. The pins are never pruned, hold with no activation, across a restart and past the activation snapshots' pruning, and a store without them rebuilds them from its retained consents. Review is a deployment process outside the reference and is not witnessed."
+    "local": "Versioning is enforced: every ceiling consent and re-consent pins the policy's (issuer, id, version) to the digest it commits, in the consent's own transaction, and a consent naming a pinned version with other content is refused and commits nothing, so a changed policy takes a new version. The pins are never pruned, hold with no activation, across a restart and past the activation snapshots' pruning, and a store without them rebuilds them from its retained consents, the Mission ceilings and the recorded re-consents together, each version from its earliest consent. Review is a deployment process outside the reference and is not witnessed."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -64596,6 +64596,18 @@
     {
      "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
      "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > a store without pins rebuilds them from its retained consents, so changed content under a version they committed is refused (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > a store without pins pins a version an unredeemed re-consent alone committed to that re-consent's content (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > a store without pins pins a version two consents committed with different contents to the earliest consent's, across both sources: an earlier unredeemed re-consent wins over a later root consent (@spec progressive#sec-drawdown-policy, #1017)",
      "level": "unit",
      "surface": "approval-ceremony"
     }

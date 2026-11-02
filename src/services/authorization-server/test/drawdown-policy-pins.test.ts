@@ -19,7 +19,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DERIVATION_POLICY, PROGRESSIVE_PROFILE } from "@mission/demo-data";
 import { withTransaction } from "@mission/store";
 import { afterAll, describe, expect, it } from "vitest";
 import {
@@ -32,11 +32,15 @@ import {
 import { DrawdownPolicyVersionReuseError } from "../src/kernel/drawdown-policy-pins.js";
 import {
   assembledCeilingOffer,
+  type CeilingConsent,
   ceilingHash,
   consentCeiling,
   createCeilingDrawdownInCallerTx,
+  type ProgressiveDrawdownOptions,
+  progressiveFromProfile,
 } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
+import { FIXTURE_BROWSER_LOGIN } from "./approval-fixture.js";
 
 const ISSUER = "http://localhost:14869";
 const TAG = "(@spec progressive#sec-drawdown-policy, #1017)";
@@ -77,7 +81,7 @@ const build = (
   file: string,
   now: () => Date,
   policies: Record<string, RegisteredActivationPolicy>,
-  extra: { auditRetentionSeconds?: number } = {},
+  extra: { auditRetentionSeconds?: number; progressive?: ProgressiveDrawdownOptions } = {},
 ): Promise<BuiltAs> =>
   buildAuthorizationServer({
     issuer: ISSUER,
@@ -152,6 +156,42 @@ const pins = (as: BuiltAs, policyId: string) =>
     .all(ISSUER, policyId) as Array<{ version: string; digest: string }>;
 
 const farExpiry = (clock: { ms: number }) => new Date(clock.ms + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+/** The published Progressive deployment, offering at a fresh approval the ceiling a case sets. */
+const PUBLISHED = progressiveFromProfile(PROGRESSIVE_PROFILE);
+let currentOffer: CeilingConsent | undefined;
+const WITH_PROGRESSIVE = { progressive: { ...PUBLISHED.options, ceilingOffer: () => currentOffer } };
+
+/**
+ * A fresh approval of an expansion of `predecessorId` that re-consents the
+ * ceiling under `policyId`: the decision is recorded and the successor never
+ * created. Returns the digest the re-consent committed.
+ */
+const reconsentDecision = (as: BuiltAs, predecessorId: string, policyId: string, expiresAt: string): string => {
+  const { deferral_code: code } = as.expansionDeferrals.open({
+    predecessorId,
+    intent: intent(as, "Schedule Acme payments", expiresAt),
+    proposedAuthority: reads(DRAWN),
+    clientId: "ap-agent",
+    jkt: "jkt-drawdown-policy-pins",
+  });
+  currentOffer = { authority_ceiling: CEILING, drawdown_policy: { id: policyId, version: "1" } } as never;
+  as.expansionDeferrals.disclosure(code);
+  expect(
+    as.expansionDeferrals.approve(code, {
+      approver: BOB,
+      authentication: FIXTURE_BROWSER_LOGIN,
+      approvalEventId: `apev-${crypto.randomUUID()}`,
+      approvedUntil: expiresAt,
+      ceiling: offer(as, policyId),
+    }),
+  ).toBe(true);
+  const row = as.kernel.db
+    .prepare("SELECT state, ceiling_reconsent_json AS reconsent FROM expansion_deferrals WHERE deferral_code = ?")
+    .get(code) as { state: string; reconsent: string };
+  expect(row.state).toBe("approved");
+  return (JSON.parse(row.reconsent) as { drawdown_policy: { digest: string } }).drawdown_policy.digest;
+};
 
 /** Each case builds a file-backed AS once or twice. */
 const SLOW = { timeout: 30_000 };
@@ -246,6 +286,65 @@ describe(`a drawdown policy version commits one content ${TAG}`, SLOW, () => {
       const before = second.kernel.allMissions().length;
       expect(() => consent(second, "drawdown-p", farExpiry(clock))).toThrow(DrawdownPolicyVersionReuseError);
       expect(second.kernel.allMissions().length).toBe(before);
+    } finally {
+      second.kernel.close();
+    }
+  });
+
+  it(`a store without pins pins a version an unredeemed re-consent alone committed to that re-consent's content ${TAG}`, async () => {
+    const { file, clock, now } = fixture();
+    const policies: Record<string, RegisteredActivationPolicy> = {
+      ...PUBLISHED.policies,
+      "drawdown-q": policy(STD),
+      "drawdown-p": policy(STD),
+    };
+    const first = await build(file, now, policies, WITH_PROGRESSIVE);
+    const root = consent(first, "drawdown-q", farExpiry(clock));
+    const recorded = reconsentDecision(first, root.id, "drawdown-p", farExpiry(clock));
+    // No Mission record carries the re-consented policy: the decision is its only record.
+    expect(first.kernel.allMissions().some((m) => m.drawdown_policy?.id === "drawdown-p")).toBe(false);
+    first.kernel.db.prepare("DELETE FROM drawdown_policy_pins").run();
+    first.kernel.close();
+
+    policies["drawdown-p"] = policy(EDITED);
+    const second = await build(file, now, policies, WITH_PROGRESSIVE);
+    try {
+      expect(pins(second, "drawdown-p")).toEqual([{ version: "1", digest: recorded }]);
+      expect(() => consent(second, "drawdown-p", farExpiry(clock))).toThrow(DrawdownPolicyVersionReuseError);
+      policies["drawdown-p"] = policy(STD);
+      expect(consent(second, "drawdown-p", farExpiry(clock)).drawdown_policy?.digest).toBe(recorded);
+    } finally {
+      second.kernel.close();
+    }
+  });
+
+  it(`a store without pins pins a version two consents committed with different contents to the earliest consent's, across both sources: an earlier unredeemed re-consent wins over a later root consent ${TAG}`, async () => {
+    const { file, clock, now } = fixture();
+    const policies: Record<string, RegisteredActivationPolicy> = {
+      ...PUBLISHED.policies,
+      "drawdown-q": policy(STD),
+      "drawdown-p": policy(STD),
+    };
+    const first = await build(file, now, policies, WITH_PROGRESSIVE);
+    const root = consent(first, "drawdown-q", farExpiry(clock));
+    clock.ms += 1_000;
+    const earlier = reconsentDecision(first, root.id, "drawdown-p", farExpiry(clock));
+    // As a store before the pins held it: nothing refused the later consent below.
+    first.kernel.db.prepare("DELETE FROM drawdown_policy_pins").run();
+    clock.ms += 60_000;
+    policies["drawdown-p"] = policy(EDITED);
+    const later = consent(first, "drawdown-p", farExpiry(clock)).drawdown_policy?.digest;
+    expect(later).not.toBe(earlier);
+    first.kernel.db.prepare("DELETE FROM drawdown_policy_pins").run();
+    first.kernel.close();
+
+    const second = await build(file, now, policies, WITH_PROGRESSIVE);
+    try {
+      expect(pins(second, "drawdown-p")).toEqual([{ version: "1", digest: earlier }]);
+      // The later content is refused under the version; the earliest is consented.
+      expect(() => consent(second, "drawdown-p", farExpiry(clock))).toThrow(DrawdownPolicyVersionReuseError);
+      policies["drawdown-p"] = policy(STD);
+      expect(consent(second, "drawdown-p", farExpiry(clock)).drawdown_policy?.digest).toBe(earlier);
     } finally {
       second.kernel.close();
     }

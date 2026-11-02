@@ -9,9 +9,9 @@
  * Pins are never pruned. The activation policy snapshots are no substitute:
  * they are retained only when an activation is adjudicated, and are pruned
  * past their audit horizon. A store from before the pins backfills them from
- * the consents it retains (the committed Mission records' ceilings, then the
- * recorded re-consents), the earliest first; a version that earlier consents
- * already committed with two contents keeps the first.
+ * the consents it retains, the committed Mission records' ceilings and the
+ * recorded re-consents together: a version that earlier consents already
+ * committed with two contents keeps the content of its earliest consent.
  *
  * Progressive only: no other activation policy profile reads these pins.
  */
@@ -79,42 +79,50 @@ export class DrawdownPolicyPinStore {
   }
 
   /**
-   * Pin every retained consent's version that has no pin, the earliest first.
-   * Reads first and writes only where a consent is unpinned, so an open over a
-   * store whose consents are all pinned commits nothing.
+   * Pin each unpinned version a retained consent committed to the content of
+   * its EARLIEST consent, across both sources: a Mission record's ceiling and
+   * a recorded re-consent, which may never have been redeemed. The earliest
+   * is the earliest consent instant (`ceiling_consented_at`); a tie goes to
+   * the Mission record, then to the lower row. One statement, so the missing
+   * pins are inserted atomically; an existing pin is never replaced. Reads
+   * first, so an open over a store whose consents are all pinned commits
+   * nothing.
    */
   private backfill(): void {
-    this.pinUnpinned(
+    const sources = [
       `SELECT issuer, json_extract(ceiling_json, '$.drawdown_policy.id') AS policy_id,
               json_extract(ceiling_json, '$.drawdown_policy.version') AS version,
               json_extract(ceiling_json, '$.drawdown_policy.digest') AS digest,
-              created_at AS pinned_at, rowid AS seq
+              COALESCE(json_extract(ceiling_json, '$.ceiling_consented_at'), created_at) AS consented_at,
+              0 AS source, rowid AS seq
        FROM missions
        WHERE json_extract(ceiling_json, '$.drawdown_policy.digest') IS NOT NULL`,
-    );
+    ];
     const columns = this.db.prepare("SELECT name FROM pragma_table_info('expansion_deferrals')").all() as Array<{
       name: string;
     }>;
-    if (!columns.some((c) => c.name === "ceiling_reconsent_json")) return;
-    this.pinUnpinned(
-      `SELECT m.issuer, json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.id') AS policy_id,
-              json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.version') AS version,
-              json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.digest') AS digest,
-              json_extract(d.ceiling_reconsent_json, '$.ceiling_consented_at') AS pinned_at, d.rowid AS seq
-       FROM expansion_deferrals d JOIN missions m ON m.id = d.predecessor_id
-       WHERE json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.digest') IS NOT NULL`,
-    );
-  }
-
-  private pinUnpinned(consents: string): void {
-    const unpinned = `SELECT c.* FROM (${consents}) c WHERE NOT EXISTS (
-      SELECT 1 FROM drawdown_policy_pins p
-      WHERE p.issuer = c.issuer AND p.policy_id = c.policy_id AND p.version = c.version)`;
-    if (this.db.prepare(`${unpinned} LIMIT 1`).get() === undefined) return;
+    if (columns.some((c) => c.name === "ceiling_reconsent_json")) {
+      sources.push(
+        `SELECT m.issuer, json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.id') AS policy_id,
+                json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.version') AS version,
+                json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.digest') AS digest,
+                json_extract(d.ceiling_reconsent_json, '$.ceiling_consented_at') AS consented_at,
+                1 AS source, d.rowid AS seq
+         FROM expansion_deferrals d JOIN missions m ON m.id = d.predecessor_id
+         WHERE json_extract(d.ceiling_reconsent_json, '$.drawdown_policy.digest') IS NOT NULL`,
+      );
+    }
+    const earliestUnpinned = `SELECT e.issuer, e.policy_id, e.version, e.digest, e.consented_at
+      FROM (SELECT c.*, ROW_NUMBER() OVER (
+              PARTITION BY c.issuer, c.policy_id, c.version ORDER BY c.consented_at, c.source, c.seq) AS n
+            FROM (${sources.join(" UNION ALL ")}) c) e
+      WHERE e.n = 1 AND NOT EXISTS (
+        SELECT 1 FROM drawdown_policy_pins p
+        WHERE p.issuer = e.issuer AND p.policy_id = e.policy_id AND p.version = e.version)`;
+    if (this.db.prepare(`${earliestUnpinned} LIMIT 1`).get() === undefined) return;
     this.db
       .prepare(
-        `INSERT OR IGNORE INTO drawdown_policy_pins (issuer, policy_id, version, digest, pinned_at)
-         SELECT issuer, policy_id, version, digest, pinned_at FROM (${unpinned}) ORDER BY pinned_at, seq`,
+        `INSERT INTO drawdown_policy_pins (issuer, policy_id, version, digest, pinned_at) ${earliestUnpinned}`,
       )
       .run();
   }
