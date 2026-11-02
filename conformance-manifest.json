@@ -12748,7 +12748,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a decision delivered after the lifetime of the interaction, deferral or activation it decides creates no Mission, and the identifier of a committed decision is still found for as long as that decision could be delivered",
-    "local": "the reference never prunes Mission rows, so the identifier outlives every decision lifetime"
+    "local": "the reference never prunes Mission rows, so a committed decision's identifier outlives every decision lifetime; an approval reservation, which holds no committed identifier, is pruned once older than the interaction lifetime plus the declared clock skew, never less than oidc-provider's clock tolerance (#1922)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -12770,9 +12770,15 @@
      "name": "Expansion (deferred): the horizon runs from initiation (@spec mission#approval-idempotency, #1915) > with the shipped horizon, an identical reuse after it and after the first deferral's lifetime starts a new operation: a new deferral, never the dead handle, completed under a new approval_event_id (@spec mission#approval-idempotency, #1915)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "a decision on an expired interaction (@spec mission#approval-idempotency, #1922) > is refused before any approval reservation is consulted and creates no reservation and no Mission, while an interaction opened after the same clock advance decides",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1915 event identity (D1056). Witnessed: a device decision after the session expired; a deferred Mission approval past its lifetime; an expansion deferral polled past its lifetime. Not witnessed: a direct decision after its interaction expired, and an expansion approval recorded after the deferral's lifetime."
+   "notes": "#1915 event identity (D1056). Witnessed: a device decision after the session expired; a deferred Mission approval past its lifetime; an expansion deferral polled past its lifetime; a direct decision after its interaction expired, refused before any reservation is consulted (#1922). Not witnessed: an expansion approval recorded after the deferral's lifetime."
   },
   {
    "id": "core.mission-record.request-key-retention-contract",

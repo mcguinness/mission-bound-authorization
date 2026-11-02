@@ -138,6 +138,7 @@ import {
   type DerivationReservationResult,
   DerivationReservationStore,
 } from "./derivation-reservations.js";
+import { INTERACTION_TTL_S, PROVIDER_CLOCK_TOLERANCE_S } from "./interaction-lifetime.js";
 import { type DurableCommitSubscriber, LifecycleOutbox } from "./lifecycle-outbox.js";
 import {
   DEFAULT_AUDIT_RETENTION_S,
@@ -283,6 +284,9 @@ import { normalizeStoredLifecycle, observeExpiry, parentTerminatedTermination } 
  */
 export const STATUS_SIGNING_ALG = "ES256";
 
+/** The most lapsed approval reservations one reservation prunes (#1922). */
+export const APPROVAL_RESERVATION_PRUNE_BATCH = 100;
+
 /** Retry budget for random Status List index allocation on UNIQUE collision. */
 const STATUS_INDEX_MAX_ATTEMPTS = 16;
 
@@ -354,6 +358,7 @@ CREATE TABLE IF NOT EXISTS approval_reservations (
   grant_id TEXT NOT NULL,
   created_at TEXT NOT NULL
 ) STRICT;
+CREATE INDEX IF NOT EXISTS approval_reservations_created_at ON approval_reservations (created_at);
 `;
 
 /** Tables that hold no Mission state: the issuer record itself and the recovery marker. */
@@ -1252,6 +1257,13 @@ export class MissionKernel {
    */
   private readonly derivationsInFlight = new Map<string, Promise<unknown>>();
   private readonly now: () => Date;
+  /**
+   * @spec mission#approval-idempotency (#1922): how long an approval
+   * reservation is kept, in milliseconds: the interaction lifetime plus the
+   * declared clock skew, never less than the provider's clock tolerance. Past
+   * it no decision on that interaction can arrive.
+   */
+  private readonly reservationRetentionMs: number;
   private readonly allocateStatusIndex: () => number;
   /**
    * @spec mission#authority-sources (#829): the trusted catalog BOUND to this
@@ -1387,6 +1399,13 @@ export class MissionKernel {
       now: this.now,
       auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
     });
+    // @spec mission#approval-idempotency (#1922): the SAME declared clock skew
+    // the tombstones compose, never less than the provider's clock tolerance,
+    // within which it still accepts an expired interaction. Every lapsed
+    // reservation goes at open, after the issuer binding has read the store.
+    this.reservationRetentionMs =
+      (INTERACTION_TTL_S + Math.max(this.tombstones.horizons().clock_skew_seconds, PROVIDER_CLOCK_TOLERANCE_S)) * 1000;
+    this.pruneApprovalReservations();
     this.dischargePins = new DischargeMappingPinStore(this.db);
     this.dischargeSelectors = new DischargeSelectorStore(this.db, this.now);
     // @spec approval-governance#governed-policy: a configuration fault refuses
@@ -2025,6 +2044,7 @@ export class MissionKernel {
     clientId: string;
     grantId: string;
   }): boolean {
+    this.pruneApprovalReservations(APPROVAL_RESERVATION_PRUNE_BATCH);
     const inserted = this.db
       .prepare(
         `INSERT INTO approval_reservations (approval_event_id, approver_iss, approver_sub, subject_iss, subject_sub, client_id, grant_id, created_at)
@@ -2053,6 +2073,28 @@ export class MissionKernel {
       held.client_id === input.clientId &&
       held.grant_id === input.grantId
     );
+  }
+
+  /**
+   * @spec mission#approval-idempotency (#1922): a reservation is read only
+   * while its interaction can still be decided, so one older than
+   * {@link reservationRetentionMs} is deleted: every one at open, at most
+   * `limit` on each reservation. A committed decision's
+   * identifier is its Mission's `approval_event_id`, which this never touches,
+   * so a replayed decision still resolves to its one Mission.
+   */
+  private pruneApprovalReservations(limit?: number): void {
+    const cutoff = new Date(this.now().getTime() - this.reservationRetentionMs).toISOString();
+    if (limit === undefined) {
+      this.db.prepare("DELETE FROM approval_reservations WHERE created_at < ?").run(cutoff);
+      return;
+    }
+    this.db
+      .prepare(
+        `DELETE FROM approval_reservations WHERE approval_event_id IN
+           (SELECT approval_event_id FROM approval_reservations WHERE created_at < ? ORDER BY created_at LIMIT ?)`,
+      )
+      .run(cutoff, limit);
   }
 
   /**

@@ -24,6 +24,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { IntentError } from "../src/kernel/intent.js";
+import { INTERACTION_TTL_S, PROVIDER_CLOCK_TOLERANCE_S } from "../src/kernel/interaction-lifetime.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14794;
@@ -522,5 +523,45 @@ describe("the approval event as the idempotency key (@spec mission#mission-recor
     expect((await flow.decide()).status).not.toBe(303);
     expect(missionsFor(flow.approvalEventId), "a second Mission was created for the approval event").toEqual([missionId]);
     expect(as.kernel.get(missionId)?.version).toBe(committed?.version);
+  });
+});
+
+describe("a decision on an expired interaction (@spec mission#approval-idempotency, #1922)", () => {
+  /** The Missions recorded for an approval event, read from the store itself. */
+  const missionsFor = (approvalEventId: string) =>
+    as.kernel.db.prepare("SELECT id FROM missions WHERE approval_event_id = ?").all(approvalEventId);
+  /** The approval reservations held for an approval event, read from the store itself. */
+  const reservationsFor = (approvalEventId: string) =>
+    as.kernel.db.prepare("SELECT approval_event_id FROM approval_reservations WHERE approval_event_id = ?").all(approvalEventId);
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("is refused before any approval reservation is consulted and creates no reservation and no Mission, while an interaction opened after the same clock advance decides", async () => {
+    const expired = await open();
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    // Past the interaction's lifetime and the provider's clock tolerance, within
+    // which it still accepts an expired interaction.
+    vi.setSystemTime(Date.now() + (INTERACTION_TTL_S + PROVIDER_CLOCK_TOLERANCE_S + 1) * 1000);
+    const reserve = vi.spyOn(as.kernel, "reserveApproval");
+
+    const refused = await expired.decide(trustedApprovalHeaders());
+    // oidc-provider finds no interaction (SessionNotFound), answered as plain
+    // text before the decision reads anything of its own.
+    expect(refused.status).toBe(400);
+    expect(await refused.clone().text()).toBe("invalid_request");
+    expect((await expired.outcome(refused)).code).toBeNull();
+    expect(reserve, "a reservation was consulted for an expired interaction").not.toHaveBeenCalled();
+    expect(reservationsFor(expired.approvalEventId)).toEqual([]);
+    expect(missionsFor(expired.approvalEventId)).toEqual([]);
+
+    // The advanced clock alone refuses nothing: an interaction opened after it
+    // reserves and decides.
+    const fresh = await open();
+    const decided = await fresh.decide();
+    expect(decided.status).toBe(303);
+    expect(reserve).toHaveBeenCalledTimes(1);
+    expect(reservationsFor(fresh.approvalEventId)).toHaveLength(1);
   });
 });
