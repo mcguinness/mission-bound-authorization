@@ -22,7 +22,7 @@ Not complete, per the review against these criteria at `1988e136` (D1192), as co
 - **P2, P1 and P4** have not started. Grant Bindings and Related Mechanisms still carries the mechanism catalogue that P2 item 1 replaces.
 - **P5** has not run, and neither P0's tracking issue nor its execution baseline exists.
 
-**Update (2026-11-02, after #2007):** the execution baseline is frozen at `c79d84ad` (Size measurement), and the owner ruled that #1944 carries the gate rather than a new tracking issue (D1206).
+**Update (2026-11-02, after #2007):** the execution baseline is frozen at `c79d84ad` (Size measurement), and #2009 tracks the gate (D1204). D1211 supersedes D1206, which had assigned it to #1944.
 
 D1195 confirms this plan's eight exit conditions, P5 and completion record as the full gate for `-02`, subject to D1134's semantic ruling. The text below keeps the gate as written; passages about work that has since landed carry dated status notes.
 
@@ -181,7 +181,7 @@ Re-quote and re-anchor rows in the same commit as the text. Split or retire a ro
 
 ### P0 Establish the work record
 
-**Status (2026-11-02):** D1134 records the D1057 supersession in its own wording (see the decisions table), so the text quoted below is historical. #1895 is closed (PR #1960, D1123). Done after #2007: the execution baseline is frozen (Size measurement). No new tracking issue is filed: the owner ruled that #1944, whose release order already puts the binding's independence before `-02`, carries the gate, with a rewritten body that quotes the exit conditions and lists the remaining packages, and a #302 row that names the next package (D1206). Still to do: name the two P5 readers, or obtain a ruling on whether a disclosed cold model reader may serve as one.
+**Status (2026-11-02):** D1134 records the D1057 supersession in its own wording (see the decisions table), so the text quoted below is historical. #1895 is closed (PR #1960, D1123). Done after #2007: the execution baseline is frozen (Size measurement). #2009 is the tracking issue (D1204): self-contained, it quotes the gate verbatim. D1211 supersedes D1206, which had assigned the gate to #1944. #1944 keeps the release order's steps (2) and (3), and points to #2009 for step (1). Still to do: name the two P5 readers, or obtain a ruling on whether a disclosed cold model reader may serve as one.
 
 The inventory and this plan complete the initial local preparation. The owner's direction authorizes pursuing independence for `-02`; the plan itself is not a substitute for an explicit record of which previous decision is superseded. The P0 record must state:
 
