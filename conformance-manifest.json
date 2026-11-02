@@ -127,8 +127,8 @@
     "content_sha256": "304a0b321defc5907bed9769afc8f5a7fb0a8ec1cc70466cabf72a0f9c3c15ee"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
-    "revision": "7e7de3e7852be07ada7a4451b25df5365832f7a6",
-    "content_sha256": "955750c52b7edb71acf93222f6d4ae565a1f93077f088246c9eed4ff0df5c015"
+    "revision": "124f20a493e72f0c19e3b39348f1c6370fcede38",
+    "content_sha256": "1d8dc744be1e8c9092a00ec69754626f8baf66dfaf33bf1fb16321c9bc61ddf6"
    },
    "draft-mcguinness-mission-aauth-management.md": {
     "revision": "940972b9823bf482819c18177c7ab8dfd935a391",
@@ -92836,7 +92836,7 @@
    "surface": "par",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "After a submission carrying a valid assertion is refused for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
+    "normative": "After a submission carrying a valid assertion is refused before acceptance for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -92858,7 +92858,7 @@
    "surface": "approval-ceremony",
    "assertion": "replay",
    "observation": {
-    "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts"
+    "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts; the AS's authorization, required-evidence and approval checks still apply at each step"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -92979,7 +92979,7 @@
    "id": "request-provenance.replay.creation-recovery-exact-retry",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it",
+   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it; the surface's other recovery conditions still apply",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -92990,7 +92990,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
+    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation, only where the surface's other recovery conditions hold, and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -93237,7 +93237,29 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 (D1119): the working-group comment of 2026-10-12. No reference deployment records a departure claim; todo."
+   "notes": "#939 (D1119): the working-group comment of 2026-10-12. The duty binds whichever component records a departure claim: this row for the intake, `request-provenance.audit.departure-claim-association-as` for the AS. No reference component records a departure claim; todo."
+  },
+  {
+   "id": "request-provenance.audit.departure-claim-association-as",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "audit",
+   "text": "Where a deployment records a claim about how far an Intent departs from the captured instruction, it MUST associate that claim with the capture's `request_digest` in access-controlled audit storage, so that an authorized audit holding the capture can test the claim.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a deployment that records a departure claim keeps it with the capture's request_digest in access-controlled audit storage, never in the assertion or the recorded facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): the AS twin of `request-provenance.audit.departure-claim-association`; the duty binds whichever component records a departure claim. No reference component records one; todo."
   },
   {
    "id": "expansion.restoration.discharge-disclosed",
