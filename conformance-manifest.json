@@ -19,12 +19,12 @@
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
-    "content_sha256": "6d637c5754f09965a3ef291909a7c48609de6b3fac2e82c66db364c9ade2a025"
+    "revision": "c458af82a38d4226382b48f54d69f8761b7e3fba",
+    "content_sha256": "d5628063c1a46f0a7dff0a31a29ca5ce817da60d3aaa265a578694f24f5265be"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "bf1307a8ed60bd61b186a4bf51a5fe1204c5c477",
-    "content_sha256": "ff023b6ea6c99953e60d830aab496abd9c7f237f336c0f8d251fadc11fd9894c"
+    "revision": "c458af82a38d4226382b48f54d69f8761b7e3fba",
+    "content_sha256": "86b31db4a01e53e3032daa798156e9635cab9cf25b2ae066dd611461b82da267"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
@@ -159,8 +159,8 @@
     "content_sha256": "a73a267a1da167dd2cb76a976c5e0bca75d8a056d0b44d9723bae39e0263793a"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
-    "content_sha256": "9af0d69fb3397fc1c4341de0f9b98855f0b7b70a6cb4149e8a1e9d8860a078ee"
+    "revision": "c458af82a38d4226382b48f54d69f8761b7e3fba",
+    "content_sha256": "ebd6734e1a71dda56fc5a82f3df9075789157f2f05d379256999f4f66a3a5e6d"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
     "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
@@ -34325,7 +34325,7 @@
    "id": "runtime.classification.unclassifiable-defaults-to-widest",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "classification",
-   "text": "An invocation the classifier cannot affirmatively place MUST be treated as the widest class the operation can reach",
+   "text": "An invocation the classifier cannot affirmatively place MUST be treated under every class the operation can reach, taking the requirements of each",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -34338,12 +34338,12 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an argument-dependent operation the deployment's classifier cannot affirmatively place defaults to the widest class that operation can reach, never a lighter one"
+    "normative": "an argument-dependent operation the deployment's classifier cannot affirmatively place takes the requirements of every class the operation can reach, never a lighter set; no single widest class is presumed"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Antecedent unreachable in this codebase: applicability names capability runtime.discovered-catalog, and no argument-dependent classifier exists anywhere (grep across src/services and src/packages for classifier/action_class/mission_action_class_floors finds only the static per-tool action_class label in mcp-payments/src/pep.ts and its pass-through in evaluate.ts; no component ever classifies an invocation from its normalized parameters). Nothing to test without fabricating a classifier the deployment does not have."
+   "notes": "Antecedent unreachable in this codebase: applicability names capability runtime.discovered-catalog, and no argument-dependent classifier exists anywhere (grep across src/services and src/packages for classifier/action_class/mission_action_class_floors finds only the static per-tool action_class label in mcp-payments/src/pep.ts and its pass-through in evaluate.ts; no component ever classifies an invocation from its normalized parameters). Nothing to test without fabricating a classifier the deployment does not have. #1994 (D1175): re-quoted after Runtime stopped presuming a total ordering of classes; the row id keeps its earlier spelling."
   },
   {
    "id": "runtime.classification.class-floor-metadata-not-lowered",
@@ -40233,7 +40233,7 @@
    "id": "runtime.trifecta-containment.external-communication-mediated-condition",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "trifecta-containment",
-   "text": "The external-communication and external-commitment classes are mediated: no unmediated path, the scope statement's egress-channel enumeration covers them",
+   "text": "Every action that satisfies the external-communication or External commitment predicate ({{classification}}), whatever its class, is mediated: no unmediated path, the scope statement's egress-channel enumeration covers it",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -40246,7 +40246,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "under the trifecta containment claim, every external-communication and external-commitment path is mediated and enumerated in the scope statement's egress-channel list"
+    "normative": "under the trifecta containment claim, every action that satisfies the external-communication or External commitment predicate, whatever its class, is mediated and its path is enumerated in the scope statement's egress-channel list"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -40257,7 +40257,8 @@
      "level": "cross-component",
      "surface": "resource-operation"
     }
-   ]
+   ],
+   "notes": "#1994 (D1175): re-quoted after the leg stopped calling external communication a class. The egress gate takes no action class, so its default-deny refusal of an undeclared channel holds whatever the action's class."
   },
   {
    "id": "runtime.negative-conformance.should-demonstrate-and-retain-evidence",
@@ -51925,6 +51926,29 @@
     }
    ],
    "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
+  },
+  {
+   "id": "evidence.decision.action-classes-set",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "REQUIRED when more than one runtime action class applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\"); omitted otherwise. An array of distinct strings from the value space of `action_class`: every class whose requirements the PDP applied, `action_class` among them.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Decision Evidence record on an action to which more than one runtime action class applies carries action_classes: distinct known class names, every class whose requirements the PDP applied, including action_class; a record on an action with one applicable class omits it, and action_class remains the assigned class"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 (D1175): the companion member that preserves the applicable class set."
   },
   {
    "id": "evidence.decision.credential-verified-claims-only",
@@ -108717,6 +108741,28 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "harness.decision-api.taint-required-where-external-commitment-applies",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "The PDP MUST require `context.taint` on every decision on an action to which that class applies and whose `action.properties.external_communication` is `true` or to which the External commitment class applies",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.taint-enforcement"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the deployment declares PDP-enforced taint for a class, a decision on an action to which that class applies, that is external communication or to which the External commitment class applies (as its assigned class or another applicable predicate), is denied taint_context_missing when context.taint is absent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 (D1175): the rule keyed on one stored action_class before; it had no row. No witness: the reference PDP does not implement PDP-enforced taint (the harness enforces taint, and the shipped statement declares no PDP-enforced taint class)."
   },
   {
    "id": "authzen.context-work-item.verified-reference-is-not-attachment",
