@@ -26,7 +26,7 @@
 
 import type { IncomingMessage } from "node:http";
 import { parse as parseForm } from "node:querystring";
-import { type KoaContextWithOIDC, type Provider } from "oidc-provider";
+import { type Adapter, type AdapterPayload, type KoaContextWithOIDC, type Provider } from "oidc-provider";
 
 /** The RFC 8628 grant type. */
 export const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
@@ -178,8 +178,58 @@ export function normalizeUserCode(input: string): string {
 /** The `error_description` the next poll of a session the AS ended carries. */
 export const DEVICE_SESSION_ENDED = "the authorization server ended this device authorization session";
 
-/** What a cancellation decision did: ended the session, or why it did not. */
+/**
+ * What a cancellation decision did: `ended` the session, or why it did not.
+ * `deciding` means the cancellation did not occur: a decision's commit holds
+ * the session, and the caller retries; the operation does not wait.
+ */
 export type DeviceCancellation = "ended" | "not_pending" | "unknown" | "deciding";
+
+/**
+ * Sessions the AS's cancellation ended, by device code id (#1202, D1181).
+ * Their denial is terminal across every writer of the device code:
+ * oidc-provider's own code confirmation saves the code without the decision
+ * claim, and a confirmation that loaded the code before the cancellation
+ * would otherwise write a pending copy back over the denial. In-process, like
+ * the decision claim; an entry lasts as long as its device code.
+ */
+const endedSessions = new Map<string, { description: string; expiresAtMs: number }>();
+
+function keepDenial(id: string, payload: AdapterPayload): AdapterPayload {
+  const ended = endedSessions.get(id);
+  if (!ended) return payload;
+  if (ended.expiresAtMs <= Date.now()) {
+    endedSessions.delete(id);
+    return payload;
+  }
+  return { ...payload, error: "access_denied", errorDescription: ended.description };
+}
+
+/**
+ * @spec device-authorization#outcomes (#1202, D1181): the device-code store,
+ * every write and read of a session the AS ended keeping its denial, so no
+ * later save, whatever copy it writes, makes the session pending again.
+ */
+export function terminalDeviceCodes(inner: Adapter): Adapter {
+  return {
+    upsert: (id, payload, expiresIn) => inner.upsert(id, keepDenial(id, payload), expiresIn),
+    find: async (id) => {
+      const stored = await inner.find(id);
+      return stored ? keepDenial(id, stored) : stored;
+    },
+    findByUserCode: async (userCode) => {
+      const stored = await inner.findByUserCode(userCode);
+      return stored && typeof stored.jti === "string" ? keepDenial(stored.jti, stored) : stored;
+    },
+    findByUid: (uid) => inner.findByUid(uid),
+    consume: (id) => inner.consume(id),
+    destroy: async (id) => {
+      endedSessions.delete(id);
+      await inner.destroy(id);
+    },
+    revokeByGrantId: (grantId) => inner.revokeByGrantId(grantId),
+  };
+}
 
 /**
  * @spec device-authorization#outcomes (#1202, D1121): a trusted,
@@ -190,8 +240,10 @@ export type DeviceCancellation = "ended" | "not_pending" | "unknown" | "deciding
  * next poll receives `access_denied`, and a decision reached afterwards
  * creates no Mission. A session no longer pending (approved, denied, expired
  * or redeemed) is left as it is; ending a Mission already created is the
- * Lifecycle endpoint's. A decision already committing holds the session, and
- * the outcome is `deciding`.
+ * Lifecycle endpoint's. A decision already committing holds the session: the
+ * outcome is `deciding`, the cancellation did not occur, and the caller
+ * retries. The denial is terminal across every writer of the device code
+ * (`terminalDeviceCodes`).
  */
 export async function cancelDeviceSession(
   provider: Provider,
@@ -205,6 +257,8 @@ export async function cancelDeviceSession(
   try {
     const current = await loadDeviceSession(provider, jti);
     if (!devicePending(current)) return "not_pending";
+    // Recorded first, so every later write of this device code keeps the denial.
+    endedSessions.set(jti, { description, expiresAtMs: (current.exp ?? 0) * 1000 });
     current.error = "access_denied";
     current.errorDescription = description;
     await current.save();
@@ -311,50 +365,104 @@ export interface DeviceVerificationState {
   deviceCodeUnknown?: boolean;
 }
 
-/** The verification throttle's configuration: rejected codes allowed per window, the window, the clock. */
+/**
+ * The verification throttle's configuration: codes that match no session
+ * allowed per address and window, the window, how many addresses are tracked
+ * apart, and the clock.
+ */
 export interface DeviceVerificationThrottleOptions {
   maxFailures?: number;
   windowMs?: number;
+  maxAddresses?: number;
   now?: () => number;
 }
 
+/** A place an admitted entry holds until it settles. */
+export interface DeviceVerificationTicket {
+  readonly key: string;
+}
+
+/** The key every address shares once `maxAddresses` are tracked apart. */
+export const DEVICE_THROTTLE_OVERFLOW_KEY = "*";
+
 /**
- * RFC 8628 Section 5.1 (#1202, D1121): verification attempts throttled
+ * RFC 8628 Section 5.1 (#1202, D1121, D1181): verification attempts throttled
  * independently of any session. Each `user_code` that matches no session
- * counts against the verification user agent's address. Past `maxFailures`
- * within `windowMs`, the address's entries are refused until the window
- * moves on. A refusal looks nothing up and ends no session; ending a
- * session is `cancelDeviceSession`'s alone. The counts are in-process, the
- * same single-process boundary as the device decision claim (#250).
+ * counts against the verification user agent's address. An entry reserves a
+ * place before any code lookup and settles after it, counted or released, so
+ * overlapping entries never pass the limit together: past `maxFailures` within
+ * `windowMs`, counted and in flight, the address's entries are refused until
+ * the window moves on. A refusal looks nothing up and ends no session; ending
+ * a session is `cancelDeviceSession`'s alone.
+ *
+ * Tracking is bounded. Addresses with nothing counted in the window and
+ * nothing in flight are swept at most once a window. Past `maxAddresses`, a
+ * new address counts under one shared overflow key, so no tracked address's
+ * limit is reset to make room. The counts are in-process, the same
+ * single-process boundary as the device decision claim (#250).
  */
 export class DeviceVerificationThrottle {
-  private readonly failures = new Map<string, number[]>();
+  private readonly entries = new Map<string, { failures: number[]; inFlight: number }>();
   private readonly maxFailures: number;
   private readonly windowMs: number;
+  private readonly maxAddresses: number;
   private readonly now: () => number;
+  private lastSweep: number;
 
   constructor(opts: DeviceVerificationThrottleOptions = {}) {
     this.maxFailures = opts.maxFailures ?? 10;
     this.windowMs = opts.windowMs ?? 600_000;
+    this.maxAddresses = opts.maxAddresses ?? 10_000;
     this.now = opts.now ?? Date.now;
+    this.lastSweep = this.now();
   }
 
-  private recent(key: string): number[] {
+  private recent(entry: { failures: number[] }): number[] {
     const since = this.now() - this.windowMs;
-    const kept = (this.failures.get(key) ?? []).filter((t) => t > since);
-    if (kept.length > 0) this.failures.set(key, kept);
-    else this.failures.delete(key);
-    return kept;
+    entry.failures = entry.failures.filter((t) => t > since);
+    return entry.failures;
   }
 
-  /** Whether `key`'s entries are refused now. */
-  blocked(key: string): boolean {
-    return this.recent(key).length >= this.maxFailures;
+  /** Drop every address with nothing counted in the window and nothing in flight. */
+  private sweep(): void {
+    this.lastSweep = this.now();
+    for (const [key, entry] of this.entries) {
+      if (entry.inFlight === 0 && this.recent(entry).length === 0) this.entries.delete(key);
+    }
   }
 
-  /** Count one code that matched no session against `key`. */
-  fail(key: string): void {
-    this.failures.set(key, [...this.recent(key), this.now()]);
+  private keyFor(address: string): string {
+    if (this.entries.has(address)) return address;
+    if (this.entries.size >= this.maxAddresses) this.sweep();
+    return this.entries.size < this.maxAddresses ? address : DEVICE_THROTTLE_OVERFLOW_KEY;
+  }
+
+  /** Admit one entry from `address`, reserving its place; undefined when the address is over the limit. */
+  admit(address: string): DeviceVerificationTicket | undefined {
+    if (this.now() - this.lastSweep >= this.windowMs) this.sweep();
+    const key = this.keyFor(address);
+    const entry = this.entries.get(key) ?? { failures: [], inFlight: 0 };
+    this.entries.set(key, entry);
+    if (this.recent(entry).length + entry.inFlight >= this.maxFailures) {
+      if (entry.inFlight === 0 && entry.failures.length === 0) this.entries.delete(key);
+      return undefined;
+    }
+    entry.inFlight += 1;
+    return { key };
+  }
+
+  /** Settle an admitted entry: count it when its code matched no session, release its place otherwise. */
+  settle(ticket: DeviceVerificationTicket, counted: boolean): void {
+    const entry = this.entries.get(ticket.key);
+    if (!entry) return;
+    entry.inFlight = Math.max(0, entry.inFlight - 1);
+    if (counted) entry.failures.push(this.now());
+    if (entry.inFlight === 0 && this.recent(entry).length === 0) this.entries.delete(ticket.key);
+  }
+
+  /** How many keys are tracked now, the overflow key included. */
+  tracked(): number {
+    return this.entries.size;
   }
 }
 

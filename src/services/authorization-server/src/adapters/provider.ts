@@ -950,7 +950,8 @@ export interface AdapterOptions {
   /**
    * RFC 8628 Section 5.1 (#1202, D1121): the verification page's throttle of
    * codes that match no session, per verification user agent address. The
-   * default allows 10 such codes per 10 minutes.
+   * default allows 10 such codes per 10 minutes, and tracks 10,000
+   * addresses apart before new ones share one overflow key.
    */
   deviceVerificationThrottle?: DeviceVerificationThrottleOptions;
   /**
@@ -3068,16 +3069,23 @@ export function buildProvider(opts: AdapterOptions): Provider {
   const verificationThrottle = new DeviceVerificationThrottle(opts.deviceVerificationThrottle);
   provider.use(async (ctx, next) => {
     if (ctx.method !== "POST" || ctx.path !== "/device" || !enabled("device-authorization")) return next();
-    const key = ctx.ip;
-    if (verificationThrottle.blocked(key)) {
+    // The entry reserves its place before the lookup, so overlapping entries
+    // never pass the limit together; it settles once the lookup answered.
+    const ticket = verificationThrottle.admit(ctx.ip);
+    if (!ticket) {
       ctx.status = 429;
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.set("cache-control", "no-store");
       ctx.body = deviceThrottledPage();
       return;
     }
-    await next();
-    if ((ctx.state as DeviceVerificationState).deviceCodeUnknown) verificationThrottle.fail(key);
+    let counted = false;
+    try {
+      await next();
+      counted = (ctx.state as DeviceVerificationState).deviceCodeUnknown === true;
+    } finally {
+      verificationThrottle.settle(ticket, counted);
+    }
   });
   // @spec #831 (role binding): the provider's keystore holds the access-token
   // key alone (`jwks`), so it signs nothing under another role's key. The
