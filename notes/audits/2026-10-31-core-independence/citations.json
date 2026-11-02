@@ -1,14 +1,14 @@
 {
-  "base_commit": "b2b6c052d7a0987c4822d534587b23bdc2b17a6f",
+  "base_commit": "ac00dc76a1e86a30dc0b092cdbf1d0ff71e3fc82",
   "source": "draft-mcguinness-oauth-mission.md",
   "method": "Citation markup from abstract to before Document History; bibliography and history excluded. Targets are McGuinness drafts; family membership comes from family-manifest.json at the same commit.",
-  "family_occurrences": 114,
-  "family_documents": 28,
+  "family_occurrences": 112,
+  "family_documents": 29,
   "adjacent_occurrences": 16,
   "rows": [
     {
       "id": "C001",
-      "line": 406,
+      "line": 414,
       "section": "Applicability",
       "anchor": "applicability",
       "target": "draft-mcguinness-mission-architecture",
@@ -19,7 +19,7 @@
     },
     {
       "id": "C002",
-      "line": 473,
+      "line": 481,
       "section": "Introductory Example",
       "anchor": "first-mission",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -30,7 +30,7 @@
     },
     {
       "id": "C003",
-      "line": 480,
+      "line": 488,
       "section": "Introductory Example",
       "anchor": "first-mission",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -41,7 +41,7 @@
     },
     {
       "id": "C004",
-      "line": 579,
+      "line": 587,
       "section": "Terminology",
       "anchor": "terminology",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -52,7 +52,7 @@
     },
     {
       "id": "C005",
-      "line": 726,
+      "line": 734,
       "section": "Principal Model",
       "anchor": "principal-model",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -63,7 +63,7 @@
     },
     {
       "id": "C006",
-      "line": 772,
+      "line": 780,
       "section": "Mission Intent",
       "anchor": "mission-intent",
       "target": "draft-mcguinness-mission-shaping",
@@ -74,18 +74,18 @@
     },
     {
       "id": "C007",
-      "line": 951,
+      "line": 959,
       "section": "The Submission Envelope",
       "anchor": "submission-envelope",
       "target": "draft-mcguinness-oauth-mission-submission-evidence",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
-      "context": "- **Structural validity.** An AS that cannot parse `mission_intent` as a JSON object, or that parses it but finds the Submission envelope or the Intent structurally invalid against this document's member definitions, MUST refuse the request with the `invalid_request` error code. - **Closed top levels.** The AS MUST reject a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines ({{extensibility}}). A bare Mission Intent submitted as the parameter value fails this rule, since its `goal` and sibling members are unknown envelope members. - **Bounded size.** The AS MUST bound the Submission envelope's total size, the Intent's total size and the lengths of its arrays, and the count and per-entry sizes of `evidence` entries, refusing a submission that exceeds the deployment-defined limits with `invalid_request`. The verification-cost bound of {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} accompanies these."
+      "context": "- **Structural validity.** An AS that cannot parse `mission_intent` as a JSON object, or that parses it but finds the Submission envelope or the Intent structurally invalid against this document's member definitions, MUST refuse the request with the `invalid_request` error code. - **Closed top levels.** The AS MUST refuse a submission with the `invalid_request` error code if the Submission envelope contains a top-level member other than `intent` and `evidence`, or if the `intent` contains a top-level member that neither this document nor a companion profile the AS implements defines ({{extensibility}}). A bare Mission Intent submitted as the parameter value fails this rule, since its `goal` and sibling members are unknown envelope members. - **Bounded size.** The AS MUST bound the Submission envelope's total size, the Intent's total size and the lengths of its arrays, and the count and per-entry sizes of `evidence` entries, refusing a submission that exceeds the deployment-defined limits with `invalid_request`. The verification-cost bound of {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} accompanies these."
     },
     {
       "id": "C008",
-      "line": 1043,
+      "line": 1051,
       "section": "Other Carriages",
       "anchor": "submission-other-carriages",
       "target": "draft-mcguinness-oauth-mission-device-authorization",
@@ -96,7 +96,7 @@
     },
     {
       "id": "C009",
-      "line": 1249,
+      "line": 1257,
       "section": "Intent Submission Evidence",
       "anchor": "intent-submission-evidence",
       "target": "draft-mcguinness-oauth-mission-submission-evidence",
@@ -107,7 +107,7 @@
     },
     {
       "id": "C010",
-      "line": 1282,
+      "line": 1290,
       "section": "Submission Processing Order",
       "anchor": "submission-processing",
       "target": "draft-mcguinness-oauth-mission-submission-evidence",
@@ -118,7 +118,7 @@
     },
     {
       "id": "C011",
-      "line": 1367,
+      "line": 1375,
       "section": "Derivation Modes",
       "anchor": "derivation-modes",
       "target": "draft-mcguinness-oauth-mission-template",
@@ -129,7 +129,7 @@
     },
     {
       "id": "C012",
-      "line": 1436,
+      "line": 1444,
       "section": "Consented Authority Set",
       "anchor": "consented-authority-set",
       "target": "draft-mcguinness-mission-shaping",
@@ -140,7 +140,7 @@
     },
     {
       "id": "C013",
-      "line": 1441,
+      "line": 1449,
       "section": "Consented Authority Set",
       "anchor": "consented-authority-set",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -151,7 +151,7 @@
     },
     {
       "id": "C014",
-      "line": 1461,
+      "line": 1469,
       "section": "Authority Set Example",
       "anchor": "authority-set-example",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -162,7 +162,7 @@
     },
     {
       "id": "C015",
-      "line": 1493,
+      "line": 1501,
       "section": "Subset Rule",
       "anchor": "subset",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -173,7 +173,7 @@
     },
     {
       "id": "C016",
-      "line": 1502,
+      "line": 1510,
       "section": "Subset Rule",
       "anchor": "subset",
       "target": "draft-mcguinness-oauth-mission-expansion",
@@ -184,7 +184,7 @@
     },
     {
       "id": "C017",
-      "line": 1582,
+      "line": 1590,
       "section": "Declared Transformation Capabilities",
       "anchor": "transformation-capabilities",
       "target": "draft-mcguinness-oauth-mission-child-delegation",
@@ -195,7 +195,7 @@
     },
     {
       "id": "C018",
-      "line": 1583,
+      "line": 1591,
       "section": "Declared Transformation Capabilities",
       "anchor": "transformation-capabilities",
       "target": "draft-mcguinness-oauth-mission-expansion",
@@ -206,7 +206,7 @@
     },
     {
       "id": "C019",
-      "line": 1594,
+      "line": 1602,
       "section": "Declared Transformation Capabilities",
       "anchor": "transformation-capabilities",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -217,7 +217,7 @@
     },
     {
       "id": "C020",
-      "line": 1767,
+      "line": 1775,
       "section": "Approver Authentication Strength",
       "anchor": "approval-authentication",
       "target": "draft-mcguinness-mission-metering",
@@ -228,7 +228,7 @@
     },
     {
       "id": "C021",
-      "line": 1777,
+      "line": 1785,
       "section": "Approver Authentication Strength",
       "anchor": "approval-authentication",
       "target": "draft-mcguinness-oauth-mission-consent-evidence",
@@ -239,7 +239,7 @@
     },
     {
       "id": "C022",
-      "line": 1953,
+      "line": 1961,
       "section": "Consent Rendering",
       "anchor": "rendering-safeguards",
       "target": "draft-mcguinness-mission-capability-binding",
@@ -250,7 +250,7 @@
     },
     {
       "id": "C023",
-      "line": 1985,
+      "line": 1993,
       "section": "Consent Rendering",
       "anchor": "rendering-safeguards",
       "target": "draft-mcguinness-oauth-mission-consent-evidence",
@@ -261,7 +261,7 @@
     },
     {
       "id": "C024",
-      "line": 2048,
+      "line": 2056,
       "section": "Single Accountable Approver",
       "anchor": "multi-party-approval",
       "target": "draft-mcguinness-mission-approval-governance",
@@ -272,7 +272,7 @@
     },
     {
       "id": "C025",
-      "line": 2050,
+      "line": 2058,
       "section": "Single Accountable Approver",
       "anchor": "multi-party-approval",
       "target": "draft-mcguinness-oauth-mission-consent-evidence",
@@ -283,7 +283,7 @@
     },
     {
       "id": "C026",
-      "line": 2054,
+      "line": 2062,
       "section": "Single Accountable Approver",
       "anchor": "multi-party-approval",
       "target": "draft-mcguinness-mission-approval-governance",
@@ -294,7 +294,7 @@
     },
     {
       "id": "C027",
-      "line": 2056,
+      "line": 2064,
       "section": "Single Accountable Approver",
       "anchor": "multi-party-approval",
       "target": "draft-mcguinness-mission-architecture",
@@ -305,7 +305,7 @@
     },
     {
       "id": "C028",
-      "line": 2110,
+      "line": 2118,
       "section": "Identity and Lifecycle Members",
       "anchor": "record-identity-members",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -316,18 +316,7 @@
     },
     {
       "id": "C029",
-      "line": 2234,
-      "section": "Principals and Approval Basis",
-      "anchor": "record-principal-members",
-      "target": "draft-mcguinness-mission-approval-governance",
-      "in_family": true,
-      "candidate_package": "P3",
-      "candidate_review": "Audit the direct contract and transfer adopter duties explicitly.",
-      "context": "When present for `direct`, `activation`, `activation_actor`, and `root_commitment` MUST each match its implied value. The implied values are semantic defaults: an omitted member has its implied value, and a reader does not insert it into a record before hashing or committing the record. A standing-consent basis requires and defines all three ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Standing-Consent Bases\")."
-    },
-    {
-      "id": "C030",
-      "line": 2245,
+      "line": 2256,
       "section": "Principals and Approval Basis",
       "anchor": "record-principal-members",
       "target": "draft-mcguinness-mission-approval-governance",
@@ -337,8 +326,8 @@
       "context": "`adjudication`: : OPTIONAL. A discriminated object naming the decision *mechanism* that adjudicated this instance: distinct from `activation_actor` (who triggered it) and `consent_principal` (who is accountable for it). Present when a Mission-creating profile or deployment chooses to make the mechanism explicit; where absent, the mechanism is still fixed by `type` and the construction rules of this document or a companion profile (below and {{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Policy Adjudication\"). Members, where present:"
     },
     {
-      "id": "C031",
-      "line": 2257,
+      "id": "C030",
+      "line": 2268,
       "section": "Principals and Approval Basis",
       "anchor": "record-principal-members",
       "target": "draft-mcguinness-mission-approval-governance",
@@ -348,30 +337,19 @@
       "context": "A companion profile can define further members of `adjudication`; Approval Governance defines `governance_record` ({{I-D.draft-mcguinness-mission-approval-governance}})."
     },
     {
+      "id": "C031",
+      "line": 2275,
+      "section": "Principals and Approval Basis",
+      "anchor": "record-principal-members",
+      "target": "draft-mcguinness-mission-approval-governance",
+      "in_family": true,
+      "candidate_package": "P3",
+      "candidate_review": "Audit the direct contract and transfer adopter duties explicitly.",
+      "context": "For `kind: policy`: the kind-specific members that the profile defining the standing-consent basis specifies (for example, {{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Policy Adjudication\")."
+    },
+    {
       "id": "C032",
-      "line": 2264,
-      "section": "Principals and Approval Basis",
-      "anchor": "record-principal-members",
-      "target": "draft-mcguinness-mission-approval-governance",
-      "in_family": true,
-      "candidate_package": "P3",
-      "candidate_review": "Audit the direct contract and transfer adopter duties explicitly.",
-      "context": "For `kind: policy`: the kind-specific members that the Approval Basis Contract defines ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Policy Adjudication\")."
-    },
-    {
-      "id": "C033",
-      "line": 2270,
-      "section": "Principals and Approval Basis",
-      "anchor": "record-principal-members",
-      "target": "draft-mcguinness-mission-approval-governance",
-      "in_family": true,
-      "candidate_package": "P3",
-      "candidate_review": "Audit the direct contract and transfer adopter duties explicitly.",
-      "context": "`approved_at`: : Absent for `direct`, whose approval event carries its own instant ({{approval-event}}); a standing-consent basis carries it ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Standing-Consent Bases\")."
-    },
-    {
-      "id": "C034",
-      "line": 2283,
+      "line": 2296,
       "section": "Principals and Approval Basis",
       "anchor": "record-principal-members",
       "target": "draft-mcguinness-mission-approval-governance",
@@ -381,8 +359,8 @@
       "context": "- Where `adjudication` is present for `direct`, `kind` MUST be `human`, with or without `governance_record`: a policy decides an instance only under a standing-consent basis ({{mission-creating-paths}}). - For `direct`, `activation.approval_event_id` MUST identify a human approval event ({{approval-event}}). Approval Governance states how a record backing a `direct` approval keeps that human decision as its accountable assertion ({{I-D.draft-mcguinness-mission-approval-governance}}). - `approval_basis` is provenance: none of the record's integrity anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`, covers it ({{integrity-anchors}}); a profile that commits the Mission Record itself covers it under that profile's own anchor. Two optional profiles commit it ({{consent-binding}}). - Its disclosure through introspection follows {{caller-authorization-and-minimization}}. - It is not carried on the baseline `mission` claim ({{mission-claim}}), and it MUST NOT be relied on to grant or widen authority wherever it does appear."
     },
     {
-      "id": "C035",
-      "line": 2342,
+      "id": "C033",
+      "line": 2355,
       "section": "Provenance and Expiry",
       "anchor": "record-provenance-members",
       "target": "draft-mcguinness-mission-approval-governance",
@@ -392,19 +370,8 @@
       "context": "`policy_version`: : OPTIONAL. A string. An opaque audit correlator naming the derivation policy version in effect at the approval event; the policy itself does not travel. It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Standing-Consent Recency\"). A deployment using such a feature records it from creation and never supplies a replacement value later."
     },
     {
-      "id": "C036",
-      "line": 2533,
-      "section": "Integrity Anchors",
-      "anchor": "integrity-anchors",
-      "target": "draft-mcguinness-mission-approval-governance",
-      "in_family": true,
-      "candidate_package": "P3",
-      "candidate_review": "Audit the direct contract and transfer adopter duties explicitly.",
-      "context": "- For `intent_hash`, `typ` is `mission-intent` and `value` is the approved Mission Intent object: the Submission envelope's `intent` member, not the envelope or its `evidence` ({{submission-envelope}}). - For `proposal_hash`, `typ` is `mission-proposed-authority` and `value` is the submitted `authorization_details` array exactly as recorded ({{proposal-derivation}}); the anchor is defined exactly when a proposal was submitted. - For `authority_hash`, `typ` is `mission-authority-set` and `value` is the Authority Set as a JSON array of entries. - For an activation policy reference's `digest`, `typ` is `mission-activation-policy` and `value` is the policy snapshot object that the Approval Basis Contract defines ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Activation Policy Commitment\")."
-    },
-    {
-      "id": "C037",
-      "line": 2610,
+      "id": "C034",
+      "line": 2618,
       "section": "Canonicalization Rules",
       "anchor": "canonicalization",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -414,8 +381,8 @@
       "context": "- The committed `value` is exactly the object the AS recorded on the Mission: the approved `intent` for `intent_hash`, the recorded `proposed_authority` for `proposal_hash`, and the `authority_set` for `authority_hash`. An auditor reproduces a digest from the record alone. - Duplicate member names are rejected at parse time ({{digest-algorithm}}). - JCS does not reorder array elements, and this document defines no element sorting, so array order is significant. The AS MUST present each committed array in its recorded order wherever it emits the committed object; that order is part of the canonical form. - URI-valued members are compared byte-for-byte, with no normalization ({{Section 12 of RFC9396}}), unless a member's own type definition specifies a normalization. Where a type defines one, as `mission_resource_access` does for its `prefix`-match resource containment test ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), it applies to that comparison alone: the default `resource` equality test remains an exact match, and anchor computation is always byte-exact over the recorded values."
     },
     {
-      "id": "C038",
-      "line": 2632,
+      "id": "C035",
+      "line": 2640,
       "section": "Digest Input and Algorithm",
       "anchor": "digest-algorithm",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -425,8 +392,8 @@
       "context": "The commitment is over the parsed I-JSON data value, not the source text: JCS does not preserve a source lexeme's spelling or excess precision. A profile whose values need exact decimal or large-integer semantics carries them as strings, as {{Section 3.1 of RFC8785}} recommends, or defines a stricter numeric domain, as the Mission Resource Access Profile's Common Constraints do for constraint values ({{I-D.draft-mcguinness-oauth-mission-resource-access}})."
     },
     {
-      "id": "C039",
-      "line": 2671,
+      "id": "C036",
+      "line": 2679,
       "section": "Binding the Mission to the Grant",
       "anchor": "grant-binding",
       "target": "draft-mcguinness-oauth-mission-continuation",
@@ -436,8 +403,8 @@
       "context": "- the authorization code issued at approval and, where its redemption emits one, the refresh-token family that follows it; or - another profile-defined reusable grant, such as a refresh-token family a continuation transport establishes later for the same Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}})."
     },
     {
-      "id": "C040",
-      "line": 2705,
+      "id": "C037",
+      "line": 2713,
       "section": "Establishing and Resolving a Binding",
       "anchor": "grant-binding-resolution",
       "target": "draft-mcguinness-oauth-mission-template",
@@ -447,8 +414,8 @@
       "context": "- the authorization code at the token endpoint; - the refresh token on refresh; - the Mission-bound `subject_token` on Token Exchange (a delegate is identified by its client authentication, {{delegated-exchange}}); or - a profile-defined grant, through the authenticated `mission` reference it carries, such as the Template profile's handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}})."
     },
     {
-      "id": "C041",
-      "line": 2726,
+      "id": "C038",
+      "line": 2734,
       "section": "Establishing and Resolving a Binding",
       "anchor": "grant-binding-resolution",
       "target": "draft-mcguinness-oauth-mission-expansion",
@@ -458,8 +425,8 @@
       "context": "Where a profile-defined operation lets a client present a Mission Identifier alongside a credential, the identifier is a non-authoritative cross-check: the AS MUST verify it against the Mission the credential resolves to and refuse a mismatch with the `invalid_grant` error code. The `predecessor` parameter of {{I-D.draft-mcguinness-oauth-mission-expansion}} is an example: it selects the Mission a successor is created from and does not reassign an existing binding."
     },
     {
-      "id": "C042",
-      "line": 2752,
+      "id": "C039",
+      "line": 2760,
       "section": "Grant Bindings and Related Mechanisms",
       "anchor": "grant-binding-related",
       "target": "draft-mcguinness-oauth-mission-continuation",
@@ -469,8 +436,8 @@
       "context": "- **Token Exchange.** A Token Exchange derivation ({{RFC8693}}) that returns only an access token establishes no new grant lineage: ordinary in-Mission delegation ({{delegation}}) and self-exchange down-scoping ({{self-exchange}}) both work this way, and the issued token is a derived token ({{mission-claim}}) whose `mission` claim identifies the one Mission its `subject_token` resolved to. Where the `subject_token` was issued under a grant lineage, the issued token retains that grant provenance, and a later redemption of a designation derived from it validates all applicable backing-grant state ({{delegated-exchange}}). A Token Exchange that instead establishes a redeemable grant lineage, such as the continuation profile's delegation-family-creating exchange ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a new grant binding, rooted in that same Mission. Three Token Exchanges are covered by the two items below instead: cross-domain projection and child creation, which return a JWT authorization grant, and expansion, which creates a successor. - **Cross-domain projection.** A cross-domain projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes no destination-side grant binding. A Resource AS consumes the cross-domain grant, and the local access token it mints there is a derived token: it identifies the one originating Mission (`mission.id`, `mission.issuer`) but is not backed by a persistent local lineage. A Resource AS holds a destination-side grant binding only where it separately establishes a redeemable grant lineage mapped to the Mission, such as a refresh-token family. - **Child Missions and successors.** A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are new Missions. Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding. They relate to their origin only by lineage (the child's `parent` member, the successor's `predecessor` member)."
     },
     {
-      "id": "C043",
-      "line": 2758,
+      "id": "C040",
+      "line": 2766,
       "section": "Grant Bindings and Related Mechanisms",
       "anchor": "grant-binding-related",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -480,8 +447,8 @@
       "context": "- **Token Exchange.** A Token Exchange derivation ({{RFC8693}}) that returns only an access token establishes no new grant lineage: ordinary in-Mission delegation ({{delegation}}) and self-exchange down-scoping ({{self-exchange}}) both work this way, and the issued token is a derived token ({{mission-claim}}) whose `mission` claim identifies the one Mission its `subject_token` resolved to. Where the `subject_token` was issued under a grant lineage, the issued token retains that grant provenance, and a later redemption of a designation derived from it validates all applicable backing-grant state ({{delegated-exchange}}). A Token Exchange that instead establishes a redeemable grant lineage, such as the continuation profile's delegation-family-creating exchange ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a new grant binding, rooted in that same Mission. Three Token Exchanges are covered by the two items below instead: cross-domain projection and child creation, which return a JWT authorization grant, and expansion, which creates a successor. - **Cross-domain projection.** A cross-domain projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes no destination-side grant binding. A Resource AS consumes the cross-domain grant, and the local access token it mints there is a derived token: it identifies the one originating Mission (`mission.id`, `mission.issuer`) but is not backed by a persistent local lineage. A Resource AS holds a destination-side grant binding only where it separately establishes a redeemable grant lineage mapped to the Mission, such as a refresh-token family. - **Child Missions and successors.** A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are new Missions. Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding. They relate to their origin only by lineage (the child's `parent` member, the successor's `predecessor` member)."
     },
     {
-      "id": "C044",
-      "line": 2767,
+      "id": "C041",
+      "line": 2775,
       "section": "Grant Bindings and Related Mechanisms",
       "anchor": "grant-binding-related",
       "target": "draft-mcguinness-oauth-mission-child-delegation",
@@ -491,8 +458,8 @@
       "context": "- **Token Exchange.** A Token Exchange derivation ({{RFC8693}}) that returns only an access token establishes no new grant lineage: ordinary in-Mission delegation ({{delegation}}) and self-exchange down-scoping ({{self-exchange}}) both work this way, and the issued token is a derived token ({{mission-claim}}) whose `mission` claim identifies the one Mission its `subject_token` resolved to. Where the `subject_token` was issued under a grant lineage, the issued token retains that grant provenance, and a later redemption of a designation derived from it validates all applicable backing-grant state ({{delegated-exchange}}). A Token Exchange that instead establishes a redeemable grant lineage, such as the continuation profile's delegation-family-creating exchange ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a new grant binding, rooted in that same Mission. Three Token Exchanges are covered by the two items below instead: cross-domain projection and child creation, which return a JWT authorization grant, and expansion, which creates a successor. - **Cross-domain projection.** A cross-domain projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes no destination-side grant binding. A Resource AS consumes the cross-domain grant, and the local access token it mints there is a derived token: it identifies the one originating Mission (`mission.id`, `mission.issuer`) but is not backed by a persistent local lineage. A Resource AS holds a destination-side grant binding only where it separately establishes a redeemable grant lineage mapped to the Mission, such as a refresh-token family. - **Child Missions and successors.** A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are new Missions. Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding. They relate to their origin only by lineage (the child's `parent` member, the successor's `predecessor` member)."
     },
     {
-      "id": "C045",
-      "line": 2769,
+      "id": "C042",
+      "line": 2777,
       "section": "Grant Bindings and Related Mechanisms",
       "anchor": "grant-binding-related",
       "target": "draft-mcguinness-oauth-mission-expansion",
@@ -502,8 +469,8 @@
       "context": "- **Token Exchange.** A Token Exchange derivation ({{RFC8693}}) that returns only an access token establishes no new grant lineage: ordinary in-Mission delegation ({{delegation}}) and self-exchange down-scoping ({{self-exchange}}) both work this way, and the issued token is a derived token ({{mission-claim}}) whose `mission` claim identifies the one Mission its `subject_token` resolved to. Where the `subject_token` was issued under a grant lineage, the issued token retains that grant provenance, and a later redemption of a designation derived from it validates all applicable backing-grant state ({{delegated-exchange}}). A Token Exchange that instead establishes a redeemable grant lineage, such as the continuation profile's delegation-family-creating exchange ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a new grant binding, rooted in that same Mission. Three Token Exchanges are covered by the two items below instead: cross-domain projection and child creation, which return a JWT authorization grant, and expansion, which creates a successor. - **Cross-domain projection.** A cross-domain projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes no destination-side grant binding. A Resource AS consumes the cross-domain grant, and the local access token it mints there is a derived token: it identifies the one originating Mission (`mission.id`, `mission.issuer`) but is not backed by a persistent local lineage. A Resource AS holds a destination-side grant binding only where it separately establishes a redeemable grant lineage mapped to the Mission, such as a refresh-token family. - **Child Missions and successors.** A Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are new Missions. Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding. They relate to their origin only by lineage (the child's `parent` member, the successor's `predecessor` member)."
     },
     {
-      "id": "C046",
-      "line": 2776,
+      "id": "C043",
+      "line": 2784,
       "section": "Grant Bindings and Related Mechanisms",
       "anchor": "grant-binding-related",
       "target": "draft-mcguinness-mission-authority-server",
@@ -513,8 +480,8 @@
       "context": "A decision-time runtime join, such as the Mission Join of {{I-D.draft-mcguinness-mission-authority-server}}, in which a policy decision point joins an ordinary OAuth credential to a Mission per request, is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound, and it rests on its own authenticated inputs and evidence, never on a Mission grant binding."
     },
     {
-      "id": "C047",
-      "line": 2823,
+      "id": "C044",
+      "line": 2831,
       "section": "Issuance Gating",
       "anchor": "issuance-gating",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -524,8 +491,8 @@
       "context": "A derivation is one issuance operation the issuer AS performs for a single request: the initial authorization-code exchange, a refresh, a Token Exchange, a cross-domain grant issuance ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or the redemption of a profile-defined grant, such as the Template profile's handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A companion profile bounds the number of derivations under a Mission ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}})."
     },
     {
-      "id": "C048",
-      "line": 2825,
+      "id": "C045",
+      "line": 2833,
       "section": "Issuance Gating",
       "anchor": "issuance-gating",
       "target": "draft-mcguinness-oauth-mission-template",
@@ -535,8 +502,8 @@
       "context": "A derivation is one issuance operation the issuer AS performs for a single request: the initial authorization-code exchange, a refresh, a Token Exchange, a cross-domain grant issuance ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or the redemption of a profile-defined grant, such as the Template profile's handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A companion profile bounds the number of derivations under a Mission ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}})."
     },
     {
-      "id": "C049",
-      "line": 2827,
+      "id": "C046",
+      "line": 2835,
       "section": "Issuance Gating",
       "anchor": "issuance-gating",
       "target": "draft-mcguinness-oauth-mission-derivation-limits",
@@ -546,8 +513,8 @@
       "context": "A derivation is one issuance operation the issuer AS performs for a single request: the initial authorization-code exchange, a refresh, a Token Exchange, a cross-domain grant issuance ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or the redemption of a profile-defined grant, such as the Template profile's handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A companion profile bounds the number of derivations under a Mission ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}})."
     },
     {
-      "id": "C050",
-      "line": 2960,
+      "id": "C047",
+      "line": 2968,
       "section": "Mission Error Member",
       "anchor": "mission-error-member",
       "target": "draft-mcguinness-oauth-mission-status",
@@ -557,8 +524,8 @@
       "context": "- another Mission state ({{lifecycle}}), which {{issuance-gating}} also refuses, as Mission Status defines a `mission_error` value for a suspended Mission ({{I-D.draft-mcguinness-oauth-mission-status}}, Section \"Mission Lifecycle Endpoint\"); or - a further refusal at issuance, as Derivation Limits defines a `mission_error` value for an exhausted limit ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\")."
     },
     {
-      "id": "C051",
-      "line": 2964,
+      "id": "C048",
+      "line": 2972,
       "section": "Mission Error Member",
       "anchor": "mission-error-member",
       "target": "draft-mcguinness-oauth-mission-derivation-limits",
@@ -568,8 +535,8 @@
       "context": "- another Mission state ({{lifecycle}}), which {{issuance-gating}} also refuses, as Mission Status defines a `mission_error` value for a suspended Mission ({{I-D.draft-mcguinness-oauth-mission-status}}, Section \"Mission Lifecycle Endpoint\"); or - a further refusal at issuance, as Derivation Limits defines a `mission_error` value for an exhausted limit ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\")."
     },
     {
-      "id": "C052",
-      "line": 2982,
+      "id": "C049",
+      "line": 2990,
       "section": "Mission Error Member",
       "anchor": "mission-error-member",
       "target": "draft-mcguinness-oauth-mission-expansion",
@@ -579,8 +546,8 @@
       "context": "Each `mission_error` value this section names reports a terminated Mission ({{termination}}): no retry under the same grant cures the refusal. Further work needs a new approval or, for `superseded`, the successor Mission ({{I-D.draft-mcguinness-oauth-mission-expansion}}). A new approval is a fresh approval event, not an automatic consequence of the refusal. A credential held outside the Mission is no fallback for its task ({{downgrade-by-omission}}). The refusal gives no assurance that the refresh token remains usable. This reading is keyed on the value, not on the error code, because the same refusal covers a Mission in a non-terminal state that a companion profile registers ({{iana-lifecycle-states}}), whose meaning that profile defines."
     },
     {
-      "id": "C053",
-      "line": 3014,
+      "id": "C050",
+      "line": 3022,
       "section": "Token Claims",
       "anchor": "token-claims",
       "target": "draft-mcguinness-oauth-mission-attenuation",
@@ -590,8 +557,8 @@
       "context": "{{RFC9068}} fixes the JWT's required claims (including `jti`), the `typ` header parameter value `at+jwt`, and resource server validation ({{Section 2.1 of RFC9068}}, {{Section 2.2 of RFC9068}}, {{Section 4 of RFC9068}}). A token whose format a companion profile explicitly defines, with its own `typ` and verification rules, follows that profile instead, as the Mission Offline Attenuation root does ({{I-D.draft-mcguinness-oauth-mission-attenuation}}). JWT access-token validation remains governed by {{Section 4 of RFC9068}}, including acceptance of `at+jwt` or `application/at+jwt`. A companion-format token is consumed only under that companion's verification rules. In addition to what {{RFC9068}} requires, a derived token:"
     },
     {
-      "id": "C054",
-      "line": 3050,
+      "id": "C051",
+      "line": 3059,
       "section": "Token Claims",
       "anchor": "token-claims",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -601,8 +568,8 @@
       "context": "A delegated token is sender-constrained to the delegate's own key ({{delegated-exchange}}); the cross-domain companion requires sender-constraint for credentials that cross a trust domain ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})."
     },
     {
-      "id": "C055",
-      "line": 3079,
+      "id": "C052",
+      "line": 3088,
       "section": "Audience and Token Response",
       "anchor": "token-response",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -612,8 +579,8 @@
       "context": "Three identifiers stay distinct. An entry's `resource`, where its type defines one, names the protected resource its authority covers, and a resource server matches each request's operation target against it under the entry's type (for `mission_resource_access`, {{I-D.draft-mcguinness-oauth-mission-resource-access}}). A token request's `resource` parameter ({{RFC8707}}) selects the audience the client asks for. The token's `aud` names the recipients that accept the token, and the AS relates an entry to them through the entry's original approved audience ({{transformation-capabilities}})."
     },
     {
-      "id": "C056",
-      "line": 3310,
+      "id": "C053",
+      "line": 3319,
       "section": "Authentication Claims and Lifetime",
       "anchor": "token-authentication-lifetime",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -623,8 +590,8 @@
       "context": "A credential the Mission Issuer derives MUST have an `exp` that does not exceed the Mission's `expires_at`, so that no credential outlives the approved Mission. The cross-domain companion ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies how this bound extends transitively to tokens minted in another trust domain."
     },
     {
-      "id": "C057",
-      "line": 3383,
+      "id": "C054",
+      "line": 3392,
       "section": "Projection Steps",
       "anchor": "scope-projection-steps",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -634,8 +601,8 @@
       "context": "This is the type-agnostic form of the rule; a type's own specification states when the mapping in step 3 is safe for that type's entries (for `mission_resource_access`, {{I-D.draft-mcguinness-oauth-mission-resource-access}})."
     },
     {
-      "id": "C058",
-      "line": 3386,
+      "id": "C055",
+      "line": 3395,
       "section": "Projection Steps",
       "anchor": "scope-projection-steps",
       "target": "draft-mcguinness-mission-runtime",
@@ -645,8 +612,8 @@
       "context": "The runtime profile's enforcement-scope declarations ({{I-D.draft-mcguinness-mission-runtime}}) can reference the same mapping for the paths it covers; this rule does not depend on that profile."
     },
     {
-      "id": "C059",
-      "line": 3430,
+      "id": "C056",
+      "line": 3439,
       "section": "Scope-Only Targets",
       "anchor": "scope-projection-scope-only",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -656,8 +623,8 @@
       "context": "- Each requested value stands for the entries that the type's specification derives from the mapping (for `mission_resource_access`, {{I-D.draft-mcguinness-oauth-mission-resource-access}}). - The Authority Set is those entries narrowed to policy, and the token for that target carries their projection under the steps above. - A requested value the target's trusted mapping does not name cannot be granted, and is refused with `invalid_scope` ({{error-mapping}})."
     },
     {
-      "id": "C060",
-      "line": 3458,
+      "id": "C057",
+      "line": 3467,
       "section": "Mission Claim",
       "anchor": "mission-claim",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -667,8 +634,8 @@
       "context": "`issuer`: : REQUIRED. A string. The Mission's `issuer` ({{mission-record}}). A credential's `iss` names the party that minted it; `mission.issuer` names the party that approved and serves the Mission, and the two differ for tokens minted in another trust domain ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})."
     },
     {
-      "id": "C061",
-      "line": 3584,
+      "id": "C058",
+      "line": 3593,
       "section": "Delegation Within a Mission",
       "anchor": "delegation",
       "target": "draft-mcguinness-oauth-actor-profile",
@@ -678,8 +645,8 @@
       "context": "Delegation is an optional capability ({{conformance}}). An agent may delegate execution to downstream actors (a sub-agent, service, or tool that is itself an OAuth client) within a Mission. Delegation is represented with the OAuth Actor Profile {{I-D.draft-mcguinness-oauth-actor-profile}}, which profiles the `act` (actor) claim of {{Section 4.1 of RFC8693}}."
     },
     {
-      "id": "C062",
-      "line": 3730,
+      "id": "C059",
+      "line": 3739,
       "section": "Delegated Exchange",
       "anchor": "delegated-exchange",
       "target": "draft-mcguinness-oauth-actor-profile",
@@ -689,8 +656,8 @@
       "context": "- **The exchange is explicit.** The `subject_token` is a designation this AS issued naming the authenticated requesting client ({{designation}}), with `subject_token_type` `urn:ietf:params:oauth:token-type:access_token`, and the `requested_token_type` is `urn:ietf:params:oauth:token-type:access_token`. The AS MUST refuse any other `subject_token` with `invalid_request` ({{Section 2.2.2 of RFC8693}}); an access token issued for resource access is never sufficient. The delegate is identified by its own client authentication, and the AS asserts the actor itself ({{delegation-constraints}}). - **The delegate authenticates.** The AS MUST authenticate the requesting client, whether or not the request carries an `actor_token`, by a method it relies on to identify the client ({{Section 2.3 of RFC6749}}), and MUST refuse a client it does not so authenticate with `invalid_client` ({{Section 5.2 of RFC6749}}), issuing no token. Once it has so authenticated the client, the AS MUST refuse a request that carries an `actor_token` with `invalid_request` ({{Section 2.2.2 of RFC8693}}), issuing no token. A claimed `client_id`, possession of the designation, or proof of an independently chosen key, such as a DPoP key, does not authenticate a client. This document does not support a public client as a delegate: {{Section 2.3 of RFC6749}} lets an AS establish a client authentication method with a public client but not rely on it to identify the client. Only an extension that defines an explicit binding of a designation to its delegate admits one; deployment policy alone does not. - **Subject is stable.** `sub` remains the Mission's Subject. The delegate is an actor, not the Subject. - **`client_id` keeps its ordinary meaning.** It names the client that requested the token ({{token-claims}}); the originally-approved agent stays in the Mission Record ({{client-id-rebinding}}). - **The `act` chain identifies the delegates.** The delegated token carries an `act` claim per {{Section 4.1 of RFC8693}} and the Actor Profile {{I-D.draft-mcguinness-oauth-actor-profile}}: the outermost `act` is the current delegate, and each earlier delegate is nested in the previous actor's `act` member. Each actor object carries the members that profile defines (for example, `sub`, `iss`, and the `sub_profile` actor-type classification, such as `ai_agent`). - **The audience processes the chain.** The AS issues the delegated token only for an audience that meets the issuance rule of {{rs-mission-unaware}}, and refuses any other with `invalid_target`. - **Authority only narrows.** The delegated token's `authorization_details` MUST be a subset ({{subset}}) of the designation's authority, hence of the delegating token's and of the Mission Authority Set. A type that declares `delegation` without `narrowing` ({{transformation-capabilities}}) is delegable only unchanged: the AS MUST NOT include an entry of such a type in a delegated token unless it is equal ({{subset}}) to an entry of the presented delegating token, it keeps that entry's approved audience, and the type's delegation policy permits the delegate ({{delegation-constraints}}). The reference is the presented token, not the Mission Authority Set, so equality never restores an entry, or any part of one, that the presented token omits. - **The `mission` claim is unchanged.** The delegated token carries the delegating token's `mission` claim ({{mission-claim}}) unchanged, so every actor in the chain operates under the one consented authority. - **Each delegate is bound to its own key.** The delegated token MUST be sender-constrained ({{token-claims}}) to the **delegate's own** key: its `cnf` is the delegate's DPoP or mTLS key, not the delegating party's, and the delegate proves possession of that key in the Token Exchange. Compromise of a delegate's key therefore does not enable use of tokens bound to the agent's or another delegate's key. - **Each redemption is gated.** Issuing a delegated token is a derivation, refused unless the Mission is `active` ({{refusing-a-derivation}}). The AS MUST evaluate every redemption of a designation afresh, as a derivation of its own: the credential the designation was derived from, and all applicable grant state backing that credential, are still valid; the Mission is `active`; and the delegation policy ({{delegation-constraints}}) and the Mission's current authority admit the result. An earlier redemption establishes none of these. Where that credential was issued under a grant lineage, the backing grant state includes that lineage, kept through any exchange that established no new grant lineage ({{grant-binding-related}}). A credential issued under none, as on the Template profile's Dispatch path before its delegation family exists, has no lineage to validate; that never excuses dropping or ignoring a lineage that does exist. The Mission's `active` state never substitutes for backing grant state."
     },
     {
-      "id": "C063",
-      "line": 3785,
+      "id": "C060",
+      "line": 3794,
       "section": "Delegated Exchange",
       "anchor": "delegated-exchange",
       "target": "draft-mcguinness-oauth-mission-child-delegation",
@@ -700,8 +667,8 @@
       "context": "The `act` chain nests (`act.act`) for as long as, and only while, authority continues under the same approved Mission. A new approval basis, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) or an expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), begins its own delegation basis and chain, and no organizational, network, or deployment boundary by itself restarts or extends a chain."
     },
     {
-      "id": "C064",
-      "line": 3786,
+      "id": "C061",
+      "line": 3795,
       "section": "Delegated Exchange",
       "anchor": "delegated-exchange",
       "target": "draft-mcguinness-oauth-mission-expansion",
@@ -711,8 +678,8 @@
       "context": "The `act` chain nests (`act.act`) for as long as, and only while, authority continues under the same approved Mission. A new approval basis, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) or an expansion successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), begins its own delegation basis and chain, and no organizational, network, or deployment boundary by itself restarts or extends a chain."
     },
     {
-      "id": "C065",
-      "line": 3804,
+      "id": "C062",
+      "line": 3813,
       "section": "Instance Context in Delegated Tokens",
       "anchor": "delegated-instance-context",
       "target": "draft-mcguinness-oauth-client-instance-id",
@@ -722,8 +689,8 @@
       "context": "Where a deployment authenticates client instances ({{I-D.draft-mcguinness-oauth-client-instance-id}}, with attesters a client endorses under {{I-D.draft-mcguinness-oauth-client-attesters}}), the delegate named by the outermost `act` can be an actor that an authenticated instance represents. Instance evidence does not establish that actor ({{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}), so the AS establishes the delegate's actor identity, and that actor's trusted association with the instance, separately."
     },
     {
-      "id": "C066",
-      "line": 3805,
+      "id": "C063",
+      "line": 3814,
       "section": "Instance Context in Delegated Tokens",
       "anchor": "delegated-instance-context",
       "target": "draft-mcguinness-oauth-client-attesters",
@@ -733,8 +700,8 @@
       "context": "Where a deployment authenticates client instances ({{I-D.draft-mcguinness-oauth-client-instance-id}}, with attesters a client endorses under {{I-D.draft-mcguinness-oauth-client-attesters}}), the delegate named by the outermost `act` can be an actor that an authenticated instance represents. Instance evidence does not establish that actor ({{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}), so the AS establishes the delegate's actor identity, and that actor's trusted association with the instance, separately."
     },
     {
-      "id": "C067",
-      "line": 3809,
+      "id": "C064",
+      "line": 3818,
       "section": "Instance Context in Delegated Tokens",
       "anchor": "delegated-instance-context",
       "target": "draft-mcguinness-oauth-client-instance-id",
@@ -744,8 +711,8 @@
       "context": "Where a deployment authenticates client instances ({{I-D.draft-mcguinness-oauth-client-instance-id}}, with attesters a client endorses under {{I-D.draft-mcguinness-oauth-client-attesters}}), the delegate named by the outermost `act` can be an actor that an authenticated instance represents. Instance evidence does not establish that actor ({{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}), so the AS establishes the delegate's actor identity, and that actor's trusted association with the instance, separately."
     },
     {
-      "id": "C068",
-      "line": 3816,
+      "id": "C065",
+      "line": 3825,
       "section": "Instance Context in Delegated Tokens",
       "anchor": "delegated-instance-context",
       "target": "draft-mcguinness-oauth-actor-profile",
@@ -755,8 +722,8 @@
       "context": "Because a delegated token is sender-constrained to the delegate's own key ({{delegated-exchange}}), and the Actor Profile makes the top-level `cnf` the current presenter's key ({{I-D.draft-mcguinness-oauth-actor-profile}}), that `cnf` is a key the instance possesses."
     },
     {
-      "id": "C069",
-      "line": 3820,
+      "id": "C066",
+      "line": 3829,
       "section": "Instance Context in Delegated Tokens",
       "anchor": "delegated-instance-context",
       "target": "draft-mcguinness-oauth-client-instance-id",
@@ -766,8 +733,41 @@
       "context": "A deployment MAY convey `client_instance` in delegated tokens under {{I-D.draft-mcguinness-oauth-client-instance-id}}. This composition selects the authenticated presenting instance for output context. The instance specification owns attestation validation, instance-to-key association, audience-scoped mapping, and Context Consumer validation; this section supplies the Mission-specific authorization and context selection. Deployments configure its use and whether instance attribution is required."
     },
     {
+      "id": "C067",
+      "line": 3839,
+      "section": "Instance Context in Delegated Tokens",
+      "anchor": "delegated-instance-context",
+      "target": "draft-mcguinness-oauth-client-instance-id",
+      "in_family": false,
+      "candidate_package": "Separate",
+      "candidate_review": "Retain unless issue #1412's destination conditions are met.",
+      "context": "- When issuing context under this composition, the AS MUST use the presenting instance validated under {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange. Context is mapped from that validated instance into the output audience's Consumer Scope under {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The AS MUST NOT use context copied or remapped from an input token as a substitute for the presenting instance's evidence. For example, when instance B is authorized to continue work from instance A, output context names B; A's context does not become B's identity by remapping it. - The actor authentication, delegation eligibility, subset, and lifecycle checks of {{delegated-exchange}} and {{delegation-constraints}} still authorize the exchange; instance evidence satisfies none of them by itself. - Where deployment policy requires instance attribution, the AS MUST refuse the exchange if the required instance evidence or its association with the delegate and output key cannot be established. {{error-mapping}} gives the error codes for these refusals. - If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding. - Consumers establish presenter attribution under Sections 7.3 and 7.5 of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer requiring attribution rejects unestablished associations under {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}. - This composition does not add provenance to `client_instance`: a consumer can use the direct-attestation trust configuration only when the issuer meets that configuration's restriction against upstream context. - An issuer also conveying upstream context needs a separately specified, authenticated provenance mechanism before its context can support presenter attribution."
+    },
+    {
+      "id": "C068",
+      "line": 3844,
+      "section": "Instance Context in Delegated Tokens",
+      "anchor": "delegated-instance-context",
+      "target": "draft-mcguinness-oauth-client-instance-id",
+      "in_family": false,
+      "candidate_package": "Separate",
+      "candidate_review": "Retain unless issue #1412's destination conditions are met.",
+      "context": "- When issuing context under this composition, the AS MUST use the presenting instance validated under {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange. Context is mapped from that validated instance into the output audience's Consumer Scope under {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The AS MUST NOT use context copied or remapped from an input token as a substitute for the presenting instance's evidence. For example, when instance B is authorized to continue work from instance A, output context names B; A's context does not become B's identity by remapping it. - The actor authentication, delegation eligibility, subset, and lifecycle checks of {{delegated-exchange}} and {{delegation-constraints}} still authorize the exchange; instance evidence satisfies none of them by itself. - Where deployment policy requires instance attribution, the AS MUST refuse the exchange if the required instance evidence or its association with the delegate and output key cannot be established. {{error-mapping}} gives the error codes for these refusals. - If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding. - Consumers establish presenter attribution under Sections 7.3 and 7.5 of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer requiring attribution rejects unestablished associations under {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}. - This composition does not add provenance to `client_instance`: a consumer can use the direct-attestation trust configuration only when the issuer meets that configuration's restriction against upstream context. - An issuer also conveying upstream context needs a separately specified, authenticated provenance mechanism before its context can support presenter attribution."
+    },
+    {
+      "id": "C069",
+      "line": 3861,
+      "section": "Instance Context in Delegated Tokens",
+      "anchor": "delegated-instance-context",
+      "target": "draft-mcguinness-oauth-client-instance-id",
+      "in_family": false,
+      "candidate_package": "Separate",
+      "candidate_review": "Retain unless issue #1412's destination conditions are met.",
+      "context": "- When issuing context under this composition, the AS MUST use the presenting instance validated under {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange. Context is mapped from that validated instance into the output audience's Consumer Scope under {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The AS MUST NOT use context copied or remapped from an input token as a substitute for the presenting instance's evidence. For example, when instance B is authorized to continue work from instance A, output context names B; A's context does not become B's identity by remapping it. - The actor authentication, delegation eligibility, subset, and lifecycle checks of {{delegated-exchange}} and {{delegation-constraints}} still authorize the exchange; instance evidence satisfies none of them by itself. - Where deployment policy requires instance attribution, the AS MUST refuse the exchange if the required instance evidence or its association with the delegate and output key cannot be established. {{error-mapping}} gives the error codes for these refusals. - If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding. - Consumers establish presenter attribution under Sections 7.3 and 7.5 of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer requiring attribution rejects unestablished associations under {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}. - This composition does not add provenance to `client_instance`: a consumer can use the direct-attestation trust configuration only when the issuer meets that configuration's restriction against upstream context. - An issuer also conveying upstream context needs a separately specified, authenticated provenance mechanism before its context can support presenter attribution."
+    },
+    {
       "id": "C070",
-      "line": 3830,
+      "line": 3865,
       "section": "Instance Context in Delegated Tokens",
       "anchor": "delegated-instance-context",
       "target": "draft-mcguinness-oauth-client-instance-id",
@@ -778,7 +778,7 @@
     },
     {
       "id": "C071",
-      "line": 3835,
+      "line": 3867,
       "section": "Instance Context in Delegated Tokens",
       "anchor": "delegated-instance-context",
       "target": "draft-mcguinness-oauth-client-instance-id",
@@ -789,40 +789,7 @@
     },
     {
       "id": "C072",
-      "line": 3852,
-      "section": "Instance Context in Delegated Tokens",
-      "anchor": "delegated-instance-context",
-      "target": "draft-mcguinness-oauth-client-instance-id",
-      "in_family": false,
-      "candidate_package": "Separate",
-      "candidate_review": "Retain unless issue #1412's destination conditions are met.",
-      "context": "- When issuing context under this composition, the AS MUST use the presenting instance validated under {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange. Context is mapped from that validated instance into the output audience's Consumer Scope under {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The AS MUST NOT use context copied or remapped from an input token as a substitute for the presenting instance's evidence. For example, when instance B is authorized to continue work from instance A, output context names B; A's context does not become B's identity by remapping it. - The actor authentication, delegation eligibility, subset, and lifecycle checks of {{delegated-exchange}} and {{delegation-constraints}} still authorize the exchange; instance evidence satisfies none of them by itself. - Where deployment policy requires instance attribution, the AS MUST refuse the exchange if the required instance evidence or its association with the delegate and output key cannot be established. {{error-mapping}} gives the error codes for these refusals. - If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding. - Consumers establish presenter attribution under Sections 7.3 and 7.5 of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer requiring attribution rejects unestablished associations under {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}. - This composition does not add provenance to `client_instance`: a consumer can use the direct-attestation trust configuration only when the issuer meets that configuration's restriction against upstream context. - An issuer also conveying upstream context needs a separately specified, authenticated provenance mechanism before its context can support presenter attribution."
-    },
-    {
-      "id": "C073",
-      "line": 3856,
-      "section": "Instance Context in Delegated Tokens",
-      "anchor": "delegated-instance-context",
-      "target": "draft-mcguinness-oauth-client-instance-id",
-      "in_family": false,
-      "candidate_package": "Separate",
-      "candidate_review": "Retain unless issue #1412's destination conditions are met.",
-      "context": "- When issuing context under this composition, the AS MUST use the presenting instance validated under {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange. Context is mapped from that validated instance into the output audience's Consumer Scope under {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The AS MUST NOT use context copied or remapped from an input token as a substitute for the presenting instance's evidence. For example, when instance B is authorized to continue work from instance A, output context names B; A's context does not become B's identity by remapping it. - The actor authentication, delegation eligibility, subset, and lifecycle checks of {{delegated-exchange}} and {{delegation-constraints}} still authorize the exchange; instance evidence satisfies none of them by itself. - Where deployment policy requires instance attribution, the AS MUST refuse the exchange if the required instance evidence or its association with the delegate and output key cannot be established. {{error-mapping}} gives the error codes for these refusals. - If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding. - Consumers establish presenter attribution under Sections 7.3 and 7.5 of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer requiring attribution rejects unestablished associations under {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}. - This composition does not add provenance to `client_instance`: a consumer can use the direct-attestation trust configuration only when the issuer meets that configuration's restriction against upstream context. - An issuer also conveying upstream context needs a separately specified, authenticated provenance mechanism before its context can support presenter attribution."
-    },
-    {
-      "id": "C074",
-      "line": 3858,
-      "section": "Instance Context in Delegated Tokens",
-      "anchor": "delegated-instance-context",
-      "target": "draft-mcguinness-oauth-client-instance-id",
-      "in_family": false,
-      "candidate_package": "Separate",
-      "candidate_review": "Retain unless issue #1412's destination conditions are met.",
-      "context": "- When issuing context under this composition, the AS MUST use the presenting instance validated under {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}}, establish its trusted association with the separately authenticated delegate, and bind the output token to an instance-unique key whose possession it verified in that exchange. Context is mapped from that validated instance into the output audience's Consumer Scope under {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The AS MUST NOT use context copied or remapped from an input token as a substitute for the presenting instance's evidence. For example, when instance B is authorized to continue work from instance A, output context names B; A's context does not become B's identity by remapping it. - The actor authentication, delegation eligibility, subset, and lifecycle checks of {{delegated-exchange}} and {{delegation-constraints}} still authorize the exchange; instance evidence satisfies none of them by itself. - Where deployment policy requires instance attribution, the AS MUST refuse the exchange if the required instance evidence or its association with the delegate and output key cannot be established. {{error-mapping}} gives the error codes for these refusals. - If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding. - Consumers establish presenter attribution under Sections 7.3 and 7.5 of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer requiring attribution rejects unestablished associations under {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}. - This composition does not add provenance to `client_instance`: a consumer can use the direct-attestation trust configuration only when the issuer meets that configuration's restriction against upstream context. - An issuer also conveying upstream context needs a separately specified, authenticated provenance mechanism before its context can support presenter attribution."
-    },
-    {
-      "id": "C075",
-      "line": 3874,
+      "line": 3883,
       "section": "Delegation Constraints",
       "anchor": "delegation-constraints",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -832,8 +799,8 @@
       "context": "What may be delegated, how far, and to whom is governed per Authority Set entry by a type-defined delegation policy ({{other-types}}). For `mission_resource_access`, the policy is the `delegation` member, whose concrete depth and matcher conditions the Mission Resource Access Profile defines ({{I-D.draft-mcguinness-oauth-mission-resource-access}})."
     },
     {
-      "id": "C076",
-      "line": 3880,
+      "id": "C073",
+      "line": 3889,
       "section": "Delegation Constraints",
       "anchor": "delegation-constraints",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -843,8 +810,8 @@
       "context": "Because the policy lives in the entry, `authority_hash` commits it with the rest of the Authority Set, and it is carried with the entries wherever they go, including across a cross-domain projection where that profile's provenance rule keeps it ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})."
     },
     {
-      "id": "C077",
-      "line": 3890,
+      "id": "C074",
+      "line": 3899,
       "section": "Delegation Constraints",
       "anchor": "delegation-constraints",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -854,30 +821,30 @@
       "context": "**Delegation depth.** The delegation depth of a token is the number of delegations between the approved agent and the token's current actor: the agent's own non-delegated token is depth 0, the first delegate is depth 1, and each further delegate adds 1. The depth checked against `max_depth` is that of the token being issued, computed after appending the new outermost actor, not the depth of the delegating token. A credential projected across a trust domain carries no `act` chain and enters the target domain at depth 0 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})."
     },
     {
-      "id": "C078",
-      "line": 4034,
+      "id": "C075",
+      "line": 4043,
       "section": "Enforcement Requirements",
       "anchor": "rs-requirements",
       "target": "draft-mcguinness-oauth-mission-resource-access",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Keep the generic type contract; inspect for unique type-specific duties.",
-      "context": "1. MUST treat `authorization_details` as the authoritative expression of authority and enforce each applicable entry according to that entry's own type specification (for `mission_resource_access`, {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Where more than one carried entry applies, entries are alternative grants of authority, not conjunctive filters, unless the entry's type states otherwise. 2. MUST treat as providing no authority any applicable entry whose type it does not implement, or whose type-defined enforcement it cannot complete (an unrecognized member, an unenforceable constraint, or an unrecognized matching mode). It MUST refuse the request, with `insufficient_scope` ({{RFC6750}}) or the RAR-remediation challenge as {{rs-denials}} states, unless another applicable entry that it can fully enforce authorizes the whole request on its own, and MUST NOT combine parts of several entries to authorize one request. A failure of the token's own validation (above) rejects the token whatever its entries carry. 3. MUST NOT, when a token also carries `scope`, grant on the basis of a scope value any access broader than the corresponding `authorization_details` entry permits, including access that bypasses a constraint carried only in `authorization_details`. 4. MUST NOT infer the Mission's originally-approved agent from `client_id`, which names the client that requested this token, on a delegated token or otherwise ({{Section 4.3 of RFC8693}}, {{client-id-rebinding}}); the approved agent is recorded only in the Mission Record ({{mission-record}}) at the issuer. 5. MUST, when configured to require the `mission` claim for a Mission-governed resource, reject a token that lacks it with the `invalid_token` error code. The issuance-side duty that pairs with this rejection is stated in {{mission-governed}}, the downgrade it prevents in {{downgrade-by-omission}}, and the metadata that advertises the requirement in {{protected-resource-metadata}}. 6. MUST accept a `mission` claim only from an issuer it explicitly trusts to issue Mission-bound authorization for the resource; trusting the issuer's ordinary access tokens is not enough. It MUST require `mission.issuer` to equal the token's `iss`, unless a Mission-binding profile it has adopted ({{mission-claim-reservation}}), such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}}, explicitly establishes the permitted relationship between the two. It MUST reject a token that fails either check with the `invalid_token` error code. For an opaque token, the issuer is the AS whose introspection response or issuer-local resolution the resource server relies on, and the same checks apply to that response's `mission` member ({{introspected-consumption}})."
+      "context": "1. MUST treat `authorization_details` as the authoritative expression of authority and enforce each applicable entry according to that entry's own type specification (for `mission_resource_access`, {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Where more than one carried entry applies, entries are alternative grants of authority, not conjunctive filters, unless the entry's type states otherwise. 2. MUST treat as providing no authority any applicable entry whose type it does not implement, or whose type-defined enforcement it cannot complete (an unrecognized member, an unenforceable constraint, or an unrecognized matching mode). It MUST challenge with `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation challenge as {{rs-denials}} states, unless another applicable entry that it can fully enforce authorizes the whole request on its own, and MUST NOT combine parts of several entries to authorize one request. A failure of the token's own validation (above) rejects the token whatever its entries carry. 3. MUST NOT, when a token also carries `scope`, grant on the basis of a scope value any access broader than the corresponding `authorization_details` entry permits, including access that bypasses a constraint carried only in `authorization_details`. 4. MUST NOT infer the Mission's originally-approved agent from `client_id`, which names the client that requested this token, on a delegated token or otherwise ({{Section 4.3 of RFC8693}}, {{client-id-rebinding}}); the approved agent is recorded only in the Mission Record ({{mission-record}}) at the issuer. 5. MUST, when configured to require the `mission` claim for a Mission-governed resource, challenge with the `invalid_token` error code a request whose token lacks it. The issuance-side duty that pairs with this challenge is stated in {{mission-governed}}, the downgrade it prevents in {{downgrade-by-omission}}, and the metadata that advertises the requirement in {{protected-resource-metadata}}. 6. MUST accept a `mission` claim only from an issuer it explicitly trusts to issue Mission-bound authorization for the resource; trusting the issuer's ordinary access tokens is not enough. It MUST require `mission.issuer` to equal the token's `iss`, unless a Mission-binding profile it has adopted ({{mission-claim-reservation}}), such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}}, explicitly establishes the permitted relationship between the two. It MUST challenge with the `invalid_token` error code a request whose token fails either check. For an opaque token, the issuer is the AS whose introspection response or issuer-local resolution the resource server relies on, and the same checks apply to that response's `mission` member ({{introspected-consumption}})."
     },
     {
-      "id": "C079",
-      "line": 4068,
+      "id": "C076",
+      "line": 4078,
       "section": "Enforcement Requirements",
       "anchor": "rs-requirements",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
-      "context": "1. MUST treat `authorization_details` as the authoritative expression of authority and enforce each applicable entry according to that entry's own type specification (for `mission_resource_access`, {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Where more than one carried entry applies, entries are alternative grants of authority, not conjunctive filters, unless the entry's type states otherwise. 2. MUST treat as providing no authority any applicable entry whose type it does not implement, or whose type-defined enforcement it cannot complete (an unrecognized member, an unenforceable constraint, or an unrecognized matching mode). It MUST refuse the request, with `insufficient_scope` ({{RFC6750}}) or the RAR-remediation challenge as {{rs-denials}} states, unless another applicable entry that it can fully enforce authorizes the whole request on its own, and MUST NOT combine parts of several entries to authorize one request. A failure of the token's own validation (above) rejects the token whatever its entries carry. 3. MUST NOT, when a token also carries `scope`, grant on the basis of a scope value any access broader than the corresponding `authorization_details` entry permits, including access that bypasses a constraint carried only in `authorization_details`. 4. MUST NOT infer the Mission's originally-approved agent from `client_id`, which names the client that requested this token, on a delegated token or otherwise ({{Section 4.3 of RFC8693}}, {{client-id-rebinding}}); the approved agent is recorded only in the Mission Record ({{mission-record}}) at the issuer. 5. MUST, when configured to require the `mission` claim for a Mission-governed resource, reject a token that lacks it with the `invalid_token` error code. The issuance-side duty that pairs with this rejection is stated in {{mission-governed}}, the downgrade it prevents in {{downgrade-by-omission}}, and the metadata that advertises the requirement in {{protected-resource-metadata}}. 6. MUST accept a `mission` claim only from an issuer it explicitly trusts to issue Mission-bound authorization for the resource; trusting the issuer's ordinary access tokens is not enough. It MUST require `mission.issuer` to equal the token's `iss`, unless a Mission-binding profile it has adopted ({{mission-claim-reservation}}), such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}}, explicitly establishes the permitted relationship between the two. It MUST reject a token that fails either check with the `invalid_token` error code. For an opaque token, the issuer is the AS whose introspection response or issuer-local resolution the resource server relies on, and the same checks apply to that response's `mission` member ({{introspected-consumption}})."
+      "context": "1. MUST treat `authorization_details` as the authoritative expression of authority and enforce each applicable entry according to that entry's own type specification (for `mission_resource_access`, {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Where more than one carried entry applies, entries are alternative grants of authority, not conjunctive filters, unless the entry's type states otherwise. 2. MUST treat as providing no authority any applicable entry whose type it does not implement, or whose type-defined enforcement it cannot complete (an unrecognized member, an unenforceable constraint, or an unrecognized matching mode). It MUST challenge with `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation challenge as {{rs-denials}} states, unless another applicable entry that it can fully enforce authorizes the whole request on its own, and MUST NOT combine parts of several entries to authorize one request. A failure of the token's own validation (above) rejects the token whatever its entries carry. 3. MUST NOT, when a token also carries `scope`, grant on the basis of a scope value any access broader than the corresponding `authorization_details` entry permits, including access that bypasses a constraint carried only in `authorization_details`. 4. MUST NOT infer the Mission's originally-approved agent from `client_id`, which names the client that requested this token, on a delegated token or otherwise ({{Section 4.3 of RFC8693}}, {{client-id-rebinding}}); the approved agent is recorded only in the Mission Record ({{mission-record}}) at the issuer. 5. MUST, when configured to require the `mission` claim for a Mission-governed resource, challenge with the `invalid_token` error code a request whose token lacks it. The issuance-side duty that pairs with this challenge is stated in {{mission-governed}}, the downgrade it prevents in {{downgrade-by-omission}}, and the metadata that advertises the requirement in {{protected-resource-metadata}}. 6. MUST accept a `mission` claim only from an issuer it explicitly trusts to issue Mission-bound authorization for the resource; trusting the issuer's ordinary access tokens is not enough. It MUST require `mission.issuer` to equal the token's `iss`, unless a Mission-binding profile it has adopted ({{mission-claim-reservation}}), such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}}, explicitly establishes the permitted relationship between the two. It MUST challenge with the `invalid_token` error code a request whose token fails either check. For an opaque token, the issuer is the AS whose introspection response or issuer-local resolution the resource server relies on, and the same checks apply to that response's `mission` member ({{introspected-consumption}})."
     },
     {
-      "id": "C080",
-      "line": 4152,
+      "id": "C077",
+      "line": 4162,
       "section": "Carried Authority",
       "anchor": "rs-carried-authority",
       "target": "draft-mcguinness-oauth-mission-approved-set-verification",
@@ -887,8 +854,8 @@
       "context": "That subset relationship is an assertion by the AS, authenticated by the token signature. Mission Approved-Set Verification ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}) defines an independent check for a resource server that needs more than that assertion."
     },
     {
-      "id": "C081",
-      "line": 4230,
+      "id": "C078",
+      "line": 4240,
       "section": "Remediation Grains",
       "anchor": "remediation-grains",
       "target": "draft-mcguinness-mission-authzen",
@@ -898,8 +865,8 @@
       "context": "A denial can carry independent remediation grains: separate remediation mechanisms, each naming a next step without granting anything. There are three: the `mission_denial` attribute of the `WWW-Authenticate` challenge ({{rs-denials}}); the `insufficient_authorization` error code with the `authorization_remediation` parameter ({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), which names what `mission_denial: insufficient_authority` only points at; and the requestable denial of {{AuthZEN.ARAP}}, profiled by {{I-D.draft-mcguinness-mission-authzen}}, which routes the same denial into a governed access request rather than a fresh derivation. Each grain keeps the wire shape and response status its defining document gives it."
     },
     {
-      "id": "C082",
-      "line": 4249,
+      "id": "C079",
+      "line": 4259,
       "section": "Remediation Grains",
       "anchor": "remediation-grains",
       "target": "draft-mcguinness-oauth-mission-expansion",
@@ -909,8 +876,19 @@
       "context": "For entries outside the Authority Set, more authority requires a new approval, proposed as for a new Mission ({{authority-proposal}}), or an expansion where that companion is deployed ({{I-D.draft-mcguinness-oauth-mission-expansion}}). A client holding no refresh grant that covers the entries proposes them as for a new Mission."
     },
     {
-      "id": "C083",
-      "line": 4326,
+      "id": "C080",
+      "line": 4291,
+      "section": "Mission State via Token Introspection",
+      "anchor": "introspection",
+      "target": "draft-mcguinness-oauth-mission-status",
+      "in_family": true,
+      "candidate_package": "P2",
+      "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
+      "context": "The cases separate token representation from state freshness. Representation is where a resource server reads the token's authority: the JWT itself or, for an opaque token, its active introspection response or issuer-local resolution. Freshness is how recent its view of Mission state is: a JWT read alone shows only that the Mission was `active` when the token was issued; an introspection response reports the token and its Mission for one decision; and a state-distribution companion such as Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) reports the Mission's state, not a token's, with its own freshness. In every case the authority a resource server enforces is the one the token carries ({{rs-requirements}})."
+    },
+    {
+      "id": "C081",
+      "line": 4349,
       "section": "Mission State via Token Introspection",
       "anchor": "introspection",
       "target": "draft-mcguinness-oauth-mission-status",
@@ -920,8 +898,8 @@
       "context": "A deployment that needs bounded-staleness caching adopts the Mission Status companion, whose signed responses carry explicit freshness ({{I-D.draft-mcguinness-oauth-mission-status}})."
     },
     {
-      "id": "C084",
-      "line": 4396,
+      "id": "C082",
+      "line": 4419,
       "section": "Issuer-Only Members",
       "anchor": "only-issuer-reports-state",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -931,30 +909,19 @@
       "context": "An AS MUST NOT include `mission.state`, `mission.termination`, `proposal_hash`, `authority_hash`, `approval_basis`, or `authority_source` in an introspection response unless it holds the Mission, that is, unless it is the Mission `issuer`. Introspection at a non-issuer Resource AS, which returns only the claim-shape members, is specified by the cross-domain companion ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})."
     },
     {
-      "id": "C085",
-      "line": 4667,
+      "id": "C083",
+      "line": 4717,
       "section": "Revocation",
       "anchor": "revocation",
       "target": "draft-mcguinness-oauth-mission-status",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
-      "context": "The wire shape of that revocation is out of scope for this document. A deployment-defined authenticated surface satisfies this requirement; Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines an interoperable `revoke` operation."
+      "context": "Token validity and Mission validity are distinct: a consumer that enforces from the token alone can honor an issued access token until it expires ({{derived-token-lifetime}}), and one that checks Mission state refuses it when that check reports a non-active state, under the mechanism's freshness rules. A deployment whose consumers rely on Mission state beyond a token's lifetime offers token introspection ({{introspection}}) or Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read current state rather than infer it from token validity."
     },
     {
-      "id": "C086",
-      "line": 4701,
-      "section": "Revocation",
-      "anchor": "revocation",
-      "target": "draft-mcguinness-oauth-mission-status",
-      "in_family": true,
-      "candidate_package": "P2",
-      "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
-      "context": "Token validity and Mission validity are distinct: an issued access token remains valid until it expires ({{derived-token-lifetime}}). A deployment whose consumers rely on Mission state beyond a token's lifetime offers token introspection ({{introspection}}) or Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read current state rather than infer it from token validity."
-    },
-    {
-      "id": "C087",
-      "line": 4789,
+      "id": "C084",
+      "line": 4805,
       "section": "Error and Challenge Mapping",
       "anchor": "error-mapping",
       "target": "draft-mcguinness-oauth-mission-submission-evidence",
@@ -964,8 +931,8 @@
       "context": "In these tables, which evidence types are required follows {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, and `invalid_client_attestation` is the error code that {{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}} specifies."
     },
     {
-      "id": "C088",
-      "line": 4791,
+      "id": "C085",
+      "line": 4807,
       "section": "Error and Challenge Mapping",
       "anchor": "error-mapping",
       "target": "draft-mcguinness-oauth-client-instance-id",
@@ -975,8 +942,8 @@
       "context": "In these tables, which evidence types are required follows {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, and `invalid_client_attestation` is the error code that {{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}} specifies."
     },
     {
-      "id": "C089",
-      "line": 4820,
+      "id": "C086",
+      "line": 4836,
       "section": "Authorization Server Metadata",
       "anchor": "discovery",
       "target": "draft-mcguinness-mission-authority-server",
@@ -986,19 +953,19 @@
       "context": "A deployment can instead arrange Mission-bound authorization, including its supported types and schemas, out of band. A client holding a Mission Intent MUST NOT submit the same authority as bare `scope` or `authorization_details` to an AS whose Mission support is neither advertised nor otherwise established; it surfaces the inability instead ({{downgrade-by-omission}}). Where the deployment's AS cannot change, the standalone Mission Authority Server ({{I-D.draft-mcguinness-mission-authority-server}}) is the governed alternative."
     },
     {
-      "id": "C090",
-      "line": 4839,
+      "id": "C087",
+      "line": 4854,
       "section": "Authorization Server Metadata",
       "anchor": "discovery",
       "target": "draft-mcguinness-oauth-mission-resource-access",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Keep the generic type contract; inspect for unique type-specific duties.",
-      "context": "An AS that advertises support for this document MUST include at least one AS-supported type in its `authorization_details_types_supported` metadata ({{RFC9396}}): the approved-set commitment a Mission-aware client relies on. Where `mission_resource_access` is among them, the Mission Resource Access Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), not out-of-band documentation, is that type's normative definition."
+      "context": "An AS that advertises support for this document MUST include at least one AS-supported type in its `authorization_details_types_supported` metadata ({{RFC9396}}). Where `mission_resource_access` is among them, the Mission Resource Access Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), not out-of-band documentation, is that type's normative definition."
     },
     {
-      "id": "C091",
-      "line": 4861,
+      "id": "C088",
+      "line": 4876,
       "section": "Authorization Server Metadata",
       "anchor": "discovery",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -1008,8 +975,8 @@
       "context": "- its response's key set is the source of truth for which types the AS supports; - `authorization_details_types_supported` mirrors those keys and MUST NOT list a type absent from them; and - the AS MUST publish, within that response, an entry for every supported type whose schema validates that type's documented object shape. For `mission_resource_access`, that shape, including the Common Constraints structure, is the Mission Resource Access Profile's ({{I-D.draft-mcguinness-oauth-mission-resource-access}})."
     },
     {
-      "id": "C092",
-      "line": 4891,
+      "id": "C089",
+      "line": 4906,
       "section": "Protected Resource Metadata",
       "anchor": "protected-resource-metadata",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -1019,8 +986,8 @@
       "context": "A type-defined `authorization_details` member may define its own constraint-discovery surface; `mission_resource_access`'s is defined by the Mission Resource Access Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}})."
     },
     {
-      "id": "C093",
-      "line": 4947,
+      "id": "C090",
+      "line": 4963,
       "section": "Extension Points",
       "anchor": "extension-points",
       "target": "draft-mcguinness-oauth-mission-submission-evidence",
@@ -1030,8 +997,8 @@
       "context": "- **Authority types.** The Authority Set is open to any AS-supported `authorization_details` type ({{other-types}}); the Mission apparatus (commitment, gating, delegation) is type-agnostic, subject to the delegation and projection limits in {{other-types}}. A type's specification supplies what the apparatus relies on for its entries: - the definition a proposed entry is validated against, alongside any schema advertised for the type or established out of band ({{submission-processing}}); - the enforcement semantics a resource server applies to an entry ({{rs-requirements}}); - the subset relation, which the AS applies only where it declares `narrowing` for the type; otherwise an entry is carried as approved ({{subset}}, {{transformation-capabilities}}); - the delegation policy, which the AS applies only where it declares `delegation`; an entry with no type-defined policy is non-delegable ({{delegation-constraints}}); - when a scope-projection mapping is safe for the type's entries, which the AS relies on only where it declares `projection` ({{scope-projection}}); and - any normalization a comparison of its members uses; without one, URI-valued members compare byte for byte ({{canonicalization}}). - **Intent Submission Evidence types.** The `evidence` array of the Submission envelope is open to evidence types defined by companion profiles: each type is a collision-resistant name whose owning specification defines the entry's closed schema, verification, and verified output facts ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), and an AS refuses an entry of a type it does not support rather than ignoring it ({{intent-submission-evidence}}). - **Mission Intent members.** The Mission Intent's top level ({{mission-intent}}) is open to members a companion profile defines, under a short name it registers in the Mission Intent Members registry ({{iana-intent-members}}) before use, or under a collision-resistant name. The owning specification defines, produces, and enforces each such member, and a recognized member never grants or widens authority beyond what that specification states. Closed-top-level validation ({{submission-envelope}}) refuses any top-level member that neither this document nor an implemented companion profile defines, and the AS ignores none it recognizes. Registration settles which specification owns a short name; it does not make an AS implement, recognize, or trust any member. - **Integrity anchors.** Additional committed objects use the same domain-separated, issuer-bound envelope with a new `typ` ({{integrity-anchors}}, {{commitment-mechanisms}}). A consent-disclosure commitment, an instruction-text attestation, or a delegation receipt can be committed this way without changing this document. A profile that commits an evidence or disclosure object MUST commit it with this envelope and a `typ` that meets {{integrity-anchors}} and {{commitment-mechanisms}}, not by hashing the bare object, so the domain separation and issuer binding hold uniformly. A `mission` descriptor embedded in such an object uses the `mission` claim shape ({{mission-claim}}), optionally extended with collision-resistantly named members (for example, an `intent_hash` for audit), and is never authority-bearing on its own. - **The `mission` claim.** It is an open object: additional, collision-resistantly named members can be carried in it (for example, a runtime decision reference, a delegation receipt, or an attestation reference), under the consumer rules of {{mission-claim}}. - **Mission Record members.** The Mission Record is open to additional members set at creation, under short names a companion profile coordinates with this document or under collision-resistant names, as {{mission-record}} states. - **Lifecycle state and termination reason.** The lifecycle state space ({{lifecycle}}) is open to additional states that companion profiles register in the Mission Lifecycle States registry ({{iana-lifecycle-states}}) for lifecycles they introduce. The termination reasons ({{termination}}) are likewise open to reasons that companion profiles register in the Mission Termination Reasons registry ({{iana-termination-reasons}}). Under the forward-compatibility rule of {{lifecycle}}, only `active` permits issuance. - **Approval bases.** The `approval_basis.type` value space ({{record-principal-members}}) is open to standing-consent bases that companion profiles define under {{mission-creating-paths}}. - **Approval-event sequencing.** The approval-event steps, their order, and the atomicity of record creation with the approval decision are fixed by {{direct-approval-steps}}; the coupling of that decision to authorization-code issuance belongs to the direct flow. A companion profile MAY relocate the approval event relative to code issuance (for example, deferring the decision beyond the authorization response), provided the steps and their atomicity hold unchanged and no Mission reference exists before the record is `active`; the Mission Deferred Approval companion is such a profile ({{I-D.draft-mcguinness-oauth-mission-approval}}). A back-channel carriage profile ({{submission-other-carriages}}) MAY instead couple the approval decision to establishing the Mission grant binding and activating for redemption a grant the profile defines, such as a device code issued while the request was pending, provided the steps and their atomicity with the approval decision hold unchanged and no Mission reference exists before the record is `active`; the Mission then binds to that profile-defined reusable grant ({{grant-binding-resolution}})."
     },
     {
-      "id": "C094",
-      "line": 5007,
+      "id": "C091",
+      "line": 5023,
       "section": "Extension Points",
       "anchor": "extension-points",
       "target": "draft-mcguinness-oauth-mission-approval",
@@ -1041,19 +1008,19 @@
       "context": "- **Authority types.** The Authority Set is open to any AS-supported `authorization_details` type ({{other-types}}); the Mission apparatus (commitment, gating, delegation) is type-agnostic, subject to the delegation and projection limits in {{other-types}}. A type's specification supplies what the apparatus relies on for its entries: - the definition a proposed entry is validated against, alongside any schema advertised for the type or established out of band ({{submission-processing}}); - the enforcement semantics a resource server applies to an entry ({{rs-requirements}}); - the subset relation, which the AS applies only where it declares `narrowing` for the type; otherwise an entry is carried as approved ({{subset}}, {{transformation-capabilities}}); - the delegation policy, which the AS applies only where it declares `delegation`; an entry with no type-defined policy is non-delegable ({{delegation-constraints}}); - when a scope-projection mapping is safe for the type's entries, which the AS relies on only where it declares `projection` ({{scope-projection}}); and - any normalization a comparison of its members uses; without one, URI-valued members compare byte for byte ({{canonicalization}}). - **Intent Submission Evidence types.** The `evidence` array of the Submission envelope is open to evidence types defined by companion profiles: each type is a collision-resistant name whose owning specification defines the entry's closed schema, verification, and verified output facts ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), and an AS refuses an entry of a type it does not support rather than ignoring it ({{intent-submission-evidence}}). - **Mission Intent members.** The Mission Intent's top level ({{mission-intent}}) is open to members a companion profile defines, under a short name it registers in the Mission Intent Members registry ({{iana-intent-members}}) before use, or under a collision-resistant name. The owning specification defines, produces, and enforces each such member, and a recognized member never grants or widens authority beyond what that specification states. Closed-top-level validation ({{submission-envelope}}) refuses any top-level member that neither this document nor an implemented companion profile defines, and the AS ignores none it recognizes. Registration settles which specification owns a short name; it does not make an AS implement, recognize, or trust any member. - **Integrity anchors.** Additional committed objects use the same domain-separated, issuer-bound envelope with a new `typ` ({{integrity-anchors}}, {{commitment-mechanisms}}). A consent-disclosure commitment, an instruction-text attestation, or a delegation receipt can be committed this way without changing this document. A profile that commits an evidence or disclosure object MUST commit it with this envelope and a `typ` that meets {{integrity-anchors}} and {{commitment-mechanisms}}, not by hashing the bare object, so the domain separation and issuer binding hold uniformly. A `mission` descriptor embedded in such an object uses the `mission` claim shape ({{mission-claim}}), optionally extended with collision-resistantly named members (for example, an `intent_hash` for audit), and is never authority-bearing on its own. - **The `mission` claim.** It is an open object: additional, collision-resistantly named members can be carried in it (for example, a runtime decision reference, a delegation receipt, or an attestation reference), under the consumer rules of {{mission-claim}}. - **Mission Record members.** The Mission Record is open to additional members set at creation, under short names a companion profile coordinates with this document or under collision-resistant names, as {{mission-record}} states. - **Lifecycle state and termination reason.** The lifecycle state space ({{lifecycle}}) is open to additional states that companion profiles register in the Mission Lifecycle States registry ({{iana-lifecycle-states}}) for lifecycles they introduce. The termination reasons ({{termination}}) are likewise open to reasons that companion profiles register in the Mission Termination Reasons registry ({{iana-termination-reasons}}). Under the forward-compatibility rule of {{lifecycle}}, only `active` permits issuance. - **Approval bases.** The `approval_basis.type` value space ({{record-principal-members}}) is open to standing-consent bases that companion profiles define under {{mission-creating-paths}}. - **Approval-event sequencing.** The approval-event steps, their order, and the atomicity of record creation with the approval decision are fixed by {{direct-approval-steps}}; the coupling of that decision to authorization-code issuance belongs to the direct flow. A companion profile MAY relocate the approval event relative to code issuance (for example, deferring the decision beyond the authorization response), provided the steps and their atomicity hold unchanged and no Mission reference exists before the record is `active`; the Mission Deferred Approval companion is such a profile ({{I-D.draft-mcguinness-oauth-mission-approval}}). A back-channel carriage profile ({{submission-other-carriages}}) MAY instead couple the approval decision to establishing the Mission grant binding and activating for redemption a grant the profile defines, such as a device code issued while the request was pending, provided the steps and their atomicity with the approval decision hold unchanged and no Mission reference exists before the record is `active`; the Mission then binds to that profile-defined reusable grant ({{grant-binding-resolution}})."
     },
     {
-      "id": "C095",
-      "line": 5066,
+      "id": "C092",
+      "line": 5121,
       "section": "Mission-Creating Paths",
       "anchor": "mission-creating-paths",
       "target": "draft-mcguinness-mission-approval-governance",
       "in_family": true,
       "candidate_package": "P3",
       "candidate_review": "Audit the direct contract and transfer adopter duties explicitly.",
-      "context": "- **Relocating the direct ceremony.** A profile that defers the approval decision, or carries the submission over a back channel, keeps the direct approval: the basis stays `direct`, and Approval-event sequencing ({{extension-points}}) states what the relocation keeps unchanged. - **Activating under standing consent.** A profile can define a named standing-consent basis, under which a template or policy activates Mission instances against an accountable human's earlier approval, with no fresh human approval per instance; each instance is still created at its own approval event ({{approval-event}}). Any companion profile that defines a standing-consent basis MUST make the basis conform to the Approval Basis Contract ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Approval Basis Contract\"), and an issuer that activates a Mission under such a basis MUST conform to the Contract for it. Neither requirement binds a deployment that creates Missions only on the direct path. The basis's `approval_basis.type` values form a specification-defined namespace with no registry ({{namespace-taxonomy}})."
+      "context": "Mission Approval Governance {{I-D.draft-mcguinness-mission-approval-governance}} defines an Approval Basis Contract, covering activation policy commitment, standing-consent recency, and policy adjudication, which the companion profiles that define standing-consent bases for this document adopt. A profile defined elsewhere can meet this section's requirements by another mechanism."
     },
     {
-      "id": "C096",
-      "line": 5132,
+      "id": "C093",
+      "line": 5157,
       "section": "Commitment Mechanisms",
       "anchor": "commitment-mechanisms",
       "target": "draft-mcguinness-mission-substrate",
@@ -1063,8 +1030,8 @@
       "context": "This document's anchors and digest rules ({{integrity-anchors}}, {{digest-algorithm}}), with this taxonomy, instantiate the default commitment construction of {{I-D.draft-mcguinness-mission-substrate}}. A commitment outside this construction (a native content address, a member-named digest whose member name fixes the algorithm) is permitted; its defining specification states its own algorithm identification and agility behavior."
     },
     {
-      "id": "C097",
-      "line": 5238,
+      "id": "C094",
+      "line": 5263,
       "section": "Conformance Roles",
       "anchor": "conformance-roles",
       "target": "draft-mcguinness-oauth-mission-submission-evidence",
@@ -1074,8 +1041,8 @@
       "context": "An AS can conform as a Mission Issuer without supporting any Intent Submission Evidence type. Such an AS refuses every presented entry under the dispatch and refusal rules ({{intent-submission-evidence}}): a structurally invalid entry with the `invalid_request` error code, and any other entry, as an unsupported type, with the `invalid_mission_intent_evidence` error code. It need not implement the evidence framework of {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} for this configuration. The companion defines conformance for ASs supporting an evidence type, whether its evidence is optional or required."
     },
     {
-      "id": "C098",
-      "line": 5306,
+      "id": "C095",
+      "line": 5331,
       "section": "Optional Capabilities",
       "anchor": "optional-capabilities",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -1085,8 +1052,8 @@
       "context": "This bar is self-contained in this document. The companion Mission Cross-Domain Projection profile ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies the interoperable mechanism that satisfies it, and implementations that interoperate across the hop implement that companion."
     },
     {
-      "id": "C099",
-      "line": 5311,
+      "id": "C096",
+      "line": 5336,
       "section": "Optional Capabilities",
       "anchor": "optional-capabilities",
       "target": "draft-mcguinness-oauth-mission-approved-set-verification",
@@ -1096,8 +1063,8 @@
       "context": "Mission Approved-Set Verification ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}}) defines an independent check, by a resource server or policy decision point, that a token's carried authority is a subset of the complete approved Authority Set; conformance to this document does not require it."
     },
     {
-      "id": "C100",
-      "line": 5337,
+      "id": "C097",
+      "line": 5362,
       "section": "Claiming Conformance",
       "anchor": "claiming-conformance",
       "target": "draft-mcguinness-mission-architecture",
@@ -1107,8 +1074,8 @@
       "context": "The Mission Binding Properties vector of {{I-D.draft-mcguinness-mission-architecture}} names what these gates supply as its `credential-mission-bound` property, informatively; these gates remain authoritative for conformance to this document regardless."
     },
     {
-      "id": "C101",
-      "line": 5344,
+      "id": "C098",
+      "line": 5369,
       "section": "Claiming Conformance",
       "anchor": "claiming-conformance",
       "target": "draft-mcguinness-mission-substrate",
@@ -1118,8 +1085,8 @@
       "context": "This document makes no Mission Substrate conformance claim and takes no requirement from the substrate contract ({{I-D.draft-mcguinness-mission-substrate}}), which is informative."
     },
     {
-      "id": "C102",
-      "line": 5402,
+      "id": "C099",
+      "line": 5427,
       "section": "Binding Index",
       "anchor": "binding-index",
       "target": "draft-mcguinness-oauth-mission-management",
@@ -1129,8 +1096,8 @@
       "context": "An issuer that needs to cascade a lifecycle operation, or to enumerate a Mission's bound grant lineages and credentials, maintains its own issuer-side index from the Mission to each binding; a Mission Management companion ({{I-D.draft-mcguinness-oauth-mission-management}}) can standardize that index's wire surface."
     },
     {
-      "id": "C103",
-      "line": 5486,
+      "id": "C100",
+      "line": 5511,
       "section": "Consent Binding",
       "anchor": "consent-binding",
       "target": "draft-mcguinness-oauth-mission-consent-evidence",
@@ -1140,8 +1107,8 @@
       "context": "A deployment whose Missions carry high-risk authority can retain presentation-level audit evidence from which the disclosure shown can be reconstructed and audited. Mission Consent Evidence {{I-D.draft-mcguinness-oauth-mission-consent-evidence}} binds a `consent_rendering_hash` over a structured consent-disclosure object on the wire; an AS that does not implement it can record equivalent evidence out of band. Such a commitment binds the structured disclosure the AS records, not the presentation itself; it narrows this gap for audit but does not close it."
     },
     {
-      "id": "C104",
-      "line": 5498,
+      "id": "C101",
+      "line": 5523,
       "section": "Consent Binding",
       "anchor": "consent-binding",
       "target": "draft-mcguinness-mission-audit",
@@ -1151,8 +1118,8 @@
       "context": "The anchors do not commit the approval basis either: who consented, who activated the Mission, and under which basis ({{mission-record}}). The record's immutability protects it, and only the AS enforces that. A deployment that needs the approval basis checkable outside the AS can register the approval event under Mission Audit Transparency {{I-D.draft-mcguinness-mission-audit}}, whose registration covers the record at creation except its `state` and `termination`, or carry the Approval Context Commitment of {{I-D.draft-mcguinness-mission-approval-governance}}, whose closed manifest includes the approval basis, in a signed artifact."
     },
     {
-      "id": "C105",
-      "line": 5501,
+      "id": "C102",
+      "line": 5526,
       "section": "Consent Binding",
       "anchor": "consent-binding",
       "target": "draft-mcguinness-mission-approval-governance",
@@ -1162,8 +1129,8 @@
       "context": "The anchors do not commit the approval basis either: who consented, who activated the Mission, and under which basis ({{mission-record}}). The record's immutability protects it, and only the AS enforces that. A deployment that needs the approval basis checkable outside the AS can register the approval event under Mission Audit Transparency {{I-D.draft-mcguinness-mission-audit}}, whose registration covers the record at creation except its `state` and `termination`, or carry the Approval Context Commitment of {{I-D.draft-mcguinness-mission-approval-governance}}, whose closed manifest includes the approval basis, in a signed artifact."
     },
     {
-      "id": "C106",
-      "line": 5517,
+      "id": "C103",
+      "line": 5542,
       "section": "Downgrade by Omission",
       "anchor": "downgrade-by-omission",
       "target": "draft-mcguinness-mission-security-model",
@@ -1173,8 +1140,8 @@
       "context": "A held ordinary credential needs no request to the AS, and neither an AS nor a resource server can generally tell that a request made with one serves a Mission. An unmediated ordinary workflow at a resource that is not Mission-governed therefore remains a residual that only the client's own conformance closes; the Mission Security Model ({{I-D.draft-mcguinness-mission-security-model}}) analyzes that path and where mediation closes it."
     },
     {
-      "id": "C107",
-      "line": 5553,
+      "id": "C104",
+      "line": 5578,
       "section": "Prompt Injection and Data Exfiltration",
       "anchor": "prompt-injection",
       "target": "draft-mcguinness-mission-security-model",
@@ -1184,8 +1151,8 @@
       "context": "Within an approved Authority Set, an injected agent can still read what the Mission permits and write to a sink the Mission permits: a Mission governs actions, not the content that flows within an authorized action. The Mission Security Model ({{I-D.draft-mcguinness-mission-security-model}}) analyzes that residual; constraining it is the runtime layer's role ({{runtime-boundary}}), and even there it is bounded, not closed: preventing misuse of data within the authorized scope needs an information-flow layer this document does not define."
     },
     {
-      "id": "C108",
-      "line": 5569,
+      "id": "C105",
+      "line": 5594,
       "section": "Authority and Propagated Information",
       "anchor": "information-propagation",
       "target": "draft-mcguinness-mission-security-model",
@@ -1195,8 +1162,8 @@
       "context": "Issuance gating bounds escalation by token acquisition ({{issuance-gating}}, {{subset}}), and the same bound holds for information: an agent can inherit another agent's knowledge, but not its authority. A work product of one Mission is input, not authority, to an agent under another Mission, which acts on it only under its own Authority Set. Independent Missions communicating through shared state can still compose individually acceptable actions into behavior no single Mission authorized; the Mission Security Model ({{I-D.draft-mcguinness-mission-security-model}}) analyzes that coordination."
     },
     {
-      "id": "C109",
-      "line": 5595,
+      "id": "C106",
+      "line": 5620,
       "section": "Issuance Scope and Runtime Enforcement",
       "anchor": "runtime-boundary",
       "target": "draft-mcguinness-mission-architecture",
@@ -1206,8 +1173,8 @@
       "context": "A deployment can use Missions for issuance alone ({{I-D.draft-mcguinness-mission-architecture}}, Section \"The Issuance-Only Deployment\"). A runtime layer ({{I-D.draft-mcguinness-mission-runtime}}), out of scope for this document, evaluates each consequential action against the Mission, with parameter binding, and records evidence for the actions it covers. A deployment adds one for an action class that needs any of the following, which issuance-time bounds alone do not provide:"
     },
     {
-      "id": "C110",
-      "line": 5597,
+      "id": "C107",
+      "line": 5622,
       "section": "Issuance Scope and Runtime Enforcement",
       "anchor": "runtime-boundary",
       "target": "draft-mcguinness-mission-runtime",
@@ -1217,8 +1184,8 @@
       "context": "A deployment can use Missions for issuance alone ({{I-D.draft-mcguinness-mission-architecture}}, Section \"The Issuance-Only Deployment\"). A runtime layer ({{I-D.draft-mcguinness-mission-runtime}}), out of scope for this document, evaluates each consequential action against the Mission, with parameter binding, and records evidence for the actions it covers. A deployment adds one for an action class that needs any of the following, which issuance-time bounds alone do not provide:"
     },
     {
-      "id": "C111",
-      "line": 5610,
+      "id": "C108",
+      "line": 5635,
       "section": "Issuance Scope and Runtime Enforcement",
       "anchor": "runtime-boundary",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -1228,8 +1195,8 @@
       "context": "Where the resource server or a composing runtime layer matches an operation target against a `prefix` entry, the Resource Boundary Canonicalization analysis of the Mission Resource Access Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) gives the single-normalization rule for that match, for a deployment that supports that type."
     },
     {
-      "id": "C112",
-      "line": 5620,
+      "id": "C109",
+      "line": 5645,
       "section": "Issuance Scope and Runtime Enforcement",
       "anchor": "runtime-boundary",
       "target": "draft-mcguinness-mission-runtime",
@@ -1239,8 +1206,8 @@
       "context": "Short-lived access tokens are this document's issuance-only recommendation: with no runtime layer, token lifetime is the revocation-latency bound at unmodified resource servers. Where a runtime layer covers the high-consequence classes with an active freshness source, the point-of-use decision is the revocation cutoff, and lifetimes can be sized by action class without losing that cutoff ({{I-D.draft-mcguinness-mission-runtime}})."
     },
     {
-      "id": "C113",
-      "line": 5717,
+      "id": "C110",
+      "line": 5742,
       "section": "Composition and the Effective Ceiling",
       "anchor": "composition-and-the-effective-ceiling",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -1250,8 +1217,8 @@
       "context": "Delegation depth ({{delegation-constraints}}) resets at each cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) and, where a deployment runs the child-delegation profile, at each child generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), so the authority a Mission's descendants can reach can exceed what a single approval appears to bound at consent time. Where that apparent bound must hold in practice, a deployment can impose a global cap out of band; the Mission Security Model ({{I-D.draft-mcguinness-mission-security-model}}) analyzes the composition."
     },
     {
-      "id": "C114",
-      "line": 5719,
+      "id": "C111",
+      "line": 5744,
       "section": "Composition and the Effective Ceiling",
       "anchor": "composition-and-the-effective-ceiling",
       "target": "draft-mcguinness-oauth-mission-child-delegation",
@@ -1261,8 +1228,8 @@
       "context": "Delegation depth ({{delegation-constraints}}) resets at each cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) and, where a deployment runs the child-delegation profile, at each child generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), so the authority a Mission's descendants can reach can exceed what a single approval appears to bound at consent time. Where that apparent bound must hold in practice, a deployment can impose a global cap out of band; the Mission Security Model ({{I-D.draft-mcguinness-mission-security-model}}) analyzes the composition."
     },
     {
-      "id": "C115",
-      "line": 5724,
+      "id": "C112",
+      "line": 5749,
       "section": "Composition and the Effective Ceiling",
       "anchor": "composition-and-the-effective-ceiling",
       "target": "draft-mcguinness-mission-security-model",
@@ -1272,8 +1239,19 @@
       "context": "Delegation depth ({{delegation-constraints}}) resets at each cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) and, where a deployment runs the child-delegation profile, at each child generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), so the authority a Mission's descendants can reach can exceed what a single approval appears to bound at consent time. Where that apparent bound must hold in practice, a deployment can impose a global cap out of band; the Mission Security Model ({{I-D.draft-mcguinness-mission-security-model}}) analyzes the composition."
     },
     {
-      "id": "C116",
-      "line": 5792,
+      "id": "C113",
+      "line": 5780,
+      "section": "Signing and Key Rotation",
+      "anchor": "key-rotation",
+      "target": "draft-mcguinness-mission-mandate",
+      "in_family": true,
+      "candidate_package": "P1",
+      "candidate_review": "Remove explanatory detours only after checking for a unique obligation.",
+      "context": "Verification for audit outlives validity: keeping a key resolvable for the audit horizon ({{audit-horizon}}) of every Mission whose tokens it signed lets an auditor verify those tokens later. A companion that anchors a longer-lived artifact to the same keys (a status assertion, a Mandate {{I-D.draft-mcguinness-mission-mandate}}, registered evidence) states its own retention bound."
+    },
+    {
+      "id": "C114",
+      "line": 5818,
       "section": "Mission Identifier Correlation",
       "anchor": "mission-identifier-correlation",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -1283,8 +1261,8 @@
       "context": "This document carries a single canonical Mission Identifier on every derived token, and cross-domain projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) carries it across trust domains unchanged. Any party that observes credentials for the same Mission, whether a resource server, a Resource AS, or an auditor spanning audiences, can correlate that activity by the Mission Identifier, and `mission.issuer` further identifies the issuing AS."
     },
     {
-      "id": "C117",
-      "line": 5863,
+      "id": "C115",
+      "line": 5889,
       "section": "Third-Party Data Subjects",
       "anchor": "third-party-data-subjects",
       "target": "draft-mcguinness-mission-metering",
@@ -1294,8 +1272,8 @@
       "context": "- the prose members (`goal`, `task_bounds`) and `purpose`; - `target_resources` and any explicit member a companion profile defines (for example, the metering companion's consumption bounds, {{I-D.draft-mcguinness-mission-metering}}); - any type-owned member of a proposed entry, and the derived Authority Set entries that reach tokens ({{mission-bound-tokens}}); and - `submission_evidence` facts, including a consent reference."
     },
     {
-      "id": "C118",
-      "line": 5904,
+      "id": "C116",
+      "line": 5930,
       "section": "Mission Record and Evidence Access",
       "anchor": "record-access",
       "target": "draft-mcguinness-mission-audit",
@@ -1305,8 +1283,8 @@
       "context": "Where approval-event evidence was registered under the audit transparency profile ({{I-D.draft-mcguinness-mission-audit}}), its erasure record and data-subject-request basis are the transparency-side mechanism. That mechanism records an erasure but neither performs one nor overrides retention law, and it leaves the operational Mission Record and its audit-horizon retention floor untouched."
     },
     {
-      "id": "C119",
-      "line": 5930,
+      "id": "C117",
+      "line": 5956,
       "section": "Internationalization Considerations",
       "anchor": "i18n",
       "target": "draft-mcguinness-oauth-mission-consent-evidence",
@@ -1316,8 +1294,8 @@
       "context": "- `goal_lang` is a syntactic declaration: the AS checks only its well-formedness ({{mission-intent}}), not that the prose is in the declared language, so the tag is not a verified property of the text. - Rendering to the Approver follows the rendering rules of {{rendering-safeguards}} unchanged: client prose stays inert text in any language and any script, including bidirectional text. Where the approval surface presents a translation, the rendered disclosure is what the deployment's consent evidence records (Mission Consent Evidence binds one locale, one disclosure, one hash, {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); `goal_lang` declares the source's language and is not a record of what was rendered. - Authority Set entries carry machine-facing identifiers (URIs, action strings, structured constraints), not prose, and this document adds no language-tagged display fields to them. Localizing how authority is explained is the approval surface's duty under {{approval-event}}, not a property of the committed set."
     },
     {
-      "id": "C120",
-      "line": 6207,
+      "id": "C118",
+      "line": 6233,
       "section": "End-to-End Example",
       "anchor": "e2e-example",
       "target": "draft-mcguinness-oauth-mission-resource-access",
@@ -1327,8 +1305,8 @@
       "context": "The OAuth flow of Stages 1 to 4, and the revocation in Stage 5, use only this document and the `mission_resource_access` type ({{I-D.draft-mcguinness-oauth-mission-resource-access}}): the baseline issuance path, with enforcement from the token alone, bounded by token lifetime."
     },
     {
-      "id": "C121",
-      "line": 6561,
+      "id": "C119",
+      "line": 6587,
       "section": "Scope",
       "anchor": "scope-and-future-work",
       "target": "draft-mcguinness-oauth-actor-profile",
@@ -1338,8 +1316,8 @@
       "context": "Its reference to the OAuth Actor Profile ({{I-D.draft-mcguinness-oauth-actor-profile}}), for the `act` chain shape the optional Delegation capability uses, is normative and binds only a deployment that claims Delegation, so the mandatory single-domain core does not depend on it."
     },
     {
-      "id": "C122",
-      "line": 6567,
+      "id": "C120",
+      "line": 6593,
       "section": "Scope",
       "anchor": "scope-and-future-work",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
@@ -1349,8 +1327,8 @@
       "context": "The companion Mission Cross-Domain Projection profile {{I-D.draft-mcguinness-oauth-mission-cross-domain}} specifies cross-domain projection, a single hop that lets an authorization server in another trust domain honor a Mission, and carries the identity-chaining and Identity Assertion JWT Authorization Grant (ID-JAG) dependencies. The Cross-Domain capability's conformance bar is self-contained in this document ({{conformance}}), so that companion is not a normative dependency."
     },
     {
-      "id": "C123",
-      "line": 6580,
+      "id": "C121",
+      "line": 6606,
       "section": "Scope",
       "anchor": "scope-and-future-work",
       "target": "draft-mcguinness-oauth-client-instance-id",
@@ -1360,8 +1338,8 @@
       "context": "This document defines no mechanism that pins a Mission to an approved agent deployment class or version, and reserves no Intent member for one. Such a pin needs two objects, not one Intent member: a committed approval-context pin, and presenter-instance evidence checked at every derivation (for example, using {{I-D.draft-mcguinness-oauth-client-instance-id}} and {{I-D.draft-mcguinness-oauth-client-attesters}}). A profile that defines the pin also defines:"
     },
     {
-      "id": "C124",
-      "line": 6581,
+      "id": "C122",
+      "line": 6607,
       "section": "Scope",
       "anchor": "scope-and-future-work",
       "target": "draft-mcguinness-oauth-client-attesters",
@@ -1371,8 +1349,8 @@
       "context": "This document defines no mechanism that pins a Mission to an approved agent deployment class or version, and reserves no Intent member for one. Such a pin needs two objects, not one Intent member: a committed approval-context pin, and presenter-instance evidence checked at every derivation (for example, using {{I-D.draft-mcguinness-oauth-client-instance-id}} and {{I-D.draft-mcguinness-oauth-client-attesters}}). A profile that defines the pin also defines:"
     },
     {
-      "id": "C125",
-      "line": 6591,
+      "id": "C123",
+      "line": 6617,
       "section": "Scope",
       "anchor": "scope-and-future-work",
       "target": "draft-mcguinness-mission-metering",
@@ -1382,59 +1360,59 @@
       "context": "This document defines no cumulative consumption bounds (for example, a budget, call-count, or activity-duration cap). An experimental companion ({{I-D.draft-mcguinness-mission-metering}}) defines them as explicit Mission Intent extension members, together with the runtime metering that enforces them."
     },
     {
-      "id": "C126",
-      "line": 6616,
+      "id": "C124",
+      "line": 6642,
       "section": "Non-Goals",
       "anchor": "non-goals",
       "target": "draft-mcguinness-oauth-mission-expansion",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
-      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. `authority_hash` is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
+      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. The `authority_hash` anchor is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
     },
     {
-      "id": "C127",
-      "line": 6621,
+      "id": "C125",
+      "line": 6647,
       "section": "Non-Goals",
       "anchor": "non-goals",
       "target": "draft-mcguinness-oauth-mission-signals",
       "in_family": true,
       "candidate_package": "P1",
       "candidate_review": "Remove explanatory detours only after checking for a unique obligation.",
-      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. `authority_hash` is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
+      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. The `authority_hash` anchor is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
     },
     {
-      "id": "C128",
-      "line": 6626,
+      "id": "C126",
+      "line": 6652,
       "section": "Non-Goals",
       "anchor": "non-goals",
       "target": "draft-mcguinness-oauth-mission-status",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
-      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. `authority_hash` is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
+      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. The `authority_hash` anchor is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
     },
     {
-      "id": "C129",
-      "line": 6631,
+      "id": "C127",
+      "line": 6657,
       "section": "Non-Goals",
       "anchor": "non-goals",
       "target": "draft-mcguinness-oauth-mission-cross-domain",
       "in_family": true,
       "candidate_package": "P2",
       "candidate_review": "Separate a generic invariant from any mechanism-specific duty.",
-      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. `authority_hash` is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
+      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. The `authority_hash` anchor is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
     },
     {
-      "id": "C130",
-      "line": 6633,
+      "id": "C128",
+      "line": 6659,
       "section": "Non-Goals",
       "anchor": "non-goals",
       "target": "draft-mcguinness-oauth-mission-cross-org-delegation",
       "in_family": true,
       "candidate_package": "P1",
       "candidate_review": "Remove explanatory detours only after checking for a unique obligation.",
-      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. `authority_hash` is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
+      "context": "- **Semantic / intent verification.** This document does not evaluate whether a runtime action serves the Mission's purpose beyond matching the approved `authorization_details` and `constraints`; per-action evaluation is the runtime layer's role ({{runtime-boundary}}). Verifying an agent's declared reasoning against the task is a further attestation problem outside both layers. - **Joint outcome and cross-resource effects.** Whether the actions taken under a Mission jointly accomplish its task is out of scope, as are the ordering, timing, atomicity, and compensation of their effects across resource servers. The `mission` claim joins requests to an approval for issuance and audit; it does not identify a business transaction. - **Approval-free authorization upgrade.** The Authority Set is committed at approval, and this document defines no mid-stream widening that bypasses consent. Widening requires a new approval, a successor Mission, as specified by Mission Expansion {{I-D.draft-mcguinness-oauth-mission-expansion}}. - **Lifecycle event distribution.** A resource server learns Mission state from the token lifetime or optional introspection ({{introspection}}); this document defines no push-based notification of Mission state changes. Mission Lifecycle Signals ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared Signals and CAEP profile for Mission lifecycle events, delivered as Security Event Tokens ({{RFC8935}}). - **Human-in-the-loop suspension.** The base lifecycle is `active` and `terminated` ({{lifecycle}}). Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a `suspended` state with `resume`/`complete` transitions as an optional extension. A pending-human-approval state and a holding-token pause-and-resume protocol are future lifecycle work. - **Multi-hop cross-domain projection.** Cross-Domain Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a single projection hop. Mission Cross-Organizational Delegation ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}) profiles recursive delegation across organizations; a destination verifies that delegation chain before projecting. Re-projecting a Mission from one Resource AS into a further domain is future work. - **Decentralized agent identity.** Agent identity and credentialing are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs the approved-task artifact those identities act within, not the identities themselves. - **Cross-audience unlinkability.** A single canonical Mission Identifier lets any party holding a token correlate a Mission's activity across audiences and resources. The `authority_hash` anchor is not part of that baseline correlation surface: it stays on the Mission Record and the audit and profile surfaces that carry it by disclosure privilege ({{mission-claim}}, {{caller-authorization-and-minimization}}), not on every token by default. Pairwise or unlinkable presentation of Mission-bound authority works against the identifier and is therefore future work ({{mission-identifier-correlation}})."
     }
   ]
 }

@@ -25,6 +25,23 @@ The [posted owner ruling for #1895](https://github.com/mcguinness/mission-bound-
 
 At `3d3185378604c70e655a663c7b6ef103366ba5d5`, the [conformance manifest](https://github.com/mcguinness/mission-bound-authorization/blob/3d3185378604c70e655a663c7b6ef103366ba5d5/conformance-manifest.json) includes `core.approval-basis.standing-consent-root-commitment-required` and other `core.*` IDs with Approval Governance as their `spec`. The critique identifies a naming and traceability risk, but a source-prefixed ID does not by itself establish the wrong normative owner.
 
+## Revision 3 (2026-11-02)
+
+D1195 required the plan's stale execution text to be updated before reuse, and a review against `main` at `ac00dc76` found the gaps below.
+
+| Finding | Disposition in revision 3 |
+| --- | --- |
+| P3's Governance import removal has landed (#1974, #1992, #2006), so the preparatory extension-contract commit cannot precede it. | P3 is rescoped to its remaining work: the local extension contract, A1, the adopter review and the Governance member explanations. The import is not restored and the relaxation is not undone. |
+| P0 proposed its own supersession of D1057. | Withdrawn. D1134 is the ruling of record. It supersedes the mandatory connection of D1054 and D1056, to the extent it states, as an intentional normative relaxation. |
+| The decisions table treated #1895, #1937, #1504 and F1 as open. | Updated: #1960 closed #1895, #1939 and #1942 merged, and #2006 removed the manifest edge. P2 item 5 is marked done. |
+| No tracking issue exists, and D1144 decided against one while #1967 owned the work. | #1967 is closed. P0 files a self-contained issue of about 1,000 words on the owner's "file", as D1195 recommends. |
+| Exit 5 adds author duties to Extension Points while exit 8 holds Extensibility flat. | The baseline is frozen at `ac00dc76`, and the contract is funded from text already in Extensibility. A single body budget remains the owner's alternative. |
+| The P5 readers are unnamed. | P0 item 4: name them, or rule whether a disclosed cold model reader may serve, before P3's remaining work starts. |
+| D1195's corrections to D1192: exit 5 not evaluated; exit 3 resting on the Grant Bindings catalogue; the Extensibility +63 attribution. | Recorded in the decisions table, P2 item 1 and the size section. |
+| A1, the `policy_version` example citing Governance. | P3 remaining item 2. |
+| The baseline inventory and counts are Revision 2's. | Regenerated at `ac00dc76` (112 family citations across 29 documents), with `measure.py` added for exit 8. Revision 2's inventory is in git history. |
+| P4's `payment_initiation` example: no subset relation, and possible confusion with the family's payments scenario. | P4 item 3: the delegated example carries its entry unchanged, and the fields are labelled as illustrative. |
+
 ## Status
 
-Only the local plan and this disposition have changed. The baseline citation inventory remains pinned to its original commit. No issue, D-row, specification, ledger or PR has been modified by this revision, and no review exercise or example implementation is claimed complete.
+The plan, this disposition, the regenerated inventory and the prose-budget measure are committed in a notes PR. Revision 2 is that PR's first commit, unchanged. No specification, ledger or issue changes with this revision. No review exercise or example implementation is claimed complete, and nothing is authorized beyond the owner's rulings it cites.
