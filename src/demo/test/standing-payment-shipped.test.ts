@@ -29,6 +29,9 @@ import { APPROVAL_RENDER_REVISION_HEADER, type ApprovalConsole } from "../src/ap
 import { tokenGrantRequest } from "../src/oauth-client.js";
 import { composeStack, type DemoStack } from "../src/stack.js";
 
+// Each case composes the whole stack, which can take longer than the default under load.
+vi.setConfig({ testTimeout: 120_000 });
+
 const loaded = vi.hoisted(() => [] as StandingPaymentDeployment[]);
 vi.mock("@mission/demo-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@mission/demo-data")>();

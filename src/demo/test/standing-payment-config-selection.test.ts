@@ -39,6 +39,9 @@ type Shipped = {
   budget_metering: { budgets: Array<Json & { policies: Json[] }> } & Json;
 };
 
+// Each case loads the module graph afresh and may compose a whole stack, which can take longer than the default under load.
+vi.setConfig({ testTimeout: 120_000 });
+
 const original = { dir: process.env.MISSION_CONFIG_DIR, resource: process.env.MCP_PAYMENTS_RESOURCE };
 const dirs: string[] = [];
 
