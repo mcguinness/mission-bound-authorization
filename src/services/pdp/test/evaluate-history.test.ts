@@ -74,6 +74,8 @@ interface DecisionShape {
   decision?: "permit" | "deny";
   mission?: string;
   audience?: string;
+  /** This record's position in the PDP's (Mission, emitter) stream; 0 unless the store holds more than one. */
+  sequence?: number;
 }
 
 /** A record signed in the PEP's role with the PEP's own trusted key: a valid signature, the wrong signer for a decision. */
@@ -97,7 +99,7 @@ async function decisionRecord(
     ...(d.action_classes !== undefined ? { action_classes: d.action_classes } : {}),
     class_source: "deployment",
     decision: d.decision ?? "permit",
-    sequence: 0,
+    sequence: d.sequence ?? 0,
     emitter: as?.emitter ?? { id: PDP_ID, role: "pdp" },
     evaluated_at: NOW.toISOString(),
   };
@@ -112,6 +114,8 @@ interface ExecutionShape {
   outcome: "completed" | "failed" | "suppressed";
   mission?: string;
   audience?: string;
+  /** This record's position in the PEP's (Mission, emitter) stream. */
+  sequence?: number;
 }
 
 /** A retained Execution Evidence record, signed by the trusted PEP key. */
@@ -123,7 +127,7 @@ async function executionRecord(e: ExecutionShape): Promise<Record<string, unknow
     audience: e.audience ?? RESOURCE,
     outcome: e.outcome,
     outcome_at: NOW.toISOString(),
-    sequence: 0,
+    sequence: e.sequence ?? 0,
     emitter: { id: PEP_ID, role: "pep" },
   };
   return {
@@ -234,11 +238,40 @@ describe("the History Context evaluates policy-selected predicates against verif
     const pending = [
       await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }),
       await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
-      await decisionRecord({ evaluation_id: "w2", action_class: "consequential_write" }),
+      await decisionRecord({ evaluation_id: "w2", action_class: "consequential_write", sequence: 1 }),
     ];
     const second = await evaluate(request(), options(historyBinding(pending)));
     expect(second.decision).toBe(false);
     expect(historyOf(second)?.[0]?.outcome).toBe("not_satisfied");
+  });
+
+  it("fails closed when the PDP's Decision Evidence stream is incomplete: a sequence gap, a reused position, or no valid position", async () => {
+    // Control: a contiguous stream of two completed writes satisfies the predicate.
+    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: 0 });
+    const w1Done = await executionRecord({ evaluation_id: "w1", outcome: "completed", sequence: 0 });
+    const w3Done = await executionRecord({ evaluation_id: "w3", outcome: "completed", sequence: 1 });
+    const contiguous = [w1, w1Done, await decisionRecord({ evaluation_id: "w3", action_class: "consequential_write", sequence: 1 }), w3Done];
+    const satisfied = await evaluate(request(), options(historyBinding(contiguous)));
+    expect(satisfied.decision, JSON.stringify(satisfied.context)).toBe(true);
+    // The store omits position 1, a permit of the class with no completed execution:
+    // every permit it returns completed, but the history is not complete.
+    const gap = [w1, w1Done, await decisionRecord({ evaluation_id: "w3", action_class: "consequential_write", sequence: 2 }), w3Done];
+    const omitted = await evaluate(request(), options(historyBinding(gap)));
+    expect(omitted.decision).toBe(false);
+    expect(omitted.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(omitted)).toEqual([{ predicate: "action_class_completed", action_class: "consequential_write", outcome: "unavailable" }]);
+    // Two records at one position: the emitter never issues a position twice.
+    const reused = [w1, w1Done, await decisionRecord({ evaluation_id: "w3", action_class: "consequential_write", sequence: 0 }), w3Done];
+    const twice = await evaluate(request(), options(historyBinding(reused)));
+    expect(twice.decision).toBe(false);
+    expect(twice.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(twice)?.[0]?.outcome).toBe("unavailable");
+    // A record with no valid position cannot be placed in the stream.
+    const unplaced = [await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: -1 }), w1Done];
+    const negative = await evaluate(request(), options(historyBinding(unplaced)));
+    expect(negative.decision).toBe(false);
+    expect(negative.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(negative)?.[0]?.outcome).toBe("unavailable");
   });
 
   it("fails closed, recording unavailable, when the evidence store cannot be consulted", async () => {
@@ -353,7 +386,7 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(satisfied.decision, JSON.stringify(satisfied.context)).toBe(true);
     const withPendingFurther = [
       ...completedSingle,
-      await decisionRecord({ evaluation_id: "p1", action_class: "irreversible_action", action_classes: ["irreversible_action", "external_commitment"] }),
+      await decisionRecord({ evaluation_id: "p1", action_class: "irreversible_action", action_classes: ["irreversible_action", "external_commitment"], sequence: 1 }),
     ];
     const pending = await evaluate(request(), options(historyBinding(withPendingFurther, [commit])));
     expect(pending.decision).toBe(false);
@@ -367,7 +400,7 @@ describe("the History Context evaluates policy-selected predicates against verif
       await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
       // Signed by the trusted PDP but listing classes that exclude its own `action_class`:
       // it is not a consequential_write permit, so its missing execution does not count.
-      await decisionRecord({ evaluation_id: "x1", action_class: "consequential_write", action_classes: ["irreversible_action", "external_commitment"] }),
+      await decisionRecord({ evaluation_id: "x1", action_class: "consequential_write", action_classes: ["irreversible_action", "external_commitment"], sequence: 1 }),
     ];
     const decision = await evaluate(request(), options(historyBinding(records)));
     expect(decision.decision, JSON.stringify(decision.context)).toBe(true);

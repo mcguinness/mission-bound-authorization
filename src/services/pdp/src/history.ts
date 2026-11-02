@@ -94,6 +94,9 @@ interface VerifiedDecision {
   audience: string | undefined;
   action_class: unknown;
   action_classes: unknown;
+  /** The record's (Mission, emitter) stream: its emitter's role and id. */
+  stream: string;
+  sequence: number;
 }
 
 interface VerifiedExecution {
@@ -123,7 +126,8 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * Read and verify the Mission's retained evidence. Returns `undefined` when
  * the history cannot be established: the read failed, a record is of no
  * known kind, a signer is not trusted for the record's kind, a signature or
- * the payload binding does not verify, a record names another Mission, or an
+ * the payload binding does not verify, a record names another Mission, a
+ * Decision Evidence stream has a gap or a reused `sequence` position, or an
  * Execution Evidence record links to no verified Decision Evidence of the
  * same Mission and audience.
  */
@@ -155,12 +159,16 @@ async function verifiedHistory(
       const recordMission = objectOf(record.mission);
       if (recordMission?.id !== mission.id || recordMission?.issuer !== mission.issuer) return undefined;
       if (typeof record.evaluation_id !== "string") return undefined;
+      const sequence = record.sequence;
+      if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0) return undefined;
       decisions.push({
         evaluation_id: record.evaluation_id,
         decision: record.decision as string,
         audience: typeof record.audience === "string" ? record.audience : undefined,
         action_class: record.action_class,
         action_classes: record.action_classes,
+        stream: JSON.stringify([emitter.role, emitter.id]),
+        sequence,
       });
     } else {
       if (!executionRoles.includes(emitter.role)) return undefined;
@@ -171,6 +179,25 @@ async function verifiedHistory(
         audience: typeof record.audience === "string" ? record.audience : undefined,
         outcome: record.outcome,
       });
+    }
+  }
+  // Completeness (@spec runtime-evidence#decision-evidence-object `sequence`):
+  // each (Mission, emitter) Decision Evidence stream is ordered by its
+  // `sequence` "so ... gaps are detectable". A position missing between the
+  // first and last record read, or one held twice, is a record the store did
+  // not return, a permit with no completed execution among them perhaps, so
+  // the history cannot be established. The start is deployment-defined, so
+  // the stream is read from its lowest position present.
+  const streams = new Map<string, number[]>();
+  for (const d of decisions) {
+    const positions = streams.get(d.stream) ?? [];
+    positions.push(d.sequence);
+    streams.set(d.stream, positions);
+  }
+  for (const positions of streams.values()) {
+    positions.sort((a, b) => a - b);
+    for (let i = 1; i < positions.length; i++) {
+      if (positions[i] !== (positions[i - 1] as number) + 1) return undefined;
     }
   }
   // Linkage: every execution names a verified decision of this Mission by its
