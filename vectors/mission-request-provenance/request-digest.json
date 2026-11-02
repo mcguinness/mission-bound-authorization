@@ -1,0 +1,117 @@
+{
+  "format": "mission-request-provenance-digest-vectors/1",
+  "spec": "draft-mcguinness-oauth-mission-request-provenance",
+  "description": "Request digest vectors: the draft appendix's four, then short low-entropy and edge instructions. Every secret here is a fixed test value; an intake never uses one.",
+  "cases": [
+    {
+      "id": "rd-01",
+      "source": "draft Appendix (#vectors), first vector",
+      "description": "the published vector, HMAC input included",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "Pay this week's Acme invoices.",
+      "instruction_hex": "5061792074686973207765656b27732041636d6520696e766f696365732e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d38000000000000001e5061792074686973207765656b27732041636d6520696e766f696365732e",
+      "request_digest": "hmac-sha-256:-xVlEjxrMKqRGHbUOS2YvZhW7uN-RpRrfV-BsTIUDu0"
+    },
+    {
+      "id": "rd-02",
+      "source": "draft Appendix (#vectors)",
+      "description": "one character removed from the instruction",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "Pay this week's Acme invoice.",
+      "instruction_hex": "5061792074686973207765656b27732041636d6520696e766f6963652e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d38000000000000001d5061792074686973207765656b27732041636d6520696e766f6963652e",
+      "request_digest": "hmac-sha-256:DXLpPDrfm1W53Z-nniGK1j2NdqvUjPCL-ha82mt5pms"
+    },
+    {
+      "id": "rd-03",
+      "source": "draft Appendix (#vectors)",
+      "description": "media type text/markdown;charset=utf-8",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/markdown;charset=utf-8",
+      "instruction_utf8": "Pay this week's Acme invoices.",
+      "instruction_hex": "5061792074686973207765656b27732041636d6520696e766f696365732e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f7631000000001b746578742f6d61726b646f776e3b636861727365743d7574662d38000000000000001e5061792074686973207765656b27732041636d6520696e766f696365732e",
+      "request_digest": "hmac-sha-256:VTGuqTNNdu6Q780TwU9cVUVlMbJlzDa_M-iWMteLoi8"
+    },
+    {
+      "id": "rd-04",
+      "source": "draft Appendix (#vectors)",
+      "description": "secret bytes 01 through 20",
+      "secret_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "Pay this week's Acme invoices.",
+      "instruction_hex": "5061792074686973207765656b27732041636d6520696e766f696365732e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d38000000000000001e5061792074686973207765656b27732041636d6520696e766f696365732e",
+      "request_digest": "hmac-sha-256:NGW2Oglh0SHnmQJaPUBHXG0LTjHwBoY67TokgLxS_g8"
+    },
+    {
+      "id": "rd-05",
+      "source": "#939 slice 1, low entropy",
+      "description": "a one-word instruction",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "Yes",
+      "instruction_hex": "596573",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d380000000000000003596573",
+      "request_digest": "hmac-sha-256:Iy3Bp-SjCReQzTOeFvNegN6nPDvGqp3wGLbTxAsMicw"
+    },
+    {
+      "id": "rd-06",
+      "source": "#939 slice 1, low entropy",
+      "description": "a two-word instruction",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "Pay Acme.",
+      "instruction_hex": "5061792041636d652e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d3800000000000000095061792041636d652e",
+      "request_digest": "hmac-sha-256:ChQjX2XQY_lWGFz9lnclJrxlRN2N4N-p4_9tO2KleMc"
+    },
+    {
+      "id": "rd-07",
+      "source": "#939 slice 1, low entropy",
+      "description": "a two-word instruction under the other secret",
+      "secret_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "Pay Acme.",
+      "instruction_hex": "5061792041636d652e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d3800000000000000095061792041636d652e",
+      "request_digest": "hmac-sha-256:wDaTo5KXRas_kL3YnSbRioViK2_KQ0LRBPUTelXlPbA"
+    },
+    {
+      "id": "rd-08",
+      "source": "#939 slice 1, low entropy",
+      "description": "a two-word instruction, media type without parameters",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/plain",
+      "instruction_utf8": "Cancel it.",
+      "instruction_hex": "43616e63656c2069742e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f7631000000000a746578742f706c61696e000000000000000a43616e63656c2069742e",
+      "request_digest": "hmac-sha-256:fjsKbyby9RkaomtlgMNTdnE4I3EmAZMXA54x7H0Px84"
+    },
+    {
+      "id": "rd-09",
+      "source": "#939 slice 1, edge",
+      "description": "an empty instruction: the 8-byte length is zero",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "",
+      "instruction_hex": "",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d380000000000000000",
+      "request_digest": "hmac-sha-256:xiZMddHbzfYxSNkMulqxPSYDWU8M8P-7ENqcQaBVAng"
+    },
+    {
+      "id": "rd-10",
+      "source": "#939 slice 1, edge",
+      "description": "a short instruction with non-ASCII UTF-8 bytes, hashed as received",
+      "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "media_type": "text/plain;charset=utf-8",
+      "instruction_utf8": "Zahle 50 € an Acme.",
+      "instruction_hex": "5a61686c6520353020e282ac20616e2041636d652e",
+      "hmac_input_hex": "6d697373696f6e2d726571756573742d70726f76656e616e63652f76310000000018746578742f706c61696e3b636861727365743d7574662d3800000000000000155a61686c6520353020e282ac20616e2041636d652e",
+      "request_digest": "hmac-sha-256:iYd7o_B48tAHCe5_9KVehx1EYmxekx90TrpLY1v_OlU"
+    }
+  ]
+}

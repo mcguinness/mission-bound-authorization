@@ -1,0 +1,172 @@
+{
+  "format": "mission-request-provenance-assertion-vector/1",
+  "spec": "draft-mcguinness-oauth-mission-request-provenance",
+  "description": "One positive assertion: fixed inputs, fixed times, fixed random values and a test-only ES256 key. The protected header and claims are exact; the sample JWS verifies under the public key, and its signature bytes are not reproducible.",
+  "key": {
+    "kid": "intake-2026-10",
+    "public_jwk": {
+      "kty": "EC",
+      "x": "NY7Uitvs0IiiFV9vF6Tmht67aFzszhVOYa_TcrksSpg",
+      "y": "IgsL3_y5SxsSehjqjHrrR0kNIjhQpYJWxAmAVQ_5iNk",
+      "crv": "P-256"
+    },
+    "private_jwk_test_only": {
+      "kty": "EC",
+      "x": "NY7Uitvs0IiiFV9vF6Tmht67aFzszhVOYa_TcrksSpg",
+      "y": "IgsL3_y5SxsSehjqjHrrR0kNIjhQpYJWxAmAVQ_5iNk",
+      "crv": "P-256",
+      "d": "zJCwqPCNOl4dzbJ5CMOJuAwzvT_Iipsr84NW4Zrufk8"
+    },
+    "note": "Test only. Never configure this key as a signer outside tests."
+  },
+  "intake": {
+    "iss": "https://intake.example.com",
+    "assertion_lifetime_seconds": 300,
+    "max_capture_age_seconds": 600,
+    "emit_capture_id": true
+  },
+  "capture": {
+    "workflow": "wf-2026-10-03-0001",
+    "media_type": "text/plain;charset=utf-8",
+    "instruction_utf8": "Pay this week's Acme invoices.",
+    "originator": {
+      "iss": "https://idp.example.com",
+      "sub": "248289761001"
+    },
+    "channel": {
+      "type": "https://intake.example.com/ch/web",
+      "acr": "phr",
+      "auth_time": 1791016100
+    },
+    "captured_at": 1791016140,
+    "secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "capture_id": "oKGio6SlpqeoqaqrrK2urw"
+  },
+  "sign": {
+    "workflow": "wf-2026-10-03-0001",
+    "audience": "https://as.example.com",
+    "intent": {
+      "goal": "Pay the open Acme invoices due this week.",
+      "target_resources": [
+        "https://erp.example.com"
+      ],
+      "expires_at": "2026-10-10T23:59:59Z"
+    },
+    "presenter": {
+      "client_id": "ap-agent",
+      "cnf": {
+        "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"
+      }
+    },
+    "iat": 1791016200,
+    "jti": "sLGys7S1tre4ubq7vL2-vw"
+  },
+  "expected": {
+    "protected_header": {
+      "typ": "mission-request-provenance+jwt",
+      "alg": "ES256",
+      "kid": "intake-2026-10"
+    },
+    "claims": {
+      "iss": "https://intake.example.com",
+      "aud": "https://as.example.com",
+      "iat": 1791016200,
+      "exp": 1791016500,
+      "jti": "sLGys7S1tre4ubq7vL2-vw",
+      "intent_hash": "sha-256:ZGWnRAjMtvZVlC6rl4TqKn5mG_q2yixbRkisvzfnmes",
+      "presenter": {
+        "client_id": "ap-agent",
+        "cnf": {
+          "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"
+        }
+      },
+      "originator": {
+        "iss": "https://idp.example.com",
+        "sub": "248289761001"
+      },
+      "channel": {
+        "type": "https://intake.example.com/ch/web",
+        "acr": "phr",
+        "auth_time": 1791016100
+      },
+      "captured_at": 1791016140,
+      "request_digest": "hmac-sha-256:-xVlEjxrMKqRGHbUOS2YvZhW7uN-RpRrfV-BsTIUDu0",
+      "capture_id": "oKGio6SlpqeoqaqrrK2urw"
+    },
+    "entry": {
+      "type": "mission-request-provenance",
+      "assertion": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9._bzUHQ5f7fvDaIGv5IeNGJ_A7RihdNW-ni7wwKDD0CPkPwdPXJgl5exiXxG0e5mzYDCNWO3320c_pv4vT8NBkw"
+    },
+    "recorded_facts": {
+      "signer": {
+        "iss": "https://intake.example.com",
+        "kid": "intake-2026-10"
+      },
+      "originator": {
+        "iss": "https://idp.example.com",
+        "sub": "248289761001"
+      },
+      "channel": {
+        "type": "https://intake.example.com/ch/web",
+        "acr": "phr",
+        "auth_time": 1791016100
+      },
+      "captured_at": "2026-10-03T08:29:00Z",
+      "request_digest": "hmac-sha-256:-xVlEjxrMKqRGHbUOS2YvZhW7uN-RpRrfV-BsTIUDu0",
+      "assertion_id": "sLGys7S1tre4ubq7vL2-vw",
+      "capture_id": "oKGio6SlpqeoqaqrrK2urw"
+    }
+  },
+  "verifier_context": {
+    "issuer": "https://as.example.com",
+    "now": 1791016260,
+    "clock_skew_seconds": 30,
+    "max_assertion_lifetime_seconds": 600,
+    "max_capture_age_seconds": 600,
+    "trust": {
+      "signers": [
+        {
+          "iss": "https://intake.example.com",
+          "keys": [
+            {
+              "kid": "intake-2026-10",
+              "public_jwk": {
+                "kty": "EC",
+                "x": "NY7Uitvs0IiiFV9vF6Tmht67aFzszhVOYa_TcrksSpg",
+                "y": "IgsL3_y5SxsSehjqjHrrR0kNIjhQpYJWxAmAVQ_5iNk",
+                "crv": "P-256"
+              },
+              "evidence_types": [
+                "mission-request-provenance"
+              ],
+              "algs": [
+                "ES256"
+              ]
+            }
+          ],
+          "originators": [
+            {
+              "iss": "https://idp.example.com"
+            }
+          ],
+          "channel_types": [
+            "https://intake.example.com/ch/web"
+          ]
+        }
+      ]
+    },
+    "intent": {
+      "goal": "Pay the open Acme invoices due this week.",
+      "target_resources": [
+        "https://erp.example.com"
+      ],
+      "expires_at": "2026-10-10T23:59:59Z"
+    },
+    "presenter": {
+      "client_id": "ap-agent",
+      "cnf": {
+        "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I"
+      }
+    }
+  }
+}
