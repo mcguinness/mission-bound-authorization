@@ -4967,7 +4967,8 @@ This document's extension points are:
   hold uniformly. A `mission` descriptor embedded in such an object
   uses the `mission` claim shape ({{mission-claim}}), optionally
   extended with collision-resistantly named members, and is never
-  authority-bearing on its own.
+  authority-bearing on its own. An AS without such a profile produces
+  and verifies none of its commitments.
 - **The `mission` claim.** It is an open object: additional,
   collision-resistantly named members can be carried in it, under the
   consumer rules of {{mission-claim}}.
@@ -4999,10 +5000,9 @@ This document's extension points are:
   back-channel carriage profile
   ({{submission-other-carriages}}) MAY instead couple the approval
   decision to establishing the Mission grant binding and activating for
-  redemption a grant the profile defines, such as a device code issued
-  while the request was pending, the Mission then binding to that
-  profile-defined reusable grant ({{grant-binding-resolution}}),
-  provided in either case that the steps and their atomicity with the
+  redemption a grant the profile defines, the Mission then binding to
+  that profile-defined reusable grant ({{grant-binding-resolution}}),
+  provided in either case the steps and their atomicity with the
   approval decision hold unchanged and no Mission reference exists
   before the record is `active`.
 - **Grants and issuance paths.** A companion profile can define a
