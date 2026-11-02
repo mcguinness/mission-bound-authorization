@@ -175,7 +175,10 @@ interface Wired {
   emitter: MissionSignalEmitter;
   declaredLog: Received[];
   undeclaredLog: Received[];
+  /** The undeclared receiver's result for each lifecycle SET, in order. */
   undeclaredResults: ApplyResult[];
+  /** Its result for each verification and Stream Updated SET, in order (#1896). */
+  undeclaredControlResults: ApplyResult[];
   undeclared: MissionSignalReceiver;
   rule: StalenessRule;
   /** The undeclared stream's transport fault, if any. */
@@ -238,15 +241,21 @@ async function wire(
       now: () => new Date(clock),
       ...(store ? { store } : {}),
     });
+  // The reference receiver reads the whole stream (#1896): its stream id,
+  // the shared clock, and the interval agreed with the emitter.
   const undeclared = new MissionSignalReceiver({
     jwks: { keys: [statusPub] },
     issuer: ISS,
     audience: UNDECLARED_AUD,
+    streamId: UNDECLARED_STREAM,
     maxStaleSeconds: MAX_STALE_SECONDS,
+    ...(heartbeatIntervalSeconds !== null ? { heartbeatIntervalSeconds } : {}),
+    now: () => new Date(clock),
   });
   const declaredLog: Received[] = [];
   const undeclaredLog: Received[] = [];
   const undeclaredResults: ApplyResult[] = [];
+  const undeclaredControlResults: ApplyResult[] = [];
   const rule = new StalenessRule(
     MAX_STALE_MS,
     heartbeatIntervalSeconds !== null ? heartbeatIntervalSeconds * 1000 : HEARTBEAT_MS,
@@ -262,6 +271,7 @@ async function wire(
       undeclaredLog.push(r);
       rule.receive(r);
       if (r.kind === "lifecycle") undeclaredResults.push(await undeclared.verifyAndApply(set));
+      else undeclaredControlResults.push(await undeclared.verifyAndApply(set));
       if (fault.after) await fault.after(r);
     });
   };
@@ -287,6 +297,7 @@ async function wire(
     declaredLog,
     undeclaredLog,
     undeclaredResults,
+    undeclaredControlResults,
     undeclared,
     rule,
     fault,
@@ -1076,12 +1087,28 @@ describe("delivery uncertainty and liveness ordering (@spec signals#discharge-co
     // The spec-rule model: still stale after the enabled notice and liveness.
     expect(w.rule.mayRely(w.now())).toBe(false);
 
-    // The reference receiver: no lease past its bound, and neither the
-    // Stream Updated event nor the verification event restores one.
+    // The reference receiver read the same stream (#1896): it verified both
+    // Stream Updated events and the resumed verification event, and the
+    // stream is verified live again, yet the Mission's state stays stale,
+    // since that verification event arrived after the stream went stale.
     const at = () => new Date(w.now()).toISOString();
+    expect(w.undeclaredControlResults).toEqual([
+      { status: "liveness" },
+      { status: "stream-updated", stream_status: "paused" },
+      { status: "stream-updated", stream_status: "enabled" },
+      { status: "liveness" },
+    ]);
+    expect(w.undeclared.streamLiveness(at())).toMatchObject({
+      verifiedLive: true,
+      stale: false,
+      lastLivenessAt: new Date(Math.floor(w.now() / 1000) * 1000),
+      streamStatus: "enabled",
+    });
+    expect(w.undeclared.streamStale(mission.id, at())).toBe(true);
     expect(w.undeclared.lease(mission.id, at())).toBeUndefined();
+    // Redelivered, the same SETs are duplicates and restore nothing.
     for (const r of resumed.filter((e) => e.kind !== "lifecycle"))
-      expect(await w.undeclared.verifyAndApply(r.set)).toMatchObject({ status: "refused" });
+      expect(await w.undeclared.verifyAndApply(r.set)).toEqual({ status: "duplicate" });
     expect(w.undeclared.lease(mission.id, at())).toBeUndefined();
 
     // Only re-established current state ends the staleness.
