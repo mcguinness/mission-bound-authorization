@@ -444,6 +444,10 @@ pending-operation lifetime still applies. A refusal after
 acceptance, such as an approval denial, releases nothing, so an
 accepted assertion is never reusable. Any other submission carrying
 the same evidence is verified in full, including the replay check.
+Relying on the acceptance record relaxes no other check: the AS's
+authorization, required-evidence, and approval checks still apply at
+each step. This reliance applies to this evidence type only; it
+changes no other type's verification.
 
 On a surface that carries a Mission-creation idempotency
 fingerprint, presented evidence is a member of that fingerprint
