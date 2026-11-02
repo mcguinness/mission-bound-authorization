@@ -44208,9 +44208,16 @@
     "normative": "the PDP never accepts a caller-asserted predicate outcome; `context.mission_history` only supplies facts the PDP itself evaluates against the policy-selected predicate"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Re-quoted at #1629 (D744 ruling 7): the request object is named by its full path."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not accept a predicate outcome asserted through context.mission_history: the outcome comes from the evidence, never the request",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): copying an outcome asserted in context.mission_history into the results permits the asserted request (M4). The reference permits no non-default evidence source, so context.mission_history supplies nothing the PDP evaluates."
   },
   {
    "id": "authzen.evidence.mission-history-computed",
@@ -44256,8 +44263,16 @@
     "normative": "a policy-selected history predicate type the PDP does not recognize is refused, treated as not establishable rather than skipped"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): dropping an unrecognized predicate from the selection permits (M5)."
   },
   {
    "id": "authzen.context-history.deny-when-unsatisfied-or-unestablishable",
@@ -44279,8 +44294,58 @@
     "normative": "a required history predicate that is false or cannot be established denies history_not_satisfied"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied, recording not_satisfied, when no permit of the class is retained",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied when a permit of the class has no completed execution: one failed, one with none",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store cannot be consulted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when a retained record does not verify: a permit signed by an untrusted key, or an execution altered after signing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when an execution's link cannot be established: recorded for another audience, or naming no retained permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > never counts another Mission's history: a store holding only another Mission's completed write fails closed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not take a permit signed in the PEP's role as Decision Evidence, although its key verifies for that role",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the remote PDP binds the history PDP-side (@spec authzen#context-history, #2015) > denies history_not_satisfied over the decision channel under its own binding, and permits once the retained history satisfies it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): removing the deny step permits every unsatisfied or unestablishable case (M9); counting a non-completed execution (M10), skipping signature verification (M1), the audience link (M2), the Mission scope (M11) or the Decision Evidence signer role (M12), or failing open on an unestablishable history (M3), each permits its case."
   },
   {
    "id": "authzen.context-history.record-predicates-and-outcomes",
@@ -44302,9 +44367,34 @@
     "normative": "every policy-selected history predicate the PDP evaluates, and its outcome, is recorded in Decision Evidence"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. The PDP's DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no member for evaluated predicates or their outcomes, and predicates appears nowhere under services/pdp/src. The row needs PDP record content, not a test."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > permits when a verified consequential_write permit has a linked completed execution, reads only the established Mission's history, and records the outcome",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied, recording not_satisfied, when no permit of the class is retained",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store cannot be consulted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): omitting mission_history from Decision Evidence fails every recording assertion (M8)."
   },
   {
    "id": "authzen.context-history.action-class-completed-applied-class",
@@ -44326,9 +44416,22 @@
     "normative": "action_class_completed counts a permit Decision Evidence record when the named class is in its action_classes, or is its action_class where the record carries no action_classes, so a pending execution of a further class keeps the predicate unsatisfied"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1994 owner review. No reference implementation of history predicates; the other context-history rows are todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a permit by membership in action_classes, so a pending execution of a further class keeps the predicate unsatisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > falls back to action_class only where action_classes is absent: a record listing action_classes is counted by membership alone",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): reading action_class alone permits with a further class's execution pending (M6); falling back to action_class where action_classes is present counts a record the class did not apply to (M7)."
   },
   {
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",
@@ -56099,8 +56202,34 @@
     "normative": "the mission_history extension member is REQUIRED on Decision Evidence whenever policy selected any history predicate for the decision, independent of whether the request itself carried a history member; each predicate outcome is satisfied, not_satisfied, or unavailable"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > records mission_history on a decision denied before the Mission is established, each selected predicate unavailable",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not accept a predicate outcome asserted through context.mission_history: the outcome comes from the evidence, never the request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > permits when a verified consequential_write permit has a linked completed execution, reads only the established Mission's history, and records the outcome",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store cannot be consulted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): recording nothing until the Mission is established leaves a decision denied before it without mission_history (M13); omitting the member fails every recording assertion (M8). Outcomes are satisfied, not_satisfied and unavailable."
   },
   {
    "id": "evidence.extensions.hop-reference-required-submembers",
