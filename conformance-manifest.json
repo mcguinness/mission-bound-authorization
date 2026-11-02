@@ -163,8 +163,8 @@
     "content_sha256": "9af0d69fb3397fc1c4341de0f9b98855f0b7b70a6cb4149e8a1e9d8860a078ee"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
-    "revision": "fbdaeffe7c9cd3222f839910df38309b320037e9",
-    "content_sha256": "f9ba7ce48a30bac7f21ff2944b84262122754e9cb7f2cc5f73040e999d5908ee"
+    "revision": "40e49936775a6b6b2d64a33d5041dc6e34b69928",
+    "content_sha256": "0ac4d8599783e6c38568ec167a45f3d18d3ba13677bf8d854b5b9efd0f657c13"
    }
   }
  },
@@ -84725,7 +84725,7 @@
    "id": "consent-evidence.material-notices.should-per-condition-delegation",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "delegation",
    "role": "AS",
    "strength": "SHOULD",
@@ -84742,13 +84742,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-boundary-crossing",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "boundary-crossing",
    "role": "AS",
    "strength": "SHOULD",
@@ -84765,13 +84765,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-irreversible-action",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "irreversible-action",
    "role": "AS",
    "strength": "SHOULD",
@@ -84788,13 +84788,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted. This is a high-risk class, so its notice is mandatory under consent-evidence.material-notices.high-risk-acknowledgment-action."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-external-commitment",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "external-commitment",
    "role": "AS",
    "strength": "SHOULD",
@@ -84811,13 +84811,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted. This is a high-risk class, so its notice is mandatory under consent-evidence.material-notices.high-risk-acknowledgment-action."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-privileged-administration",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "privileged-administration",
    "role": "AS",
    "strength": "SHOULD",
@@ -84834,13 +84834,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted. This is a high-risk class, so its notice is mandatory under consent-evidence.material-notices.high-risk-acknowledgment-action."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-broad-read",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "broad-read",
    "role": "AS",
    "strength": "SHOULD",
@@ -84857,13 +84857,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-exhaustible-consumption-bounds",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "exhaustible-consumption-bounds",
    "role": "AS",
    "strength": "SHOULD",
@@ -84880,13 +84880,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted. This is a high-risk class, so its notice is mandatory under consent-evidence.material-notices.high-risk-acknowledgment-action."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-widening-expansion",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "widening-expansion",
    "role": "AS",
    "strength": "SHOULD",
@@ -84903,13 +84903,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-third-party-effect",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "third-party-effect",
    "role": "AS",
    "strength": "SHOULD",
@@ -84926,13 +84926,13 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted."
   },
   {
    "id": "consent-evidence.material-notices.should-per-condition-runtime-enforcement-gaps",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context:",
+   "text": "A material notice SHOULD be included for each of these conditions when present in the proposed Authority Set or Mission context",
    "facet": "runtime-enforcement-gaps",
    "role": "AS",
    "strength": "SHOULD",
@@ -84949,7 +84949,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the material_notices member definition and in the Conformance section's beyond-the-floor list. #1945 (D1098): re-quoted."
   },
   {
    "id": "consent-evidence.material-notices.notice-identifies-entries",
@@ -84977,9 +84977,9 @@
    "id": "consent-evidence.material-notices.high-risk-acknowledgment-action",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "For each material notice of a high-risk class, `approver_actions` ({{consent-disclosure}}) SHOULD carry an explicit acknowledgment action identifying that notice.",
+   "text": "For each high-risk condition present, the disclosure MUST include its material notice, and `approver_actions` ({{consent-disclosure}}) MUST carry an explicit acknowledgment action identifying that notice.",
    "role": "AS",
-   "strength": "SHOULD",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
     "capability": "consent-evidence.recording"
@@ -84988,20 +84988,20 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "for every material notice of irreversible action, external commitment, privileged administration or a consumption bound, approver_actions carries one acknowledgment action identifying that notice"
+    "normative": "a disclosure for an approval whose Authority Set or Mission context presents a high-risk condition (irreversible action, external commitment, privileged administration, a consumption bound) includes that condition's material notice and, in approver_actions, an acknowledgment action identifying it"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the approver_actions member definition; the Conformance floor's high-risk item is conformance.high-risk-notices-acknowledged."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Restated in the approver_actions member definition; the Conformance floor's high-risk item is conformance.high-risk-notices-acknowledged. #1945 (D1098): SHOULD to MUST, the notice and the action both mandatory."
   },
   {
    "id": "consent-evidence.material-notices.no-approved-without-acknowledgments",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "material-notices",
-   "text": "The Mission Issuer SHOULD NOT record an `approved` decision unless the Approver completed every acknowledgment the disclosure carries.",
+   "text": "The Mission Issuer MUST NOT record an `approved` decision until the Approver has completed every high-risk acknowledgment",
    "role": "AS",
-   "strength": "SHOULD NOT",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "consent-evidence.recording"
@@ -85010,12 +85010,12 @@
    "surface": "approval-ceremony",
    "assertion": "refusal",
    "observation": {
-    "normative": "an approval submitted with any acknowledgment the disclosure carries left incomplete records no approved decision"
+    "normative": "no approved decision is recorded while any high-risk acknowledgment the disclosure carries is incomplete"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation drops the Mission-creation consequence, which the clause does not state and the binding-to-mission rows carry."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation drops the Mission-creation consequence, which the clause does not state and the binding-to-mission rows carry. #1945 (D1098): the high-risk gate is a MUST NOT; the recommendation for other acknowledgments is consent-evidence.material-notices.no-approved-without-other-acknowledgments."
   },
   {
    "id": "consent-evidence.material-notices.record-acknowledgment-completion",
@@ -85060,6 +85060,116 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+  },
+  {
+   "id": "consent-evidence.material-notices.no-approved-without-other-acknowledgments",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "material-notices",
+   "text": "SHOULD NOT record one unless the Approver completed every other acknowledgment the disclosure carries",
+   "role": "AS",
+   "strength": "SHOULD NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approved decision is not recorded while an acknowledgment beyond the high-risk classes is incomplete"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1945 (D1098). Todo: the reference implements no Consent Evidence (O-11). The recommendation kept for acknowledgments beyond the high-risk classes."
+  },
+  {
+   "id": "consent-evidence.material-notices.acknowledgment-follows-condition",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "material-notices",
+   "text": "The acknowledgment follows the condition, so omitting the notice does not remove it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a disclosure that omits a high-risk condition's notice still owes, and gates approved on, that condition's acknowledgment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1945 (D1098). Todo: the reference implements no Consent Evidence (O-11). Omission of the notice cannot evade the acknowledgment."
+  },
+  {
+   "id": "consent-evidence.material-notices.declined-narrowed-not-blocked",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "material-notices",
+   "text": "An incomplete acknowledgment never prevents recording a `declined` or `narrowed` decision.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a declined or narrowed decision is recorded whatever acknowledgments remain incomplete"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1945 (D1098). Todo: the reference implements no Consent Evidence (O-11). "
+  },
+  {
+   "id": "consent-evidence.material-notices.duties-event-scope",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "material-notices",
+   "text": "These duties apply at the human approval events this profile binds, the approval of a standing consent included ({{binding-to-mission}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the high-risk notice and acknowledgment duties bind each human approval event the profile binds, a standing consent's approval included, and no instance activated by policy under it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1945 (D1098). Todo: the reference implements no Consent Evidence (O-11). "
+  },
+  {
+   "id": "consent-evidence.consent-disclosure.approver-actions-required-high-risk",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-disclosure",
+   "text": "REQUIRED when a high-risk condition is present, carrying the acknowledgment actions {{material-notices}} requires;",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Consent Disclosure object for an approval presenting a high-risk condition carries approver_actions with the acknowledgment actions Material Notice Requirements requires"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1945 (D1098). Todo: the reference implements no Consent Evidence (O-11). The member is conditionally REQUIRED by reference; the rule lives in Material Notice Requirements."
   },
   {
    "id": "consent-evidence.intent-translation.natural-language-forms",
@@ -87434,7 +87544,7 @@
    "id": "consent-evidence.conformance.high-risk-notices-acknowledged",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "conformance",
-   "text": "for the high-risk classes, include their material notices with the per-notice acknowledgment those classes require, recording each acknowledgment completion",
+   "text": "meet the high-risk notice and acknowledgment requirements of {{material-notices}};",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -87450,7 +87560,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. The floor makes mandatory what material-notices states as SHOULD for these classes (the notice and the acknowledgment action)."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. The floor makes mandatory what material-notices states as SHOULD for these classes (the notice and the acknowledgment action). #1945 (D1098): the floor item references Material Notice Requirements instead of restating it."
   },
   {
    "id": "consent-evidence.conformance.record-offered-interrogation",
