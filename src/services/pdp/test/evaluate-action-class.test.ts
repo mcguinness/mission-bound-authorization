@@ -314,6 +314,27 @@ describe("a non-string class label establishes no class (@spec authzen#pdp-consi
     expect(retained).toHaveLength(1);
   });
 
+  it("refuses an empty-string class as no class, with no decision work", async () => {
+    const retained: PdpRefusalRecord[] = [];
+    const { refusals } = recorder(retained);
+    const { fga, calls } = countingFga();
+    const policy = resourcePolicyFixture();
+    const options = {
+      ...decisionOptions(fga),
+      resourcePolicy: policy,
+      refusals,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      operationDeclarations: [],
+    };
+    const empty = request("consequential_read");
+    (empty.context as { action_class: unknown }).action_class = "";
+    await expect(evaluateRequest(empty, options)).rejects.toBeInstanceOf(DecisionRequestRefused);
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toMatchObject({ denial_reason: "action_class_missing", decision: "deny" });
+    expect(calls()).toBe(0);
+    expect(policy.queries).toHaveLength(0);
+  });
+
   it("refuses a non-string class on an operation this PDP declares nothing for, with no decision work", async () => {
     const retained: PdpRefusalRecord[] = [];
     const { refusals } = recorder(retained);
