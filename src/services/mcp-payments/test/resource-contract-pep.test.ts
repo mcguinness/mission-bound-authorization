@@ -21,14 +21,20 @@
 
 import {
   type ActionPhase,
+  AUTHORITY_ENTRY_TYP,
+  authorityHash,
+  computeAnchor,
   establishOperationTarget,
+  type JsonValue,
+  matchResource,
   RESOURCE_CONTRACT_STATES,
   ResourceContractDeclarations,
   type ResourceContractRef,
   resourceContractDigest,
 } from "@mission/core";
-import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { EVALUATION_CONTEXT_BINDING, RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
+  committedEntry,
   createDecisionChannel,
   createEphemeralDecisionPoint,
   type EvaluationRequest,
@@ -44,6 +50,9 @@ import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it } from "vitest";
 import {
   type ActionMapping,
+  buildEffectiveParams,
+  buildListEffectiveParams,
+  buildReversalParams,
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
@@ -54,6 +63,7 @@ import {
   openEphemeralWriteReservationStore,
   PAYMENTS_INVOICE_CONTRACT,
   PAYMENTS_PROFILE_VERSION,
+  parameterDigest,
   PaymentsStore,
   PaymentsToolCatalog,
   Pep,
@@ -75,11 +85,29 @@ const RETAINED_TABLE: Record<string, ActionMapping> = {
   get_invoice: { ...(TOOL_ACTIONS.get_invoice as ActionMapping), target: PAYMENTS_INVOICE_CONTRACT },
 };
 
+/**
+ * A synthetic contract document: each operation's action and phase and, for a
+ * crossing the shipped Evaluation-Context Binding claim covers, the
+ * descriptor it declares (#249, D1155), so a covered crossing performed
+ * under it captures its context.
+ */
 const doc = (version: string, profile: string) => ({
   id: CONTRACT,
   version,
   operation_profile: profile,
-  operations: Object.fromEntries(Object.entries(TOOL_ACTIONS).map(([tool, m]) => [tool, { action: m.action }])),
+  operations: Object.fromEntries(
+    Object.entries(TOOL_ACTIONS).map(([tool, m]) => {
+      const covered = EVALUATION_CONTEXT_BINDING.operation(m.action, m.phase);
+      return [
+        tool,
+        {
+          action: m.action,
+          ...(m.phase !== undefined ? { phase: m.phase } : {}),
+          ...(covered ? { evaluation_context_descriptor: covered.descriptor } : {}),
+        },
+      ];
+    }),
+  ),
 });
 const ref = (version: string, profile = PAYMENTS_PROFILE_VERSION): ResourceContractRef => ({
   id: CONTRACT,
@@ -145,6 +173,8 @@ interface Built {
   /** The transaction tier's connectors and the write tier's reservations: every effect a tool can leave. */
   connectors: Connectors;
   writeReservations: ReturnType<typeof openEphemeralWriteReservationStore>;
+  /** The store the operations read, as seeded. */
+  payments: PaymentsStore;
   decided: EvaluationRequest[];
   records: () => ReturnType<EvidenceStore["forMission"]>;
   setPepContracts: (d: ResourceContractDeclarations) => void;
@@ -158,9 +188,13 @@ async function build(
   opts: {
     pdpContracts?: ResourceContractDeclarations;
     now?: () => Date;
+    /** The PDP's own clock, where it differs from the PEP's (`now`). */
+    pdpNow?: () => Date;
     requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
     /** Perform under the shipped `RETAINED_OPERATION_PROFILES` rather than this file's retained table. */
     shippedRetainedProfiles?: boolean;
+    /** Further records, after the shared seed. */
+    seed?: (payments: PaymentsStore) => void;
   } = {},
 ): Promise<Built> {
   const now = opts.now ?? NOW;
@@ -184,6 +218,7 @@ async function build(
       status: "payable",
     })),
   );
+  opts.seed?.(payments);
   const fga = { checkWithContext: async () => true } as unknown as Fga;
   const loadView = (r: { id: string; issuer: string }) =>
     r.id === view.id && r.issuer === view.issuer
@@ -198,7 +233,7 @@ async function build(
       view,
       fga,
       modelId: "test",
-      now,
+      now: opts.pdpNow ?? now,
       stalenessBound,
       relationForAction,
       stateSourcePlacement: "pep" as const,
@@ -242,6 +277,7 @@ async function build(
     pep,
     connectors,
     writeReservations,
+    payments,
     decided,
     records: () => evidence.forMission(view.id),
     setPepContracts: (d) => {
@@ -278,6 +314,184 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       const resolved = catalog.resolve(tool);
       if (!resolved.catalog_sourced) throw new Error(`${tool} is catalog-sourced`);
       expect(op.capability, tool).toEqual({ tool_id: resolved.binding.tool_id, source_digest: resolved.binding.source_digest });
+    }
+  });
+
+  // @spec runtime#resource-contract (#249, D1104): the Operation Profile
+  // material the document states, the parameter forms and the matcher values,
+  // corresponds to what the resource performs, so a change to it without a
+  // new version fails here.
+  it("each declared parameter form is the fields its normal form carries, every optional member included, and no other form is declared", () => {
+    const forms = (current?.document as { parameter_forms: Record<string, string[]> }).parameter_forms;
+    const vendor = { id: "acme", name: "Acme", status: "approved", version: 1 };
+    const invoice = { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable", version: 1 };
+    const built: Record<string, object | undefined> = {
+      invoice: buildEffectiveParams({ action: "payments:payment.schedule", invoice, vendor, resource: CANONICAL_RESOURCE, recipients: ["ap@acme.example"] }),
+      list: buildListEffectiveParams({ action: "payments:invoice.list", resource: CANONICAL_RESOURCE, vendor_scope: ["acme"], vendor_scope_source: "all", members: [] }),
+      none: undefined,
+      reversal: buildReversalParams({
+        action: "payments:payment.reverse",
+        wire: { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD" },
+        resource: CANONICAL_RESOURCE,
+        reverses: "op-1",
+      }),
+    };
+    expect(Object.keys(forms).sort()).toEqual(Object.keys(built).sort());
+    for (const [form, params] of Object.entries(built)) {
+      expect([...(forms[form] ?? [])].sort(), form).toEqual(params === undefined ? [] : Object.keys(params).sort());
+    }
+  });
+
+  /**
+   * Each parameter form's canonical digest over fixed inputs, recorded per
+   * contract version. Normalization (each member's encoding, the canonical
+   * object the digest is computed over) is contract material, so a change to
+   * it changes these: it needs a new contract version with its own entry
+   * here, never an edit of a published version's.
+   */
+  const NORMAL_FORM_DIGESTS: Record<string, Record<string, string>> = {
+    "2026-10-27": {
+      invoice: "sha-256:u_Ts2Z1zkNdll-qmricNSCXuAetq5psUkOeCKH3uQS8",
+      list: "sha-256:GujuA1Uzv_MUN7wzxQtOyG6iA6FX1Jon_6YpeDFNObs",
+      reversal: "sha-256:w2ZqvQP0H3xLDCWwInxrbcxX5mDPInzeIg5wmbimnG8",
+    },
+    // #249, D1155: the version names its descriptors; normalization is unchanged.
+    "2026-11-02": {
+      invoice: "sha-256:u_Ts2Z1zkNdll-qmricNSCXuAetq5psUkOeCKH3uQS8",
+      list: "sha-256:GujuA1Uzv_MUN7wzxQtOyG6iA6FX1Jon_6YpeDFNObs",
+      reversal: "sha-256:w2ZqvQP0H3xLDCWwInxrbcxX5mDPInzeIg5wmbimnG8",
+    },
+  };
+
+  it("each parameter form normalizes fixed inputs to the digest recorded for the current version", () => {
+    const vendor = { id: "acme", name: "Acme", status: "approved", version: 3 };
+    const invoice = { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable", version: 2 };
+    const normalized = {
+      invoice: parameterDigest(
+        buildEffectiveParams({ action: "payments:payment.schedule", invoice, vendor, resource: CANONICAL_RESOURCE, recipients: ["ap@acme.example", "ar@acme.example"] }),
+      ),
+      list: parameterDigest(
+        buildListEffectiveParams({
+          action: "payments:invoice.list",
+          resource: CANONICAL_RESOURCE,
+          vendor_scope: ["acme", "globex"],
+          vendor_scope_source: "entry",
+          members: [{ id: "inv-1", issued_at: "2026-08-15T09:30:00Z", tenant: "payments-demo", data_classification: "internal" }],
+        }),
+      ),
+      reversal: parameterDigest(
+        buildReversalParams({
+          action: "payments:payment.reverse",
+          wire: { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD" },
+          resource: CANONICAL_RESOURCE,
+          reverses: "op-1",
+        }),
+      ),
+    };
+    expect(normalized).toEqual(NORMAL_FORM_DIGESTS[current?.version as string]);
+  });
+
+  it("the declared resource_match values are exactly those the matcher enforces", () => {
+    const declaredMatches = (current?.document as { resource_match: string[] }).resource_match;
+    const candidates = ["exact", "prefix", "suffix", "regex", "glob", "template", "wildcard"];
+    const enforced = candidates.filter((form) => matchResource({ resource: `${CANONICAL_RESOURCE}/`, resource_match: form }, `${CANONICAL_RESOURCE}/`) !== "unsupported");
+    expect([...declaredMatches].sort()).toEqual(enforced.sort());
+  });
+
+  it("each operation binds the parameter form the document names, accepts an idempotency key and carries resolved recipients exactly where it declares them, and the none form binds no digest", async () => {
+    const operations = (current?.document as {
+      operations: Record<string, { parameters: string; idempotency_key?: boolean; recipients?: boolean }>;
+    }).operations;
+    const pinned = viewOf([entry({ id: CONTRACT, version: current?.version as string, digest: current?.digest as string })]);
+    const routed = (payments: PaymentsStore) => payments.seedRemittance("acme", ["ap@acme.example", "ar@acme.example"]);
+    const callOn = (x: Built, tool: string, mapping: ActionMapping) => {
+      const path = dispatchPathFor(mapping, true);
+      return path === "read"
+        ? x.server.callReadTool.bind(x.server)
+        : path === "write"
+          ? x.server.callWriteTool.bind(x.server)
+          : x.server.callTransactionTool.bind(x.server);
+    };
+    // The compensate crossing binds the reversal form over the committed
+    // wire's own record, witnessed live in compound-actions.test.ts ("reverses
+    // exactly the committed amount whatever the invoice now reads"), whose
+    // fields the first test above pins to the declared form.
+    expect(operations.reverse_wire_transfer).toMatchObject({ parameters: "reversal", idempotency_key: true });
+    for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
+      if (tool === "reverse_wire_transfer") continue;
+      const declaredOp = operations[tool] as { parameters: string; idempotency_key?: boolean; recipients?: boolean };
+      const base: Record<string, unknown> = tool === "list_invoices" ? {} : tool === "lookup_vendor" ? { vendor_id: "acme" } : { invoice_id: "inv-1" };
+      const key = `idem_${crypto.randomUUID()}`;
+      if (declaredOp.idempotency_key !== true) {
+        // An operation that declares no idempotency key refuses one before any decision.
+        const offered = await build("co-resident", pinned, RESOURCE_CONTRACTS, { shippedRetainedProfiles: true, seed: routed });
+        try {
+          const res = await callOn(offered, tool, mapping)(tool, { ...base, idempotency_key: key }, tokenFor(pinned));
+          expect(res.ok, tool).toBe(false);
+          expect(offered.decided, tool).toHaveLength(0);
+        } finally {
+          await offered.close();
+        }
+      }
+      const x = await build("co-resident", pinned, RESOURCE_CONTRACTS, { shippedRetainedProfiles: true, seed: routed });
+      try {
+        await callOn(x, tool, mapping)(tool, declaredOp.idempotency_key === true ? { ...base, idempotency_key: key } : base, tokenFor(pinned));
+        const req = x.decided[0] as { action: { properties?: Record<string, unknown> }; context: Record<string, unknown> } | undefined;
+        expect(req, tool).toBeDefined();
+        const invoice = x.payments.getInvoice("inv-1");
+        const vendor = x.payments.getVendor("acme");
+        if (!invoice || !vendor) throw new Error("seeded records");
+        const recipients = x.payments.remittanceRecipients("acme")?.recipients;
+        const expected: Record<string, string | undefined> = {
+          invoice: parameterDigest(
+            buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: CANONICAL_RESOURCE, ...(declaredOp.recipients ? { recipients } : {}) }),
+          ),
+          list: parameterDigest(
+            buildListEffectiveParams({ action: mapping.action, resource: CANONICAL_RESOURCE, vendor_scope: ["acme"], vendor_scope_source: "all" }),
+          ),
+          none: undefined,
+        };
+        expect(Object.keys(expected), tool).toContain(declaredOp.parameters);
+        expect(req?.context.parameter_digest, tool).toBe(expected[declaredOp.parameters]);
+        expect(req?.action.properties?.idempotency_key, tool).toBe(declaredOp.idempotency_key === true ? key : undefined);
+        expect(req?.action.properties?.recipients, tool).toEqual(declaredOp.recipients ? recipients : undefined);
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  // @spec runtime#read-binding, runtime#resource-contract (#249): the list
+  // form's normalization orders its vendor scope canonically, whatever order
+  // the entry's allowlist gives, so the digest the read commits names the same
+  // normal form for the same vendors. The scope is the matched entry's own
+  // `constraints.vendors`, supplied here in reverse canonical order.
+  it("normalizes a two-vendor list read's scope, supplied in reverse canonical order, to the canonical order, and commits the digest of exactly that normal form", async () => {
+    const pinnedRef = { id: CONTRACT, version: current?.version as string, digest: current?.digest as string };
+    const reversed = viewOf([entry(pinnedRef, CANONICAL_RESOURCE, { constraints: { vendors: ["globex", "acme"] } } as Partial<Entry>)]);
+    const secondVendor = (payments: PaymentsStore) =>
+      payments.seed(
+        [{ id: "globex", name: "Globex", status: "approved" }],
+        [{ id: "inv-g1", vendor_id: "globex", amount: "40.00", currency: "USD", payee_account: "acct-globex", status: "payable" }],
+      );
+    const x = await build("co-resident", reversed, RESOURCE_CONTRACTS, { seed: secondVendor });
+    try {
+      const res = await x.server.callReadTool("list_invoices", {}, tokenFor(reversed));
+      expect(res.ok, JSON.stringify(res)).toBe(true);
+      const req = x.decided[0] as { resource: { properties?: Record<string, unknown> }; context: Record<string, unknown> } | undefined;
+      const normal = (scope: string[]) =>
+        parameterDigest(
+          buildListEffectiveParams({ action: "payments:invoice.list", resource: CANONICAL_RESOURCE, vendor_scope: scope, vendor_scope_source: "entry" }),
+        );
+      // The exact normalized scope, in canonical order.
+      expect(req?.resource.properties?.vendor_ids).toEqual(["acme", "globex"]);
+      // The committed digest is the normal form's over that order, never the supplied order's.
+      expect(normal(["acme", "globex"])).not.toBe(normal(["globex", "acme"]));
+      expect(req?.context.parameter_digest).toBe(normal(["acme", "globex"]));
+      const decided = x.records().filter((e) => e.kind === "decision").map((e) => e.content as { parameter_digest?: string });
+      expect(decided.map((d) => d.parameter_digest)).toEqual([normal(["acme", "globex"])]);
+    } finally {
+      await x.close();
     }
   });
 
@@ -331,7 +545,7 @@ describe("the payments resource declares its contract versions (@spec runtime#re
     expect(v15).toEqual(v14);
   });
 
-  it("the current 2026-10-27 document differs from 2026-10-26's only in its version and its Operation Profile (#813, #816, D877)", () => {
+  it("the 2026-10-27 document differs from 2026-10-26's only in its version and its Operation Profile (#813, #816, D877)", () => {
     const docOf = (version: string) =>
       structuredClone(shipped?.versions.find((v) => v.version === version)?.document) as {
         version: string;
@@ -339,7 +553,6 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       };
     const v16 = docOf("2026-10-27");
     const v15 = docOf("2026-10-26");
-    expect(current?.version).toBe("2026-10-27");
     expect([v16.version, v16.operation_profile]).toEqual(["2026-10-27", "payments-runtime-profile-v16"]);
     v16.version = v15.version;
     v16.operation_profile = v15.operation_profile;
@@ -360,16 +573,49 @@ describe("the payments resource declares its contract versions (@spec runtime#re
     }
   });
 
-  it("resolves the current 2026-10-27 version, naming payments-runtime-profile-v16, for every operation, and the superseded 2026-10-26 version through its retained_until instant and not after it (#813, #816, D877)", () => {
+  // @spec runtime#resource-contract, runtime#evaluation-context-binding
+  // (#249, D1155): the descriptor references are contract material, so they
+  // arrive as a new version, and the published 2026-10-27 bytes are unchanged.
+  it("the current 2026-11-02 document differs from 2026-10-27's only in its version and the evaluation-context descriptor each covered operation names, the one the claim declares for it", () => {
+    const docOf = (version: string) =>
+      structuredClone(shipped?.versions.find((v) => v.version === version)?.document) as {
+        version: string;
+        operation_profile: string;
+        operations: Record<string, { action: string; phase?: string; evaluation_context_descriptor?: unknown }>;
+      };
+    const next = docOf("2026-11-02");
+    const v16 = docOf("2026-10-27");
+    expect(current?.version).toBe("2026-11-02");
+    expect([next.version, next.operation_profile]).toEqual(["2026-11-02", "payments-runtime-profile-v16"]);
+    const named: string[] = [];
+    for (const [tool, op] of Object.entries(next.operations)) {
+      const declared = EVALUATION_CONTEXT_BINDING.operation(op.action, op.phase);
+      expect(op.evaluation_context_descriptor, tool).toEqual(declared?.descriptor);
+      if (op.evaluation_context_descriptor !== undefined) named.push(tool);
+      delete op.evaluation_context_descriptor;
+    }
+    expect(named.sort()).toEqual(["check_transfer", "execute_wire_transfer", "hold_transfer", "reverse_wire_transfer", "send_remittance_email"]);
+    next.version = v16.version;
+    expect(next).toEqual(v16);
+  });
+
+  it("resolves the current 2026-11-02 version, naming payments-runtime-profile-v16, for every operation, and the superseded 2026-10-27 and 2026-10-26 versions each through its retained_until instant and not after it (#813, #816, D877; #249, D1155)", () => {
     const refOf = (version: string): ResourceContractRef => {
       const v = shipped?.versions.find((x) => x.version === version);
       return { id: CONTRACT, version, digest: v?.digest as string };
     };
     const at = (iso: string, action: string) => ({ target: CANONICAL_RESOURCE, action, now: new Date(iso) });
+    expect(shipped?.versions.find((x) => x.version === "2026-10-27")).toMatchObject({ state: "superseded", retained_until: "2027-11-02T00:00:00Z" });
     for (const action of ACTIONS) {
-      const resolved = RESOURCE_CONTRACTS.resolve(refOf("2026-10-27"), at("2030-01-01T00:00:00Z", action));
+      const resolved = RESOURCE_CONTRACTS.resolve(refOf("2026-11-02"), at("2030-01-01T00:00:00Z", action));
       expect(resolved.ok, action).toBe(true);
       expect(resolved.ok ? resolved.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v16");
+      const v16Within = RESOURCE_CONTRACTS.resolve(refOf("2026-10-27"), at("2027-11-02T00:00:00Z", action));
+      expect(v16Within.ok ? v16Within.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v16");
+      expect(RESOURCE_CONTRACTS.resolve(refOf("2026-10-27"), at("2027-11-02T00:00:01Z", action)), action).toEqual({
+        ok: false,
+        reason: "outside_retention",
+      });
       const within = RESOURCE_CONTRACTS.resolve(refOf("2026-10-26"), at("2027-10-27T00:00:00Z", action));
       expect(within.ok ? within.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v15");
       expect(RESOURCE_CONTRACTS.resolve(refOf("2026-10-26"), at("2027-10-27T00:00:01Z", action)), action).toEqual({
@@ -397,6 +643,92 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       const stmt = structuredClone(RUNTIME_SCOPE_CONFIG) as { extensions: { resource_contracts: Array<{ versions: Array<Record<string, unknown>> }> } };
       mutate(stmt.extensions.resource_contracts[0]?.versions[0] as Record<string, unknown>);
       expect(() => loadRuntimePosture(stmt), label).toThrow(/extensions\.resource_contracts/);
+    }
+  });
+});
+
+// @spec runtime#resource-contract, resource-access#initial-common-constraints
+// (#249, D1104): the declared inputs of the two constraints no other witness
+// tells apart from an alternative source. Every other clause of the document's
+// `constraints` is witnessed where its constraint is enforced (the ledger row
+// runtime.resource-contract.new-version-on-change lists each).
+describe("the declared constraint inputs the payments resource reads (@spec runtime#resource-contract, #249)", () => {
+  const [shipped] = RESOURCE_CONTRACTS.declarations;
+  const current = shipped?.versions.find((v) => v.state === "current");
+  const constraints = (current?.document as { constraints: Record<string, string> } | undefined)?.constraints ?? {};
+  const pinnedRef = { id: CONTRACT, version: current?.version as string, digest: current?.digest as string };
+  const read = (x: Built, view: MissionView) => x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+
+  it("time_window reads each evaluating component's own clock, never a time the request carries: past the window's end on the PDP's clock is denied what the PEP's clock let through, and past it on the PEP's clock is refused before any decision", async () => {
+    expect(constraints.time_window).toBe("the evaluating component's own clock");
+    // Over the remote channel, the one whose PDP evaluates with its own
+    // options and clock; a co-resident PDP decides in the PEP's process, on
+    // its clock.
+    const t = NOW().getTime();
+    const at = (ms: number) => () => new Date(ms);
+    const windowed = viewOf([entry(pinnedRef, CANONICAL_RESOURCE, { constraints: { time_window: { not_after: new Date(t + 60_000).toISOString() } } } as Partial<Entry>)]);
+    const both = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t), pdpNow: at(t) });
+    try {
+      const res = await read(both, windowed);
+      expect(res.ok, JSON.stringify(res)).toBe(true);
+    } finally {
+      await both.close();
+    }
+    const pdpPast = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t), pdpNow: at(t + 120_000) });
+    try {
+      const res = await read(pdpPast, windowed);
+      expect(res, JSON.stringify(res)).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+      expect(pdpPast.decided).toHaveLength(1);
+    } finally {
+      await pdpPast.close();
+    }
+    const pepPast = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t + 120_000), pdpNow: at(t) });
+    try {
+      const res = await read(pepPast, windowed);
+      // The PEP's own credential-bound check refuses it before any decision:
+      // a pre-decision Refusal Record classified
+      // credential_authority_insufficient, where the PDP's evaluated
+      // constraint denial above is parameter_violation.
+      expect(res.ok, JSON.stringify(res)).toBe(false);
+      expect(pepPast.decided).toHaveLength(0);
+      expect(pepPast.records().filter((e) => e.kind === "refusal").map((e) => e.content)).toEqual([
+        expect.objectContaining({ denial_reason: "credential_authority_insufficient" }),
+      ]);
+    } finally {
+      await pepPast.close();
+    }
+  });
+
+  it("terminal_when reads the Mission Issuer's discharge state: the entry the issuer's view lists as discharged is denied authority_discharged at the decision, and the same entry undischarged is performed, nothing at the resource differing", async () => {
+    expect(constraints.terminal_when).toBe("the Mission Issuer's discharge state");
+    const completing = entry(pinnedRef, CANONICAL_RESOURCE, {
+      constraints: { terminal_when: [{ event_type: "accounting-period-closed", discharge_authority: "close-management-2026-q3" }] },
+    } as Partial<Entry>);
+    // A view that holds its committed set, so the PDP can source the
+    // credential entry's completion condition from the Mission's.
+    const live: MissionView = { ...viewOf([completing]), authority_hash: authorityHash(ISSUER, [committedEntry(completing)] as unknown as JsonValue[]) };
+    const discharged: MissionView = {
+      ...live,
+      version: 2,
+      discharged: { entry_digests: [computeAnchor(AUTHORITY_ENTRY_TYP, ISSUER, committedEntry(completing) as unknown as JsonValue)] },
+    };
+    for (const mode of MODES) {
+      const performed = await build(mode, live, RESOURCE_CONTRACTS);
+      try {
+        const res = await read(performed, live);
+        expect(res.ok, `${mode}: ${JSON.stringify(res)}`).toBe(true);
+      } finally {
+        await performed.close();
+      }
+      const denied = await build(mode, discharged, RESOURCE_CONTRACTS);
+      try {
+        const res = await read(denied, discharged);
+        expect(res, `${mode}: ${JSON.stringify(res)}`).toMatchObject({ ok: false, denial_reason: "authority_discharged" });
+        expect(denied.decided, mode).toHaveLength(1);
+        expect(res.result, mode).toBeUndefined();
+      } finally {
+        await denied.close();
+      }
     }
   });
 });

@@ -310,7 +310,7 @@ these reversibility classes before execution:
 `irreversible_action`, `external_commitment`, and
 `privileged_administration` are the identically-named action classes of
 {{I-D.draft-mcguinness-mission-runtime}} (Section
-"Action classification"). A step's reversibility class MUST be at least
+"Action Classification"). A step's reversibility class MUST be at least
 the minimum this table maps from the runtime action class the runtime
 profile assigns the same operation:
 
@@ -325,6 +325,13 @@ profile assigns the same operation:
 
 `read_only` and `reversible_write` are a reversibility refinement this
 profile adds that the runtime classification does not separately track.
+
+A step whose operation satisfies more than one runtime class predicate
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Action
+Classification") meets the minimum each of those classes maps to.
+`irreversible_action`, `external_commitment`, and
+`privileged_administration` carry the same requirements in this
+profile, so any one of them meets the minimum of another.
 
 The class MAY be raised by Resource policy or operation profile. As
 with the runtime classification floor
@@ -1080,6 +1087,11 @@ This document makes no IANA request.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Reversibility Classes ({{reversibility}}): a step whose operation
+  satisfies more than one runtime class predicate meets the minimum
+  each of those classes maps to, and the three highest classes meet
+  one another's minimum (#1735).
 
 - Record Integrity and Retention ({{evidence-integrity}}): the
   imported sequence indicator is per emitter for each Mission, as the

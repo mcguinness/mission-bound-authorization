@@ -8,6 +8,7 @@
 
 import { EvaluationContextBindingDeclarations } from "@mission/core";
 import { currentContractRef } from "@mission/demo-data";
+import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
 import type { EvaluationRequest } from "./evaluate.js";
 import type { MissionView } from "./policy-view.js";
 import {
@@ -53,6 +54,17 @@ export function resourcePolicyFixture(refuses: (query: ResourcePolicyQuery) => b
  * witnesses (`evaluate-evaluation-context.test.ts`).
  */
 export const EVALUATION_CONTEXT_UNCLAIMED_FIXTURE = new EvaluationContextBindingDeclarations({});
+
+/**
+ * @spec runtime#classification (#1994): no operation declarations, so a
+ * request's class set is its assigned class and no phase is required. For a
+ * unit test whose subject is another decision input on a payments operation
+ * the shipped statement declares only at phases, bound PDP-side exactly as a
+ * deployment's declarations are; the declared sets have their own witnesses
+ * (`evaluate-multi-class.test.ts`).
+ */
+export const OPERATION_DECLARATIONS_NONE_FIXTURE: ReadonlyArray<ExecutionCapabilityDeclaration> = [];
+
 
 /**
  * @spec runtime#resource-contract (#249, D865): `request` as a PEP that

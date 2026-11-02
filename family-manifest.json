@@ -153,7 +153,7 @@
    "verbs": [
     "analyze"
    ],
-   "summary": "Maps Cloudflare's Agent Access Model onto the family, realizing each of its six components with an existing mechanism and declining the grant review loop because Missions are not standing grants.",
+   "summary": "Maps Cloudflare's Agent Access Model onto the family: each of its six components is realized by an existing mechanism, and its grant review loop by the Template and Progressive review cadences over standing consent.",
    "pull_when": "Adopting Cloudflare's AAM vocabulary and mapping it onto existing mechanisms.",
    "normative_references": [],
    "adoption_requires": [],
@@ -171,6 +171,7 @@
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-issuance-grant",
     "draft-mcguinness-oauth-mission-management",
+    "draft-mcguinness-oauth-mission-progressive",
     "draft-mcguinness-oauth-mission-template"
    ]
   },
@@ -2502,14 +2503,6 @@
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-template"
-   ],
-   "requires_when": [
-    {
-     "when": "a Mission is activated under a standing-consent basis",
-     "requires": [
-      "draft-mcguinness-mission-approval-governance"
-     ]
-    }
    ]
   },
   {

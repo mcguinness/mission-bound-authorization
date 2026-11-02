@@ -38,7 +38,8 @@ import type { ActObject } from "@mission/actor-chain";
 import {
   type AudienceContext,
   type AudienceValidation,
-  executionLeaseMaxSeconds,
+  applicableActionClasses,
+  executionLeaseMaxSecondsOver,
   executionLeaseMs,
   loadRuntimePosture,
   REVERSIBLE_WRITE_CLASS,
@@ -76,7 +77,7 @@ import {
   type TxnCredential,
   type WriteReservationScope,
 } from "./pep.js";
-import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
+import { type DpopPresentation, DpopProofError, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
 import { type IntrospectionSettings, TokenInactiveError, TokenIntrospector } from "./introspection.js";
 import { aatKeyThumbprint, readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
 import { type AatPresentation, AatPresentationRefused } from "./aat-presentation.js";
@@ -688,7 +689,8 @@ export interface McpServerDeps {
  */
 export type VerifiedTxnCredential =
   | { ok: true; facts: MissionBoundTokenFacts }
-  | { ok: false; refusal_reason: string };
+  /** `proofFailure`: the presented DPoP proof itself failed (#1970), so the HTTP gate may say so. */
+  | { ok: false; refusal_reason: string; proofFailure?: true };
 
 export interface TransactionToolResult {
   ok: boolean;
@@ -1162,7 +1164,10 @@ export class McpPaymentsServer {
   async validateCredential(accessToken: string, pop?: DpopPresentation): Promise<TokenFacts> {
     if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
       const verified = await this.verifyTransactionCredential(accessToken, pop);
-      if (!verified.ok) throw new Error(`transaction credential refused: ${verified.refusal_reason}`);
+      if (!verified.ok) {
+        const why = `transaction credential refused: ${verified.refusal_reason}`;
+        throw verified.proofFailure ? new DpopProofError(why) : new Error(why);
+      }
       return verified.facts;
     }
     return pop
@@ -1247,7 +1252,7 @@ export class McpPaymentsServer {
       // @spec runtime-evidence#pre-decision-refusal, #1173 (D375): replay state
       // at capacity is a transient refusal, not a proof verdict.
       if (e instanceof DpopReplayUnavailableError) return { ok: false, refusal_reason: "state_unavailable" };
-      return { ok: false, refusal_reason: "txn_cnf_mismatch" };
+      return { ok: false, refusal_reason: "txn_cnf_mismatch", ...(e instanceof DpopProofError ? { proofFailure: true as const } : {}) };
     }
 
     // 3. Against the RETAINED pending operation.
@@ -2248,9 +2253,16 @@ export class McpPaymentsServer {
       leaseStartMs +
       executionLeaseMs({
         nowMs: leaseStartMs,
-        publishedMaxSeconds: executionLeaseMaxSeconds(
+        // @spec runtime#classification (#1994): the tightest lease any class
+        // that applies to the operation publishes.
+        publishedMaxSeconds: executionLeaseMaxSecondsOver(
           this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
-          profile?.actionClass,
+          applicableActionClasses(
+            this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
+            profile?.actionClass,
+            profile?.action ?? tool,
+            profile?.phase,
+          ),
         ),
         permitValidUntilMs:
           typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : undefined,
@@ -2305,7 +2317,15 @@ export class McpPaymentsServer {
     // effect (#821 review). A write that fails prevents the effect: the
     // action is refused and nothing executes.
     let attemptRecord: ExecutionAttemptRecord | undefined;
-    if (PRE_EFFECT_ATTEMPT_CLASSES.has(profile?.actionClass ?? "")) {
+    // @spec runtime#classification (#1994): a duty any applicable class carries.
+    if (
+      applicableActionClasses(
+        this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
+        profile?.actionClass,
+        profile?.action ?? tool,
+        profile?.phase,
+      ).some((c) => PRE_EFFECT_ATTEMPT_CLASSES.has(c))
+    ) {
       try {
         if (!this.deps.writeReservations || !attempt.decisionEvidence) throw new Error("no pre-effect attempt record");
         attemptRecord = this.deps.writeReservations.recordAttempt({

@@ -40,6 +40,14 @@ import { type EvidenceKeyResolver, REFUSAL_RECORD_MEDIA_TYPE, verifyEvidenceEnve
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import type { ExecutionCapabilityDeclaration } from "../src/enforcement-scope.js";
+
+/**
+ * #1994: this file's PDP declares no operation classes. Its subject is input
+ * validation before evaluation, which no class set changes; the class set
+ * has its own witnesses (`evaluate-multi-class.test.ts`).
+ */
+const NO_OPERATION_DECLARATIONS: ReadonlyArray<ExecutionCapabilityDeclaration> = [];
 
 const AUDIENCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-10-24T12:00:00Z");
@@ -127,6 +135,7 @@ async function inProcess(req: EvaluationRequest, over: Partial<EvaluateOptions> 
     evidence: emitter(),
     refusals: (r) => refusals.push(r),
     evaluationContextBinding: CLAIMED,
+    operationDeclarations: NO_OPERATION_DECLARATIONS,
     ...over,
   }).then(
     (decision) => ({ decision: decision as unknown as { decision: boolean; context: Record<string, unknown> } }),
@@ -210,6 +219,7 @@ describe("the PDP validates the evaluation-context inputs of a covered operation
     const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
     const { fga, calls } = countingFga();
     handle = await createPdpHttpServer({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE] }]]),
       // A request option naming a declaration that covers nothing is stripped.
       getOptions: () =>
@@ -240,6 +250,7 @@ describe("the PDP validates the evaluation-context inputs of a covered operation
     // request its claimed peer refused: its own binding applies, never the
     // shipped statement's or a caller's.
     handle = await createPdpHttpServer({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE] }]]),
       getOptions: () => ({ ...decisionOptions(fga), evaluationContextBinding: CLAIMED }) as DecisionOptions,
       evaluateFn: evaluateRequest,
@@ -338,6 +349,7 @@ describe("the PDP echoes the validated context digest and records the binding (@
     const { fga } = countingFga();
     const refusals: PdpRefusal[] = [];
     const point = createEphemeralDecisionPoint({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       emitterId: "pdp-773",
       audience: AUDIENCE,
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
@@ -356,6 +368,7 @@ describe("the PDP echoes the validated context digest and records the binding (@
     // context, though the shipped statement claims the extension and the
     // caller names the claimed declaration.
     const unclaimed = createEphemeralDecisionPoint({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       emitterId: "pdp-773",
       audience: AUDIENCE,
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
@@ -368,6 +381,7 @@ describe("the PDP echoes the validated context digest and records the binding (@
     // A decision point with no binding of its own applies the shipped
     // statement, which claims the extension: a caller cannot switch it off.
     const statement = createEphemeralDecisionPoint({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       emitterId: "pdp-773",
       audience: AUDIENCE,
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,

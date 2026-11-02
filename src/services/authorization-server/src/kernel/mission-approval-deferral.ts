@@ -163,6 +163,10 @@ const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
   ["delivery_claimed_at", "INTEGER"],
   ["resource", "TEXT"],
   ["evidence_json", "TEXT"],
+  // @spec request-provenance#replay (#939 slice 2a-2): the accepted pushed
+  // submission the pending approval was opened from; NULL on a row opened
+  // before it.
+  ["acceptance_ref", "TEXT"],
 ];
 
 function migrate(db: Database): void {
@@ -202,6 +206,7 @@ interface Row {
   delivery_claimed_at: number | null;
   resource: string | null;
   evidence_json: string | null;
+  acceptance_ref: string | null;
 }
 
 /** A refusal the activation checks raise (as opposed to a fault of the issuer). */
@@ -270,6 +275,12 @@ export class MissionApprovalDeferralStore {
      * whole envelope, so the activation verifies it again and records its facts.
      */
     evidence?: IntentSubmissionEvidenceEntry[];
+    /**
+     * @spec request-provenance#replay (#939 slice 2a-2): the carrier's
+     * reference for the accepted submission (`par:<jti>`): the activation is
+     * a later step of it and relies on its acceptance record.
+     */
+    acceptanceRef?: string;
   }): DeferralPending {
     const code = `mdfr_${randomBytes(18).toString("base64url")}`;
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
@@ -283,8 +294,8 @@ export class MissionApprovalDeferralStore {
       this.db
         .prepare(
           `INSERT INTO mission_approval_deferrals (deferral_code, state, client_id, jkt, intent_json, proposal_json,
-             approval_event_id, created_at, resource, evidence_json)
-           VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
+             approval_event_id, created_at, resource, evidence_json, acceptance_ref)
+           VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           code,
@@ -296,6 +307,7 @@ export class MissionApprovalDeferralStore {
           nowMs,
           input.resource ?? null,
           input.evidence?.length ? JSON.stringify(input.evidence) : null,
+          input.acceptanceRef ?? null,
         );
     });
     return { error: "authorization_pending", deferral_code: code, expires_in: this.lifetimeMs() / 1000, interval: DEFERRAL_INTERVAL };
@@ -458,6 +470,10 @@ export class MissionApprovalDeferralStore {
       presenter: { clientId: row.client_id },
       required: this.opts.requiredEvidenceTypes?.(row.client_id) ?? [],
       requestContext: { carrier: "par" },
+      // @spec request-provenance#replay (#939 slice 2a-2): the activation is
+      // a later step of the accepted pushed submission the row was opened
+      // from; a row that names none relies on no acceptance record.
+      ...(row.acceptance_ref ? { accepted: { ref: row.acceptance_ref } } : {}),
     });
   }
 

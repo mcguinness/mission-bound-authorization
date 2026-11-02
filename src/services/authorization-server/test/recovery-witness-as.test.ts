@@ -392,6 +392,7 @@ const KERNEL_TABLE_INVENTORY = [
   "discharge_events",
   "discharge_mapping_pins",
   "discharge_selectors",
+  "drawdown_policy_pins",
   "drawdown_record_inputs",
   "drawdown_recording_rules",
   "expansion_deferrals",

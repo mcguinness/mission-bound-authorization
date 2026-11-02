@@ -323,7 +323,17 @@ const assertionFile = {
 // ---- negative cases ---------------------------------------------------------
 
 const REFUSE = { outcome: "refuse", error: "invalid_mission_intent_evidence" };
-const PENDING = { status: "pending", tracking: "#939 slice 2 (AS verifier)" };
+// The AS verifier's test runs every case by its id (#939 slice 2a-1).
+const VERIFIER_TEST =
+  "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939)";
+const verifierChecked = (c) => ({
+  status: "checked",
+  test: `${VERIFIER_TEST} > ${c.id}: ${
+    c.expected.outcome === "refuse"
+      ? `refused at step ${c.step}`
+      : "accepted, recording exactly the positive vector's facts"
+  }`,
+});
 const T = "src/packages/request-provenance/test";
 const producerHeader = {
   status: "checked",
@@ -354,7 +364,7 @@ const without = (o, k) => {
 };
 
 const negatives = [];
-const add = (c) => negatives.push(c);
+const add = (c) => negatives.push({ ...c, verifier: verifierChecked(c) });
 
 add({
   id: "neg-typ-jwt",
@@ -364,7 +374,6 @@ add({
   token: await es256({ ...header, typ: "JWT" }, claims),
   expected: REFUSE,
   producer: producerHeader,
-  verifier: PENDING,
 });
 add({
   id: "neg-typ-absent",
@@ -374,7 +383,6 @@ add({
   token: await es256(without(header, "typ"), claims),
   expected: REFUSE,
   producer: producerHeader,
-  verifier: PENDING,
 });
 add({
   id: "neg-alg-none",
@@ -384,7 +392,6 @@ add({
   token: `${b64({ ...header, alg: "none" })}.${b64(claims)}.`,
   expected: REFUSE,
   producer: producerHeader,
-  verifier: PENDING,
 });
 {
   const pem = createPublicKey({ key: publicJwk, format: "jwk" }).export({
@@ -406,7 +413,6 @@ add({
     token: `${input}.${mac}`,
     expected: REFUSE,
     producer: producerHeader,
-    verifier: PENDING,
   });
 }
 add({
@@ -417,7 +423,6 @@ add({
   token: await es256(without(header, "kid"), claims),
   expected: REFUSE,
   producer: producerHeader,
-  verifier: PENDING,
 });
 for (const [param, value] of [
   ["jku", "https://intake.example.com/jwks.json"],
@@ -433,7 +438,6 @@ for (const [param, value] of [
     token: await es256({ ...header, [param]: value }, claims),
     expected: REFUSE,
     producer: producerHeader,
-    verifier: PENDING,
   });
 }
 add({
@@ -444,7 +448,6 @@ add({
   token: await es256({ ...header, kid: "intake-2026-09" }, claims),
   expected: REFUSE,
   producer: na("the intake signs under its configured kid; the mapping is AS configuration"),
-  verifier: PENDING,
 });
 add({
   id: "neg-key-not-mapped-to-type",
@@ -475,7 +478,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("AS trust configuration"),
-  verifier: PENDING,
 });
 {
   const [h, p, s] = sample.split(".");
@@ -489,7 +491,6 @@ add({
     token: `${h}.${b64(altered)}.${s}`,
     expected: REFUSE,
     producer: na("a property of the token in transit"),
-    verifier: PENDING,
   });
 }
 for (const claim of [
@@ -505,15 +506,19 @@ for (const claim of [
   "captured_at",
   "request_digest",
 ]) {
+  // Step 3 looks the signer up by the iss claim, so an absent iss names no
+  // signer and refuses there, before step 5's claim check.
   add({
     id: `neg-missing-${claim.replaceAll("_", "-")}`,
-    description: `required claim ${claim} is absent`,
-    step: 5,
+    description:
+      claim === "iss"
+        ? "required claim iss is absent: the signer lookup by iss (step 3) finds no signer"
+        : `required claim ${claim} is absent`,
+    step: claim === "iss" ? 3 : 5,
     construction: { claims_delete: [claim] },
     token: await es256(header, without(claims, claim)),
     expected: REFUSE,
     producer: producerClaims,
-    verifier: PENDING,
   });
 }
 add({
@@ -524,7 +529,6 @@ add({
   token: await es256(header, { ...claims, iat: String(IAT) }),
   expected: REFUSE,
   producer: producerClaims,
-  verifier: PENDING,
 });
 add({
   id: "neg-presenter-no-client-id",
@@ -534,7 +538,6 @@ add({
   token: await es256(header, { ...claims, presenter: { cnf: capture.presenter.cnf } }),
   expected: REFUSE,
   producer: producerClaims,
-  verifier: PENDING,
 });
 add({
   id: "neg-aud-array",
@@ -544,7 +547,6 @@ add({
   token: await es256(header, { ...claims, aud: [AUD] }),
   expected: REFUSE,
   producer: producerClaims,
-  verifier: PENDING,
 });
 add({
   id: "neg-aud-other-as",
@@ -554,7 +556,6 @@ add({
   token: await es256(header, { ...claims, aud: "https://other-as.example.com" }),
   expected: REFUSE,
   producer: na("the intake signs for the audience its caller names"),
-  verifier: PENDING,
 });
 add({
   id: "neg-expired",
@@ -564,7 +565,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("expiry is judged at verification"),
-  verifier: PENDING,
 });
 add({
   id: "neg-iat-future",
@@ -574,7 +574,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("judged at verification"),
-  verifier: PENDING,
 });
 add({
   id: "neg-lifetime-over-max",
@@ -584,7 +583,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("the AS's declared bound"),
-  verifier: PENDING,
 });
 add({
   id: "neg-captured-after-iat",
@@ -594,7 +592,6 @@ add({
   token: await es256(header, { ...claims, captured_at: IAT + 120 }),
   expected: REFUSE,
   producer: producerClock,
-  verifier: PENDING,
 });
 add({
   id: "neg-capture-age-over-max",
@@ -604,7 +601,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: producerAge,
-  verifier: PENDING,
 });
 add({
   id: "neg-originator-out-of-scope",
@@ -625,7 +621,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("AS trust configuration"),
-  verifier: PENDING,
 });
 add({
   id: "neg-channel-out-of-scope",
@@ -646,7 +641,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("AS trust configuration"),
-  verifier: PENDING,
 });
 add({
   id: "neg-intent-mismatch",
@@ -660,7 +654,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("the AS's comparison"),
-  verifier: PENDING,
 });
 add({
   id: "neg-presenter-client-mismatch",
@@ -670,7 +663,6 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("the AS's comparison"),
-  verifier: PENDING,
 });
 add({
   id: "neg-presenter-cnf-mismatch",
@@ -685,7 +677,16 @@ add({
   token: sample,
   expected: REFUSE,
   producer: na("the AS's comparison"),
-  verifier: PENDING,
+});
+add({
+  id: "neg-presenter-cnf-unestablished",
+  description:
+    "the exchange established the same client_id and no confirmation key, as a PAR does: a presenter carrying cnf does not agree, and no key is inferred from the assertion (D1119 Q3)",
+  step: 9,
+  construction: { verifier_context_patch: { presenter: { cnf: null } } },
+  token: sample,
+  expected: REFUSE,
+  producer: na("the AS's comparison"),
 });
 {
   const instructionSha256 = `sha-256:${createHash("sha256").update(Buffer.from(INSTRUCTION, "utf8")).digest("base64url")}`;
@@ -698,7 +699,6 @@ add({
     token: await es256(header, { ...claims, instruction_sha256: instructionSha256 }),
     expected: { outcome: "accept", recorded_facts: recordedFacts },
     producer: producerContent,
-    verifier: PENDING,
   });
 }
 

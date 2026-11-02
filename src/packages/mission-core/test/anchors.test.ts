@@ -126,6 +126,33 @@ describe("parseStrictJson", () => {
   it("rejects trailing input", () => {
     expect(() => parseStrictJson('{"a":1} garbage')).toThrow(SyntaxError);
   });
+
+  it("keeps a __proto__ member as an own data member, whatever its value, and never as the object's prototype", () => {
+    for (const [text, value] of [
+      ['{"a":1,"__proto__":null}', null],
+      ['{"a":1,"__proto__":7}', 7],
+      ['{"a":1,"__proto__":"x"}', "x"],
+      ['{"a":1,"__proto__":{"admin":true}}', { admin: true }],
+    ] as const) {
+      const v = parseStrictJson(text) as Record<string, unknown>;
+      expect(Object.getPrototypeOf(v), text).toBe(Object.prototype);
+      expect(Object.keys(v), text).toEqual(["a", "__proto__"]);
+      expect(Object.getOwnPropertyDescriptor(v, "__proto__")?.value, text).toEqual(value);
+      expect("admin" in v, text).toBe(false);
+      expect(canonicalize(v as never), text).toBe(`{"__proto__":${JSON.stringify(value)},"a":1}`);
+    }
+    const nested = parseStrictJson('{"outer":{"__proto__":{"admin":true}}}') as {
+      outer: Record<string, unknown>;
+    };
+    expect(Object.keys(nested.outer)).toEqual(["__proto__"]);
+    expect("admin" in nested.outer).toBe(false);
+  });
+
+  it("rejects a duplicated __proto__ member", () => {
+    expect(() => parseStrictJson('{"__proto__":null,"__proto__":{}}')).toThrow(
+      DuplicateMemberError,
+    );
+  });
 });
 
 // Core § integrity-anchors, the Authority Set entry commitment vector.

@@ -27,7 +27,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { type EvaluationRequest, evaluate, type MissionView, stalenessBound } from "../src/index.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withActionClass } from "./with-credential.js";
 
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
@@ -118,6 +118,9 @@ async function decide(input: Record<string, unknown>): Promise<boolean> {
     // entries alone decide.
     relationForAction: () => ({ relation: "payer", needsAmount: false }),
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    // #1994: no operation declarations: a payments operation is decided
+    // under its assigned class alone, with no phase required.
+    operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
   });
   return decision.decision;
 }

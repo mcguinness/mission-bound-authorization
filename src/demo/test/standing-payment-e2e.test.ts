@@ -51,6 +51,10 @@ import { tokenGrantRequest } from "../src/oauth-client.js";
 import { composeStack, type DemoStack } from "../src/stack.js";
 import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
+// Each case composes the whole stack, twice for the restart cases; run alone
+// under load they took up to 5.2 s, past the five-second default.
+vi.setConfig({ testTimeout: 120_000 });
+
 const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
 const ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";

@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "clock_skew_seconds": 30,
+  "max_assertion_lifetime_seconds": 600,
+  "max_capture_age_seconds": 600,
+  "signers": []
+}

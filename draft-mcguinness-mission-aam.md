@@ -65,6 +65,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-progressive:
+    title: "Mission Progressive Authorization for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-progressive.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
@@ -157,9 +165,9 @@ Mission-Bound Authorization: every component is realized by an
 existing mechanism of the family's OAuth lane, so the model's
 reference scenario runs end to end in Mission vocabulary with no new
 protocol surface.
-The mapping also states what it deliberately does not adopt (the
-grant review loop, which has no standing grants to stand over) and
-the honesty boundaries any deployment of it inherits.
+The mapping also states where the grant review loop runs (over the
+family's standing consent, not over individual Missions) and the
+honesty boundaries any deployment of it inherits.
 
 --- middle
 
@@ -186,8 +194,8 @@ components named per that section's rule. This document is that mapping, stated
 in both vocabularies: which Mission mechanism realizes each AAM
 component, how the model's reference scenario (a nightly
 reconciliation job with one human-gated external communication) runs
-end to end on Missions, why the Grant Review Loop is deliberately
-not adopted, and which claims the mapping refuses to make.
+end to end on Missions, where the Grant Review Loop runs, and which
+claims the mapping refuses to make.
 
 This document defines no wire protocol, no new Mission mechanism,
 and no binding; it is not a Mission Substrate binding and carries no
@@ -220,9 +228,9 @@ names are capitalized as {{AAM}} presents them.
 | Task-Scoped Access Engine | A stateless Policy Decision Point evaluating a per-check view of the Mission (the Authority Set plus the containment delta) | {{I-D.draft-mcguinness-mission-authzen}}, {{I-D.draft-mcguinness-mission-runtime}} |
 | Mediation Layer | The mediated harness (the tool channel plus the resource-server Policy Enforcement Point) for tool calls, and an egress gate for the otherwise-unmediated network path | {{I-D.draft-mcguinness-mission-harness}}, {{I-D.draft-mcguinness-mission-runtime}} |
 | Trust Ratchet | Mission Containment: an authenticated protected event narrows the effective Authority Set deterministically, and restoration requires a fresh approval | {{I-D.draft-mcguinness-oauth-mission-containment}} |
-| Task template and capability ceiling | Mission Templates: consent once to a ceiling and a bounded per-instance lifetime, then Dispatch many instances, each clipped to the ceiling | {{I-D.draft-mcguinness-oauth-mission-template}}, {{I-D.draft-mcguinness-oauth-mission-approval}} |
+| Task template and capability ceiling | Mission Templates: consent to a ceiling and a bounded per-instance lifetime, renewed by a human within the template's `review_cadence`, then Dispatch many instances, each clipped to the ceiling | {{I-D.draft-mcguinness-oauth-mission-template}}, {{I-D.draft-mcguinness-oauth-mission-approval}} |
 | Agent Activity Log | A pure read-model join over the family's evidence: decision, execution, egress, ingestion, and containment records threaded by Mission lineage into a per-task-run graph | {{I-D.draft-mcguinness-mission-audit}}, {{I-D.draft-mcguinness-mission-authzen}} |
-| Grant Review Loop | Not adopted ({{grant-review}}) | {{I-D.draft-mcguinness-oauth-mission-expansion}}, {{I-D.draft-mcguinness-oauth-mission-approval-revision}}, {{I-D.draft-mcguinness-oauth-mission-management}} |
+| Grant Review Loop | Standing consent stops admitting policy issuance past its review cadence until a human re-consents: the Template's `review_cadence` and Progressive's ceiling review cadence ({{grant-review}}) | {{I-D.draft-mcguinness-oauth-mission-template}}, {{I-D.draft-mcguinness-oauth-mission-progressive}} |
 {: title="AAM components and their Mission realizations"}
 
 ## Agent Identity Broker {#identity-broker}
@@ -293,9 +301,10 @@ Dispatch to ever confer the high-consequence entry, which is only
 ever granted by a fresh human approval
 ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
-The ceiling therefore names the whole job's scope, consented a
-single time, while every machine-speed instance is clipped to the
-low-consequence slice.
+The ceiling therefore names the whole job's scope, consented by one
+human approval and renewed within the template's `review_cadence`,
+while every machine-speed instance is clipped to the low-consequence
+slice.
 
 ## Agent Activity Log {#activity-log}
 
@@ -314,10 +323,11 @@ AAM's reference scenario is a nightly reconciliation job whose one
 external communication (posting a finance remittance) is
 human-gated. The run, in Mission vocabulary:
 
-1. Consent once. A Template is recorded with a read-only
-   reconciliation ceiling plus one external-communication capability
-   (the whole nightly job's scope), a bounded per-instance lifetime,
-   and the human approver of record.
+1. Consent. A Template is recorded with a read-only reconciliation
+   ceiling plus one external-communication capability (the whole
+   nightly job's scope), a bounded per-instance lifetime, the
+   `review_cadence` within which a human renews it, and the human
+   approver of record.
 2. Machine-speed Dispatch, kept low-consequence. A scheduler redeems
    the mission-dispatch grant for a read-only intent, yielding a
    fresh Mission with Template lineage, the Template's human as
@@ -352,14 +362,32 @@ human-gated. The run, in Mission vocabulary:
    ingestion, Containment Evidence, and subsequent contained
    decision, with no Template lineage.
 
-# The Grant Review Loop Is Not Adopted {#grant-review}
+# The Grant Review Loop {#grant-review}
 
 AAM's grant review loop is a periodic human re-approval of standing
-grants. Missions are not standing grants, so the loop has nothing to
-stand over:
+grants. The family's standing grants are its standing consent, and
+each realizes the loop:
 
-- consent is captured once at the Template and re-checked against
-  the ceiling at every Dispatch;
+- A Mission Template's consent admits no Dispatch once its most
+  recent human approval is older than the template's required
+  `review_cadence`, until a fresh human approval re-consents to, or
+  narrows, the template; the Template profile recommends that the
+  review's disclosure render the template's dispatch record since the
+  prior review ({{I-D.draft-mcguinness-oauth-mission-template}}).
+- A Progressive pre-consented ceiling admits no policy-adjudicated
+  drawdown once its consent, the initial consent or the latest
+  re-consent, is older than the ceiling review cadence the deployment
+  publishes; the drawdown request falls back to a fresh human approval,
+  and policy adjudication returns only with a re-consent, whose
+  disclosure renders the chain's record since the prior review
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+A Mission itself is not a standing grant, so no review loop runs over
+individual Missions:
+
+- consent is captured at the Template, re-checked against the ceiling
+  at every Dispatch, and renewed by a human within the template's
+  `review_cadence`;
 - a Mission is lifetime-bounded, so reliance expires on its own
   rather than persisting until a review revokes it;
 - drift during a run is handled by containment, not by a scheduled
@@ -373,9 +401,9 @@ stand over:
   management surface
   ({{I-D.draft-mcguinness-oauth-mission-management}}).
 
-A standing review loop would duplicate the expansion, containment,
-and audit surfaces the family already carries. A deployment that
-wants a periodic review as organizational practice can run one over
+A review loop over individual Missions would duplicate the expansion,
+containment, and audit surfaces the family already carries. A
+deployment that wants one as organizational practice can run it over
 the Activity Log without any new mechanism.
 
 # Limitations {#limitations}
@@ -414,7 +442,10 @@ deployment claiming to realize AAM through this mapping is claiming,
 per component, the conformance targets of the governing documents in
 {{mapping}}: the issuance profile for approval and issuance, the
 template companion for ceilings and Dispatch (including the
-prohibited-class refusal), the AuthZEN and runtime profiles for the
+prohibited-class refusal), the template companion's review cadence,
+and the progressive companion's where the deployment pre-consents
+ceilings, for the grant review loop, the AuthZEN and runtime
+profiles for the
 decision and enforcement path, the harness document for mediation,
 the containment companion for the ratchet, and the audit companion
 for the evidence the Activity Log joins. A deployment that omits a
@@ -449,6 +480,16 @@ model's accountability feature and is subject to the same scoping.
 This document has no IANA actions.
 
 --- back
+
+# Document History {#document-history}
+
+\[\[ To be removed from the final specification ]]
+
+- The Grant Review Loop is realized for the family's standing consent:
+  the Template's `review_cadence` and Progressive's ceiling review
+  cadence each stop policy issuance until a human re-consents. The
+  reasons no loop runs over individual Missions stay. The component
+  mapping, the reference scenario and Conformance follow (#1139).
 
 # Acknowledgments
 {:numbered="false"}

@@ -45,18 +45,23 @@ export const REVERSIBILITY_FLOOR: Readonly<Record<RuntimeActionClass, Reversibil
 };
 
 /**
- * A deterministic rank so the floor is a total function. read_only <
- * reversible_write < the three high-risk classes; the three high-risk classes
- * are ranked only to break ties for a deterministic max, NOT as a claim that
- * they are mutually ordered by reversibility.
+ * @spec orchestration#reversibility (#1735, #1994): the profile's partial
+ * order. read_only < reversible_write < the three high-risk classes, which
+ * carry the same requirements in this profile and share one tier: any one
+ * meets the minimum of another, and none ranks above the others.
  */
-const RANK: Readonly<Record<ReversibilityClass, number>> = {
+const TIER: Readonly<Record<ReversibilityClass, number>> = {
   read_only: 0,
   reversible_write: 1,
   irreversible_action: 2,
-  external_commitment: 3,
-  privileged_administration: 4,
+  external_commitment: 2,
+  privileged_administration: 2,
 };
+
+/** Whether `proposed` meets the minimum `floor` maps to. */
+function meets(proposed: ReversibilityClass, floor: ReversibilityClass): boolean {
+  return TIER[proposed] >= TIER[floor];
+}
 
 /** The high-risk classes: an `unknown` outcome here MUST route to human review. */
 export const HIGH_RISK_REVERSIBILITY: ReadonlySet<ReversibilityClass> = new Set([
@@ -93,16 +98,36 @@ export function floorReversibility(runtimeActionClass: RuntimeActionClass): Reve
 }
 
 /**
- * Enforce the floor: never below the mapped minimum (raise-only). Returns the
- * higher of the proposed class and the floor, so a proposal can raise but
- * never lower below what the runtime action class requires.
+ * @spec orchestration#reversibility (#1735, #1994): the minimum for a step
+ * one or more runtime classes apply to: a floor that meets each class's
+ * minimum. Where several floors share the highest tier, the first in the
+ * given order (the assigned class first) is taken; any of them meets every
+ * minimum, so the choice decides nothing the rule governs.
+ */
+export function floorReversibilityOver(
+  runtimeActionClasses: readonly RuntimeActionClass[],
+): ReversibilityClass {
+  const floors = runtimeActionClasses.map(floorReversibility);
+  const floor = floors.find((f) => floors.every((g) => meets(f, g)));
+  if (floor === undefined) throw new Error("a governed step has at least one runtime action class");
+  return floor;
+}
+
+/**
+ * Enforce the floor: never below the mapped minimum (raise-only). Keeps the
+ * proposed class where it meets the minimum of every applicable runtime class,
+ * and otherwise takes the floor, so a proposal can raise but never lower below
+ * what any applicable class requires.
  */
 export function enforceReversibilityFloor(
   proposed: ReversibilityClass,
-  runtimeActionClass: RuntimeActionClass,
+  runtimeActionClass: RuntimeActionClass | readonly RuntimeActionClass[],
 ): ReversibilityClass {
-  const floor = floorReversibility(runtimeActionClass);
-  return RANK[proposed] >= RANK[floor] ? proposed : floor;
+  const classes: readonly RuntimeActionClass[] =
+    typeof runtimeActionClass === "string" ? [runtimeActionClass] : runtimeActionClass;
+  return classes.every((c) => meets(proposed, floorReversibility(c)))
+    ? proposed
+    : floorReversibilityOver(classes);
 }
 
 export interface DeriveReversibilityResult {
@@ -121,10 +146,16 @@ export interface DeriveReversibilityResult {
  */
 export function deriveReversibility(input: {
   runtimeActionClass: RuntimeActionClass;
+  /**
+   * @spec orchestration#reversibility (#1735, #1994): each further runtime
+   * class whose predicate the step's operation satisfies.
+   */
+  additionalRuntimeActionClasses?: readonly RuntimeActionClass[];
   proposed?: ReversibilityClass;
   proposedSource: ClassSource;
 }): DeriveReversibilityResult {
-  const floor = floorReversibility(input.runtimeActionClass);
+  const classes = [input.runtimeActionClass, ...(input.additionalRuntimeActionClasses ?? [])];
+  const floor = floorReversibilityOver(classes);
   if (input.proposed === undefined) {
     return { reversibility: floor, adopted: true, reason: "floor_from_runtime_action_class" };
   }
@@ -133,7 +164,7 @@ export function deriveReversibility(input: {
     return { reversibility: floor, adopted: false, reason: "untrusted_source_not_adopted" };
   }
   return {
-    reversibility: enforceReversibilityFloor(input.proposed, input.runtimeActionClass),
+    reversibility: enforceReversibilityFloor(input.proposed, classes),
     adopted: true,
     reason: "trusted_source_floored",
   };

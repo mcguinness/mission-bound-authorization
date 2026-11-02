@@ -60,6 +60,7 @@ import type {
 import { verifyTokenEndpointDpop } from "./continuation-grant.js";
 import { refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
+  acceptedPushedSubmission,
   type AdapterOptions,
   audienceCarriedEntries,
   clientProposalParam,
@@ -100,6 +101,9 @@ CREATE TABLE IF NOT EXISTS mission_deferred_authorization_codes (
 const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
   ["resources_json", "TEXT"],
   ["evidence_json", "TEXT"],
+  // @spec request-provenance#replay (#939 slice 2a-2): the accepted pushed
+  // submission the code was staged from; NULL on a row staged before it.
+  ["acceptance_ref", "TEXT"],
 ];
 
 interface StagedCode {
@@ -114,6 +118,11 @@ interface StagedCode {
   resources_json: string | null;
   /** The Submission envelope's `evidence`, as presented, or null. */
   evidence_json: string | null;
+  /**
+   * @spec request-provenance#replay (#939 slice 2a-2): the carrier's reference
+   * for the accepted pushed submission (`par:<jti>`), or null.
+   */
+  acceptance_ref: string | null;
   expires_at: number;
   deferral_code: string | null;
 }
@@ -202,8 +211,8 @@ export class DeferredAuthorizationCodes {
     this.store.db
       .prepare(
         `INSERT INTO mission_deferred_authorization_codes (code, client_id, redirect_uri, code_challenge, dpop_jkt,
-           intent_json, proposal_json, resources_json, evidence_json, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           intent_json, proposal_json, resources_json, evidence_json, acceptance_ref, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.code,
@@ -215,6 +224,7 @@ export class DeferredAuthorizationCodes {
         row.proposal_json,
         row.resources_json,
         row.evidence_json,
+        row.acceptance_ref,
         row.expires_at,
       );
   }
@@ -238,6 +248,7 @@ export class DeferredAuthorizationCodes {
         jkt,
         ...(resource ? { resource } : {}),
         ...(staged.evidence_json ? { evidence: JSON.parse(staged.evidence_json) as IntentSubmissionEvidenceEntry[] } : {}),
+        ...(staged.acceptance_ref ? { acceptanceRef: staged.acceptance_ref } : {}),
       });
       const claimed = this.store.db
         .prepare(
@@ -323,6 +334,10 @@ export async function completeDeferredAuthorization(
       // exactly them.
       resources_json: named.length ? JSON.stringify(named) : null,
       evidence_json: evidence?.length ? JSON.stringify(evidence) : null,
+      // @spec request-provenance#replay (#939 slice 2a-2): the pushed
+      // submission this interaction began from, which the activation relies
+      // on as a later step of that accepted submission.
+      acceptance_ref: acceptedPushedSubmission(details).accepted?.ref ?? null,
       expires_at: nowMs + DEFERRED_CODE_TTL_S * 1000,
     },
     nowMs,

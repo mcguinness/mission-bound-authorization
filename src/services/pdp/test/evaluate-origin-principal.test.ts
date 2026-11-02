@@ -18,7 +18,7 @@ import { evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptio
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import type { EntitlementObservation, OriginPrincipal, PrincipalMappingObservation } from "@mission/core";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
 
@@ -68,6 +68,9 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   relationForAction,
   resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
+  // #1994: no operation declarations: a payments operation is decided
+  // under its assigned class alone, with no phase required.
+  operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
   ...extra,
 });
 
