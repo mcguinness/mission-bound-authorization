@@ -1942,6 +1942,18 @@ Privileged administration:
 : the action changes who holds authority or how authority is
   evaluated.
 
+An action can satisfy more than one predicate: a payment or sent mail
+is irreversible and also binds the Subject to a party outside the
+deployment, so the table lists each under both classes. Every
+requirement of each class whose predicate the action satisfies
+applies to it: classification under one class MUST NOT waive a
+requirement arising from another applicable predicate. Where
+requirements impose comparable bounds, the tighter bound applies.
+Where they are not comparable, each applies, and an action that
+cannot satisfy every applicable requirement is refused. An exception
+stated for one class or predicate relieves only the requirement it
+names, never one that another applicable predicate imposes.
+
 Classification remains deployment-scoped: each deployment applies the
 predicates to its own actions and systems. The predicates make the
 resulting classifications comparable across deployments and auditable:
