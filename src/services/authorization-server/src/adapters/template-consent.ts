@@ -169,8 +169,11 @@ export function templateConsentDisclosure(
   const held = verifiedActivationPolicy(opts.issuer, dispatchPolicies, proposal.dispatch_policy);
   const maximum = held && standingConsentMaximumOf(held);
   if (!maximum) {
+    // #2018: without Derivation Limits the page shows no per-instance limit,
+    // so a changed policy is refused for the change alone.
+    const unshown = opts.derivationLimits === false && !held ? "" : ", so its per-instance derivation limit cannot be shown";
     return {
-      refusal: `The Dispatch Policy ${body.dispatch_policy.id} version ${body.dispatch_policy.version} is not the one this template was proposed under, so its per-instance derivation limit cannot be shown. This consent is refused; propose the template again.`,
+      refusal: `The Dispatch Policy ${body.dispatch_policy.id} version ${body.dispatch_policy.version} is not the one this template was proposed under${unshown}. This consent is refused; propose the template again.`,
     };
   }
   // @spec mission-template#prohibited-classes, metering#consent (#813): a
