@@ -145,36 +145,56 @@ function isNumericDate(v: unknown): v is number {
 /**
  * A JSON value exactly as its text states it: every number finite (the strict
  * parser reads an overflowing number such as `1e400` as Infinity), and every
- * object a plain one.
+ * object a plain one. Walked with an explicit stack, never by recursion, so
+ * no nesting depth the parser accepts exhausts the call stack.
  */
-function isExactJson(v: unknown): boolean {
-  if (v === null || typeof v === "string" || typeof v === "boolean") return true;
-  if (typeof v === "number") return Number.isFinite(v);
-  if (Array.isArray(v)) return v.every(isExactJson);
-  return isPlainObject(v) && Object.keys(v).every((k) => isExactJson(own(v, k)));
+function isExactJson(root: unknown): boolean {
+  const pending: unknown[] = [root];
+  while (pending.length > 0) {
+    const v = pending.pop();
+    if (v === null || typeof v === "string" || typeof v === "boolean") continue;
+    if (typeof v === "number") {
+      if (!Number.isFinite(v)) return false;
+      continue;
+    }
+    if (Array.isArray(v)) {
+      for (const item of v) pending.push(item);
+      continue;
+    }
+    if (!isPlainObject(v)) return false;
+    for (const k of Object.keys(v)) pending.push(own(v, k));
+  }
+  return true;
 }
 
 /**
  * Exact JSON equality: the same own members with the same values, compared
- * structurally, so it never throws on any value.
+ * structurally with an explicit stack, so it never throws on any value or
+ * nesting depth.
  */
 function sameJson(a: unknown, b: unknown): boolean {
-  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return a === b;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    return (
-      Array.isArray(a) &&
-      Array.isArray(b) &&
-      a.length === b.length &&
-      a.every((x, i) => sameJson(x, b[i]))
-    );
+  const pending: [unknown, unknown][] = [[a, b]];
+  while (pending.length > 0) {
+    const [x, y] = pending.pop() as [unknown, unknown];
+    if (x === null || y === null || typeof x !== "object" || typeof y !== "object") {
+      if (x !== y) return false;
+      continue;
+    }
+    if (Array.isArray(x) || Array.isArray(y)) {
+      if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length) return false;
+      for (let i = 0; i < x.length; i += 1) pending.push([x[i], y[i]]);
+      continue;
+    }
+    const left = x as Record<string, unknown>;
+    const right = y as Record<string, unknown>;
+    const keys = Object.keys(left);
+    if (keys.length !== Object.keys(right).length) return false;
+    for (const k of keys) {
+      if (!Object.hasOwn(right, k)) return false;
+      pending.push([own(left, k), own(right, k)]);
+    }
   }
-  const left = a as Record<string, unknown>;
-  const right = b as Record<string, unknown>;
-  const keys = Object.keys(left);
-  return (
-    keys.length === Object.keys(right).length &&
-    keys.every((k) => Object.hasOwn(right, k) && sameJson(own(left, k), own(right, k)))
-  );
+  return true;
 }
 
 const UTF8 = new TextDecoder("utf-8", { fatal: true });
