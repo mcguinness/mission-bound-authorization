@@ -399,12 +399,14 @@ export function contractDescriptor(
  * operation the claim does not cover. A superseded version may name none for
  * a covered operation: that crossing is then refused under it. A descriptor
  * a supported version names cannot leave the claim while that version
- * resolves.
+ * resolves. Without the claim nothing is covered and no descriptor is used,
+ * so there is nothing to check until a statement claims it.
  */
 export function assertContractDescriptors(
   contracts: ResourceContractDeclarations,
   binding: EvaluationContextBindingDeclarations,
 ): void {
+  if (!binding.claimed) return;
   contracts.declarations.forEach((d, di) => {
     d.versions.forEach((v, vi) => {
       if (v.state === "retired") return;
@@ -412,7 +414,7 @@ export function assertContractDescriptors(
         const path = `resource_contracts[${di}].versions[${vi}] (${v.version}), operation ${o.name}`;
         const named =
           o.descriptor !== undefined ? o.descriptor : v.evaluation_context_descriptors?.[o.name];
-        const declared = binding.claimed ? binding.operation(o.action, o.phase) : undefined;
+        const declared = binding.operation(o.action, o.phase);
         if (declared === undefined) {
           if (named !== undefined) {
             throw new ResourceContractConfigError(

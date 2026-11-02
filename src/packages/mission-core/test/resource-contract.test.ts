@@ -448,6 +448,13 @@ describe("the evaluation-context descriptors a contract version names (@spec run
     const st = shipped();
     const { contracts, binding } = load(st);
     expect(() => assertContractDescriptors(contracts, binding)).not.toThrow();
+    // Unclaimed, nothing is covered and no descriptor is used: nothing to check.
+    expect(() =>
+      assertContractDescriptors(
+        contracts,
+        new EvaluationContextBindingDeclarations({ ...st, claims: [] }),
+      ),
+    ).not.toThrow();
     const execute = claimDescriptor(st, "payments:payment.execute");
     const reverse = claimDescriptor(st, "payments:payment.reverse");
     for (const version of ["2026-11-02", "2026-10-27", "2026-10-26", "2026-10-24"]) {
