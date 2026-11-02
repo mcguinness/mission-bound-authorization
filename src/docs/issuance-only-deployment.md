@@ -381,7 +381,8 @@ No test restarts the assembled AS as a new process. In one process,
 on a key ring and a kernel file and finds the kernel reopened; the other
 file-backed outcomes come from the code (port §4.5). Recovery this
 deployment does not support is unsupported, not partially durable:
-cross-store recovery and fencing are #250's. A key ring keeps the AS's
+cross-store recovery and multi-process fencing wait on #641's deployment
+trigger (D885). A key ring keeps the AS's
 signing keys across a restart, and `pnpm keys` rotates, retires and
 withdraws them as compromised (#831; `channel-key-matrix.md`).
 
@@ -435,7 +436,7 @@ deployment's values: the reference AS and `plain-rs`.
     "evidence is the AS's issuance records only: the Mission Record, its lifecycle events, and the per-token issuance index",
     "plain-rs logs nothing Mission-linked",
     "a restart is not revocation: with ephemeral keys, consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes); with a key ring the key does not change",
-    "with ephemeral keys a restart drops the signing key from the JWKS while tokens signed under it are unexpired, so the OAuth binding's key-resolvability rule is not met across that restart; a key ring keeps the key, and rotation is #831's",
+    "with ephemeral keys a restart drops the signing key from the JWKS while tokens signed under it are unexpired, so the OAuth binding's key-resolvability rule is not met across that restart; a key ring keeps the key, and pnpm keys rotates it (#831)",
     "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
     "the release fence orders a revocation against an issuance within one process only (#641); a revocation committing after the fence is acknowledged after the token is answered",
