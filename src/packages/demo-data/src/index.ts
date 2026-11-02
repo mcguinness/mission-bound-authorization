@@ -818,6 +818,38 @@ if (
   );
 }
 
+/**
+ * @spec signals#consumer-behavior (#1896, D1023 ruling 3, D1100): the
+ * Signals stream timing the Mission Issuer and its consumer agree
+ * (config/signals.json): the heartbeat interval, with the issuer's advertised
+ * `mission_max_stale_seconds` above. Signals defines no discovery member for
+ * the interval, so this file is the agreement; the strict loader refuses an
+ * unknown member and an interval that is not a positive whole number of
+ * seconds.
+ */
+function loadSignalStreamAgreement(): Readonly<{
+  heartbeatIntervalSeconds: number;
+  maxStaleSeconds: number;
+}> {
+  const file = "signals.json";
+  const root = asObject(file, readJson(file), "signals");
+  for (const key of Object.keys(root)) {
+    if (key !== "heartbeat_interval_seconds")
+      throw new ConfigError(file, `signals has unknown member ${key}`);
+  }
+  const interval = root.heartbeat_interval_seconds;
+  if (typeof interval !== "number" || !Number.isSafeInteger(interval) || interval <= 0) {
+    throw new ConfigError(file, "signals.heartbeat_interval_seconds must be a positive integer");
+  }
+  return Object.freeze({
+    heartbeatIntervalSeconds: interval,
+    maxStaleSeconds: MISSION_MAX_STALE_SECONDS as number,
+  });
+}
+
+/** The agreed Signals stream timing (@see loadSignalStreamAgreement). */
+export const SIGNAL_STREAM_AGREEMENT = loadSignalStreamAgreement();
+
 export interface SeededUser {
   sub: string;
   name: string;

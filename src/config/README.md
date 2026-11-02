@@ -420,6 +420,37 @@ The AS refuses a token whose audiences span both modes. That is an
 implementation restriction (one `scope` claim is shared by every audience),
 not a protocol rule.
 
+## `signals.json`
+
+The Signals stream's heartbeat interval (`@spec signals#consumer-behavior`,
+#1896, D1023 ruling 3, D1100): the longest time after a verification or
+heartbeat event during which a stream stays verified live. Signals defines no
+discovery member for it, so the Mission Issuer and its consumers agree it
+through this file. `@mission/demo-data` exports it as
+`SIGNAL_STREAM_AGREEMENT`, with the issuer's advertised
+`mission_max_stale_seconds` from `enforcement-scope.json`, and
+`composeSignalStream` (`@mission/signals`) builds both the emitter and the
+receiver from that one agreement. An interval longer than
+`mission_max_stale_seconds` lengthens how long a paused stream stays paused;
+it never extends a receiver's per-Mission reliance bound.
+
+- **Selection.** Validated when `@mission/demo-data` loads. The demo stack
+  does not wire Signals, so only the package's reference composition reads it.
+- **Owner.** The Mission Issuer's operator, together with each consumer's
+  operator: both ends must hold the same value.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members and an interval that is not a positive whole number of
+  seconds. There is no default: a receiver without an interval treats its
+  stream as never verified live.
+- **Updating.** Edit, review, and restart both ends. A receiver holding a
+  longer interval than its issuer stays verified live after the issuer
+  assumes it has gone stale, so to lengthen the interval change the issuer
+  first, and to shorten it change the consumers first. A receiver's store
+  records the agreement, so a receiver restarted with another interval or
+  `mission_max_stale_seconds` treats the change as a break (D1117): each
+  Mission it held gives no lease until Mission Status re-establishes it, and
+  a stream already stale stays stale until a liveness event arrives.
+
 ## `standing-payment.json`
 
 DRAFT ENABLEMENT (D1122, not for merge): the shared demo composition's

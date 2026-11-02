@@ -100,6 +100,14 @@ carry no reference.
   five operations.
 - The remedy is a new approval: a new Mission, or an Expansion whose
   successor is approved with the reference.
+- A child of a parent approved before the cutover carries none either, and
+  is not carried by that Expansion. Carryover preserves the child's entries
+  as they are and never assembles the current reference into them, so its
+  replacement is not a strict subset of the successor's pinned entries: no
+  replacement is created, the signed carryover result records the child
+  `excluded` with `not_strict_subset`, and the old child terminates
+  without `carried_to`. A child under the successor needs its own
+  authorized creation.
 - A supported older reference keeps working within its declared retention,
   under the Operation Profile its own contract version names
   (`2026-10-26`, `payments-runtime-profile-v15`, until 2027-10-27).
@@ -130,11 +138,21 @@ MAS class-reservation cases in `demo/test/mas-pilot.test.ts` and
 grants no `payments:payment.reverse`, so no credential this deployment
 issues carries it; its refusal is witnessed at the PEP only.
 
-Not witnessed: that no reference is gained at the delegated Token Exchange
-without a handle, the designation exchange, the child-creation exchange,
-`mintMissionAccessToken`, or the carryover of an unpinned grant
-(`resource-access.resource-contract.no-reference-without-approval` stays
-partial).
+No path gains a reference without an approval
+(`resource-access.resource-contract.no-reference-without-approval`):
+besides refresh and the Token Exchange through a handle, the designation
+and its redemption (`services/authorization-server/test/delegation-exchange.test.ts`),
+child creation and its redemption, and the refusal of a child proposal
+restating the current reference
+(`services/authorization-server/test/child-delegation-endpoint.test.ts`),
+the Dispatch handoff (`services/authorization-server/test/dispatch-handoff.test.ts`),
+a ceiling drawdown's minted token
+(`services/authorization-server/test/progressive-drawdown-endpoint.test.ts`),
+and the carryover cascade above
+(`services/authorization-server/test/expansion-endpoint.test.ts`) are
+witnessed under a configuration requiring the reference. The cascade's
+witness asserts its committed result, not how the Expansion's approval
+page renders it.
 
 ## Rolling back
 
