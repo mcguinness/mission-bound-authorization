@@ -1873,9 +1873,13 @@ An implementation claiming an extension MUST meet its requirements:
   ({{mission-status-anti-oracle}}), and the error shape of
   {{mission-status-errors}}; and advertise `mission_status_endpoint`,
   `mission_status_signing_alg_values_supported`, and the endpoint's
-  authentication metadata: the client-authentication members of
-  {{as-metadata}} and, for the access-token path, its Protected
-  Resource Metadata ({{mission-status-authentication}}).
+  authentication metadata ({{as-metadata}}):
+  `mission_status_endpoint_auth_methods_supported` when the endpoint
+  accepts client authentication,
+  `mission_status_endpoint_auth_signing_alg_values_supported`
+  when that member lists `private_key_jwt`, and, when the endpoint
+  accepts the access-token path, its Protected Resource Metadata
+  ({{mission-status-authentication}}).
 - **Introspection projection**: carry the Mission projection on the
   introspection response as {{introspection-projection}} provides,
   including when it carries `fresh_until` and when it is signed with
@@ -1886,9 +1890,13 @@ An implementation claiming an extension MUST meet its requirements:
   `completed` termination it introduces exactly as the issuance profile
   gates on non-`active` state, and advertise `mission_lifecycle_endpoint`,
   `mission_status_signing_alg_values_supported`, and the endpoint's
-  authentication metadata: the client-authentication members of
-  {{as-metadata}} and, for the access-token path, its Protected
-  Resource Metadata ({{mission-status-authentication}}).
+  authentication metadata ({{as-metadata}}):
+  `mission_lifecycle_endpoint_auth_methods_supported` when the endpoint
+  accepts client authentication,
+  `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
+  when that member lists `private_key_jwt`, and, when the endpoint
+  accepts the access-token path, its Protected Resource Metadata
+  ({{mission-status-authentication}}).
 - **Mission Lifecycle, revoke only**: serve the Mission Lifecycle endpoint
   ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under
   its authentication, its explicit lifecycle authorization
@@ -1900,9 +1908,13 @@ An implementation claiming an extension MUST meet its requirements:
   ({{lifecycle-operations}}); and advertise
   `mission_lifecycle_endpoint`,
   `mission_status_signing_alg_values_supported`, and the endpoint's
-  authentication metadata: the client-authentication members of
-  {{as-metadata}} and, for the access-token path, its Protected
-  Resource Metadata ({{mission-status-authentication}}). The class requires
+  authentication metadata ({{as-metadata}}):
+  `mission_lifecycle_endpoint_auth_methods_supported` when the endpoint
+  accepts client authentication,
+  `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
+  when that member lists `private_key_jwt`, and, when the endpoint
+  accepts the access-token path, its Protected Resource Metadata
+  ({{mission-status-authentication}}). The class requires
   neither another operation nor the Mission Status operation. An
   implementation that also serves another base operation or the
   Mission Status operation meets that operation's requirements, and
