@@ -85951,12 +85951,34 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Consent Evidence object carries mission: for approved, id, issuer, intent_hash, authority_hash, proposal_hash when the Mission records a proposal, and consent_rendering_hash when recorded on the Mission; for declined or narrowed, issuer and the intent_hash and authority_hash (with proposal_hash where present) equal to the disclosure's source_hashes"
+    "normative": "every Consent Evidence object carries mission: for approved, id, issuer, intent_hash, authority_hash, consent_rendering_hash, and proposal_hash when the Mission records a proposal; for declined or narrowed, issuer, the consent_rendering_hash of the disclosure the decision was made on, and the intent_hash and authority_hash (with proposal_hash where present) equal to the disclosure's source_hashes"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. #1956 (D1107): the observation lists consent_rendering_hash on every branch."
+  },
+  {
+   "id": "consent-evidence.consent-evidence.approved-rendering-hash",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "When `decision` is `approved`, it contains `id`, `issuer`, `intent_hash`, `authority_hash`, `consent_rendering_hash`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission descriptor of approved evidence carries consent_rendering_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1107). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
    "id": "consent-evidence.consent-evidence.declined-no-id",
@@ -85981,6 +86003,28 @@
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
+   "id": "consent-evidence.consent-evidence.declined-rendering-hash",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "It instead contains `issuer`, the `consent_rendering_hash` of the disclosure the Approver declined",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission descriptor of declined evidence carries the consent_rendering_hash of the disclosure the Approver declined"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1107). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+  },
+  {
    "id": "consent-evidence.consent-evidence.narrowed-no-id",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "consent-evidence",
@@ -86001,6 +86045,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+  },
+  {
+   "id": "consent-evidence.consent-evidence.narrowed-rendering-hash",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "Like a decline, it contains `issuer`, the reviewed disclosure's `consent_rendering_hash`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission descriptor of narrowed evidence carries the reviewed disclosure's consent_rendering_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1107). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
    "id": "consent-evidence.consent-evidence.approval-context-commitment-approved-only",
@@ -86631,7 +86697,7 @@
    "id": "consent-evidence.integrity.verify-approved-anchors",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "integrity",
-   "text": "when `decision` is `approved`, verifies that the Mission anchors in `mission` match the Mission record being audited.",
+   "text": "when `decision` is `approved`, verifies that the Mission anchors in `mission`, `consent_rendering_hash` among them, match the Mission record being audited.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -86642,18 +86708,18 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "approved evidence whose mission anchors (id, issuer, intent_hash, authority_hash and the rest present) differ from the audited Mission record fails verification"
+    "normative": "approved evidence whose mission anchors (id, issuer, intent_hash, authority_hash, consent_rendering_hash and the rest present) differ from the audited Mission record fails verification"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures. #1956 (D1107): re-quoted; every decision's descriptor carries consent_rendering_hash."
   },
   {
    "id": "consent-evidence.integrity.verify-declined-narrowed-descriptor",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "integrity",
-   "text": "the verifier instead confirms the `mission` descriptor carries `issuer` and the two `source_hashes` anchors and no `id`;",
+   "text": "the verifier instead confirms the `mission` descriptor carries `issuer`, `consent_rendering_hash`, and the two `source_hashes` anchors, and no `id`;",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -86664,12 +86730,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "declined or narrowed evidence whose mission descriptor lacks issuer or either source_hashes anchor, or carries id, fails verification"
+    "normative": "declined or narrowed evidence whose mission descriptor lacks issuer, consent_rendering_hash or either source_hashes anchor, or carries id, fails verification"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures. #1956 (D1107): re-quoted; every decision's descriptor carries consent_rendering_hash."
   },
   {
    "id": "consent-evidence.integrity.verify-rendering-confirmation",
@@ -86741,7 +86807,7 @@
    "id": "consent-evidence.integrity.disclosure-reconstruction",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "integrity",
-   "text": "when the disclosure object is inlined, a verifier recomputes `consent_rendering_hash` over it and compares; when it is carried by reference ({{minimization}}), the verifier retrieves it and verifies it against `consent_rendering_hash`.",
+   "text": "when the disclosure object is inlined, a verifier recomputes `consent_rendering_hash` over it and compares it with the `mission` descriptor's value; when it is carried by reference ({{minimization}}), the verifier retrieves it and verifies it against that value.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -86757,7 +86823,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures. #1956 (D1107): re-quoted; every decision's descriptor carries consent_rendering_hash."
   },
   {
    "id": "consent-evidence.integrity.unretrievable-not-integrity-failure",

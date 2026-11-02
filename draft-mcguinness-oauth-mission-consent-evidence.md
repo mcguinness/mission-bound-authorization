@@ -840,10 +840,9 @@ A Consent Evidence object has these members:
   approval ({{I-D.draft-mcguinness-oauth-mission}}):
 
   - When `decision` is `approved`, it contains `id`, `issuer`,
-    `intent_hash`, `authority_hash`, `proposal_hash` when the Mission
-    records an authority proposal, `consent_rendering_hash` when this
-    profile records it on the Mission, and, where the
-    deployment computes it, `approval_context_commitment`
+    `intent_hash`, `authority_hash`, `consent_rendering_hash`,
+    `proposal_hash` when the Mission records an authority proposal,
+    and, where the deployment computes it, `approval_context_commitment`
     ({{I-D.draft-mcguinness-mission-approval-governance}}): OPTIONAL,
     a string, the commitment over the created Mission's immutable
     creation facts, carried so this object and another authenticated
@@ -851,15 +850,16 @@ A Consent Evidence object has these members:
     transaction.
   - When `decision` is `declined`, no Mission was created
     ({{declined-events}}), so there is no `id`. It instead contains
-    `issuer` and the `intent_hash` and `authority_hash` (with
+    `issuer`, the `consent_rendering_hash` of the disclosure the
+    Approver declined, and the `intent_hash` and `authority_hash` (with
     `proposal_hash` where present) the disclosure
     corresponded to, matching the disclosure object's `source_hashes`
     ({{consent-disclosure}}). It MUST NOT contain `id`.
   - When `decision` is `narrowed`, the review required a narrowing
     revision and no Mission was created ({{revision-events}}). Like a
-    decline, it contains `issuer` and the reviewed disclosure's
-    `intent_hash` and `authority_hash` (with `proposal_hash` where
-    present), matching that disclosure's
+    decline, it contains `issuer`, the reviewed disclosure's
+    `consent_rendering_hash`, and its `intent_hash` and `authority_hash`
+    (with `proposal_hash` where present), matching that disclosure's
     `source_hashes`, and MUST NOT contain `id`.
 
   `approval_context_commitment` appears on the `approved` branch
@@ -1134,11 +1134,12 @@ inherits no other JWT BCP requirement. A verifier:
 5. verifies the signing key against the Mission Issuer's published key
    material or configured trust anchors; and
 6. when `decision` is `approved`, verifies that the Mission anchors in
-   `mission` match the Mission record being audited. When `decision` is
-   `declined` or `narrowed` there is no Mission record
-   ({{declined-events}}, {{revision-events}}); the verifier instead
-   confirms the `mission` descriptor carries `issuer` and the two
-   `source_hashes` anchors and no `id`; and
+   `mission`, `consent_rendering_hash` among them, match the Mission
+   record being audited. When `decision` is `declined` or `narrowed`
+   there is no Mission record ({{declined-events}},
+   {{revision-events}}); the verifier instead confirms the `mission`
+   descriptor carries `issuer`, `consent_rendering_hash`, and the two
+   `source_hashes` anchors, and no `id`; and
 7. when `rendering_confirmation` is present
    ({{experimental-rungs}}), verifies it against the recorded
    `approver`'s authenticator and over the `consent_rendering_hash`
@@ -1165,12 +1166,13 @@ not a failure; it means the evidence asserts no rung above the rendering
 the AS recorded.
 
 Steps 1 through 6 establish the integrity of the evidence record itself
-and rely only on the record, since `consent_rendering_hash` is carried
-inside the signed `mission`. Reconstructing the disclosure is a separate
-step that depends on retrieval: when the disclosure object is inlined, a
-verifier recomputes `consent_rendering_hash` over it and compares; when
-it is carried by reference ({{minimization}}), the verifier retrieves it
-and verifies it against `consent_rendering_hash`.
+and rely only on the record, since every decision's signed `mission`
+descriptor carries `consent_rendering_hash`. Reconstructing the
+disclosure is a separate step that depends on retrieval: when the
+disclosure object is inlined, a verifier recomputes
+`consent_rendering_hash` over it and compares it with the `mission`
+descriptor's value; when it is carried by reference ({{minimization}}),
+the verifier retrieves it and verifies it against that value.
 
 A verifier MUST NOT treat a disclosure that is merely unretrievable as
 an integrity failure of the evidence record; failure to retrieve a
@@ -1860,6 +1862,14 @@ encoding difference to resolve before interoperating.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Every decision's signed `mission` descriptor carries
+  `consent_rendering_hash`: the approved branch lists it without a
+  condition, and a declined or narrowed descriptor carries the hash of
+  the disclosure the decision was made on, still with no `id` or
+  `approval_context_commitment`. Integrity and Verification checks the
+  member on each branch and compares a reconstructed disclosure with it
+  (#1956).
 
 - Material Notice Requirements makes the high-risk notices and their
   acknowledgments mandatory: each high-risk condition present gets its
