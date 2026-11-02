@@ -279,6 +279,9 @@ export function deviceFlowFeature(enabled: boolean) {
     charset: "base-20" as const,
     mask: DEVICE_USER_CODE_MASK,
     userCodeInputSource: (ctx: KoaContextWithOIDC, form: string, _out?: unknown, err?: unknown) => {
+      // A code that matches no session is the attempt the verification
+      // throttle counts; an expired, used or empty entry is not.
+      if ((err as { name?: string } | undefined)?.name === "NotFoundError") (ctx.state as DeviceVerificationState).deviceCodeUnknown = true;
       const note = err ? "<p>The code was not accepted.</p>" : "<p>Enter the code your device displays.</p>";
       ctx.body = page("Device sign-in", `${note}${form}<button type="submit" form="op.deviceInputForm">Continue</button>`);
     },
@@ -301,6 +304,63 @@ export function deviceFlowFeature(enabled: boolean) {
       ctx.body = page("Done", "<p>You can close this page.</p>");
     },
   };
+}
+
+/** What the verification page records on a request for the throttle. */
+export interface DeviceVerificationState {
+  deviceCodeUnknown?: boolean;
+}
+
+/** The verification throttle's configuration: rejected codes allowed per window, the window, the clock. */
+export interface DeviceVerificationThrottleOptions {
+  maxFailures?: number;
+  windowMs?: number;
+  now?: () => number;
+}
+
+/**
+ * RFC 8628 Section 5.1 (#1202, D1121): verification attempts throttled
+ * independently of any session. Each `user_code` that matches no session
+ * counts against the verification user agent's address. Past `maxFailures`
+ * within `windowMs`, the address's entries are refused until the window
+ * moves on. A refusal looks nothing up and ends no session; ending a
+ * session is `cancelDeviceSession`'s alone. The counts are in-process, the
+ * same single-process boundary as the device decision claim (#250).
+ */
+export class DeviceVerificationThrottle {
+  private readonly failures = new Map<string, number[]>();
+  private readonly maxFailures: number;
+  private readonly windowMs: number;
+  private readonly now: () => number;
+
+  constructor(opts: DeviceVerificationThrottleOptions = {}) {
+    this.maxFailures = opts.maxFailures ?? 10;
+    this.windowMs = opts.windowMs ?? 600_000;
+    this.now = opts.now ?? Date.now;
+  }
+
+  private recent(key: string): number[] {
+    const since = this.now() - this.windowMs;
+    const kept = (this.failures.get(key) ?? []).filter((t) => t > since);
+    if (kept.length > 0) this.failures.set(key, kept);
+    else this.failures.delete(key);
+    return kept;
+  }
+
+  /** Whether `key`'s entries are refused now. */
+  blocked(key: string): boolean {
+    return this.recent(key).length >= this.maxFailures;
+  }
+
+  /** Count one code that matched no session against `key`. */
+  fail(key: string): void {
+    this.failures.set(key, [...this.recent(key), this.now()]);
+  }
+}
+
+/** The verification page while the throttle refuses the user agent's entries. */
+export function deviceThrottledPage(): string {
+  return page("Device sign-in", "<p>Too many codes were not accepted. Wait a few minutes, then enter the code your device displays.</p>");
 }
 
 /** The verification user agent's page after a device decision. */

@@ -1427,3 +1427,92 @@ describe("the AS ends a pending session on a trusted cancellation decision (@spe
     expect(await as.cancelDeviceSession(s.userCode)).toBe("ended");
   });
 });
+
+describe("the verification page throttles codes that match no session, and ends none (RFC 8628 Section 5.1, #1202, D1121)", () => {
+  const T_PORT = 14765;
+  const T_ISSUER = `http://localhost:${T_PORT}`;
+  let throttled: BuiltAs;
+  let tServer: Server;
+  let t = Date.now();
+
+  beforeAll(async () => {
+    throttled = await buildAuthorizationServer({
+      issuer: T_ISSUER,
+      approvalSessions: SESSIONS,
+      capabilities: new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "device-authorization"]),
+      testClients: [deviceClient({ client_id: PUBLIC, token_endpoint_auth_method: "none" })],
+      deviceVerificationThrottle: { maxFailures: 3, windowMs: 60_000, now: () => t },
+    });
+    tServer = throttled.provider.listen(T_PORT);
+  });
+  afterAll(() => {
+    tServer?.close();
+  });
+
+  /** One code entry at the verification page, from a fresh user agent at this test's address. */
+  async function enter(userCode: string): Promise<{ status: number; html: string }> {
+    const jar: Jar = new Map();
+    let res = await fetch(`${T_ISSUER}/device`, { redirect: "manual" });
+    keep(jar, res);
+    const html = await res.text();
+    res = await fetch(`${T_ISSUER}/device`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { ...FORM, cookie: cookieOf(jar) },
+      body: new URLSearchParams({ xsrf: hidden(html, "xsrf"), user_code: userCode }).toString(),
+    });
+    return { status: res.status, html: await res.text() };
+  }
+
+  /** The client's poll at the throttled AS. */
+  async function pollThrottled(deviceCode: string): Promise<{ status: number; body: Record<string, unknown> }> {
+    const k = await newKeys();
+    const htu = `${T_ISSUER}/token`;
+    const dpop = await new SignJWT({ htu, htm: "POST" })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: k.jwk })
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(k.privateKey);
+    const res = await fetch(htu, {
+      method: "POST",
+      headers: { ...FORM, dpop },
+      body: new URLSearchParams({ grant_type: DEVICE_GRANT, device_code: deviceCode, client_id: PUBLIC }).toString(),
+    });
+    return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+  }
+
+  it("refuses an address's entries after three codes that match no session, a valid code included, ending no session; once the window moves on, the valid code is admitted", async () => {
+    const da = await deviceAuthorize(PUBLIC, {}, { issuer: T_ISSUER });
+    expect(da.status, JSON.stringify(da.body)).toBe(200);
+    const userCode = da.body.user_code as string;
+    for (const guess of ["BCDF-GHJK", "LMNP-QRST", "VWXZ-BCDF"]) {
+      const r = await enter(guess);
+      expect(r.status, guess).toBe(200);
+      expect(r.html, guess).toMatch(/not accepted/);
+    }
+    const refused = await enter(userCode);
+    expect(refused.status).toBe(429);
+    expect(refused.html).toMatch(/Too many codes were not accepted/);
+    // Nothing ended the session: the client is still told to wait.
+    expect((await pollThrottled(da.body.device_code as string)).body.error).toBe("authorization_pending");
+    t += 60_001;
+    const admitted = await enter(userCode);
+    expect(admitted.status).toBe(200);
+    expect(admitted.html).toMatch(/Confirm the device code/);
+  });
+
+  it("counts only codes that match no session: a code whose session ended is not accepted, yet never counts toward the limit", async () => {
+    t += 120_000;
+    const ended = await deviceAuthorize(PUBLIC, {}, { issuer: T_ISSUER });
+    expect(await throttled.cancelDeviceSession(ended.body.user_code as string)).toBe("ended");
+    for (let i = 0; i < 4; i++) {
+      const r = await enter(ended.body.user_code as string);
+      expect(r.status).toBe(200);
+      expect(r.html).toMatch(/not accepted/);
+    }
+    const live = await deviceAuthorize(PUBLIC, {}, { issuer: T_ISSUER });
+    const admitted = await enter(live.body.user_code as string);
+    expect(admitted.status).toBe(200);
+    expect(admitted.html).toMatch(/Confirm the device code/);
+  });
+});

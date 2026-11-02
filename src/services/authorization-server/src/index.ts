@@ -1218,6 +1218,8 @@ export async function buildAuthorizationServer(opts: {
   childMissionCarryover?: CarryoverConfig;
   /** Independent approver login integration; OAuth interaction cookies never establish this login. */
   approvalSessions?: ApprovalSessionStore;
+  /** RFC 8628 Section 5.1 (#1202, D1121): the device verification page's throttle (see the provider's option). */
+  deviceVerificationThrottle?: { maxFailures?: number; windowMs?: number; now?: () => number };
   /**
    * @spec mission#approval-authentication (#1320, D496): the approval
    * surface logs its Approver in as an OpenID Connect relying party to this
@@ -2224,6 +2226,7 @@ export async function buildAuthorizationServer(opts: {
     accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
+    ...(opts.deviceVerificationThrottle ? { deviceVerificationThrottle: opts.deviceVerificationThrottle } : {}),
     ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
     approverApprovesFor,
     knownSubjects,
