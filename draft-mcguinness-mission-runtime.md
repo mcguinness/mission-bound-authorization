@@ -1968,7 +1968,10 @@ each of the three highest classes above consequential write, while
 the three highest classes are not ordered among themselves. An action
 is at or above a class when a class that applies to it is that class
 or ranks above it, and raising, lowering, and a stricter class refer
-to this order.
+to this order. A minimum classification is met only by an action at or
+above it, so a minimum of one of the three highest classes is met only
+where that class applies. Audit-only, a freshness posture
+({{state-freshness}}), is outside this order.
 
 Classification remains deployment-scoped: each deployment applies the
 predicates to its own actions and systems. The predicates make the
@@ -4321,7 +4324,8 @@ worked example shows the concrete record
   is treated under every class the operation can reach. Trifecta
   containment's external-communication leg reaches every action that
   satisfies the external-communication or External commitment
-  predicate, whatever its class (#1994).
+  predicate, whatever its class. A minimum class is met only by an
+  action at or above it, and Audit-only is outside the order (#1994).
 
 - Changes a requirement (#1735, D1153, D1164): an action that
   satisfies more than one class predicate takes the requirements of
