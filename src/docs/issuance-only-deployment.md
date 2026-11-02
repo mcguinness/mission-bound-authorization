@@ -275,9 +275,9 @@ is in [`provider-integration-port.md`](provider-integration-port.md).
 |---|---|---|
 | Trusted approval input | `decide()` (`provider.ts`); the resolving principal comes from the surface (`ApprovalSessionStore.resolve`, or a scoped service principal behind `allowHeadlessAdjudication`), and a `decide` body naming `approver`/`subject` is refused | In-request; no separate commit |
 | Principal resolution | Client: oidc-provider `private_key_jwt` (`config/clients.json`). Subject: the approval console's selection (`x-approval-subject` on its headless decision), checked against `knownSubjects` and `approverApprovesFor`; `login_hint` concerns the Approver (#826). Authority source gates inside `kernel.approve` | In-request, before derivation |
-| Derive-and-commit issuance | `kernel.derive` at the decision, then `kernel.approve` (anchors and record through `insertRecord`, deduplicated on `approval_event_id`), then `grant.save()` and `kernel.bindGrant` | MUST be transactional for the record and its anchors. In the reference, `bindGrant` is a separate write after the grant save, not in the record's transaction. Provider token acceptance and derivation counting are not coupled atomically: the provider access-token hook counts inside the provider's own token save, with no reservation, operation identity, or acceptance callback (`src/docs/control-plane-deployment.md`; #250) |
+| Derive-and-commit issuance | `kernel.derive` at the decision, then `kernel.approve` (anchors and record through `insertRecord`, deduplicated on `approval_event_id`), then `grant.save()` and `kernel.bindGrant` | MUST be transactional for the record and its anchors. In the reference, `bindGrant` is a separate write after the grant save, not in the record's transaction. Provider token acceptance and derivation counting are not coupled atomically: the provider access-token hook counts inside the provider's own token save, with no reservation, operation identity, or acceptance callback (`src/docs/control-plane-deployment.md`; no atomicity claim, D874) |
 | Grant-to-Mission lookup | `kernel.findByGrant`, the delegation-family store, and the durable append-only `MissionBoundGrantStore`; `missionForBoundGrant` fails closed when the index names a grant whose Mission is gone | Read at every issuance |
-| Refresh and revocation gating | `extraTokenClaims` runs `gateDerivation` (the state check `gateDerivable`, then the cap-conditioned counter update `countDerivationInCallerTx`) or `gateActive`; before that, `rotateRefreshToken` runs the same checks without counting (`preCheckRefreshMissionState`: `kernel.checkDerivation`, or `gateActive` for a family), so a refusal it detects consumes no refresh token (#914; `provider-integration-port.md` §3.6); `rarThroughEffectiveSet` re-projects through the effective set; `kernel.transition` compare-and-sets state. Family grants are destroyed by the durable subscriber `delegation-family-grant-revoke` (`index.ts`) | The state check and the counter update are adjacent synchronous calls with no `await` between them, so they do not interleave within one process, but they are not one conditional update; the count is also not coupled to the provider's token acceptance (see derive-and-commit). Family-grant destruction MAY be async, because the gate refuses first. A suspension or derivation landing between the refresh pre-check and the save-time gate is still refused there, after rotation (#250) |
+| Refresh and revocation gating | `extraTokenClaims` runs `gateDerivation` (the state check `gateDerivable`, then the cap-conditioned counter update `countDerivationInCallerTx`) or `gateActive`; before that, `rotateRefreshToken` runs the same checks without counting (`preCheckRefreshMissionState`: `kernel.checkDerivation`, or `gateActive` for a family), so a refusal it detects consumes no refresh token (#914; `provider-integration-port.md` §3.6); `rarThroughEffectiveSet` re-projects through the effective set; `kernel.transition` compare-and-sets state. Family grants are destroyed by the durable subscriber `delegation-family-grant-revoke` (`index.ts`) | The state check and the counter update are adjacent synchronous calls with no `await` between them, so they do not interleave within one process, but they are not one conditional update; the count is also not coupled to the provider's token acceptance (see derive-and-commit). Family-grant destruction MAY be async, because the gate refuses first. A suspension or derivation landing between the refresh pre-check and the save-time gate is still refused there, after rotation, an accepted single-process residual (#914, D772) |
 | Scope projection | `decideMissionScope`, shared by the save-time `projectMissionBoundScope` (in `extraTokenClaims`, before the state gates) and the refresh pre-check `preCheckRefreshProjection` (in `rotateRefreshToken`, after client authentication and the token's own checks, before consumption). Also: `earlyScopeRefusal` at PAR, the decision-time check, the async-delegation and cross-org pre-checks, and the response-`scope` middleware | In-request, before any side effect of the issuing request; the refresh pre-check MUST precede consumption |
 | Introspection composite `active` | `/introspect` in `makeRoutes`: signature, `at+jwt`, the RFC 9068 claim set, the issuance index (`TokenIssuanceStore`) and `isGrantLive`, then Mission state; audience-minimized through `resourcesForAudiences` | Reads current state per request |
 | JWT customizer backstop | `formats.customizers.jwt`: applies the projection's decision and refuses a Mission-bound JWT the projection did not decide, or an `act`-bearing one to a non-Mission-aware audience | In-request |
@@ -315,26 +315,30 @@ is the AS's decision to answer: after every response wrapper and the
 request-path drain, it refuses a token whose Mission has terminated, with
 the gate's own refusal, and nothing is awaited after it (port §4.2). It
 records nothing, so it is not an acceptance point. Under D408 the
-unsupported cases below are accepted for this reference deployment; #250
-keeps the work, and no applicable requirement is thereby satisfied.
+unsupported cases below are accepted for this reference deployment, with
+the dispositions #250 closed under (D874, D885), and no applicable
+requirement is thereby satisfied.
 
 | Case | Outcome on this deployment | Evidence or owner |
 |---|---|---|
 | A revocation committing after the state gate and before the AS releases the token | Refused at the release fence: `invalid_grant` with `mission_error` `revoked`, and no token member. The token was signed, and on the code path indexed with its refresh token saved; none is delivered. The derivation stays counted: its Mission has ended, and the fence refunds nothing (D771, D772). A suspension committing in the same window still delivers, and every state-reading consumer refuses its use | Supported for one process (port §3.5, §4.2): `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers`, `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > refresh: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same refresh without it delivers` and `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > a revocation committed while the request-path drain runs, the last awaited step before release, is still refused invalid_grant with mission_error revoked and no token member` (`issuance-release-fence.test.ts`). Across processes it is not claimed (#641) |
 | A revocation committing after the release fence | The token is delivered and the revocation is acknowledged after it was answered. A JWT-only Resource Server accepts the token until its `exp` plus tolerance; an introspecting one refuses it on its next request, because introspection reads the current Mission state | The binding's ordering holds: the AS answered before it acknowledged. Code reading |
-| A failure after the derivation is counted: a customizer refusal, a signing failure, a throw from the index listener, or on the code path a refresh-token or ID-token failure | The request observes the failure before any token leaves and returns the count (#935, D772) | `a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)` (`derivation-counting.test.ts`). A crash or a lost response after the count is not observed and stays counted (#250 step 3) |
+| A failure after the derivation is counted: a customizer refusal, a signing failure, a throw from the index listener, or on the code path a refresh-token or ID-token failure | The request observes the failure before any token leaves and returns the count (#935, D772) | `a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)` (`derivation-counting.test.ts`). A crash or a lost response after the count is not observed and stays counted, the fail-safe (D772, D874) |
 | A failure after signing, before the issuance index records the token (a throw from the index listener) | The token endpoint fails and the client receives nothing. The signed token is never indexed, and introspection answers `active: false` for a token the index does not hold; the request returns the count (row above) | The count as in the row above; the unindexed token has no test yet |
-| A failure after the index records the token, before the response is delivered (on the code path, a refresh-token failure) | The client receives nothing, but the token is indexed. Introspection answers `active: true` for it only while it is unexpired, its Mission `active` and its grant live (`{#composite-active}`); nothing reconciles or revokes it. A retry of the same code revokes the grant (next row) | Unsupported (#250). No test yet |
-| A lost code-exchange response | A retry of the same code is refused `invalid_grant` and counts nothing: oidc-provider treats it as code reuse and revokes the grant (`authorization_code.js` L84-87). The token the lost response carried then introspects `active: false`, and a JWT-only Resource Server holding it accepts it until `exp` plus tolerance. The Mission stays `active` with no grant until `expires_at` or a revocation. Recovery is a new authorization, whose code exchange is its own counted derivation | Unsupported: there is no operation identity or replay of the lost response (#250). Code reading (port §4.4); no test yet |
-| A lost refresh response | This deployment's clients authenticate with `private_key_jwt`, so an approval-grant refresh token rotates only once 70% of its lifetime has passed (`rotateRefreshToken`). Before that, a retry with the same refresh token is a fresh derivation, counted again, and the token the lost response carried stays valid, introspecting as the row above, until `exp`. After rotation, a retry is reuse: refused `invalid_grant`, nothing counted, the grant revoked | Unsupported (#250). Reuse after rotation: `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment` (`scope-projection.test.ts`); the rest is code reading |
+| A failure after the index records the token, before the response is delivered (on the code path, a refresh-token failure) | The client receives nothing, but the token is indexed. Introspection answers `active: true` for it only while it is unexpired, its Mission `active` and its grant live (`{#composite-active}`); nothing reconciles or revokes it. A retry of the same code revokes the grant (next row) | Unsupported; no atomicity claim (D874). No test yet |
+| A lost code-exchange response | A retry of the same code is refused `invalid_grant` and counts nothing: oidc-provider treats it as code reuse and revokes the grant (`authorization_code.js` L84-87). The token the lost response carried then introspects `active: false`, and a JWT-only Resource Server holding it accepts it until `exp` plus tolerance. The Mission stays `active` with no grant until `expires_at` or a revocation. Recovery is a new authorization, whose code exchange is its own counted derivation | Unsupported: there is no operation identity or replay of the lost response (D874). Code reading (port §4.4); no test yet |
+| A lost refresh response | This deployment's clients authenticate with `private_key_jwt`, so an approval-grant refresh token rotates only once 70% of its lifetime has passed (`rotateRefreshToken`). Before that, a retry with the same refresh token is a fresh derivation, counted again, and the token the lost response carried stays valid, introspecting as the row above, until `exp`. After rotation, a retry is reuse: refused `invalid_grant`, nothing counted, the grant revoked | Unsupported (D874). Reuse after rotation: `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refused rotating refresh leaves the same refresh token valid: once the trusted mapping is repaired it succeeds once, and its reuse gets the ordinary replay treatment` (`scope-projection.test.ts`); the rest is code reading |
 
 None of these is claimed as a safe refund or an idempotent replay. Within
 one process, the AS refuses every derivation it would answer after it
-acknowledged a revocation of the Mission. Still open under #250: a crash after
-the count, a lost response, the replay of a lost response under one
-operation identity, the window between the approval commit and the code
-(#916; §5's last residual), the refund of a fenced derivation's count
-(#935), and multi-process issuance (#641).
+acknowledged a revocation of the Mission. #250 closed with the rest
+dispositioned (D874, D885): a crash after the count or a lost response stays
+counted (D772, D874); no operation identity replays a lost response (D874);
+the window between the approval commit and the code is #1863's, closed with
+`core.approval-event.record-code-atomicity` settled at `partial` (D1016,
+D1018; §5's last residual); a fenced derivation's count stays spent because
+its Mission has ended (D772, D954); and multi-process issuance waits on
+#641's deployment trigger.
 
 ### Restart and recovery
 
@@ -380,10 +384,15 @@ No test restarts the assembled AS as a new process. In one process,
 `issuance-only-kernel-store.test.ts` restarts this deployment's composition
 on a key ring and a kernel file and finds the kernel reopened; the other
 file-backed outcomes come from the code (port §4.5). Recovery this
-deployment does not support is unsupported, not partially durable:
-cross-store recovery and fencing are #250's. A key ring keeps the AS's
-signing keys across a restart, and `pnpm keys` rotates, retires and
-withdraws them as compromised (#831; `channel-key-matrix.md`).
+deployment does not support is unsupported, not partially durable. Its
+restart recovery is accepted with a stated scope (D874, D885): kernel
+projections recover; unsupported provider state is invalidated or refused;
+and no refresh continuity or recovery from lost storage is established.
+#641 owns multi-process claiming and
+fencing of the kernel outbox, parked until a second AS process shares one
+kernel store. A key ring keeps the AS's signing keys across a restart, and
+`pnpm keys` rotates, retires and withdraws them as compromised (#831;
+`channel-key-matrix.md`).
 
 ## 5. Deployment Profile instance
 
@@ -435,17 +444,17 @@ deployment's values: the reference AS and `plain-rs`.
     "evidence is the AS's issuance records only: the Mission Record, its lifecycle events, and the per-token issuance index",
     "plain-rs logs nothing Mission-linked",
     "a restart is not revocation: with ephemeral keys, consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes); with a key ring the key does not change",
-    "with ephemeral keys a restart drops the signing key from the JWKS while tokens signed under it are unexpired, so the OAuth binding's key-resolvability rule is not met across that restart; a key ring keeps the key, and rotation is #831's",
+    "with ephemeral keys a restart drops the signing key from the JWKS while tokens signed under it are unexpired, so the OAuth binding's key-resolvability rule is not met across that restart; a key ring keeps the key, and pnpm keys rotates it (#831)",
     "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
-    "provider token acceptance and derivation counting are not coupled atomically (#250)",
+    "provider token acceptance and derivation counting are not coupled atomically (no atomicity claim, D874)",
     "the release fence orders a revocation against an issuance within one process only (#641); a revocation committing after the fence is acknowledged after the token is answered",
-    "a failure after the derivation is counted is refunded only when the request observes it; a crash or a lost response keeps the count (#935, #250)",
-    "a token indexed but never delivered introspects active while unexpired with its Mission active and its grant live; nothing reconciles or revokes it (#250)",
-    "no artifact is replayed: a retry after a lost code-exchange response is code reuse, refused invalid_grant with nothing counted, and revokes the grant, leaving the Mission active with no grant; a retry after a lost refresh response is a fresh, counted derivation until the refresh token rotates (#250)",
-    "by default the launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; with MISSION_KERNEL_STORE, a key ring and a recovery witness the Mission kernel is kept, never the provider (#250)",
+    "a failure after the derivation is counted is refunded only when the request observes it; a crash or a lost response keeps the count (#935, D772, D874)",
+    "a token indexed but never delivered introspects active while unexpired with its Mission active and its grant live; nothing reconciles or revokes it (D874)",
+    "no artifact is replayed: a retry after a lost code-exchange response is code reuse, refused invalid_grant with nothing counted, and revokes the grant, leaving the Mission active with no grant; a retry after a lost refresh response is a fresh, counted derivation until the refresh token rotates (D874)",
+    "by default the launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; with MISSION_KERNEL_STORE, a key ring and a recovery witness the Mission kernel is kept, never the provider (D874, D885)",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
-    "the approval commits the Mission active and bound to its grant one request before the code is issued, so a client that never follows the redirect leaves an active Mission with no code (#250)"
+    "the approval commits the Mission active and bound to its grant one request before the code is issued, so a client that never follows the redirect leaves an active Mission with no code (#1863, D1016, D1018)"
   ]
 }
 ~~~
@@ -505,7 +514,8 @@ with `pnpm install --frozen-lockfile`.
   `buildAuthorizationServer` assembly restricted to the capability set of §8
   (`ISSUANCE_ONLY_CAPABILITIES`). `src/server.ts` runs the same assembly with
   no capability set: every default-on capability, with the opt-in
-  `device-authorization`, `delegation` and `deferred-approval` off. It is
+  `device-authorization`, `delegation`, `deferred-approval` and
+  `standing-payment-dispatch` off. It is
   the issuer, and its
   JWKS is at `/jwks`.
 - **`plain-rs`**, at `http://localhost:4410`, audience
@@ -613,9 +623,11 @@ profile is always on. Of the optional capabilities, only the lifecycle
 endpoint's `revoke` is enabled. Every other one is off, and a request for it
 gets the standard refusal its path already uses. With no `capabilities` set,
 the assembly is the full reference provider: every capability except the
-opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`,
+opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`: `device-authorization`,
 `delegation`, `deferred-approval` and `standing-payment-dispatch`), which are
-on only where a capability set names them.
+on only where a capability set names them. The shared demo composition with
+the AS names `standing-payment-dispatch`; this launcher's set names none of
+them, and neither does any other deployment's.
 
 How a capability is turned off:
 
@@ -812,8 +824,9 @@ introspection response carries the OAuth binding's `mission` member
 A reference deployment of the issuance-only floor, accepted under D408 as a
 bounded reference deliverable. It is not an owner-accepted conformance class,
 not full floor conformance, and makes no production-readiness claim. Provider
-acceptance and recovery guarantees are unsupported and owned by #250, and the
-mandatory requirements they bear on are not waived. #253's AS-native
+acceptance and recovery guarantees are unsupported, with the scope #250
+closed under (D874, D885), and the mandatory requirements they bear on are
+not waived. #253's AS-native
 deployment builds on this floor and inherits these limits.
 
 #873's acceptance, item by item:

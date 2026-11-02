@@ -12,10 +12,13 @@
  * instance's budget binding from the kernel's committed Dispatch Policy
  * snapshot, never from the PEP's view.
  *
- * The opt-in `standing-payment-dispatch` capability (composeStack's test
- * fixture) and the `budget_metering` declaration (the statement built here)
- * are enabled in this file only; the shipped configuration enables neither.
- * Only the OpenFGA client is stubbed, so this file never skips.
+ * This file enables the opt-in `standing-payment-dispatch` capability through
+ * composeStack's test fixture and claims `budget_metering` in the statement
+ * built here, so its composition does not read `config/standing-payment.json`.
+ * The shared demo composition with the AS enables both from that file; the
+ * issuance-only deployment, the as-native target, the MAS pilot and the
+ * standalone AS enable neither. Only the OpenFGA client is stubbed, so this
+ * file never skips.
  */
 
 import { randomUUID } from "node:crypto";
@@ -47,6 +50,10 @@ import { kernelBudgetBinding } from "../src/kernel-mission-view.js";
 import { tokenGrantRequest } from "../src/oauth-client.js";
 import { composeStack, type DemoStack } from "../src/stack.js";
 import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
+
+// Each case composes the whole stack, twice for the restart cases; run alone
+// under load they took up to 5.2 s, past the five-second default.
+vi.setConfig({ testTimeout: 120_000 });
 
 const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";

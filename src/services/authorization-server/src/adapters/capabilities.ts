@@ -74,7 +74,8 @@ export type ProviderCapability =
    * standing-payment dispatch workflow, where a human-consented Mission
    * Template dispatches `payments:payment.execute` unattended and only that
    * operation's `irreversible_action` predicate is waived. Opt-in: off unless
-   * a set names it, never claimed or shipped, and it needs `templates`.
+   * a set names it, and it needs `templates`. Only the shared demo
+   * composition with the AS names it.
    */
   | "standing-payment-dispatch";
 
@@ -121,8 +122,8 @@ export const TOKEN_EXCHANGE_CAPABILITIES: readonly ProviderCapability[] = [
  * only where a capability set names it. Device authorization is experimental;
  * delegation is the core's optional Delegation capability, which neither
  * baseline elects (D415, D449); Deferred Mission Approval is an optional
- * companion tracking an early substrate; standing-payment dispatch stays
- * disabled and unclaimed until its enablement is separately approved (D830).
+ * companion tracking an early substrate; standing-payment dispatch is on only
+ * in the shared demo composition with the AS (D830).
  */
 export const OPT_IN_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
   "device-authorization",

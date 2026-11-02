@@ -1585,3 +1585,55 @@ describe("every consequential permit's final disposition is one Execution Eviden
     }
   });
 });
+
+describe("the HTTP gate describes a refused credential (@spec #1970)", () => {
+  const OTHER_ISSUER = "https://other-as.test";
+
+  it("answers 401 invalid_token for every credential it refuses, naming the DPoP proof only when the proof failed and describing any other refusal neutrally, with no internal reason", async () => {
+    const x = pepDeciding([VIEW, { ...VIEW, issuer: OTHER_ISSUER }]);
+    const routed = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+      pep: x.pep,
+      payments: x.store,
+      loadView: x.loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    try {
+      const htu = canonicalHtu(channel.url);
+      const post = async (token: string, proof: string) => {
+        const res = await fetch(channel.url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream",
+            authorization: `DPoP ${token}`,
+            dpop: proof,
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_invoice", arguments: { invoice_id: "inv-1" } } }),
+        });
+        return { status: res.status, body: JSON.parse(await res.text()) as Record<string, unknown> };
+      };
+      const neutral = { status: 401, body: { error: "invalid_token", error_description: "the presented credential is not valid" } };
+      const proofFailed = { status: 401, body: { error: "invalid_token", error_description: "DPoP proof-of-possession failed" } };
+
+      // A valid proof, for a token refused for another reason: its mission.issuer names another issuer.
+      const foreign = await mint({ mission: { id: MISSION.id, issuer: OTHER_ISSUER } });
+      expect(await post(foreign, await dpopProofFor(holder, htu, "POST", foreign))).toEqual(neutral);
+
+      // A valid token, with a proof that fails: for another URL, then under another key.
+      const token = await mint();
+      expect(await post(token, await dpopProofFor(holder, "http://elsewhere.example/mcp", "POST", token))).toEqual(proofFailed);
+      const otherKey = await generateKeyPair("ES256", { extractable: true });
+      expect(await post(token, await dpopProofFor(otherKey, htu, "POST", token))).toEqual(proofFailed);
+
+      // Nothing reached the PEP.
+      expect(x.decided).toHaveLength(0);
+      expect(x.evidence.all()).toHaveLength(0);
+    } finally {
+      await channel.close();
+    }
+  });
+});

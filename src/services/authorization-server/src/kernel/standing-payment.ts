@@ -1,7 +1,8 @@
 /**
  * @spec mission-template#prohibited-classes (#813, D814, D830): the one
  * standing-payment dispatch workflow this reference implements, behind the
- * opt-in `standing-payment-dispatch` capability (disabled and unclaimed).
+ * opt-in `standing-payment-dispatch` capability, which only the shared demo
+ * composition with the AS enables.
  *
  * A Mission Template whose Dispatch Policy states a `standing_payment` member
  * DESIGNATES the workflow: recurring payment of approved invoices through

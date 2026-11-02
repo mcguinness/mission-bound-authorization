@@ -53,6 +53,39 @@ Trusted test/operator code can stop the listener with
 `await stack.decisionChannel.close()`; callers composing a stack must close it
 alongside its other service listeners. The agent tool surface has no such hook.
 
+## Standing payments
+
+The composition behind
+`pnpm demo:serve`, `pnpm exhibit` and `pnpm agent` enables standing-payment
+dispatch and budget metering (#813, #816) from `config/standing-payment.json`
+(see `config/README.md`); no other deployment enables either. Its one
+Dispatch Policy, `ap-standing-payment` version 1, pays approved Acme
+invoices to `acct-acme-001`, at most 500.00 USD per payment and per
+instance, within the 1000.00 USD budget `payments-operator/ap-standing-payments`
+shared by every instance. A human consents to a template under it on the
+approval surface; the Dispatcher then dispatches instances unattended within
+86400 seconds of that consent, with 60 seconds of clock skew allowed.
+`demo/test/standing-payment-shipped.test.ts` runs this configuration.
+
+Accepted limitations (D907, D1143):
+
+- The idempotency scope keeps the Mission. An Expansion successor
+  presenting its predecessor's key takes a new claim on the same budget
+  counters. The payments ledger's one-settlement-per-invoice rule then
+  refuses the wire within a process, but it is a separate guard, not
+  lineage-wide idempotency, and the in-memory ledger does not survive a
+  restart.
+- Neither limitation lets a same-Mission claim lapse before the Mission's
+  `expires_at`. The claim store is a file
+  (`topology.json` `stores.pdpIdempotencyClaims`), and a composition
+  restarted on the same claim, reservation and kernel files refuses a
+  same-Mission duplicate `duplicate_suppressed` against the retained claim,
+  past the published idempotency horizon too, and charges nothing.
+- These launchers keep the kernel and the templates in memory and generate
+  the AS's signing keys at each boot, so a restart ends their Missions and
+  the credentials naming them. A composition given `kernelStore` keeps its
+  Missions across a restart; that is the restart path the witness runs.
+
 ## Scenarios
 
 | # | Scenario | Milestone |

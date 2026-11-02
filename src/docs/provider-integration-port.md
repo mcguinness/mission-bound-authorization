@@ -58,9 +58,14 @@ boot under `MISSION_EPHEMERAL_KEYS=1`. `server.ts`, `pnpm issuance-only` and
 `pnpm as-native` each refuse to start with neither or both
 (`signingKeysFromEnv`, #831 slice 1); a composition that names no source, as
 the tests and the shared demo do, generates them per boot
-(`buildAuthorizationServer`). A ring keeps the keys across a restart; it
-holds one generation per key, and rotation and resource-side JWKS refresh
-are #831's.
+(`buildAuthorizationServer`). A ring keeps the keys across a restart and
+holds each role's generations: `pnpm keys` rotates, retires and withdraws
+them as compromised (#831; `channel-key-matrix.md`). Several reference
+consumers, the payments PEP, the PDP and the Signals receiver among them,
+hold the AS's keys through `IssuerKeys`, refreshed within the freshness
+`/jwks` declares. Not every consumer does: the reference Lifecycle client
+fetches `/jwks` at every verification and keeps no copy, and other consumers
+keep their own copies (§4.5).
 
 ## 2. Desired contract
 
@@ -124,7 +129,7 @@ the store.
 | Source and authority derivation | Yes | `kernel.derive`; the source gates on the approval page before it renders and in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | No test exercises the decision-time `scope` check on a catalog-sourced `scope_only` target (§3.3) |
 | Record and grant binding | Yes | `kernel.prepareApproval`; the held-grant classification and `grant.save()` under the interaction's grant identity; the hold; then, at the code save on the resume request, the fenced `AuthorizationCode` adapter: `kernel.approve` and `insertRecord`, committing the record already bound, and the code's release (§3.4) | Every refusal at the decision before any write, a consented ceiling's entries and drawdown policy included; the record commits bound (§4.1) in one synchronous turn with the staged code's release, an in-process fence (D663) | Publication of the activating event | A failure in the decision leaves an inert, classified grant and no Mission; a failure at the code save leaves no Mission and no redeemable code; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | On the file-backed kernel a crash after the commit keeps the Mission and loses its code, the delivery gap's end state (#1863; §3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | A failure the request observes returns the count; a crash or a lost response keeps it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a crash or a lost response after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
-| Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
+| Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; D772); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
 | Scope projection | Yes (`plain-rs` is `scope_only`) | `earlyScopeRefusal`; the decision check; `decideMissionScope`; `preCheckRefreshProjection`; the JWT customizer (§3.7) | In request, before the state gate and before refresh consumption; reads only | None | The mapping is configuration, strictly loaded at boot | Yes, HTTP; the JWT customizer directly and on a delegated mint (§3.7) | Code-exchange refusal after code consumption (§3.7) |
 | Protected introspection | JWT-plus-introspection configuration only | `/introspect` route in `makeRoutes` (§3.8) | Per-request read of current kernel state; may commit an expiry | None | The index is per boot, and so are the keys unless a key ring keeps them; pre-restart tokens introspect `active: false` either way (§3.8) | Yes, HTTP (§3.8) | None: a signed token with no issuance record is never active (§3.8) |
 
@@ -737,7 +742,7 @@ the store.
   - `async-delegation terminal paths (@spec async-delegation) > fractional-second boundary: a family refresh token lives exactly until expires_at, and a family refresh with 0.9 s left is refused invalid_grant with mission_error expired and no refresh token saved (@spec mission#mission-bound-tokens, mission#issuance-gating)` (`async-delegation.test.ts`)
 - **Tests (kernel-level):** `single-process control-plane fault boundaries > a derivation admitted from a stale snapshot cannot overshoot the cap` (`control-plane-faults.test.ts`).
 - **Unsupported or residual.**
-  - The counter is not coupled to the token it pays for (§4.3; #250).
+  - The counter is not coupled to the token it pays for (§4.3; D874).
   - **`exp` is bounded by `expires_at` on every mint.** The `ttl` configuration
     in `buildProvider` sets `AccessToken`, `RefreshToken`, `AuthorizationCode`
     and `IdToken` through one clamp, `clampToMission`: oidc-provider's
@@ -780,10 +785,14 @@ the store.
     - `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > a revocation committed while the request-path drain runs, the last awaited step before release, is still refused invalid_grant with mission_error revoked and no token member`
     - `the release fence refuses only an ended Mission (@spec mission#issuance-gating, #250) > a suspension committed at the same point, after the gate and the signature, still delivers the code exchange's tokens`
 
-    The fence holds for one process. Still #250's (§4.6): a crash after the
-    count, a lost response, the replay of a lost response, the window between
-    the approval commit and the code (#916, §3.4), the refund of a fenced
-    derivation's count (#935, §4.3), and multi-process issuance (#641).
+    The fence holds for one process. The cases it leaves have these
+    dispositions (§4.6). A crash after the count, or a lost response, leaves
+    the derivation counted, the fail-safe (D772, D874), and no operation
+    identity replays a lost response (§4.4). The window between the approval
+    commit and the code is #1863's, closed with
+    `core.approval-event.record-code-atomicity` settled at `partial` (D1016,
+    D1018; §3.4). A fenced derivation keeps its count by design: its Mission
+    has ended, and the fence refunds nothing (D772, D954; §4.3). Multi-process issuance waits on #641's deployment trigger.
   - No operation identity: nothing replays a lost token response. A retry
     of the same authorization code, or of a rotated refresh token, is reuse
     and revokes the grant; a retry of a refresh token that has not rotated
@@ -882,7 +891,8 @@ the store.
     presented token is consumed and a rotated one saved: after a `resume` the
     client's token is reuse, and oidc-provider revokes the grant
     (`refresh_token.js` L121-127). Only refusals detected before rotation
-    consume nothing. Closing that window is #250's cross-step atomic domain.
+    consume nothing. That window is an accepted single-process residual (D772, D885), and
+    no lease is built.
   - **A fully contained family is refused after rotation.** A delegation family
     whose effective authority is entirely contained is refused at the `rar`
     hook (L212), after the presented token is consumed and a rotated one saved,
@@ -1076,17 +1086,21 @@ A JWT-only Resource Server would accept the token from step 3 on, but the AS
 releases it only at step 7. A revocation committed before step 7 is refused
 there; one committed after it is acknowledged after the token was answered.
 The fence records nothing, so no authoritative issuance commit exists across
-the provider and Mission stores. Defining one is #250's first acceptance item
-(§4.6). The boundary cases this leaves open (a failure after counting, a
+the provider and Mission stores. None is defined: #250 closed with no claim
+that every provider count and its artifact commit atomically (D874, D885;
+§4.6), and [control-plane-deployment.md](control-plane-deployment.md) declares
+the limit. The boundary cases this leaves open (a failure after counting, a
 failure after signing, a failure after index acceptance, a lost code-exchange
 or refresh response), each with its outcome and owner, are listed in
 [issuance-only-deployment.md](issuance-only-deployment.md) §4; D408 accepts
-them as unsupported for that reference deployment. Also open: a crash after
-the count, the replay of a lost response under one operation identity, the
-window between the approval commit and the code (#916), a fenced
-derivation's count, which stays spent because its Mission has ended (D771,
-D772), and multi-process issuance (#641), where
-the fence orders a revocation against an issuance only within one process.
+them as unsupported for that reference deployment. The remaining cases: a crash
+after the count stays counted (D772, D874); no operation identity replays a
+lost response (§4.4); the window between the approval commit and the code is
+#1863's, closed with `core.approval-event.record-code-atomicity` settled at
+`partial` (D1016, D1018); a fenced derivation's count stays spent because its
+Mission has ended (D772, D954); and multi-process issuance waits on #641,
+where the fence orders a revocation against an issuance only within one
+process.
 
 ### 4.3 Failed-issuance counting
 
@@ -1178,10 +1192,12 @@ this path, a restart on the file-backed kernel leaves:
 - **Stranded:** an `active` Mission whose grant is gone. Nothing can derive
   from it, and it stays `active` until `expires_at` or a revocation.
 
-A restart is not revocation either way: with per-boot keys a consumer holding
-the old key keeps accepting pre-restart tokens until `exp` plus tolerance,
-and with a ring the key does not change. Rotation and resource-side JWKS
-refresh are #831's.
+A restart is not revocation either way. With per-boot keys, a consumer that
+refreshes the AS's keys (`IssuerKeys`) stops accepting pre-restart tokens
+once its cached `/jwks` expires (300 s in the reference), and one holding a
+fixed copy of the old key keeps accepting them until `exp` plus tolerance.
+With a ring the key does not change. Rotation, retirement and compromise
+are `pnpm keys` operations (#831; `channel-key-matrix.md`).
 
 Committed authority-source roots are the one thing reconciled at kernel
 construction (#827). A row that predates them gains one only from trusted
@@ -1207,34 +1223,38 @@ grants and witnesses only the kernel's side
 inventory). The key ring is witnessed the same way:
 `an AS signing from a key ring across restarts (@spec #831 slice 1) > an access token signed before a restart verifies against the restarted AS's JWKS; its introspection does not survive the restart (#250)`.
 
-### 4.6 Where #250 owns the open work
+### 4.6 Where #250's open work went
 
-Issue #250 owns control-plane consistency, including cross-store atomicity. Its
-2026-09-16 acceptance items map onto this port:
+Issue #250 owned control-plane consistency, including cross-store atomicity.
+It closed as completed (D885) under the owner's closure rulings (D874), and
+the reference makes no Mission Control-Plane Consistency claim. Its
+2026-09-16 acceptance criteria (#250 comment 11) map onto this port as
+follows:
 
-| #250 acceptance item | Port points it would close |
-|---|---|
-| Define the authoritative issuance commit point and durable operation and artifact identity across the provider and kernel path | §4.2, §4.3 |
-| Revoke versus issue, crash after reservation, an accepted artifact with a lost acknowledgement, and replay without refund or duplicate issuance | §3.5, §4.3, §4.4 |
-| Assembly-level restart recovery for outstanding credentials and required indexes and projections, with explicit refusal where recovery is unsupported | §4.5 |
-| Restore to an older snapshot under a recovery admission or fencing mechanism | Rollback resistance stays partial ([control-plane-deployment.md](control-plane-deployment.md)) |
+| 2026-09-16 criterion | Port points | Disposition |
+|---|---|---|
+| Define the authoritative issuance commit point and durable operation and artifact identity across the provider and kernel path | §4.2, §4.3 | Not defined. No claim is made that every provider count and its artifact commit atomically (D874); multi-process serialization waits on #641's trigger |
+| Revoke versus issue, crash after reservation, an accepted artifact with a lost acknowledgement, and replay without refund or duplicate issuance | §3.5, §4.3, §4.4 | Accepted as scoped completion (D874): an authoritative non-acceptance may refund once, and an ambiguous delivery stays counted; a fenced derivation keeps its count (#935, D954) |
+| Assembly-level restart recovery for outstanding credentials and required indexes and projections, with explicit refusal where recovery is unsupported | §4.5 | Accepted with scope (D874): kernel projections recover, and unsupported provider state is invalidated or refused; no refresh continuity or recovery from lost storage is established |
+| Restore to an older snapshot under a recovery admission or fencing mechanism | §4.5; [control-plane-deployment.md](control-plane-deployment.md) | Met by #1688 and #1691 (D816, D820): an older store is refused at boot and reconciled by restoring the witnessed store; invalidation under a new recovery generation is deferred (D820), one writer on one host is declared ([control-plane-deployment.md](control-plane-deployment.md)), and the `rollback` row stays `partial` |
 
-The latest owner status on #250 also lists `expected_version` with 409, the
-durable projections with a rollback witness, and the emergency rows and
-closure. Multi-process serialization stays with #641. This document claims
-none of that work.
+#250's other acceptance items, `expected_version` with 409 (#1302, D490)
+and closure (D885), are met. Its four follow-ups (#1747, #1748, #1749,
+#1750) are closed and concern the consumer and control-plane rows, not this
+port.
 
-These gaps are not named in #250's items:
-
-- external Subjects (§3.2), whose owner is not verified.
+External Subjects (§3.2) are unsupported and refused, and their owner is not
+verified.
 
 The window between the approval commit and code issuance (§3.4) is #1863's
-(D1001): the record commits with its code, and the file-backed crash
-residual is declared in [control-plane-deployment.md](control-plane-deployment.md).
+(D1001), closed with `core.approval-event.record-code-atomicity` settled at
+`partial` (D1016, D1018): the record commits with its code, and the
+file-backed crash residual is declared in
+[control-plane-deployment.md](control-plane-deployment.md).
 
-The state gate after rotation (§3.6) is partly fixed by the refresh pre-check
-(#914). What remains, a state change between the pre-check and the save-time
-gate, is the pre-check-to-commit window of #250's cross-step atomic domain.
+The state gate after rotation (§3.6) is partly fixed by the refresh
+pre-check (#914). What remains, a state change between the pre-check and the
+save-time gate, is an accepted single-process residual (D772, D885).
 
 ## 5. Runtime overlay: the AS-native payments target
 
@@ -1328,10 +1348,14 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Crash and recovery.** The DPoP replay cache is in memory. The AS signing
   keys are generated per boot or kept in a key ring (§1). With per-boot keys
   a pre-restart token fails signature validation. With a ring it validates,
-  but the Mission it names does not survive: the kernel runs in memory on
-  `pnpm as-native`, so the PEP's loader finds no Mission and refuses
-  `unknown_mission` before any decision (§5.3). The PEP fetches the AS JWKS
-  once at assembly (`stack.ts:638`); refresh is #831's.
+  and its Mission survives only with a kernel file (`MISSION_KERNEL_STORE`,
+  with a recovery witness). With the kernel in memory, the default, the
+  PEP's loader finds no Mission and refuses `unknown_mission` before any
+  decision (§5.3), witnessed across a key-ring restart:
+  `the as-native launcher in process, OpenFGA client stubbed (D332) > refuses, after a restart on the same key ring with the kernel and the pending operations in memory, a pre-restart Mission-bound token unknown_mission and a pre-restart transaction token txn_unknown, before any decision and with no effect (#1337)`.
+  The PEP holds the AS's keys through `IssuerKeys`, refreshed within the
+  freshness `/jwks` declares, not a copy taken at assembly
+  (`channel-key-matrix.md`).
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
@@ -1705,7 +1729,7 @@ validates a token as the resource does (D402, §3.8).
 1. Creating the Mission Record atomically with issuance of the authorization
    code (`{#approval-event}` step 7). §3.4.
 2. An authoritative issuance commit that couples the derivation count to the
-   access token (#250). §4.2, §4.3.
+   access token (not defined; D874). §4.2, §4.3.
 3. Ordering a revocation against an issuance across processes
    (`{#issuance-gating}`; #641). Within one process the release fence
    refuses a derivation whose Mission is revoked before the AS answers it,
@@ -1745,7 +1769,7 @@ Runtime overlay:
   bounded by the code's 60 s lifetime, after which no derivation is possible
   and the Mission stays `active` until `expires_at` or a revocation (§3.4).
 - A state change between the refresh pre-check and the save-time gate is
-  refused after rotation consumes the presented refresh token (§3.6; #250).
+  refused after rotation consumes the presented refresh token (§3.6; D772).
 - A fully contained delegation family is refused after rotation consumes its
   refresh token; no recoverable issuance authority is lost under the three
   conditions of §3.6.
