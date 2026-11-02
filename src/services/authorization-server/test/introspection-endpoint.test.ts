@@ -45,7 +45,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 import type { Server } from "node:http";
-import { DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import { DERIVATION_POLICY, DEV_SERVICE_TOKEN, pinnedToCurrentContract, TOPOLOGY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { credentialProfileVectors } from "@mission/core/test-vectors";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -749,8 +749,10 @@ describe("credential-authority projection: never the Mission's full authority (@
     expect(recordActions).toEqual(
       expect.arrayContaining(["payments:invoice.read", "payments:remittance.send"]),
     );
+    // Pinned as the Mission's entries are: the payments resource requires a
+    // reference, so a fresh approval records it (#249 C.3b, D989).
     const narrowClaim: AuthorityEntry[] = [
-      { type: "mission_resource_access", resource: PAYMENTS, actions: ["payments:invoice.read"] },
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: PAYMENTS, actions: ["payments:invoice.read"] }),
     ];
     const crafted = await craftToken({
       jti: flow5.jti,
@@ -1255,6 +1257,8 @@ describe("discharge_selectors in the introspection projection (@spec discharge#c
           resource: PAYMENTS,
           actions: ["payments:invoice.read"],
           constraints: { ...readEntry.constraints, terminal_when: [{ ...CLOSE_CONDITION }, added] },
+          // The record entry's reference, which a credential within it carries (#249 C.3b).
+          ...(readEntry.resource_contract !== undefined ? { resource_contract: readEntry.resource_contract } : {}),
         },
       ],
     });

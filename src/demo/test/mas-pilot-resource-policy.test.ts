@@ -18,7 +18,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { EvaluationRequest } from "@mission/pdp";
 import type { MasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig } from "../src/mas-pilot/config.js";
-import { admin, approve, call, composeRecorded, estateToken, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
+import { admin, approve, call, composeRecorded, estateToken, INVOICES_READ, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
 
 const up = await openfgaReachable();
 const d = up ? describe : describe.skip;
@@ -56,7 +56,7 @@ d("MAS pilot Resource policy: estate entitlements, administered and revoked (#81
 
   it("permits a joined read for an estate subject and client entitled in the store under the estate issuer", async () => {
     expect(pilot.resourcePolicy.development).toBe(true);
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(res.ok, JSON.stringify(res)).toBe(true);
     // The policy's inputs: the estate subject and client the gateway authenticated.
@@ -66,8 +66,8 @@ d("MAS pilot Resource policy: estate entitlements, administered and revoked (#81
   });
 
   it("revoking only the estate subject's entitlement denies resource_policy with no result, and granting it back permits", async () => {
-    const first = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
-    const second = await estateToken(pilot, "estate-ap-bot-7f3", "u-1002", "invoices.read");
+    const first = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
+    const second = await estateToken(pilot, "estate-ap-bot-7f3", "u-1002", INVOICES_READ);
     await admin(pilot, "revoke", "--iss", ESTATE, "--sub", "u-1001", "--relation", "reader", "--vendor", "acme");
     const revoked = await call(pilot, first, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(revoked.ok).toBe(false);
@@ -81,7 +81,7 @@ d("MAS pilot Resource policy: estate entitlements, administered and revoked (#81
   });
 
   it("evaluates the estate subject, not the Mission-side identity it maps to: with alice and ap-agent fully entitled, the revoked estate account is still denied", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     await admin(pilot, "revoke", "--iss", ESTATE, "--sub", "u-1001", "--relation", "reader", "--vendor", "acme");
     await missionSideIdentity(pilot, "grant");
     try {
@@ -95,7 +95,7 @@ d("MAS pilot Resource policy: estate entitlements, administered and revoked (#81
   });
 
   it("keeps the two alices apart: the Mission-side alice's entitlement never satisfies the estate account named alice, and its own does", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "alice", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "alice", INVOICES_READ);
     await admin(pilot, "revoke", "--iss", ESTATE, "--sub", "alice", "--relation", "reader", "--vendor", "acme");
     await admin(pilot, "revoke", "--iss", ESTATE, "--sub", "alice", "--relation", "member", "--tenant", TENANT);
     await admin(pilot, "grant", "--iss", MAS, "--sub", "alice", "--relation", "member", "--tenant", TENANT);
@@ -115,7 +115,7 @@ d("MAS pilot Resource policy: estate entitlements, administered and revoked (#81
   });
 
   it("applies the client dimension to the estate client: revoking its authorized_client denies, the Mission-side identity never stands in, and restoring permits", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     await admin(pilot, "revoke", "--iss", ESTATE, "--client", "estate-ap-bot-7f3", "--relation", "client", "--vendor", "acme");
     await missionSideIdentity(pilot, "grant");
     try {
@@ -143,7 +143,7 @@ d("MAS pilot Resource policy: a restart attached to the same store keeps a revoc
     const { pilot: after } = await composeRecorded({ config, resourcePolicyStore: { attach: store } });
     try {
       const missionId = approve(after, "alice", { label: "rp-restart" });
-      const credential = await estateToken(after, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+      const credential = await estateToken(after, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
       const revoked = await call(after, credential, missionId, "get_invoice", { invoice_id: "inv-1" });
       expect(revoked.ok).toBe(false);
       expect(revoked.denial_reason).toBe("resource_policy");

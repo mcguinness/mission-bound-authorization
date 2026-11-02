@@ -143,8 +143,8 @@ name this Mission `$MISSION`, and two more approved the same way
 ### 3.2 Obtain an estate credential
 
 ```sh
-console -X POST "$PILOT_CONSOLE/estate-tokens" -d '{"client_id":"estate-ap-bot-7f3","account":"u-1001","scope":"invoices.read"}'
-console -X POST "$PILOT_CONSOLE/estate-tokens" -d '{"client_id":"estate-opaque-bot-4e2","account":"u-1001","scope":"invoices.read"}'
+console -X POST "$PILOT_CONSOLE/estate-tokens" -d '{"client_id":"estate-ap-bot-7f3","account":"u-1001","scope":"invoices.read.2026-10-27"}'
+console -X POST "$PILOT_CONSOLE/estate-tokens" -d '{"client_id":"estate-opaque-bot-4e2","account":"u-1001","scope":"invoices.read.2026-10-27"}'
 ```
 
 ```json
@@ -159,8 +159,11 @@ memory under the returned `credential_id` (below, `$JWT_CREDENTIAL` and
 `$OPAQUE_CREDENTIAL`). The first client receives an RFC
 9068 JWT, the second an opaque token the gateway introspects (deployment
 §5). Under the shipped mapping contract, `u-1001` and `u-1002` map to
-`alice`, both clients to `ap-agent`, and `invoices.read` to
-`payments:invoice.read` and `payments:invoice.list`.
+`alice`, both clients to `ap-agent`, and `invoices.read.2026-10-27` to
+`payments:invoice.read` and `payments:invoice.list` under the current
+payments contract, which the Mission approved at the console carries
+(deployment §2). The legacy `invoices.read` states no contract and joins
+only a Mission approved before the payments cutover.
 
 ### 3.3 Make a joined call
 

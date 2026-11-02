@@ -18,14 +18,21 @@
 
 import { type Server } from "node:http";
 import { ResourceContractDeclarations, type ResourceContractRef } from "@mission/core";
-import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN, RESOURCE_CONTRACTS, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
+import {
+  DERIVATION_POLICY,
+  demoReconciliationTemplate,
+  DEV_SERVICE_TOKEN,
+  pinnedToCurrentContract,
+  RESOURCE_CONTRACTS,
+  TRUSTED_TOOL_CATALOGS,
+} from "@mission/demo-data";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   MACHINE_SPEED_STATEMENT,
   PROHIBITED_CLASSES_STATEMENT,
   TEMPLATE_CEILING_STATEMENT,
 } from "../src/adapters/template-consent.js";
-import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { ApprovalSessionStore, type AuthorityEntry, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import {
   browserApprovalHeaders,
   floorApprovalHeaders,
@@ -130,8 +137,12 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
       MACHINE_SPEED_STATEMENT,
       PROHIBITED_CLASSES_STATEMENT,
     ]);
-    // The proposed ceiling, with the trusted capability bindings it will commit.
-    expect(renderedCeiling(html).map(({ capability_sources: _bindings, ...entry }) => entry)).toEqual(proposalBody().ceiling);
+    // The proposed ceiling, with the trusted capability bindings it will commit,
+    // and the current reference on each payments entry: the payments resource
+    // requires one, so a fresh approval records it (#249 C.3b, D989).
+    expect(renderedCeiling(html).map(({ capability_sources: _bindings, ...entry }) => entry)).toEqual(
+      (proposalBody().ceiling as AuthorityEntry[]).map((e) => pinnedToCurrentContract(e)),
+    );
     // Only the user agent holding the Approver's login for this proposal is
     // offered the decision, and its form carries that login's CSRF secret.
     expect(html).not.toContain("<form");

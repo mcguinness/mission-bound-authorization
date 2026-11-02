@@ -72,7 +72,8 @@ describe("mapping contract loader (@spec authority-server#mapping-contract, #818
     const shipped = loadMasPilotConfig().mapping_contract;
     expect(() => parseMappingContract(shipped)).not.toThrow();
     const parsed = parseMappingContract(shipped);
-    expect(parsed.version).toBe(1);
+    // The shipped contract's version: 2 since the contract-stating scope values were added (#249 C.3b).
+    expect(parsed.version).toBe(2);
     expect(parsed.failure).toBe("mission_binding_failed");
     expect(parsed.subjects.filter((r) => r.to.sub === "alice").length).toBeGreaterThan(1);
   });
