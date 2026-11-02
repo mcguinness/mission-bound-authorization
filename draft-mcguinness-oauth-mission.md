@@ -2989,9 +2989,9 @@ servers while retaining
 stolen-token exposure ({{token-theft}}).
 
 A delegated token is sender-constrained to the delegate's own key
-({{delegated-exchange}}); the cross-domain companion requires
-sender-constraint for credentials that cross a trust domain
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+({{delegated-exchange}}), and the Cross-Domain capability
+sender-constrains every credential that crosses a trust domain
+({{optional-capabilities}}).
 
 An AS that issues Mission-bound JWT access tokens for resource servers
 to consume MUST publish its token verification keys (for example, at
@@ -5242,9 +5242,17 @@ that supports none of them is still conformant:
   2. authority that only narrows ({{subset}});
   3. projection performed only by, or under the authorization of, the
      Mission `issuer`, gated on the Mission's `active` state
-     ({{lifecycle}}, {{issuance-gating}}); and
+     ({{lifecycle}}, {{issuance-gating}});
   4. projected credential lifetimes capped by the Mission's
-     `expires_at` ({{token-authentication-lifetime}}).
+     `expires_at` ({{token-authentication-lifetime}});
+  5. projected credentials sender-constrained to their presenter
+     ({{token-claims}}), never bearer credentials, each recipient
+     verifying the proof of possession and refusing a credential whose
+     binding is absent or invalid ({{rs-enforcement}}); and
+  6. renewal only through the Mission `issuer`: a projected grant is
+     redeemable once, and the other trust domain issues no renewal
+     authority on it, so a further credential there needs a new
+     projection.
 
   This bar is self-contained in this document. The companion Mission
   Cross-Domain Projection profile

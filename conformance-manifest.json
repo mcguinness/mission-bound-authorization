@@ -7459,6 +7459,50 @@
    "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
   },
   {
+   "id": "core.cross-domain.sender-constrained-and-verified",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projected credentials sender-constrained to their presenter ({{token-claims}}), never bearer credentials, each recipient verifying the proof of possession and refusing a credential whose binding is absent or invalid ({{rs-enforcement}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every credential a projection yields, the grant that crosses the trust boundary and each credential issued from it in the other trust domain, carries a key binding to the party that presents it and is never issued as a bearer credential; the authorization server or resource server receiving one verifies the presenter's proof of possession against that binding and refuses a credential whose binding is absent or whose proof fails"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2009 P2 (review of #2014, F1): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. Before #2014 the bar reached this duty only by requiring implementations that interoperate across the hop to implement the companion Mission Cross-Domain Projection profile; this property states it locally, and the companion keeps the mechanism. Companion sources (Issuing the Cross-Domain Grant; Validation at the Resource AS): the grant \"MUST be sender-constrained ({{RFC7800}}) to the presenting client\"; the Resource AS \"MUST verify the grant's sender-constraint\" and \"MUST reject with `invalid_grant` a cross-domain grant that is not sender-constrained or whose proof-of-possession does not verify\"; a local token \"MUST be sender-constrained ({{RFC7800}}), like the grant it derives from\" and \"MUST NOT be issued as a bearer token\". The companion has no row for these MUSTs (a traceability follow-up). Its Resource AS test \"presenter-key mismatch is rejected (sender-constraint)\" (src/services/mcp-saas/test/cross-domain.test.ts) acts at the Resource AS, not the claimant, and is not cited. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.renewal-only-through-issuer",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "renewal only through the Mission `issuer`: a projected grant is redeemable once, and the other trust domain issues no renewal authority on it, so a further credential there needs a new projection",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projected grant presented a second time is refused, and no credential issued from a projection in the other trust domain is a refresh token or other renewal authority, so every further credential there follows a new projection, which the Mission `issuer` gates on the Mission's `active` state"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2009 P2 (review of #2014, F1): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. Before #2014 the bar reached this duty only by requiring implementations that interoperate across the hop to implement the companion Mission Cross-Domain Projection profile; this property states it locally, and the companion keeps the mechanism. Companion sources and their rows: the grant \"MUST carry a `jti` for one-time use\" and the Resource AS \"MUST reject a replayed cross-domain grant\" (cross-domain.resource-as.rejects-replayed-grant, tested); it \"MUST NOT issue a refresh token, or any equivalent renewal authority, on a Mission-bound grant\" (cross-domain.resource-as.no-renewal-authority, partial); \"Carrying `expires_at` extends no credential's lifetime and authorizes no renewal\" (cross-domain.resource-as.expiry-extends-no-lifetime, partial). Those rows sit under cross-domain.projection and are not cited here. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
    "id": "core.derivation.configured-mapping-scope-key",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "derivation-modes",
