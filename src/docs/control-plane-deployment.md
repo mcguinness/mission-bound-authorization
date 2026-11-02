@@ -518,6 +518,7 @@ a check at the next guarded transaction, after that write committed.
 | `discharge_selectors` | `discharge-selector-store.ts` | managed (`selectorFor`) |
 | `approval_governance_records` | `approval-governance.ts` | managed |
 | `direct_approval_rules`, `direct_approval_inputs` | `direct-approval-record.ts` | managed |
+| `drawdown_policy_pins` | `drawdown-policy-pins.ts` | managed (with the ceiling consent's Mission insert, and with the re-consent decision); statement (the backfill at open, only where a retained consent is unpinned) |
 | `drawdown_recording_rules`, `drawdown_record_inputs` | `drawdown-approval-record.ts` | managed |
 | `template_recording_rules`, `template_record_inputs` | `template-approval-record.ts` | managed (with the standing-payment instance insert) |
 | `standing_payment_budget_bindings` | `standing-payment.ts` | managed (`bindBudget`, at template consent) |

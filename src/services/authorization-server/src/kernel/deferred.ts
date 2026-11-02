@@ -969,22 +969,35 @@ export class ExpansionDeferralStore {
       manifestJson = JSON.stringify(committed.manifest);
       manifestHash = committed.manifestHash;
     }
-    const approved = this.db
-      .prepare(
-        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ?, approved_authority_hash = ?, decision_audiences_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
-      )
-      .run(
-        JSON.stringify(approval.approver),
-        approval.approvalEventId,
-        approval.approvedUntil,
-        manifestJson,
-        manifestHash,
-        reconsent ? JSON.stringify(reconsent) : null,
-        approvedAuthority,
-        decisionAudiences ? JSON.stringify(decisionAudiences) : null,
-        deferralCode,
-      );
-    return approved.changes === 1;
+    // @spec progressive#sec-drawdown-policy (#1017, D1162): a re-consent pins
+    // its policy version with the decision that records it, whether or not
+    // the successor is ever created; a version committed with other content
+    // refuses the decision, which records nothing.
+    return withTransaction(this.db, () => {
+      const approved = this.db
+        .prepare(
+          "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ?, approved_authority_hash = ?, decision_audiences_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        )
+        .run(
+          JSON.stringify(approval.approver),
+          approval.approvalEventId,
+          approval.approvedUntil,
+          manifestJson,
+          manifestHash,
+          reconsent ? JSON.stringify(reconsent) : null,
+          approvedAuthority,
+          decisionAudiences ? JSON.stringify(decisionAudiences) : null,
+          deferralCode,
+        );
+      if (approved.changes === 1 && reconsent?.drawdown_policy) {
+        this.kernel.drawdownPolicyPins.pinInCallerTx(
+          this.kernel.issuerId(),
+          reconsent.drawdown_policy,
+          reconsent.ceiling_consented_at,
+        );
+      }
+      return approved.changes === 1;
+    });
   }
 
   /**

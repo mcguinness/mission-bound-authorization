@@ -62879,7 +62879,7 @@
    "level": "concurrency",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. Implemented on the reference drawdown path (#1017): the predecessor's count is read inside the creation transaction (code reading). No concurrency witness yet, so todo; #1079 owns it, and a witness covers D296's concurrency example and must fail with the guard disabled."
+   "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. Implemented on the reference drawdown path (#1017): the predecessor's count is read inside the creation transaction (code reading). No concurrency witness yet, so todo; #1079 owns it, and a witness covers D296's concurrency example and must fail with the guard disabled. D1162: transferred from #1017 to #1079."
   },
   {
    "id": "progressive.drawdown-derivation.no-fork",
@@ -62909,7 +62909,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1079 (D296) owns what remains open."
+   "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1079 (D296) owns what remains open. D1162: transferred from #1017 to #1079."
   },
   {
    "id": "progressive.drawdown-derivation.token-counted-once",
@@ -62939,7 +62939,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1079 (D296) owns what remains open."
+   "notes": "#1079 (D296) specification slice. Gated on progressive.drawdown-derivation-limits: a deployment that runs Progressive ceiling drawdown and also adopts Mission Derivation Limits. Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1079 (D296) owns what remains open. D1162: transferred from #1017 to #1079."
   },
   {
    "id": "progressive.drawdown-derivation.exhaustion-refuses",
@@ -63450,7 +63450,7 @@
    "coverage": "blocked",
    "tests": [],
    "blocked_by": "#1469",
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row. D593: blocked on #1469, the reference's discovery encounter intake (roadmap). #1469 stage 1 retrieves and digests the declaration and records whether it lists the sought actions, for the human only: every encounter falls back to a fresh approval, and no adjudication evaluates the declaration against the ceiling until the later stages (D607)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row. D593: blocked on #1469, the reference's discovery encounter intake (roadmap). #1469 stage 1 retrieves and digests the declaration and records whether it lists the sought actions, for the human only: every encounter falls back to a fresh approval, and no adjudication evaluates the declaration against the ceiling until the later stages (D607). D1162: transferred from #1017 to #1469."
   },
   {
    "id": "progressive.ceiling-test.retained-outside-authority-needs-human",
@@ -64600,7 +64600,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row. D593."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row. D593. D1162: stays todo, explicitly deferred to deployment adoption: no reference deployment selects Progressive authorization."
   },
   {
    "id": "progressive.sec.drawdown-policy-reviewed-versioned",
@@ -64618,12 +64618,55 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the deployment reviews its drawdown policy and versions every change, as it does approval policy",
-    "local": "Not witnessed. The digest check protects an existing consent's content commitment: a snapshot edited under an unchanged version authorizes nothing for a Mission that committed the old digest. It does not show that every policy change is versioned, since edited content can still be consented by a new Mission under the same version with a different digest. Review is a deployment process outside the reference."
+    "local": "Versioning is enforced: every ceiling consent and re-consent pins the policy's (issuer, id, version) to the digest it commits, in the consent's own transaction, and a consent naming a pinned version with other content is refused and commits nothing, so a changed policy takes a new version. The pins are never pruned, hold with no activation, across a restart and past the activation snapshots' pruning, and a store without them rebuilds them from its retained consents. Review is a deployment process outside the reference and is not witnessed."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row. D593: stays todo; the digest test witnesses the commitment and cadence rows, not deployment versioning."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > a ceiling consent naming a version whose content changed since an earlier consent is refused and creates no Mission; the changed content under a new version, and the unchanged content, are consented",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent naming a version whose content changed since the ceiling was consented is refused at the decision, which records nothing and leaves the deferral pending (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > a first consent pins its version with no activation: the unchanged content is consented again, changed content under that version is refused and commits nothing, and changed content under a new version is consented (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > a re-consent pins too: a successor re-consenting a pinned version with other content is refused and creates no successor (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > the pin survives a restart: an AS rebuilt over the store refuses changed content under the pinned version (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > the pin survives the activation snapshots' pruning past their audit horizon (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017) > a store without pins rebuilds them from its retained consents, so changed content under a version they committed is refused (@spec progressive#sec-drawdown-policy, #1017)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row. D593: stays todo; the digest test witnesses the commitment and cadence rows, not deployment versioning. D1162: partial, versioning witnessed by the drawdown policy pins (#1017); review stays a deployment process."
   },
   {
    "id": "progressive.audit.cumulative-drawdown-count",
@@ -64737,10 +64780,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "every Mission record in a drawdown chain holds its effective ceiling members and the consent commitment, and the consented ceiling that commitment names stays retained for the audit horizon",
-    "local": "Every successor carries authority_ceiling, drawdown_policy, ceiling_hash and ceiling_consent_hash; the consented members are held on the consent-bearing record (the root or a re-consenting successor), itself a Mission record of the chain. Retention for the audit horizon is the kernel record store's and is not witnessed here."
+    "local": "Every successor carries authority_ceiling, drawdown_policy, ceiling_hash and ceiling_consent_hash; the consented members are held on the consent-bearing record (the root or a re-consenting successor), itself a Mission record of the chain. Mission records are never pruned: witnessed through a policy narrowing, a re-consent and a restart past the chain's audit horizon, after the store pruned the chain's activation snapshots."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -64765,9 +64808,15 @@
      "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-policy-pins.test.ts",
+     "name": "a drawdown chain retains its ceilings through a restart past its audit horizon (@spec progressive#audit-linkage, #1017) > every record keeps its ceiling members, and each consent commitment's consented ceiling and policy stay retained, through a policy narrowing, a re-consent and a restart past the audit horizon",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D1162: retention witnessed (#1017)."
   },
   {
    "id": "progressive.audit.resource-declaration-digest",
@@ -64790,7 +64839,7 @@
    "coverage": "blocked",
    "tests": [],
    "blocked_by": "#1469",
-   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved. D593: blocked on #1469, the reference's discovery encounter intake (roadmap). #1469 stage 1 records the digest on a human-approved encounter successor (progressive-encounter-endpoint.test.ts); the policy-adjudicated arm waits for the later stages, so the row stays blocked (D607)."
+   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved. D593: blocked on #1469, the reference's discovery encounter intake (roadmap). #1469 stage 1 records the digest on a human-approved encounter successor (progressive-encounter-endpoint.test.ts); the policy-adjudicated arm waits for the later stages, so the row stays blocked (D607). D1162: transferred from #1017 to #1469."
   },
   {
    "id": "progressive.in-ceiling.publish-per-drawdown-bound",
