@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 5 May 2027</td>
+<td class="center">Expires 6 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-authority-server-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-11-01" class="published">1 November 2026</time>
+<time datetime="2026-11-02" class="published">2 November 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-05">5 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-06">6 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ Profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 5 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 6 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2646,10 +2646,12 @@ the following members:<a href="#section-6.5-1" class="pilcrow">¶</a></p>
 <code>delegate_depth</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.5-2.2">
             <p id="section-6.5-2.2.1">An integer. The joining client's depth under the Mission, from the
-deployment's actor records, which rule 5 of <a href="#join-rules" class="auto internal xref">Section 6.1</a> evaluates.
-Present when the joining client is a delegate; the Mission's own
-client is depth 0. On the assertion path, the assertion's <code>join</code>
-claim governs (<a href="#join-assertion-pdp" class="auto internal xref">Section 8.3</a>).<a href="#section-6.5-2.2.1" class="pilcrow">¶</a></p>
+deployment's actor records, which rule 5 of <a href="#join-rules" class="auto internal xref">Section 6.1</a> evaluates;
+the Mission's own client is depth 0. On a mapping join, it is present
+when the joining client is a delegate. On the assertion path, the
+assertion's <code>join</code> claim supplies the depth, so the member is
+optional, and a reported value is compared with that claim
+(<a href="#join-assertion-pdp" class="auto internal xref">Section 8.3</a>).<a href="#section-6.5-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.5-2.3">
@@ -3221,8 +3223,9 @@ does not join, the MAS rejects the request with HTTP 403 and the
 </li>
         </ul>
 <p id="section-8.1-9">Visibility on this endpoint is bounded: a Mission is visible to its
-<code>client_id</code>, its recorded delegates, and the PEPs and PDPs enrolled
-for the Mission's enforcement scope. Any other caller <span class="bcp14">MUST</span> receive
+<code>client_id</code>, each delegate with an actor record under the Mission
+(<a href="#join-rules" class="auto internal xref">Section 6.1</a>), and the PEPs and PDPs enrolled for the Mission's
+enforcement scope. Any other caller <span class="bcp14">MUST</span> receive
 <code>not_found</code>, so the <code>join_failed</code> (403) and <code>not_found</code> (404) split
 never acts as a mapping oracle for callers outside that set.
 Visibility alone does not establish a caller's role.<a href="#section-8.1-9" class="pilcrow">¶</a></p>

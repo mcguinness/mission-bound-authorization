@@ -1067,7 +1067,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 5 May 2027</td>
+<td class="center">Expires 6 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1083,12 +1083,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-11-01" class="published">1 November 2026</time>
+<time datetime="2026-11-02" class="published">2 November 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-05">5 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-06">6 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1149,7 +1149,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 5 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 6 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -3482,9 +3482,13 @@ anti-oracle property
 (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a>), and the error shape of
 <a href="#mission-status-errors" class="auto internal xref">Section 3.10</a>; and advertise <code>mission_status_endpoint</code>,
 <code>mission_status_signing_alg_values_supported</code>, and the endpoint's
-authentication metadata: the client-authentication members of
-<a href="#as-metadata" class="auto internal xref">Section 8</a> and, for the access-token path, its Protected
-Resource Metadata (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>).<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+authentication metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>):
+<code>mission_status_endpoint_auth_methods_supported</code> when the endpoint
+accepts client authentication,
+<code>mission_status_endpoint_auth_signing_alg_values_supported</code>
+when that member lists <code>private_key_jwt</code>, and, when the endpoint
+accepts the access-token path, its Protected Resource Metadata
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>).<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.2">
           <p id="section-9-3.2.1"><strong>Introspection projection</strong>: carry the Mission projection on the
@@ -3499,9 +3503,13 @@ gate the <code>suspended</code> state and the
 <code>completed</code> termination it introduces exactly as the issuance profile
 gates on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code>,
 <code>mission_status_signing_alg_values_supported</code>, and the endpoint's
-authentication metadata: the client-authentication members of
-<a href="#as-metadata" class="auto internal xref">Section 8</a> and, for the access-token path, its Protected
-Resource Metadata (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>).<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
+authentication metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>):
+<code>mission_lifecycle_endpoint_auth_methods_supported</code> when the endpoint
+accepts client authentication,
+<code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
+when that member lists <code>private_key_jwt</code>, and, when the endpoint
+accepts the access-token path, its Protected Resource Metadata
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>).<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.4">
           <p id="section-9-3.4.1"><strong>Mission Lifecycle, revoke only</strong>: serve the Mission Lifecycle endpoint
@@ -3515,9 +3523,13 @@ operation the implementation has not adopted
 (<a href="#lifecycle-operations" class="auto internal xref">Section 5.1</a>); and advertise
 <code>mission_lifecycle_endpoint</code>,
 <code>mission_status_signing_alg_values_supported</code>, and the endpoint's
-authentication metadata: the client-authentication members of
-<a href="#as-metadata" class="auto internal xref">Section 8</a> and, for the access-token path, its Protected
-Resource Metadata (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>). The class requires
+authentication metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>):
+<code>mission_lifecycle_endpoint_auth_methods_supported</code> when the endpoint
+accepts client authentication,
+<code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
+when that member lists <code>private_key_jwt</code>, and, when the endpoint
+accepts the access-token path, its Protected Resource Metadata
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>). The class requires
 neither another operation nor the Mission Status operation. An
 implementation that also serves another base operation or the
 Mission Status operation meets that operation's requirements, and

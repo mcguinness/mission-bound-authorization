@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-01T05:13:16Z
-Source repository commit: 5cfd5913d97754ad9be37211b60218d7b55d43d1
+Generated: 2026-11-02T04:50:16Z
+Source repository commit: 55f4b213267d3afbdca2e4de094f5a4ef43a4bdb
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           1 November 2026
-Expires: 5 May 2027
+Intended status: Informational                           2 November 2026
+Expires: 6 May 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -6817,8 +6817,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                      Mission Substrate Requirements
@@ -6876,7 +6876,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -8428,8 +8428,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -8488,7 +8488,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -16811,8 +16811,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16864,7 +16864,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -18681,9 +18681,13 @@ Table of Contents
       Section 3.2, the anti-oracle property (Section 3.8), and the error
       shape of Section 3.10; and advertise mission_status_endpoint,
       mission_status_signing_alg_values_supported, and the endpoint's
-      authentication metadata: the client-authentication members of
-      Section 8 and, for the access-token path, its Protected Resource
-      Metadata (Section 3.2).
+      authentication metadata (Section 8):
+      mission_status_endpoint_auth_methods_supported when the endpoint
+      accepts client authentication,
+      mission_status_endpoint_auth_signing_alg_values_supported when
+      that member lists private_key_jwt, and, when the endpoint accepts
+      the access-token path, its Protected Resource Metadata
+      (Section 3.2).
 
    *  *Introspection projection*: carry the Mission projection on the
       introspection response as Section 4 provides, including when it
@@ -18695,9 +18699,13 @@ Table of Contents
       issuance profile gates on non-active state, and advertise
       mission_lifecycle_endpoint,
       mission_status_signing_alg_values_supported, and the endpoint's
-      authentication metadata: the client-authentication members of
-      Section 8 and, for the access-token path, its Protected Resource
-      Metadata (Section 3.2).
+      authentication metadata (Section 8):
+      mission_lifecycle_endpoint_auth_methods_supported when the
+      endpoint accepts client authentication,
+      mission_lifecycle_endpoint_auth_signing_alg_values_supported when
+      that member lists private_key_jwt, and, when the endpoint accepts
+      the access-token path, its Protected Resource Metadata
+      (Section 3.2).
 
    *  *Mission Lifecycle, revoke only*: serve the Mission Lifecycle
       endpoint (Section 5) with the revoke operation, under its
@@ -18708,16 +18716,20 @@ Table of Contents
       Section 5.1; refuse any operation the implementation has not
       adopted (Section 5.1); and advertise mission_lifecycle_endpoint,
       mission_status_signing_alg_values_supported, and the endpoint's
-      authentication metadata: the client-authentication members of
-      Section 8 and, for the access-token path, its Protected Resource
-      Metadata (Section 3.2).  The class requires neither another
-      operation nor the Mission Status operation.  An implementation
-      that also serves another base operation or the Mission Status
-      operation meets that operation's requirements, and one that serves
-      suspend serves resume, without widening who may perform either
-      (Section 5.4).  The suspended state and completed termination
-      arrive only with the operations that introduce them.  An
-      implementation claiming Mission Lifecycle meets this class.
+      authentication metadata (Section 8):
+      mission_lifecycle_endpoint_auth_methods_supported when the
+      endpoint accepts client authentication,
+      mission_lifecycle_endpoint_auth_signing_alg_values_supported when
+      that member lists private_key_jwt, and, when the endpoint accepts
+      the access-token path, its Protected Resource Metadata
+      (Section 3.2).  The class requires neither another operation nor
+      the Mission Status operation.  An implementation that also serves
+      another base operation or the Mission Status operation meets that
+      operation's requirements, and one that serves suspend serves
+      resume, without widening who may perform either (Section 5.4).
+      The suspended state and completed termination arrive only with the
+      operations that introduce them.  An implementation claiming
+      Mission Lifecycle meets this class.
 
    *  *Revocation propagation*: advertise mission_max_stale_seconds and
       size Mission-bound access-token TTLs as Section 6 provides.
@@ -19375,8 +19387,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -19435,7 +19447,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -24675,8 +24687,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                         Mission Runtime Evidence
@@ -24726,7 +24738,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -27767,8 +27779,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -27817,7 +27829,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -31593,8 +31605,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -31646,7 +31658,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -33737,8 +33749,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -33793,7 +33805,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
