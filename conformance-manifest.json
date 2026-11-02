@@ -9083,10 +9083,10 @@
    "notes": "#1892 ruling 6 (row debt). Facet: the direct value; the standing-consent values are companion-defined. The kernel witness compares the whole stored basis with toEqual; the workload witness reads the record created over the approval endpoints. Mutation proof (2026-10-29): recording a type other than direct fails both witnesses on their assertions (the kernel toEqual over the stored basis; the workload step 2 type check)."
   },
   {
-   "id": "core.mission-creating-paths.standing-consent-profile-conforms",
+   "id": "core.mission-creating-paths.standing-consent-profile-specifies",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-creating-paths",
-   "text": "Any companion profile that defines a standing-consent basis MUST make the basis conform to the Approval Basis Contract",
+   "text": "A companion profile that defines a standing-consent basis MUST specify its `approval_basis.type` value and its activation semantics",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -9100,18 +9100,18 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each standing-consent basis the family defines states that it meets the Approval Basis Contract: Template's `template`, Progressive's `ceiling_drawdown`, Child Delegation's `policy_drawdown` and Approval Governance's `governed_policy`"
+    "normative": "each standing-consent basis a profile defines states its `approval_basis.type` value and its activation semantics, including the shape of `activation`: Template's `template`, Progressive's `ceiling_drawdown`, Child Delegation's `policy_drawdown` and Approval Governance's `governed_policy`"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1915 stage 2 (D1056, D1057). An obligation on a profile's text, which no runtime test witnesses; stage 1 (#1918) added the statement to each of the four bases. The activating issuer's clause is core.mission-creating-paths.standing-consent-contract."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local profile obligation. An obligation on a profile's text, which no runtime test witnesses; it stays todo, as its predecessor was."
   },
   {
-   "id": "core.mission-creating-paths.standing-consent-contract",
+   "id": "core.mission-creating-paths.standing-consent-issuer-records",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-creating-paths",
-   "text": "an issuer that activates a Mission under such a basis MUST conform to the Contract for it",
+   "text": "An issuer that activates a Mission under such a basis MUST record the instance's `activation`, `activation_actor`, `root_commitment`, and `approved_at`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -9125,7 +9125,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each standing-consent basis the AS implements records approved_at from retained state, verifies its activation policy digest where one exists, enforces any declared recency ceiling, and gives each instance its own approval_event_id"
+    "normative": "every Mission the AS activates under a standing-consent basis records approval_basis.activation, activation_actor, root_commitment and approved_at with the types the Mission Record gives them: root_commitment identifying the exact consented root, approved_at that root's human approval instant"
    },
    "level": "unit",
    "coverage": "partial",
@@ -9137,20 +9137,8 @@
      "surface": "derivation"
     },
     {
-     "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch once the template's approval is older than review_cadence, allows it exactly at the bound, and commits nothing on refusal",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/template.test.ts",
-     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -9161,67 +9149,13 @@
      "surface": "derivation"
     },
     {
-     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > verifies the drawdown policy digest before activation and retains the verified snapshot with the successor",
-     "level": "endpoint",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a chain whose ceiling consent is older than the policy's review cadence falls back",
-     "level": "endpoint",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
-     "level": "endpoint",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > establishes the standing consent only from retained, authenticated governance state",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a retained root whose bytes no longer reproduce the consented digest, and a forged approval instant",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses when the separate evaluator's snapshot differs from the digest the root commits",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > commits one Mission and one record per approval event; retries and racing activations resolve to them, distinct activations get distinct events",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1915 stage 2 (D1056). Binds only a deployment that activates under a standing-consent basis. Witnessed per basis against the contract's main rules (template, ceiling_drawdown, policy_drawdown, governed_policy). Gaps: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the contract's own partial rows carry over. D1057: the clause is scoped to the activating issuer; the profile-author clause is core.mission-creating-paths.standing-consent-profile-conforms."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local issuer obligation. Witnesses carried from the Contract's member rows (core.approval-basis.standing-consent-activation-required, -activation-actor-required, -root-commitment-required, core.approval-basis.approved-at-standing-consent), one per implemented basis (template, policy_drawdown, ceiling_drawdown, governed_policy); each compares the stored approval_basis whole with toEqual, all four members included. Coverage stays partial because D1134 promotes nothing in this move, not for a known gap: the per-member mutation proofs are recorded on those rows and were not re-run for this one, so tested follows a mutation proof under this row."
   },
   {
    "id": "core.mission-creating-paths.root-approval-authenticate",
@@ -78053,6 +77987,141 @@
     }
    ],
    "notes": "#1313 follow-up: the Conformance section's Relying Auditor sentence had no row. Its envelope and mission-binding clauses are approval-governance.envelope.payload-byte-equality and approval-governance.envelope.verifier-steps; this row carries the retained-policy clause, and approval-governance.re-check.steps the procedure. Mutations: dropping the missing-root-snapshot check, or the evaluator snapshot check, fails the witness."
+  },
+  {
+   "id": "approval-governance.contract.adopting-profile-conforms",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "conformance",
+   "text": "A profile that defines a standing-consent basis and adopts the Approval Basis Contract, and an issuer that activates a Mission under such a basis, conform to that Contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each standing-consent basis the family defines states that it meets the Approval Basis Contract: Template's `template`, Progressive's `ceiling_drawdown`, Child Delegation's `policy_drawdown` and Approval Governance's `governed_policy`"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's profile clause, scoped to a profile that adopts the Contract; stated, as Governance's conformance sentence carries no keyword. An obligation on a profile's text, which no runtime test witnesses; it stays todo."
+  },
+  {
+   "id": "approval-governance.contract.activating-issuer-conforms",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "conformance",
+   "text": "an issuer that activates a Mission under such a basis, conform to that Contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each standing-consent basis the AS implements records approved_at from retained state, verifies its activation policy digest where one exists, enforces any declared recency ceiling, and gives each instance its own approval_event_id"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch_policy_changed when the held policy's content, version, or presence changes, committing nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "dispatch gates (@spec mission-template#dispatch-refusals) > refuses dispatch once the template's approval is older than review_cadence, allows it exactly at the bound, and commits nothing on refusal",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval_event_id per Dispatch reservation (@spec mission-template#dispatch, approval-governance#standing-consent-bases) > two Dispatches under one template consent create two Missions, each with its own approval_event_id, never the template's",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > verifies the drawdown policy digest before activation and retains the verified snapshot with the successor",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a chain whose ceiling consent is older than the policy's review cadence falls back",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, approval-governance#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec approval-governance#standing-consent-bases, child-delegation#child-creation) > uses the justifying entry's child_creation_policy digest as root_commitment when the entry carries one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > establishes the standing consent only from retained, authenticated governance state",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a retained root whose bytes no longer reproduce the consented digest, and a forged approval instant",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses when the separate evaluator's snapshot differs from the digest the root commits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > commits one Mission and one record per approval event; retries and racing activations resolve to them, distinct activations get distinct events",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row carries the predecessor's issuer clause, its witnesses and its gaps, scoped to an issuer activating under a basis that adopts the Contract (all four implemented bases do); stated, as Governance's conformance sentence carries no keyword. Predecessor gaps, unchanged: a mismatched approved_at is refused only on governed_policy (the others have no intake for one); no policy_drawdown test shows two activations get distinct approval_event_id values; the Contract's own partial rows carry over."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",
