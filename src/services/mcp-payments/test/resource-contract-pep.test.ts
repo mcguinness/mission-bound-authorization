@@ -595,10 +595,15 @@ describe("the declared constraint inputs the payments resource reads (@spec runt
     const pepPast = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t + 120_000), pdpNow: at(t) });
     try {
       const res = await read(pepPast, windowed);
-      // The PEP's own credential-bound check refuses it, with a Refusal Record.
+      // The PEP's own credential-bound check refuses it before any decision:
+      // a pre-decision Refusal Record classified
+      // credential_authority_insufficient, where the PDP's evaluated
+      // constraint denial above is parameter_violation.
       expect(res.ok, JSON.stringify(res)).toBe(false);
       expect(pepPast.decided).toHaveLength(0);
-      expect(pepPast.records().filter((e) => e.kind === "refusal")).toHaveLength(1);
+      expect(pepPast.records().filter((e) => e.kind === "refusal").map((e) => e.content)).toEqual([
+        expect.objectContaining({ denial_reason: "credential_authority_insufficient" }),
+      ]);
     } finally {
       await pepPast.close();
     }
