@@ -6686,9 +6686,9 @@ Table of Contents
               Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
               Steele, N., and A. Parecki, "AI Identity Management
               System", Work in Progress, Internet-Draft, draft-ietf-
-              wimse-aims-00, 15 September 2026,
+              wimse-aims-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
-              aims-00>.
+              aims-01>.
 
    [I-D.draft-ietf-wimse-arch]
               Salowey, J. A., Rosomakho, Y., and H. Tschofenig,
