@@ -101276,9 +101276,15 @@
      "name": "the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121) > ends a pending session by its displayed or its normalized user_code: the next poll is access_denied with the AS's reason, and the Approver's decision on the still-open interaction creates no Mission",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121) > keeps the cancellation terminal against a code confirmation already in progress: its stale save keeps the denial, the decision creates no Mission, and the poll answers no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decline, a creation commit refused by the authority-source gates (Dana activates no source this client resolves), an abort, and the AS's cancellation decision each answer the next poll access_denied; the cancellation's poll carries the AS's own error_description, after the Approver's decision on the still-open interaction created no Mission. openid with an Approver who is not the Subject answers invalid_scope. The test that records an ending on the device code stays as supporting evidence of how a poll answers any ending. Proved by answering every refusal access_denied, by not recording the denial, by removing oidc-provider's raising of the recorded error, and by dropping the cancellation's denial."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decline, a creation commit refused by the authority-source gates (Dana activates no source this client resolves), an abort, and the AS's cancellation decision each answer the next poll access_denied; the cancellation's poll carries the AS's own error_description, after the Approver's decision on the still-open interaction created no Mission. The ending is terminal across every writer of the device code: a code confirmation held at its save across the cancellation keeps the denial, and its poll answers no token (D1181). openid with an Approver who is not the Subject answers invalid_scope. The test that records an ending on the device code stays as supporting evidence of how a poll answers any ending. Proved by answering every refusal access_denied, by not recording the denial, by removing oidc-provider's raising of the recorded error, by dropping the cancellation's denial, and by removing the terminal DeviceCode store."
   },
   {
    "id": "device-authorization.outcomes.expired",

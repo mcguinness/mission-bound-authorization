@@ -629,7 +629,13 @@ the store.
   the AS's own `error_description`; the next poll receives `access_denied`,
   and a decision reached afterwards creates no Mission. A session no longer
   pending is left as it is, and a Mission already created is ended through
-  the Lifecycle endpoint:
+  the Lifecycle endpoint. A committing decision's claim holds the session:
+  the outcome is `deciding`, the cancellation did not occur, and the caller
+  retries; the operation does not wait. The denial is terminal across every
+  writer of the device code: the `DeviceCode` store keeps it on every write
+  and read (`terminalDeviceCodes`), so oidc-provider's code confirmation,
+  which saves without the decision claim, cannot write a pending copy back
+  over it (D1181):
   `the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121) > ends a pending session by its displayed or its normalized user_code: the next poll is access_denied with the AS's reason, and the Approver's decision on the still-open interaction creates no Mission` and the rest of `the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121)`.
 
   Verification attempts are throttled independently (RFC 8628 Section 5.1):
@@ -637,9 +643,14 @@ the store.
   user agent's address (`ctx.ip`; behind a proxy, a deployment sets the
   provider's proxy trust), and past the limit (`deviceVerificationThrottle`,
   default 10 per 10 minutes) the address's entries are refused 429 before any
-  code lookup until the window moves on. The throttle ends no session. Its
+  code lookup until the window moves on. Each entry reserves its place before
+  the lookup and settles after it, counted or released, so overlapping
+  entries never pass the limit together. Addresses with nothing counted and
+  nothing in flight are swept at most once a window; past 10,000 tracked
+  addresses, a new one counts under one shared key, so no active limit is
+  reset (D1181). The throttle ends no session. Its
   counts are in-process, the same single-process boundary as the device
-  decision claim (#250): `the verification page throttles codes that match no session, and ends none (RFC 8628 Section 5.1, #1202, D1121)`, both tests.
+  decision claim (#250): `the verification page throttles codes that match no session, and ends none (RFC 8628 Section 5.1, #1202, D1121)`, every test, and `the verification throttle's accounting (RFC 8628 Section 5.1, #1202, D1181)`.
 
   The refresh token inherits the binding by construction: `createRefreshToken`
   copies the code's `grantId` (`lib/helpers/grant_common.js`).
