@@ -50,6 +50,7 @@ export {
   deriveReversibility,
   enforceReversibilityFloor,
   floorReversibility,
+  floorReversibilityOver,
   HIGH_RISK_REVERSIBILITY,
   isTrustedClassSource,
   REVERSIBILITY_FLOOR,
