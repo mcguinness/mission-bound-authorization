@@ -771,7 +771,11 @@ Issuer MUST discard the disclosure and construct a new one. It
 MUST NOT reuse the prior `consent_rendering_hash`; the issuance
 profile's rule recomputing the integrity anchors over the changed
 context applies alongside
-({{I-D.draft-mcguinness-oauth-mission}}). Rung 1 determinism
+({{I-D.draft-mcguinness-oauth-mission}}). Re-verifying the
+submission's evidence records a new `verified_at`, which
+`submission_provenance_hash` commits, so a re-verification between
+construction and decision renews the disclosure even when the
+verified facts are unchanged. Rung 1 determinism
 ({{experimental-rungs}}) applies per presentation modality: the same
 inputs produce the same rendered form within a given modality, not
 across modalities.
@@ -1847,6 +1851,10 @@ encoding difference to resolve before interoperating.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Consent Disclosure states that re-verifying the submission's evidence
+  renews the disclosure, since `submission_provenance_hash` commits
+  each element's `verified_at` (#1927).
 
 - Editorial (#1176): examples of the canonical Mission follow one
   dated history; an example line too long for the page is folded per
