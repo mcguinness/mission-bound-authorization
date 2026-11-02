@@ -28,6 +28,7 @@ import { isMissionGovernedResource, validateMissionIntent } from "@mission/autho
 import { CANONICAL_RESOURCE, DERIVATION_POLICY, DEV_SERVICE_TOKEN, GOVERNED_RESOURCES, MAS_JOIN, TOPOLOGY } from "@mission/demo-data";
 import { createHttpMediatedClient, type DpopKeys } from "@mission/mcp-payments";
 import { composeStack, type DemoStack } from "../src/stack.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 /** @spec runtime#idempotency (#917): each stack gets its own single-writer claim file. */
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
 const tempReservationsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-reservations-")), "write-reservations.sqlite");
@@ -85,7 +86,7 @@ d("composed stack: the MAS-governed channel joins an ordinary credential (#557)"
       JSON.stringify({
         goal: "Read approved Acme invoices for the quarter",
         target_resources: [DERIVATION_POLICY.ceiling[0].resource],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     );
     missionId = stack.kernel.approve({
