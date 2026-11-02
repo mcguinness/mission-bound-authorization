@@ -258,10 +258,20 @@ export type DurableIdempotencyDeclaration =
  * A reference-statement representation of the Operation Profile items, not a
  * Runtime wire member.
  */
+/** @spec runtime#classification: the three highest action classes. */
+const HIGH_CONSEQUENCE_CLASSES: readonly string[] = ["irreversible_action", "external_commitment", "privileged_administration"];
+
 export interface ExecutionCapabilityDeclaration {
   operation: string;
   phase?: (typeof COMPOUND_PHASES)[number];
   action_class: string;
+  /**
+   * @spec runtime#classification (#1735, #1994): each further runtime class
+   * whose predicate the operation satisfies, beside the assigned
+   * `action_class`. The PDP applies every listed class's requirements; the
+   * assigned class stays the one `class_source` describes.
+   */
+  additional_action_classes?: readonly string[];
   durable_idempotency: "none" | DurableIdempotencyDeclaration;
   conditional_effect: "none" | { precondition: string };
   outcome_lookup: "none" | { identifier: string; method: string };
@@ -847,6 +857,35 @@ export function executionCapabilityFindings(input: unknown): EnforcementScopeFin
       push(member, "missing the action class of the operation");
     } else if (!classes.includes(actionClass)) {
       push(member, `action_class "${actionClass}" is outside mediated_scope.action_classes`);
+    }
+    // @spec runtime#classification (#1994): a further class is one the
+    // deployment mediates, named once and never the assigned class again; a
+    // class the PDP could not gate is refused here, at load.
+    const additional = decl.additional_action_classes;
+    if (additional !== undefined) {
+      if (!isNonEmptyStringArray(additional) || new Set(additional).size !== additional.length) {
+        push(member, "additional_action_classes must be a non-empty array of distinct class names");
+      } else {
+        for (const extra of additional) {
+          if (extra === actionClass) push(member, `additional_action_classes repeats the assigned class "${extra}"`);
+          else if (!classes.includes(extra)) push(member, `additional action class "${extra}" is outside mediated_scope.action_classes`);
+        }
+        // @spec runtime#classification (#1994, cold read, owner review): each
+        // declared phase carries its own set, so this restriction reads only
+        // this entry's classes. The reference resolves the write-keyed duties
+        // (the single-use default, the reversible-write key window, the claim
+        // domain's class) from the assigned class, so it admits further
+        // classes only where the assigned class and every further class are
+        // high-consequence, whose duties it resolves over the set. Any other
+        // combination is refused here rather than decided with a duty dropped
+        // or never satisfiable.
+        if (
+          !HIGH_CONSEQUENCE_CLASSES.includes(String(actionClass)) ||
+          !additional.every((extra) => HIGH_CONSEQUENCE_CLASSES.includes(extra))
+        ) {
+          push(member, "additional_action_classes is supported only where the assigned class and every further class are high-consequence");
+        }
+      }
     }
     const identity = `${String(operation)}#${String(decl.phase ?? "")}`;
     if (seen.has(identity)) push(member, `operation "${String(operation)}" is declared twice`);

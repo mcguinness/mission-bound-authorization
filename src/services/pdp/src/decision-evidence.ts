@@ -308,6 +308,12 @@ export interface DecisionEvidenceObject {
   action_phase?: ActionPhase;
   audience: string;
   action_class: RuntimeActionClass;
+  /**
+   * @spec runtime-evidence#decision-evidence-object `action_classes` (#1994):
+   * every class whose requirements the PDP applied, `action_class` first,
+   * present only when more than one applies.
+   */
+  action_classes?: RuntimeActionClass[];
   class_source: RuntimeClassSource;
   actor?: ContextActor;
   credential?: RuntimeCredentialRef;
@@ -433,6 +439,8 @@ export interface DecisionEvidenceEmissionInput {
   decision: "permit" | "deny";
   evaluated_at: string;
   action_class?: RuntimeActionClass;
+  /** @spec runtime-evidence#decision-evidence-object `action_classes` (#1994). */
+  action_classes?: RuntimeActionClass[];
   /**
    * The VALIDATED phase from the evaluation context, on a permit and on a
    * denial alike: a denial has no permit condition to mirror, so it records
@@ -578,6 +586,21 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       }
       const classes = ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"];
       if (!classes.includes(action_class)) throw new Error("Decision Evidence has an unknown action class");
+      // @spec runtime-evidence#decision-evidence-object `action_classes`
+      // (#1994): every applied class, distinct and known, the assigned one
+      // among them, and only where more than one applies.
+      const action_classes = input.action_classes;
+      if (
+        action_classes !== undefined &&
+        (!Array.isArray(action_classes) ||
+          action_classes.length < 2 ||
+          new Set(action_classes).size !== action_classes.length ||
+          !action_classes.every((c) => classes.includes(c)) ||
+          !action_classes.includes(action_class))
+      ) {
+        throw new Error("Decision Evidence action_classes must name more than one distinct known class, the assigned one among them");
+      }
+      const applied = action_classes ?? [action_class];
       if (input.decision === "permit" && (!input.entry_digest || !input.conditions)) {
         throw new Error("Decision Evidence permit requires entry digest and conditions");
       }
@@ -611,7 +634,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       const contextRecorded =
         isEvaluationContextDigest(input.evaluation_context_digest) &&
         isEvaluationContextBindingRef(input.evaluation_context_binding);
-      if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
+      if (input.decision === "permit" && applied.some((c) => classes.slice(2).includes(c)) && input.conditions?.use_limit !== 1) {
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
       }
       // @spec authzen#evidence `authority_bound`: only on a deny one of the
@@ -657,6 +680,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         ...(isActionPhase(input.action_phase) ? { action_phase: input.action_phase } : {}),
         audience: input.audience,
         action_class,
+        ...(action_classes !== undefined ? { action_classes: [...action_classes] } : {}),
         class_source,
         ...(capability_source ? { capability_source } : {}),
         ...(actor ? { actor } : {}),

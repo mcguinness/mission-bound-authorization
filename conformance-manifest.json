@@ -11,20 +11,20 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "f7db738441843285b69c35b2e12cf14195c3b02b",
-    "content_sha256": "6360896049e20743ced8e1e89e1788c2df5b10045511f5a5d1ca2a7a42ffc4fe"
+    "revision": "0c57b29d73c99de4e933aca72fac401b72aa12d4",
+    "content_sha256": "12c57cd9885ea4623ae1fcf5810c832abd5ddf0a8bb8d1ec66f05ac222c0400d"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
-    "content_sha256": "6d637c5754f09965a3ef291909a7c48609de6b3fac2e82c66db364c9ade2a025"
+    "revision": "41b65f55a3d275b7fe878e22476f9c0bcc7e1419",
+    "content_sha256": "67147ad7cb47679d722c5d794bb31d5c5002552d5b87cc6fb41daa14bf97c1ea"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "bf1307a8ed60bd61b186a4bf51a5fe1204c5c477",
-    "content_sha256": "ff023b6ea6c99953e60d830aab496abd9c7f237f336c0f8d251fadc11fd9894c"
+    "revision": "a96a6d7bb9afd6891db9591835bcb25b462784e0",
+    "content_sha256": "275e69961fef3a7a62d5c744344a95ba49ff12e204abd3c7244d294b4ec56bf4"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
@@ -159,8 +159,8 @@
     "content_sha256": "a73a267a1da167dd2cb76a976c5e0bca75d8a056d0b44d9723bae39e0263793a"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
-    "content_sha256": "9af0d69fb3397fc1c4341de0f9b98855f0b7b70a6cb4149e8a1e9d8860a078ee"
+    "revision": "66964c562e28368d092490adb796037b983b7d1a",
+    "content_sha256": "1a73f641a725f5bc4b92dd227af7ae7209092b44a0bbc5e8050214ad629c74ca"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
     "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
@@ -34291,12 +34291,115 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an action that satisfies more than one class predicate is decided under the requirements of every class whose predicate it satisfies (PDP gate, parameter binding, freshness, action-bound approval, evidence); none is dropped because the action is assigned one of those classes, and an exception stated for one class or predicate relieves only the requirement it names"
+    "normative": "an action that satisfies more than one class predicate is decided under the requirements of every class whose predicate it satisfies, and none is dropped because the action is assigned one of those classes: a further class's freshness bound, action-bound approval and work-item attribution apply to it, and Decision Evidence records every applied class; an exemption stated for one class (a no-active-freshness posture) relieves only the requirement it names, never another applicable class's bound; a request whose assigned class differs from the class the PDP's own declaration assigns the operation and phase is refused before evaluation, never decided with a duty resolved from either class alone"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Not implemented: the reference carries one action class per operation (src/config/enforcement-scope.json operation profiles' action_class; the static per-tool label in mcp-payments/src/pep.ts) and looks up posture by that single class (services/pdp/src/runtime-posture.ts postureStalenessBound and executionLeaseMaxSeconds). payments:remittance.send is external_commitment (max_staleness_seconds 60) although a sent remittance also satisfies the irreversible predicate (irreversible_action, 30), so its decision takes the looser bound. Planned surface: an operation profile declares every class whose predicate it satisfies and the PDP applies each class's requirements; witness: a two-predicate operation decided under the tighter staleness bound and every class's approval and evidence requirements, mutation-proved by restoring single-class lookup."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses remittance.send on a 45-second-old observation: the irreversible class's 30-second bound applies, although 60 seconds is the external-commitment bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > caps a fresh remittance permit at the tighter window: valid 30 seconds past the observation, not the external-commitment 60, single use, with every applied class recorded",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > requires the action-bound approval a further class carries, which the assigned class alone would not",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses when a non-comparable duty of a further class is unmet: work-item attribution claimed for irreversible_action",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > an exemption stated for one class relieves only what it names: audit_only's no-freshness posture does not relieve a further write class's bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses action_class_missing, before evaluation and with no Decision Evidence, a request whose assigned class differs from the class the declaration assigns, a further class of the set included",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses phase_invalid, before evaluation, a phase on an operation the declarations name without one, with further classes (remittance.send) or without (payment.schedule, whose read label would otherwise match no declaration); an undeclared preflight of a compound action decides under its assigned class alone",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses at load a further class beside an assigned class that is not high-consequence, and a further class that is not",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > loads further classes per declared phase: commit and compensate carry external_commitment while prepare carries none, and a further class on the lower-class prepare phase is refused",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses phase_invalid, before evaluation, an effect-bearing phase a compound operation with further classes does not declare, or no phase; an undeclared preflight and a declared phase decide",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses phase_invalid, before evaluation, no phase on an operation every declaration of which names one, even with no further classes, so a read label never reaches a declared write or irreversible phase's duties",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a payment to an outside party and its reversal also satisfy External commitment (@spec runtime#classification, runtime-evidence#decision-evidence-object, #1994 owner review) > signs both classes on the wire's commit permit and the reversal's compensate permit, each single use, while the prepare and preflight phases of the payment keep their own class",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a payment to an outside party and its reversal also satisfy External commitment (@spec runtime#classification, runtime-evidence#decision-evidence-object, #1994 owner review) > applies a duty only External commitment carries to the commit and compensate crossings, which the assigned class alone would not, and never to prepare",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes) > requires the declared scheduling key under the declared write class, and refuses a request labeling the operation a read rather than deciding it without the key",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes) > keeps the prepare write's single-use control: the declared write permits with use_limit 1 and one class, and a read label is refused rather than permitted without it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the declared write class, issuing no unkeyed scheduling permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the prepare class, issuing no permit without single use",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement): payments:remittance.send declares irreversible_action beside its assigned external_commitment, and the commit phase of payments:payment.execute and the compensate phase of payments:payment.reverse declare external_commitment beside their assigned irreversible_action. Mutation proofs: resolving the set to the assigned class alone fails all five remittance witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness. Owner review (hold at 3e8ed1ff): the earlier union of the PEP's label with the declaration's classes did not only add duties. A read label on a declared write fed the single-use default, the reversible-write key window and the claim domain, so a mislabeled payments:payment.schedule permitted without its scheduling key and a mislabeled payment.execute prepare without use_limit 1 while its evidence listed consequential_write. A label other than the class the PDP's declaration assigns the operation and phase is refused before evaluation (action_class_missing, no Decision Evidence), so the set is the declaration's and every single-class site reads the declared class; the loader admits further classes only among the high-consequence classes, per declared phase. A phase on an operation declared without one, and an effect-bearing phase (or no phase) of an operation declaring further classes on another phase, are refused phase_invalid; an undeclared preflight releases no effect and keeps its assigned class. Mutation proofs: disabling the mismatch refusal permits both owner probes (the schedule without its key; the prepare with no use_limit and evidence naming consequential_read) and fails the probe and refusal witnesses; accepting any class of the declared set as the label fails the refusal witness; dropping external_commitment from commit or from compensate fails the set, signing and approval-duty witnesses; disabling the phaseless-operation refusal lets payment.schedule with a phase and a read label permit, failing the phase witness; refusing the undeclared preflight fails the preflight witnesses and nine payments PEP compound-action tests (check_transfer refused); admitting an undeclared effect-bearing phase lets prepare decide, failing the compound phase witness; disabling the per-phase load restriction fails both load witnesses; restoring the uniform-across-phases rule refuses the shipped statement at load with that rule's finding. No phase on an operation every declaration of which names one is refused phase_invalid, with or without further classes, so a phaseless request never decides under its label alone. Mutation: admitting it lets payment.execute labeled consequential_read permit, failing the absent-phase witness. #1994 owner re-review: an array label can no longer pass the agreement check by coercion and drop the declared write controls (the scheduling key, single use)."
   },
   {
    "id": "runtime.classification.multi-predicate-bounds",
@@ -34317,15 +34420,82 @@
     "normative": "for an action that satisfies more than one class predicate, comparable bounds (a staleness bound, a permit validity window, an execution lease) resolve to the tighter one; requirements that are not comparable all apply, and the action is refused when it cannot satisfy every one of them"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Depends on the multi-class declaration planned under runtime.classification.multi-predicate-no-waiver: the reference resolves one class per action, so there is no set of applicable requirements to compare or refuse on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses remittance.send on a 45-second-old observation: the irreversible class's 30-second bound applies, although 60 seconds is the external-commitment bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > caps a fresh remittance permit at the tighter window: valid 30 seconds past the observation, not the external-commitment 60, single use, with every applied class recorded",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses when a non-comparable duty of a further class is unmet: work-item attribution claimed for irreversible_action",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > issues the irreversible class's 120-second permit lifetime to a remittance, where no staleness window caps it below",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 (D1175): the staleness bound and the permit window resolve to the tightest across the set (30 s for remittance.send, not the external-commitment 60 s); the permit lifetime is the irreversible class's 120 s where no staleness window caps it below; a further class's non-comparable duty (work-item attribution) refuses when unmet. The execution lease and the remote call deadline, applied by the PEP, are witnessed on runtime.classification.multi-predicate-bounds-pep. Mutation proofs: the loosest staleness window fails the 45-second and permit-window witnesses; the permit lifetime read from the assigned class fails the lifetime witness; attribution read from the assigned class fails the work-item witness."
+  },
+  {
+   "id": "runtime.classification.multi-predicate-bounds-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "Where requirements impose comparable bounds, the tighter bound applies.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an action several classes apply to, the executing PEP takes the tightest execution lease any of them publishes, and bounds its remote decision call by the tightest staleness window across them"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "the executing PEP leases an action several classes apply to for the tightest lease any of them publishes (@spec runtime#classification, runtime#execution-reverification, #1994) > leases send_remittance_email for the irreversible class's 30 seconds where the statement publishes 60 for external_commitment and the permit window allows more",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > takes the tightest published execution lease across the classes that apply",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > bounds the remote decision call by the tightest window across the set: 30 seconds for remittance.send, 60 for external_commitment alone",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 cold read: the PEP-role twin of runtime.classification.multi-predicate-bounds, for the bounds the PEP applies. Mutation proofs: the payments server's lease read from the assigned class (60 s where the statement publishes 60 for external_commitment) fails the PEP lease witness; the loosest lease in the helper fails the helper witness; the channel deadline read from the assigned class fails the channel witness. The PEP witness runs the channel in remote mode, where the opened staleness bound reaches the PDP and the permit window allows more than either lease."
   },
   {
    "id": "runtime.classification.unclassifiable-defaults-to-widest",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "classification",
-   "text": "An invocation the classifier cannot affirmatively place MUST be treated as the widest class the operation can reach",
+   "text": "An invocation the classifier cannot affirmatively place MUST be treated under every class the operation can reach, taking the requirements of each",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -34338,12 +34508,12 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an argument-dependent operation the deployment's classifier cannot affirmatively place defaults to the widest class that operation can reach, never a lighter one"
+    "normative": "an argument-dependent operation the deployment's classifier cannot affirmatively place takes the requirements of every class the operation can reach, never a lighter set; no single widest class is presumed"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Antecedent unreachable in this codebase: applicability names capability runtime.discovered-catalog, and no argument-dependent classifier exists anywhere (grep across src/services and src/packages for classifier/action_class/mission_action_class_floors finds only the static per-tool action_class label in mcp-payments/src/pep.ts and its pass-through in evaluate.ts; no component ever classifies an invocation from its normalized parameters). Nothing to test without fabricating a classifier the deployment does not have."
+   "notes": "Antecedent unreachable in this codebase: applicability names capability runtime.discovered-catalog, and no argument-dependent classifier exists anywhere (grep across src/services and src/packages for classifier/action_class/mission_action_class_floors finds only the static per-tool action_class label in mcp-payments/src/pep.ts and its pass-through in evaluate.ts; no component ever classifies an invocation from its normalized parameters). Nothing to test without fabricating a classifier the deployment does not have. #1994 (D1175): re-quoted after Runtime stopped presuming a total ordering of classes; the row id keeps its earlier spelling."
   },
   {
    "id": "runtime.classification.class-floor-metadata-not-lowered",
@@ -40233,7 +40403,7 @@
    "id": "runtime.trifecta-containment.external-communication-mediated-condition",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "trifecta-containment",
-   "text": "The external-communication and external-commitment classes are mediated: no unmediated path, the scope statement's egress-channel enumeration covers them",
+   "text": "Every action that satisfies the external-communication or External commitment predicate ({{classification}}), whatever its class, is mediated: no unmediated path, the scope statement's egress-channel enumeration covers it",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -40246,7 +40416,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "under the trifecta containment claim, every external-communication and external-commitment path is mediated and enumerated in the scope statement's egress-channel list"
+    "normative": "under the trifecta containment claim, every action that satisfies the external-communication or External commitment predicate, whatever its class, is mediated and its path is enumerated in the scope statement's egress-channel list"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -40257,7 +40427,8 @@
      "level": "cross-component",
      "surface": "resource-operation"
     }
-   ]
+   ],
+   "notes": "#1994 (D1175): re-quoted after the leg stopped calling external communication a class. The egress gate takes no action class, so its default-deny refusal of an undeclared channel holds whatever the action's class."
   },
   {
    "id": "runtime.negative-conformance.should-demonstrate-and-retain-evidence",
@@ -42085,7 +42256,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a mediated request reaching the PDP with no action class established is refused before evaluation, in process and over the remote decision channel, with no decision, no evaluation_id, no Decision Evidence and no class consulted or recorded; the refusal is a PDP-signed Refusal Record `action_class_missing`"
+    "normative": "a mediated request reaching the PDP with no action class established, or carried with a class other than the one the PDP's own declaration assigns its operation and phase, is refused before evaluation, in process and over the remote decision channel, with no decision, no evaluation_id, no Decision Evidence, no decision work and no class recorded (an absent class is never defaulted); the refusal is a PDP-signed Refusal Record `action_class_missing`"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -42113,9 +42284,87 @@
      "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses to sign a record that names no action class, never defaulting one",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a carried class other than the one the PDP's own declaration assigns establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner review) > records the refusal of a request carried with another class as a PDP-signed Refusal Record action_class_missing naming no class, with no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a carried class other than the one the PDP's own declaration assigns establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner review) > the remote PDP refuses a request carried with another class before evaluation as action_class_missing, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses action_class_missing, before evaluation and with no Decision Evidence, a request whose assigned class differs from the class the declaration assigns, a further class of the set included",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes) > requires the declared scheduling key under the declared write class, and refuses a request labeling the operation a read rather than deciding it without the key",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes) > keeps the prepare write's single-use control: the declared write permits with use_limit 1 and one class, and a read label is refused rather than permitted without it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > records the refusal of an array label that would stringify to the declared class as a PDP-signed Refusal Record action_class_missing, with no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > refuses an empty-string class as no class, with no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > refuses a non-string class on an operation this PDP declares nothing for, with no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > the remote PDP refuses an array label before evaluation as action_class_missing, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the declared write class, issuing no unkeyed scheduling permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the prepare class, issuing no permit without single use",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > over the remote channel, refuses a non-string class instead of issuing an unkeyed scheduling permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > with the Decision Evidence emitter configured, refuses a non-string class as input before evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails both action-class witnesses and the GAP 2 witness; restoring the emitter's consequential_read default fails the emitter witness. The posture's old default is unreachable behind the check, so it is not separately mutated."
+   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails both action-class witnesses and the GAP 2 witness; restoring the emitter's consequential_read default fails the emitter witness. The posture's old default is unreachable behind the check, so it is not separately mutated. #1994 owner review: a carried class other than the one the PDP's declaration assigns has no class established either. Mutation: disabling that refusal fails both carried-class witnesses (the in-process request permits, the remote one decides), the multi-class refusal witness and both owner probes; accepting any class of the declared set fails the multi-class refusal witness. #1994 owner re-review: only a non-empty string establishes a class; a JSON array that would stringify to the declared class, or an empty string, is refused action_class_missing before evaluation, including where nothing is declared. Mutation-proved: restoring the undefined-only check with String() coercion fails all eight non-string witnesses (the owner's four probes permit or throw); admitting an empty string fails the empty-string witness (evaluated and denied, not refused)."
   },
   {
    "id": "authzen.pdp-request.consistency-state-active-and-pdp-precedence",
@@ -43493,7 +43742,7 @@
    "id": "authzen.context-external-communication.required-for-pdp-enforced-taint-classes",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-external-communication",
-   "text": "REQUIRED for every action in a class for which the deployment declares PDP-enforced taint; OPTIONAL otherwise.",
+   "text": "REQUIRED for every action to which a class applies for which the deployment declares PDP-enforced taint; OPTIONAL otherwise.",
    "role": "PEP",
    "strength": "stated",
    "applicability": {
@@ -43505,11 +43754,12 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "action.properties.external_communication (a boolean) is REQUIRED for every action in a class for which the deployment declares PDP-enforced taint, and OPTIONAL otherwise; it is a harness-profile-owned extension point defining the predicate and how the PEP computes it"
+    "normative": "action.properties.external_communication (a boolean) is REQUIRED for every action to which a class applies for which the deployment declares PDP-enforced taint, assigned or further, and OPTIONAL otherwise; it is a harness-profile-owned extension point defining the predicate and how the PEP computes it"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#1994 owner review: re-quoted for a class that applies to the action. No witness: the reference declares no PDP-enforced taint."
   },
   {
    "id": "authzen.context-taint.fail-closed-when-missing",
@@ -43528,11 +43778,12 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "when the Enforcement Scope Statement declares PDP-enforced taint for an action's class, a decision request missing context.taint is denied taint_context_missing"
+    "normative": "when the Enforcement Scope Statement declares PDP-enforced taint for a class that applies to the action, assigned or further, a decision request missing context.taint is denied taint_context_missing"
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#1994 owner review: the condition names a class that applies to the action. No witness: the reference declares no PDP-enforced taint."
   },
   {
    "id": "authzen.context-approval.arap-object-verbatim",
@@ -43862,6 +44113,30 @@
    "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. The PDP's DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no member for evaluated predicates or their outcomes, and predicates appears nowhere under services/pdp/src. The row needs PDP record content, not a test."
   },
   {
+   "id": "authzen.context-history.action-class-completed-applied-class",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "The named class applied to a record when its `action_classes` member lists that class or, in a record without `action_classes`, its `action_class` is that class, so an execution the class applied to counts whichever class was assigned.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "action_class_completed counts a permit Decision Evidence record when the named class is in its action_classes, or is its action_class where the record carries no action_classes, so a pending execution of a further class keeps the predicate unsatisfied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 owner review. No reference implementation of history predicates; the other context-history rows are todo."
+  },
+  {
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
@@ -44004,9 +44279,15 @@
      "name": "compound-action phase carriers on the decision (@spec authzen#context-action-phase, response-context) > refuses a context.action_phase outside the closed set before evaluation as phase_invalid, never echoing it (#1629)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses phase_invalid, before evaluation, no phase on an operation every declaration of which names one, even with no further classes, so a read label never reaches a declared write or irreversible phase's duties",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1629 (D744 ruling 3). The PDP checks action_phase in evaluate(), after the operation target: an out-of-set value (unknown, case, padding, empty, null, number, array, object) and a missing phase for an action its trusted operation declaration places at phases are refused before evaluation as phase_invalid, with no decision, no Decision Evidence, no FGA check and no Resource policy query, in process and over the remote channel. The trusted declaration is the PDP-side phasedActions binding (EvaluateOptions, the decision point and the remote server), stripped from a caller's options. The shipped demo stack binds no phasedActions, so its PDP declares no phased action and refuses only an out-of-set phase; binding the catalog's compound actions there is a deployment follow-up. Mutations: not refusing an out-of-set phase fails the out-of-set, signed-record, remote and evaluate-decision witnesses; ignoring the declaration fails the missing-phase, signed-record, decision-point and remote witnesses; keeping a caller's declaration at the decision point fails the decision-point witness; the remote server not applying its own declaration fails the remote witness."
+   "notes": "#1629 (D744 ruling 3). The PDP checks action_phase in evaluate(), after the operation target: an out-of-set value (unknown, case, padding, empty, null, number, array, object) and a missing phase for an action its trusted operation declaration places at phases are refused before evaluation as phase_invalid, with no decision, no Decision Evidence, no FGA check and no Resource policy query, in process and over the remote channel. The trusted declaration is the PDP-side phasedActions binding (EvaluateOptions, the decision point and the remote server), stripped from a caller's options. The shipped demo stack binds no phasedActions, so its PDP declares no phased action and refuses only an out-of-set phase; binding the catalog's compound actions there is a deployment follow-up. Mutations: not refusing an out-of-set phase fails the out-of-set, signed-record, remote and evaluate-decision witnesses; ignoring the declaration fails the missing-phase, signed-record, decision-point and remote witnesses; keeping a caller's declaration at the decision point fails the decision-point witness; the remote server not applying its own declaration fails the remote witness. #1994 owner review: the PDP also reads the requirement from its own operation declarations: an operation every declaration of which names a phase requires one. Mutation: admitting the absent phase there fails the absent-phase witness."
   },
   {
    "id": "authzen.context-compensation-link.pep-establishes-from-verified-evidence",
@@ -51900,7 +52181,7 @@
    "id": "evidence.decision.action-class-and-source",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "decision-evidence-object",
-   "text": "REQUIRED. A string. The runtime action class the PDP applied to the action: one of `consequential_read`, `consequential_write`, `irreversible_action`, `external_commitment`, or `privileged_administration`",
+   "text": "REQUIRED. A string. The runtime action class assigned to the action: one of `consequential_read`, `consequential_write`, `irreversible_action`, `external_commitment`, or `privileged_administration`",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -51924,7 +52205,61 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
+   "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md. #1994 cold read: re-quoted after action_class came to read \"assigned to the action\", matching action_classes."
+  },
+  {
+   "id": "evidence.decision.action-classes-set",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "REQUIRED when more than one runtime action class applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\"); omitted otherwise. An array of distinct strings from the value space of `action_class`: every class whose requirements the PDP applied, `action_class` among them.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Decision Evidence record on an action to which more than one runtime action class applies carries action_classes: distinct known class names, every class whose requirements the PDP applied, including action_class; a record on an action with one applicable class omits it, and action_class remains the assigned class"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses remittance.send on a 45-second-old observation: the irreversible class's 30-second bound applies, although 60 seconds is the external-commitment bound",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > caps a fresh remittance permit at the tighter window: valid 30 seconds past the observation, not the external-commitment 60, single use, with every applied class recorded",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > omits action_classes on a decision only one class applies to",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a payment to an outside party and its reversal also satisfy External commitment (@spec runtime#classification, runtime-evidence#decision-evidence-object, #1994 owner review) > signs both classes on the wire's commit permit and the reversal's compensate permit, each single use, while the prepare and preflight phases of the payment keep their own class",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes) > keeps the prepare write's single-use control: the declared write permits with use_limit 1 and one class, and a read label is refused rather than permitted without it",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1994 (D1175): the companion member that preserves the applicable class set. Mutation proofs: dropping it from the signed object fails the denial and permit witnesses; emitting a one-class set (and accepting it) fails the omission witness. Owner review: the wire commit and the reversal's compensate sign [irreversible_action, external_commitment]; preflight and prepare sign one class and omit the member. Mutation: dropping external_commitment from commit or from compensate fails the signing witness."
   },
   {
    "id": "evidence.decision.credential-verified-claims-only",
@@ -52927,7 +53262,7 @@
    "id": "evidence.refusal.pdp-action-class-missing",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "for a mediated request with no action class established, where the runtime Enforcement Scope Statement declares action classes, `action_class_missing`, recorded with no class",
+   "text": "for a mediated request with no action class established (none carried or assigned, or a carried class other than the one the PDP's trusted declaration assigns), where the runtime Enforcement Scope Statement declares action classes, `action_class_missing`, recorded with no class",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -52937,7 +53272,7 @@
    "surface": "evidence-emission",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PDP's Refusal Record for an unclassified mediated request carries denial_reason action_class_missing and no action_class or class_source, and verifies under the PDP's evidence key; a PEP-side store never signs that reason"
+    "normative": "the PDP's Refusal Record for an unclassified mediated request, or one carried with a class other than the one its declaration assigns, carries denial_reason action_class_missing and no action_class or class_source, and verifies under the PDP's evidence key; a PEP-side store never signs that reason"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -52949,13 +53284,31 @@
      "surface": "evidence-emission"
     },
     {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a carried class other than the one the PDP's own declaration assigns establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner review) > records the refusal of a request carried with another class as a PDP-signed Refusal Record action_class_missing naming no class, with no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
      "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
      "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > action_class_missing is the PDP's alone, and a PEP-side store never signs it (#956)",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > records the refusal of an array label that would stringify to the declared class as a PDP-signed Refusal Record action_class_missing, with no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > the remote PDP refuses an array label before evaluation as action_class_missing, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#956, D814. The PDP recorder takes the reason by type; the evidence store's closed sets hold it at runtime. Mutation: removing action_class_missing from the store's PDP set, or admitting it to the PEP set, fails the closed-set witness."
+   "notes": "#956, D814. The PDP recorder takes the reason by type; the evidence store's closed sets hold it at runtime. Mutation: removing action_class_missing from the store's PDP set, or admitting it to the PEP set, fails the closed-set witness. #1994 owner review: re-quoted for the carried-class case. Mutation: disabling the refusal of a carried class other than the declared one fails the carried-class witness. #1994 owner re-review: a non-string label is no class; its Refusal Record carries action_class_missing, no class, and verifies under the PDP's key, in process and over the remote channel."
   },
   {
    "id": "evidence.refusal.pep-compensation-link-unavailable",
@@ -58196,9 +58549,34 @@
     "normative": "a step whose operation satisfies more than one runtime class predicate carries a reversibility class that meets the minimum each of those runtime classes maps to; among irreversible_action, external_commitment and privileged_administration, any one meets the minimum of another"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference's deriveReversibility and enforceReversibilityFloor (src/packages/orchestration/src/reversibility.ts) floor from a single runtimeActionClass, so a step has no input naming a second satisfied class. The three high classes are ranked there only to break ties, which raises an irreversible_action proposal for an external_commitment operation: stricter than this text requires, not a violation. Planned: accept the set of satisfied runtime classes and floor against each."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > raises a trusted reversible_write proposal to a high class when external_commitment also applies",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > keeps a trusted irreversible_action proposal where external_commitment also applies: any of the three high classes meets another's minimum",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > adopts no untrusted proposal: the floor over every applicable class governs",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > keeps each high class against every other high class's minimum, in all six pairings: no high class ranks below another",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 (D1175): deriveReversibility and enforceReversibilityFloor take every applicable runtime class and use tiers (read_only, reversible_write, then the three high classes together), so no order among the high classes is introduced; where several floors share the top tier, the first in the given order is taken, which decides nothing the rule governs. Mutation proofs: ignoring the further classes fails the raise and untrusted witnesses; restoring the old total rank (external_commitment above irreversible_action) replaces the trusted irreversible_action proposal and fails the keep witness. Cold read: the six-pairing witness keeps each high class against every other's minimum, so any total order among them fails it; proved with irreversible_action lowest and with external_commitment lowest."
   },
   {
    "id": "template.dispatch.idempotent-retry-returns-committed",
@@ -108286,6 +108664,91 @@
    "notes": "The reference harness has no queue."
   },
   {
+   "id": "harness.queue-item.expires-at-where-high-consequence-applies",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "queue-item",
+   "text": "REQUIRED where a high-consequence action class applies to the item's action ({{I-D.draft-mcguinness-mission-runtime}}), unless the deployment sets a maximum queue age for each such class; OPTIONAL otherwise.",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a governed queue item to which a high-consequence action class applies, assigned or further, carries expires_at unless the deployment sets a maximum queue age for each such class"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 owner review. The reference harness has no queue."
+  },
+  {
+   "id": "harness.queue-item.shortest-maximum-queue-age",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "queue-item",
+   "text": "Where several applicable classes set a maximum queue age, the shortest applies.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a queued item older than the shortest maximum queue age any applicable class sets is not dispatched"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 owner review. The reference harness has no queue."
+  },
+  {
+   "id": "harness.queue-item.work-item-where-claimed-class-applies",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "queue-item",
+   "text": "REQUIRED where the Enforcement Scope Statement claims work-item attribution for a class that applies to the item's action, OPTIONAL otherwise.",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.work-item-attribution"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a governed queue item whose action a class applies to that the statement claims work-item attribution for, assigned or further, carries work_item and work_item_issuer"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 owner review. The reference harness has no queue."
+  },
+  {
+   "id": "harness.queue-item.fresh-approval-after-non-active-interval",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "queue-item",
+   "text": "A queued item to which a high-consequence action class applies that crossed a non-active period before dispatch MUST obtain a fresh action-bound approval ({{I-D.draft-mcguinness-mission-runtime}}) before it runs.",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a queued item to which a high-consequence class applies, assigned or further, that crossed a Mission non-active period is not run until a fresh action-bound approval is obtained; its queue position is not a standing approval"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 owner review. The reference harness has no queue."
+  },
+  {
    "id": "harness.evidence.work-item-issuer-required-where-claimed",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "harness-evidence-object",
@@ -108402,7 +108865,7 @@
    "id": "authzen.context-work-item.absent-denied-where-claimed",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-work-item",
-   "text": "Where the deployment's Enforcement Scope Statement claims work-item attribution for the action's class, the PDP MUST deny with `work_item_context_missing` ({{runtime-denial-classification}}) a decision from which `context.work_item` is absent.",
+   "text": "Where the deployment's Enforcement Scope Statement claims work-item attribution for a class that applies to the action, the PDP MUST deny with `work_item_context_missing` ({{runtime-denial-classification}}) a decision from which `context.work_item` is absent.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -108413,7 +108876,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "in a class the PDP's own statement claims work-item attribution for, a decision with no context.work_item is the evaluated denial work_item_context_missing; the claim is the PDP's binding, and a claim an enforcement component supplies is stripped",
+    "normative": "where the PDP's own statement claims work-item attribution for a class that applies to the action, assigned or further, a decision with no context.work_item is the evaluated denial work_item_context_missing; the claim is the PDP's binding, and a claim an enforcement component supplies is stripped",
     "local": "Witnessed only on the co-resident decision point createDecisionPoint builds, which binds workItemAttributedClasses and strips a value an enforcement component supplies. createEphemeralDecisionPoint takes no claimed-class configuration, and the remote PDP server neither binds nor strips it (a remote deployment would supply it through its own getOptions): neither path is verified, and no row claims it."
    },
    "level": "unit",
@@ -108430,8 +108893,15 @@
      "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > the decision point applies its own claimed classes and strips any an enforcement component supplies",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses when a non-comparable duty of a further class is unmet: work-item attribution claimed for irreversible_action",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1994 owner review: re-quoted for a class that applies to the action. Mutation (from the #1994 build): reading attribution from the assigned class alone fails the multi-class work-item witness."
   },
   {
    "id": "authzen.context-work-item.unclaimed-absence-relaxes-nothing",
@@ -108717,6 +109187,28 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "harness.decision-api.taint-required-where-external-commitment-applies",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "The PDP MUST require `context.taint` on every decision on an action to which that class applies and whose `action.properties.external_communication` is `true` or to which the External commitment class applies",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.taint-enforcement"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the deployment declares PDP-enforced taint for a class, a decision on an action to which that class applies, that is external communication or to which the External commitment class applies (as its assigned class or another applicable predicate), is denied taint_context_missing when context.taint is absent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1994 (D1175): the rule keyed on one stored action_class before; it had no row. No witness: the reference PDP does not implement PDP-enforced taint (the harness enforces taint, and the shipped statement declares no PDP-enforced taint class)."
   },
   {
    "id": "authzen.context-work-item.verified-reference-is-not-attachment",

@@ -40,6 +40,14 @@ import {
 } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
+import type { ExecutionCapabilityDeclaration } from "../src/enforcement-scope.js";
+
+/**
+ * #1994: this file's PDP declares no operation classes. Its subject is input
+ * validation before evaluation, which no class set changes; the class set
+ * has its own witnesses (`evaluate-multi-class.test.ts`).
+ */
+const NO_OPERATION_DECLARATIONS: ReadonlyArray<ExecutionCapabilityDeclaration> = [];
 
 const AUDIENCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-10-23T12:00:00Z");
@@ -137,6 +145,7 @@ async function inProcess(req: EvaluationRequest, over: Partial<EvaluateOptions> 
     // phase is this file's subject (evaluate-evaluation-context.test.ts
     // witnesses the claimed path, refused after the phase).
     evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+    operationDeclarations: NO_OPERATION_DECLARATIONS,
     ...over,
   }).then(
     (decision) => ({ decision }),
@@ -248,6 +257,7 @@ describe("the PDP refuses an unusable action phase before evaluation (@spec auth
     const { fga } = countingFga();
     const refusals: PdpRefusal[] = [];
     const point = createEphemeralDecisionPoint({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       emitterId: "pdp-1629",
       audience: AUDIENCE,
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
@@ -263,6 +273,7 @@ describe("the PDP refuses an unusable action phase before evaluation (@spec auth
     expect(permitted.decision, JSON.stringify(permitted.context)).toBe(true);
     // A decision point bound to no declaration requires no phase, whatever the caller names.
     const open = createEphemeralDecisionPoint({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       emitterId: "pdp-1629",
       audience: AUDIENCE,
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
@@ -278,6 +289,7 @@ describe("the PDP refuses an unusable action phase before evaluation (@spec auth
     const { fga, calls } = countingFga();
     const policy = resourcePolicyFixture();
     handle = await createPdpHttpServer({
+      operationDeclarations: NO_OPERATION_DECLARATIONS,
       peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE] }]]),
       // A request option naming an empty declaration is stripped: the server's own applies.
       getOptions: () => ({ ...decisionOptions(fga), phasedActions: new Set<string>() }) as DecisionOptions,

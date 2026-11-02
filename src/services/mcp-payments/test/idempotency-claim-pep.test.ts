@@ -17,7 +17,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { IDEMPOTENCY_KEY_PATTERN } from "@mission/core";
-import { TRUSTED_TOOL_CATALOGS, pinnedToCurrentContract } from "@mission/demo-data";
+import { RUNTIME_SCOPE_CONFIG, TRUSTED_TOOL_CATALOGS, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   type ClaimChannel,
   type ConsumptionStatusFn,
@@ -26,12 +26,14 @@ import {
   type DecisionFn,
   type EvidenceKeyResolver,
   type Fga,
+  loadRuntimePosture,
   type MissionView,
   newRecordId,
   openEphemeralClaimDomain,
   relationForAction,
   reversibleWriteKeyControl,
   RUNTIME_POSTURE,
+  type RuntimePosture,
   type SettlementResult,
   stalenessBound,
 } from "@mission/pdp";
@@ -71,7 +73,7 @@ const TOKEN: TokenFacts = {
   credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
-const view = (): MissionView => ({
+const view = (extraActions: readonly string[] = []): MissionView => ({
   id: "msn_917",
   issuer: "https://as.test",
   state: "active",
@@ -81,7 +83,7 @@ const view = (): MissionView => ({
     pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
-      actions: ["payments:payment.execute"],
+      actions: ["payments:payment.execute", ...extraActions],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     }),
   ],
@@ -97,6 +99,12 @@ interface HarnessOptions {
   consumptionStatus?: (engineStatus: ConsumptionStatusFn) => ConsumptionStatusFn;
   /** Write the PEP's evidence through a durable retention backend, as the composed stack does (#821). */
   retention?: boolean;
+  /** #1994: the Enforcement Scope Statement the executing PEP reads its leases from. */
+  statement?: RuntimePosture;
+  /** #1994: the PDP's staleness bound, so a test can open the permit window past a lease. */
+  stalenessBound?: typeof stalenessBound;
+  /** #1994: further actions the Mission approves beside payment.execute. */
+  extraActions?: readonly string[];
 }
 
 async function harness(o: HarnessOptions = {}) {
@@ -109,7 +117,7 @@ async function harness(o: HarnessOptions = {}) {
   );
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === "msn_917" && ref.issuer === "https://as.test"
-      ? { view: view(), observation: { state: view().state, version: view().version, mode: "fresh", freshness_at: now().toISOString() } }
+      ? { view: view(o.extraActions), observation: { state: view().state, version: view().version, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
 
   // The PDP side: its own claim domain on its own file, verifying settlement
@@ -137,11 +145,11 @@ async function harness(o: HarnessOptions = {}) {
     consumptionStatus: status,
     redeemingExecution: redemption.redeemer,
     getOptions: () => ({
-      view: view(),
+      view: view(o.extraActions),
       fga: alwaysAllowFga,
       modelId: "model-917",
       now,
-      stalenessBound,
+      stalenessBound: o.stalenessBound ?? stalenessBound,
       relationForAction,
       stateSourcePlacement: "pep" as const,
     }),
@@ -186,6 +194,7 @@ async function harness(o: HarnessOptions = {}) {
     keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: "https://as.test",
     transaction: { engine, connectors, evidence },
+    ...(o.statement ? { enforcementScopeStatement: o.statement } : {}),
   });
   return {
     server,
@@ -937,6 +946,35 @@ describe("a replacement worker while the original's request is in flight (@spec 
         [evaluationId, "completed", undefined],
         [evaluationId, "suppressed", "permit_consumed"],
       ]);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+describe("the executing PEP leases an action several classes apply to for the tightest lease any of them publishes (@spec runtime#classification, runtime#execution-reverification, #1994)", () => {
+  it("leases send_remittance_email for the irreversible class's 30 seconds where the statement publishes 60 for external_commitment and the permit window allows more", async () => {
+    const declared = structuredClone(RUNTIME_SCOPE_CONFIG) as {
+      extensions: { transaction_assurance: Array<{ mediated_class_or_scope: string; execution_lease_max_seconds: number }> };
+    };
+    const external = declared.extensions.transaction_assurance.find((d) => d.mediated_class_or_scope === "external_commitment");
+    if (!external) throw new Error("fixture: no external_commitment declaration");
+    external.execution_lease_max_seconds = 60;
+    // Remote mode: the PDP reads its options from the channel (getOptions), so
+    // the opened staleness bound reaches the decision and the permit window
+    // allows more than either lease.
+    const h = await harness({
+      mode: "remote",
+      statement: loadRuntimePosture(declared),
+      stalenessBound: () => ({ kind: "bounded", seconds: 600 }),
+      extraActions: ["payments:remittance.send"],
+    });
+    try {
+      const redeem = vi.spyOn(h.engine, "redeemPermit");
+      const result = await h.server.callTransactionTool("send_remittance_email", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+      expect((result as { ok: boolean }).ok, JSON.stringify(result)).toBe(true);
+      expect(redeem).toHaveBeenCalledTimes(1);
+      expect(redeem.mock.calls[0]?.[0].leaseExpiresAtMs).toBe(BASE_MS + 30_000);
     } finally {
       await h.close();
     }

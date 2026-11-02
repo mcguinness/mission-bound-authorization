@@ -218,6 +218,147 @@ export function executionLeaseMaxSeconds(posture: RuntimePosture, actionClass: s
 }
 
 /**
+ * @spec runtime#classification (#1735, #1994): every runtime action class
+ * whose requirements apply to one operation at one phase: the declared
+ * assigned class first, then each further class the statement declares for
+ * that operation and phase, once each. A compound action's phases carry
+ * their own classes, so one phase's further classes never reach another. No
+ * class assigned is no class set: the PDP refuses that request before
+ * evaluation (`action_class_missing`), as it refuses one whose assigned
+ * class differs from the declared one.
+ */
+export function applicableActionClasses(
+  posture: RuntimePosture,
+  actionClass: string | undefined,
+  action: string,
+  phase?: string,
+): readonly string[] {
+  return declaredActionClasses(posture.extensions?.execution_capabilities ?? [], actionClass, action, phase);
+}
+
+/**
+ * @spec runtime#classification (#1994, owner review): the class set from a
+ * set of operation declarations. Where a declaration matches the operation
+ * and phase, the set is that declaration's class and each further class it
+ * names; the PDP refuses a request whose assigned class differs from the
+ * declared one before evaluation ({@link assignedClassConflicts}), so every
+ * class-keyed duty, the write-keyed ones included, reads one consistent
+ * assignment. With no matching declaration, the set is the assigned class.
+ */
+export function declaredActionClasses(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  actionClass: string | undefined,
+  action: string,
+  phase?: string,
+): readonly string[] {
+  if (actionClass === undefined) return [];
+  const matched = declarations.find((d) => d.operation === action && d.phase === phase);
+  return matched === undefined ? [actionClass] : [matched.action_class, ...(matched.additional_action_classes ?? [])];
+}
+
+/**
+ * @spec runtime#classification, authzen#pdp-consistency-checks (#1994, owner
+ * review): whether the class assigned to a request differs from the class
+ * the PDP's own declaration assigns the same operation and phase. Deciding
+ * under either alone would drop the other's requirements, and a union would
+ * pair a write class with duties resolved from a read label, so no class is
+ * established and the PDP refuses the request (`action_class_missing`).
+ */
+export function assignedClassConflicts(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  actionClass: string,
+  action: string,
+  phase?: string,
+): boolean {
+  const matched = declarations.find((d) => d.operation === action && d.phase === phase);
+  return matched !== undefined && matched.action_class !== actionClass;
+}
+
+/**
+ * @spec authzen#context-action-phase, runtime#classification (#1994, cold
+ * read): whether a request names a phase for an operation the declarations
+ * name only without one. Its class set would match no declaration and lose
+ * the declared classes, so the PDP refuses it (`phase_invalid`). A phase of a
+ * compound operation that names no execution capabilities (such as a
+ * `preflight` with no effect) has no declaration of its own and is not this.
+ */
+export function phaseOnPhaselessOperation(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  action: string,
+  phase: string | undefined,
+): boolean {
+  if (phase === undefined) return false;
+  const own = declarations.filter((d) => d.operation === action);
+  return own.length > 0 && own.every((d) => d.phase === undefined);
+}
+
+/**
+ * @spec authzen#context-action-phase, runtime#classification (#1994, owner
+ * review): whether a request names no phase for an operation every
+ * declaration of which names one. The declarations require a phase, and
+ * with none the request would match no declaration and be decided under its
+ * assigned class alone, so the PDP refuses it (`phase_invalid`).
+ */
+export function phaseAbsentOnPhasedOperation(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  action: string,
+  phase: string | undefined,
+): boolean {
+  if (phase !== undefined) return false;
+  const own = declarations.filter((d) => d.operation === action);
+  return own.length > 0 && own.every((d) => d.phase !== undefined);
+}
+
+/**
+ * @spec authzen#context-action-phase, runtime#classification (#1994): whether
+ * a request's phase, or its absence, matches no declaration of an operation
+ * that names further classes on any phase. Each declared phase carries its
+ * own set, so the set of an undeclared effect-bearing phase cannot be
+ * established, and the PDP refuses it (`phase_invalid`). An undeclared
+ * `preflight` is not this: it releases no reservation or external effect
+ * (runtime#compound-actions), so it satisfies no high-consequence predicate,
+ * the only further classes the loader admits, and its set is its assigned
+ * class. An operation that names no further classes keeps every
+ * undeclared-phase case open.
+ */
+export function phaseUnmatchedWithFurtherClasses(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  action: string,
+  phase: string | undefined,
+): boolean {
+  const own = declarations.filter((d) => d.operation === action);
+  if (!own.some((d) => (d.additional_action_classes?.length ?? 0) > 0)) return false;
+  if (phase === "preflight") return false;
+  return !own.some((d) => d.phase === phase);
+}
+
+/**
+ * @spec runtime#classification, runtime#state-freshness (#1994): the posture
+ * for an action several classes apply to. Staleness bounds are comparable, so
+ * the tighter applies; a class the deployment does not declare leaves the
+ * whole set `undeclared`, which the PDP refuses; the set has no active
+ * freshness requirement only where no class in it has one.
+ */
+export function stalenessBoundOver(bounds: readonly StalenessBound[]): StalenessBound {
+  if (bounds.length === 0 || bounds.some((b) => b.kind === "undeclared")) return { kind: "undeclared" };
+  const windows = bounds.flatMap((b) => (b.kind === "bounded" ? [b.seconds] : []));
+  return windows.length === 0 ? { kind: "none" } : { kind: "bounded", seconds: Math.min(...windows) };
+}
+
+/**
+ * @spec runtime#classification, runtime#execution-reverification (#1994): the
+ * published execution lease maximum for an action several classes apply to:
+ * the tightest any of them publishes, or `undefined` when none publishes one.
+ */
+export function executionLeaseMaxSecondsOver(posture: RuntimePosture, classes: readonly string[]): number | undefined {
+  const leases = classes.flatMap((c) => {
+    const lease = executionLeaseMaxSeconds(posture, c);
+    return lease === undefined ? [] : [lease];
+  });
+  return leases.length === 0 ? undefined : Math.min(...leases);
+}
+
+/**
  * @spec runtime#execution-capabilities (#817): the execution capabilities the
  * statement declares for one operation and phase, or `undefined` when it
  * declares none. The loader has already refused a declaration whose claims

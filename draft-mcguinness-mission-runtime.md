@@ -1962,6 +1962,17 @@ cannot satisfy every applicable requirement is refused. An exception
 stated for one class or predicate relieves only the requirement it
 names, never one that another applicable predicate imposes.
 
+The classes are ordered only in part: consequential read ranks above
+non-consequential, consequential write above consequential read, and
+each of the three highest classes above consequential write, while
+the three highest classes are not ordered among themselves. An action
+is at or above a class when a class that applies to it is that class
+or ranks above it, and raising, lowering, and a stricter class refer
+to this order. A minimum classification is met only by an action at or
+above it, so a minimum of one of the three highest classes is met only
+where that class applies. Audit-only, a freshness posture
+({{state-freshness}}), is outside this order.
+
 Classification remains deployment-scoped: each deployment applies the
 predicates to its own actions and systems. The predicates make the
 resulting classifications comparable across deployments and auditable:
@@ -1974,9 +1985,10 @@ on its arguments. Such an argument-dependent operation is classified
 per invocation, from its normalized parameters, by a classifier the
 deployment declares in its Enforcement Scope Statement
 ({{runtime-conformance}}). An invocation the classifier cannot
-affirmatively place MUST be treated as the widest class the
-operation can reach, and the floor below applies to the classifier's
-assignments as to any other: a class the deployment cannot justify
+affirmatively place MUST be treated under every class the operation
+can reach, taking the requirements of each, and the floor below
+applies to the classifier's assignments as to any other: a class the
+deployment cannot justify
 by its predicate is not a basis to leave the invocation ungated.
 
 **Classification floor.** Four rules bound classification:
@@ -3280,9 +3292,10 @@ of its base-profile level:
   ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
   rule; otherwise the harness does, and the scope statement says
   which.
-- **External communication.** The external-communication and
-  external-commitment classes are mediated: no unmediated path, the
-  scope statement's egress-channel enumeration covers them
+- **External communication.** Every action that satisfies the
+  external-communication or External commitment predicate
+  ({{classification}}), whatever its class, is mediated: no unmediated
+  path, the scope statement's egress-channel enumeration covers it
   ({{I-D.draft-mcguinness-mission-harness}}), and the
   sender-constraint keys are held by the mediating PEP ({{custody}}).
 
@@ -4305,6 +4318,14 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Classes are ordered only in part, and the three highest are not
+  ordered among themselves; an invocation the classifier cannot place
+  is treated under every class the operation can reach. Trifecta
+  containment's external-communication leg reaches every action that
+  satisfies the external-communication or External commitment
+  predicate, whatever its class. A minimum class is met only by an
+  action at or above it, and Audit-only is outside the order (#1994).
 
 - Changes a requirement (#1735, D1153, D1164): an action that
   satisfies more than one class predicate takes the requirements of

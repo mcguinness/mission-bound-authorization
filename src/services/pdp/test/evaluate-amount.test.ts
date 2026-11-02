@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate as evaluateRequest, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { withCredential } from "./with-credential.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -72,6 +72,9 @@ const optsFor = (v: MissionView) => ({
   stalenessBound,
   relationForAction,
   resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  // #1994: no operation declarations: a payments operation is decided
+  // under its assigned class alone, with no phase required.
+  operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
 });
 
 /** Same request shape as `request()`, but with no `context.amount` at all
