@@ -60,7 +60,7 @@ const TIMEOUT_ESTATE_PORT = 14850;
 const DOUBLE_ESTATE_PORT = 14852;
 const EXECUTE = "payments:payment.execute";
 /** The estate scope for the commit-phase witness: it states the current payments contract (#249 C.3b). */
-const EXECUTE_SCOPE = "payments.execute.2026-10-27";
+const EXECUTE_SCOPE = "payments.execute.2026-11-02";
 
 /**
  * The pilot configuration for the separated MAS: the estate at `estatePort`,

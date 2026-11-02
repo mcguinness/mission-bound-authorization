@@ -37,7 +37,7 @@ const tempReservationsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo
  * approved now carries the current payments contract (D989), so the ordinary
  * credential is issued under the value whose mapping states it.
  */
-const PAYMENTS_READ = "payments.read.2026-10-27";
+const PAYMENTS_READ = "payments.read.2026-11-02";
 
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url;

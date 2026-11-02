@@ -38,7 +38,7 @@ if (!up) console.warn("OpenFGA unreachable; skipping the MAS pilot contract-stat
 
 const EXECUTE = "payments:payment.execute";
 /** Test configuration: an execute value stating the current contract, and a legacy one stating none. */
-const EXECUTE_STATING = "payments.execute.2026-10-27";
+const EXECUTE_STATING = "payments.execute.2026-11-02";
 const EXECUTE_LEGACY = "payments.execute";
 const CURRENT = currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] });
 
