@@ -621,6 +621,26 @@ the store.
   `Mission Device Authorization polling (@spec device-authorization#polling, #1202) > lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked`
   (`device-authorization.test.ts`).
 
+  The AS ends a pending device session on a trusted, session-specific
+  decision (#1202, D1121): `cancelDeviceSession(user_code)` on the built AS,
+  an in-process operation for a trusted integration (a fraud or operator
+  signal), never an agent-callable API. Under the device decision's claim it
+  re-reads the session and, while it is still pending, ends it `denied` with
+  the AS's own `error_description`; the next poll receives `access_denied`,
+  and a decision reached afterwards creates no Mission. A session no longer
+  pending is left as it is, and a Mission already created is ended through
+  the Lifecycle endpoint:
+  `the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121) > ends a pending session by its displayed or its normalized user_code: the next poll is access_denied with the AS's reason, and the Approver's decision on the still-open interaction creates no Mission` and the rest of `the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121)`.
+
+  Verification attempts are throttled independently (RFC 8628 Section 5.1):
+  each `user_code` that matches no session counts against the verification
+  user agent's address (`ctx.ip`; behind a proxy, a deployment sets the
+  provider's proxy trust), and past the limit (`deviceVerificationThrottle`,
+  default 10 per 10 minutes) the address's entries are refused 429 before any
+  code lookup until the window moves on. The throttle ends no session. Its
+  counts are in-process, the same single-process boundary as the device
+  decision claim (#250): `the verification page throttles codes that match no session, and ends none (RFC 8628 Section 5.1, #1202, D1121)`, both tests.
+
   The refresh token inherits the binding by construction: `createRefreshToken`
   copies the code's `grantId` (`lib/helpers/grant_common.js`).
 - **Resolution.** `kernel.findByGrant`, then the delegation-family store, then

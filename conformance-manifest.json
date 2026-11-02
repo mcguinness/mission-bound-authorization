@@ -101037,9 +101037,15 @@
      "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > creates no Mission for a decision reached after the session expired or ended",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121) > ends a pending session by its displayed or its normalized user_code: the next poll is access_denied with the AS's reason, and the Approver's decision on the still-open interaction creates no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decision after the device_code lifetime lapsed, or after the session's device code recorded an ending, is refused and creates no Mission. The session is claimed and re-read immediately before the record commit. Proved by removing the decision's pending checks."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decision after the device_code lifetime lapsed, after the session's device code recorded an ending, or after the AS's cancellation decision ended the session (D1121) is refused and creates no Mission. The session is claimed and re-read immediately before the record commit. Proved by removing the decision's pending checks."
   },
   {
    "id": "device-authorization.approval.render-client",
@@ -101179,10 +101185,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After a decline, a creation commit that creates no Mission, or the AS ending the session, the next poll receives access_denied; an openid request whose Approver is not the Subject receives invalid_scope.",
-    "local": "This AS ends a session on a decline, a refusal at the decision, or the Approver's abort at the provider's code confirmation; all three are witnessed. It implements no AS-initiated cancellation, such as user_code guessing detection, so that clause is not exercised: the test that records an ending on the device code shows only how a poll answers such an ending, not an AS path that produces it."
+    "local": "This AS ends a session on a decline, a refusal at the decision, the Approver's abort at the provider's code confirmation, and a trusted, session-specific AS cancellation decision (cancelDeviceSession, D1121); each is witnessed. A throttle of verification attempts (RFC 8628 Section 5.1) refuses entries and ends no session."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/device-authorization.test.ts",
@@ -101195,9 +101201,15 @@
      "name": "Mission Device Authorization approval (@spec device-authorization#approval, #1202) > creates no Mission for a decision reached after the session expired or ended",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121) > ends a pending session by its displayed or its normalized user_code: the next poll is access_denied with the AS's reason, and the Approver's decision on the still-open interaction creates no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decline, a creation commit refused by the authority-source gates (Dana activates no source this client resolves), an abort, and an ending recorded on the device code each answer the next poll access_denied; openid with an Approver who is not the Subject answers invalid_scope. Partial until an AS cancellation path exists and is exercised. Proved by answering every refusal access_denied, by not recording the denial, and by removing oidc-provider's raising of the recorded error."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. A decline, a creation commit refused by the authority-source gates (Dana activates no source this client resolves), an abort, and the AS's cancellation decision each answer the next poll access_denied; the cancellation's poll carries the AS's own error_description, after the Approver's decision on the still-open interaction created no Mission. openid with an Approver who is not the Subject answers invalid_scope. The test that records an ending on the device code stays as supporting evidence of how a poll answers any ending. Proved by answering every refusal access_denied, by not recording the denial, by removing oidc-provider's raising of the recorded error, and by dropping the cancellation's denial."
   },
   {
    "id": "device-authorization.outcomes.expired",
