@@ -31,6 +31,8 @@ export interface DeviceMissionClient {
   dpopKeys?: DpopKeys;
   /** Waits between polls; a test injects one that records the wait instead. */
   sleep?: (ms: number) => Promise<void>;
+  /** The clock, in milliseconds, that the session's deadline is measured on; `Date.now` by default. */
+  now?: () => number;
 }
 
 export interface MissionDeviceRequest {
@@ -83,14 +85,15 @@ const unsupported = (reason: string): DeviceMissionSupport => ({ supported: fals
  * metadata or the OAuth binding's member alone establishes nothing.
  */
 export async function discoverMissionDeviceSupport(issuer: string, configuredEndpoint?: string): Promise<DeviceMissionSupport> {
-  let meta: Record<string, unknown>;
+  let meta: Record<string, unknown> | undefined;
   try {
     const res = await fetch(`${issuer}/.well-known/openid-configuration`);
     if (res.status !== 200) return unsupported(`${issuer} answered its metadata request with ${res.status}`);
-    meta = (await res.json()) as Record<string, unknown>;
+    meta = objectOf(await res.json());
   } catch (e) {
     return unsupported(`${issuer} serves no readable metadata: ${(e as Error).message}`);
   }
+  if (meta === undefined) return unsupported(`${issuer} serves metadata that is not a JSON object`);
   if (meta.issuer !== issuer) return unsupported(`${issuer} serves metadata for issuer ${String(meta.issuer)}`);
   if (meta.mission_bound_authorization_supported !== true) {
     return unsupported(`${issuer} does not advertise mission_bound_authorization_supported`);
@@ -126,6 +129,7 @@ export async function createMissionByDevice(
   if (request.authorizationDetails) form.set("authorization_details", JSON.stringify(request.authorizationDetails));
   if (request.scope) form.set("scope", request.scope);
   if (request.resource) form.set("resource", request.resource);
+  const now = client.now ?? Date.now;
   const res = await fetch(support.deviceAuthorizationEndpoint, { method: "POST", headers: FORM, body: form.toString() });
   const session = await jsonOf(res);
   if (res.status !== 200) return refused(session, res.status);
@@ -133,6 +137,10 @@ export async function createMissionByDevice(
   if (typeof deviceCode !== "string" || typeof userCode !== "string" || typeof verificationUri !== "string" || typeof expiresIn !== "number") {
     return { outcome: "no_mission", error: "invalid_device_authorization_response" };
   }
+  // RFC 8628 Section 3.2: `expires_in` runs from this response. Every later
+  // moment, the user's time with the code, authentication and requests
+  // included, is measured against this deadline.
+  const deadline = now() + expiresIn * 1000;
   await show({
     userCode,
     verificationUri,
@@ -142,13 +150,16 @@ export async function createMissionByDevice(
 
   const sleep = client.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   let interval = typeof session.interval === "number" ? session.interval : DEFAULT_INTERVAL_SECONDS;
-  let waited = 0;
-  while (waited < expiresIn) {
+  for (;;) {
+    // A poll the interval would delay to or past the deadline is never
+    // waited for, and the deadline is checked again just before sending, so a
+    // wait or an authentication that ran up to it sends nothing.
+    if (now() + interval * 1000 >= deadline) break;
     await sleep(interval * 1000);
-    waited += interval;
     const headers: Record<string, string> = { ...FORM };
     if (client.dpopKeys) headers.dpop = await dpopProofFor(client.dpopKeys, support.tokenEndpoint, "POST");
     const body = new URLSearchParams({ ...(await client.authenticate()), grant_type: DEVICE_GRANT, device_code: deviceCode });
+    if (now() >= deadline) break;
     const polled = await fetch(support.tokenEndpoint, { method: "POST", headers, body: body.toString() });
     const answer = await jsonOf(polled);
     if (polled.status === 200) return missionResponse(answer);
@@ -200,10 +211,13 @@ function refused(body: Record<string, unknown>, status: number): DeviceMissionRe
   };
 }
 
+function objectOf(body: unknown): Record<string, unknown> | undefined {
+  return body !== null && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : undefined;
+}
+
 async function jsonOf(res: Response): Promise<Record<string, unknown>> {
   try {
-    const body = (await res.json()) as unknown;
-    return body !== null && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
+    return objectOf(await res.json()) ?? {};
   } catch {
     return {};
   }

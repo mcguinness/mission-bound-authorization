@@ -1138,18 +1138,24 @@ describe("Mission Device Authorization polling (@spec device-authorization#polli
   // Mission run to its expires_at, never revoking it
   // (docs/provider-integration-port.md, section 3.4).
   it("lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked", async () => {
-    const short = await approvedSession(PUBLIC, ALICE_BY_BOB, intentExpiringIn(3000));
-    const expiresAt = missionOf(short.uid)?.expires_at as string;
+    const short = await approvedSession(PUBLIC, ALICE_BY_BOB, intentExpiringIn(3_600_000));
+    const expiresAt = Date.parse(missionOf(short.uid)?.expires_at as string);
     const long = await approvedSession(PUBLIC, ALICE_BY_BOB, intentExpiringIn(THIRTY_DAYS_MS));
     for (const s of [short, long]) {
       await lapse(s.deviceCode);
       expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("expired_token");
       expect(await missionStatus(missionOf(s.uid)?.id as string)).toMatchObject({ state: "active" });
     }
-    await new Promise((r) => setTimeout(r, Date.parse(expiresAt) - Date.now() + 200));
-    const ended = await missionStatus(missionOf(short.uid)?.id as string);
-    expect(ended).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
-    expect(await missionStatus(missionOf(long.uid)?.id as string)).toMatchObject({ state: "active" });
+    // The kernel's clock moves one second past the shorter Mission's
+    // expires_at, as time passing would; nothing waits on the real clock.
+    const clock = vi.spyOn(as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(expiresAt + 1000));
+    try {
+      const ended = await missionStatus(missionOf(short.uid)?.id as string);
+      expect(ended).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
+      expect(await missionStatus(missionOf(long.uid)?.id as string)).toMatchObject({ state: "active" });
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("refuses redemption with the issuance-gating refusal once the Mission was revoked after approval", async () => {

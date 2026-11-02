@@ -80,9 +80,15 @@ const advertised = (issuer: string): Record<string, unknown> => ({
 
 /**
  * A stub AS that records every request: metadata from `meta`, a device
- * session at `/device/auth`, and the token endpoint's `answers` in turn.
+ * session at `/device/auth` whose members `opts.session` overrides, and the
+ * token endpoint's `answers` in turn, running `opts.onToken` as each poll
+ * arrives.
  */
-async function stubAs(meta: (issuer: string) => Record<string, unknown>, answers: Answer[] = [{ status: 200, body: SUCCESS }]): Promise<Stub> {
+async function stubAs(
+  meta: (issuer: string) => unknown,
+  answers: Answer[] = [{ status: 200, body: SUCCESS }],
+  opts: { session?: Record<string, unknown>; onToken?: () => void } = {},
+): Promise<Stub> {
   const seen: Seen[] = [];
   let issuer = "";
   let polls = 0;
@@ -97,9 +103,17 @@ async function stubAs(meta: (issuer: string) => Record<string, unknown>, answers
       };
       if (req.url === METADATA_PATH) return send(200, meta(issuer));
       if (req.url === "/device/auth") {
-        return send(200, { device_code: "stub-device-code", user_code: "WDJB-MJHT", verification_uri: `${issuer}/device`, expires_in: 600, interval: 5 });
+        return send(200, {
+          device_code: "stub-device-code",
+          user_code: "WDJB-MJHT",
+          verification_uri: `${issuer}/device`,
+          expires_in: 600,
+          interval: 5,
+          ...opts.session,
+        });
       }
       if (req.url === "/token") {
+        opts.onToken?.();
         const answer = answers[Math.min(polls++, answers.length - 1)] as Answer;
         return send(answer.status, answer.body);
       }
@@ -122,8 +136,15 @@ beforeAll(async () => {
   dpopKeys = { privateKey: pair.privateKey, publicKey: pair.publicKey };
 });
 
-/** A public client of `issuer` whose waits are recorded, never slept. */
-function clientOf(issuer: string, extra: Partial<DeviceMissionClient> = {}): { client: DeviceMissionClient; waits: number[] } {
+/** The client's clock in milliseconds, advanced only by the test. */
+type Clock = { ms: number };
+
+/** A public client of `issuer` on its own clock: each wait is recorded and advances the clock, never sleeping. */
+function clientOf(
+  issuer: string,
+  extra: Partial<DeviceMissionClient> = {},
+  clock: Clock = { ms: 0 },
+): { client: DeviceMissionClient; waits: number[]; clock: Clock } {
   const waits: number[] = [];
   const client: DeviceMissionClient = {
     issuer,
@@ -131,14 +152,16 @@ function clientOf(issuer: string, extra: Partial<DeviceMissionClient> = {}): { c
     dpopKeys,
     sleep: async (ms) => {
       waits.push(ms);
+      clock.ms += ms;
     },
+    now: () => clock.ms,
     ...extra,
   };
-  return { client, waits };
+  return { client, waits, clock };
 }
 
 describe("the reference device client's discovery (@spec device-authorization#discovery, #1202)", () => {
-  const cases: { name: string; meta: (issuer: string) => Record<string, unknown>; endpoint?: (issuer: string) => string; reason: RegExp }[] = [
+  const cases: { name: string; meta: (issuer: string) => unknown; endpoint?: (issuer: string) => string; reason: RegExp }[] = [
     {
       name: "RFC 8628 device-grant metadata alone",
       meta: (i) => {
@@ -177,6 +200,16 @@ describe("the reference device client's discovery (@spec device-authorization#di
       name: "metadata naming another issuer",
       meta: (i) => ({ ...advertised(i), issuer: "https://as.other.example" }),
       reason: /serves metadata for issuer https:\/\/as\.other\.example/,
+    },
+    {
+      name: "a metadata document that is JSON null",
+      meta: () => null,
+      reason: /serves metadata that is not a JSON object/,
+    },
+    {
+      name: "a metadata document that is a JSON array",
+      meta: (i) => [advertised(i)],
+      reason: /serves metadata that is not a JSON object/,
     },
   ];
 
@@ -268,6 +301,78 @@ describe("the reference device client's use of a success response (@spec device-
     const refusal = await createMissionByDevice(clientOf(denied.issuer).client, REQUEST, () => {});
     expect(refusal).toEqual({ outcome: "no_mission", error: "access_denied", errorDescription: "declined" });
     expect(denied.seen.filter((s) => s.path === "/token")).toHaveLength(1);
+  });
+});
+
+describe("the reference device client's polling deadline (@spec device-authorization#outcomes, #1202)", () => {
+  const PENDING: Answer = { status: 400, body: { error: "authorization_pending" } };
+  const EXPIRED = { outcome: "no_mission", error: "expired_token", errorDescription: "the device_code lifetime elapsed while polling" };
+
+  /** A device session with these members on a stub that records the client's clock at each poll and spends `latencyMs` answering it. */
+  async function session(members: Record<string, unknown>, answers: Answer[], latencyMs = 0) {
+    const clock: Clock = { ms: 0 };
+    const polledAt: number[] = [];
+    const stub = await stubAs(advertised, answers, {
+      session: members,
+      onToken: () => {
+        polledAt.push(clock.ms);
+        clock.ms += latencyMs;
+      },
+    });
+    return { ...clientOf(stub.issuer, {}, clock), polledAt };
+  }
+
+  it("sends no poll, and does not wait, when the session's lifetime is shorter than its interval", async () => {
+    const s = await session({ expires_in: 2, interval: 5 }, [PENDING]);
+    expect(await createMissionByDevice(s.client, REQUEST, () => {})).toEqual(EXPIRED);
+    expect(s.polledAt).toEqual([]);
+    expect(s.waits).toEqual([]);
+  });
+
+  it("counts the user's time with the code against the deadline: no poll after a display that outlasted the session", async () => {
+    const s = await session({ expires_in: 10, interval: 5 }, [PENDING]);
+    const result = await createMissionByDevice(s.client, REQUEST, () => {
+      s.clock.ms += 11_000;
+    });
+    expect(result).toEqual(EXPIRED);
+    expect(s.polledAt).toEqual([]);
+  });
+
+  it("never polls at the deadline: one poll at 5 seconds of a 10-second session, none at 10", async () => {
+    const s = await session({ expires_in: 10, interval: 5 }, [PENDING]);
+    expect(await createMissionByDevice(s.client, REQUEST, () => {})).toEqual(EXPIRED);
+    expect(s.polledAt).toEqual([5000]);
+    expect(s.waits).toEqual([5000]);
+  });
+
+  it("after slow_down near the deadline, neither waits for nor sends the poll the longer interval would place past it", async () => {
+    const s = await session({ expires_in: 12, interval: 5 }, [{ status: 400, body: { error: "slow_down" } }]);
+    expect(await createMissionByDevice(s.client, REQUEST, () => {})).toEqual(EXPIRED);
+    expect(s.polledAt).toEqual([5000]);
+    expect(s.waits).toEqual([5000]);
+  });
+
+  it("counts each poll's request time: a poll answered at 8 seconds of a 12-second session is the last", async () => {
+    const s = await session({ expires_in: 12, interval: 5 }, [PENDING], 3000);
+    expect(await createMissionByDevice(s.client, REQUEST, () => {})).toEqual(EXPIRED);
+    expect(s.polledAt).toEqual([5000]);
+  });
+
+  it("rechecks the deadline immediately before each poll: a wait that overran it, or an authentication that reached it, sends nothing", async () => {
+    const overrun = await session({ expires_in: 10, interval: 5 }, [PENDING]);
+    overrun.client.sleep = async (ms) => {
+      overrun.clock.ms += ms + 6000;
+    };
+    expect(await createMissionByDevice(overrun.client, REQUEST, () => {})).toEqual(EXPIRED);
+    expect(overrun.polledAt).toEqual([]);
+
+    const slowAuth = await session({ expires_in: 6, interval: 5 }, [PENDING]);
+    slowAuth.client.authenticate = async () => {
+      slowAuth.clock.ms += 1000;
+      return { client_id: "cli-agent" };
+    };
+    expect(await createMissionByDevice(slowAuth.client, REQUEST, () => {})).toEqual(EXPIRED);
+    expect(slowAuth.polledAt).toEqual([]);
   });
 });
 
