@@ -1361,6 +1361,34 @@ describe("the admission scope at the dispatch (@spec request-provenance#replay, 
     ).rejects.toThrow("binds another presenter");
   });
 
+  it("the replay store releases only a reservation: releasing a committed pair's token keeps its acceptance record and its pair", async () => {
+    const own = new InMemoryRequestProvenanceStore();
+    const at = Date.UTC(2026, 10, 2, 12);
+    const record = {
+      iss: "https://intake.example.org",
+      jti: "store-committed",
+      expiresAtMs: at + 60_000,
+      issuer: ISSUER,
+      intentHash: provisionalIntentHash(ISSUER, INTENT as never),
+      presenter: { clientId: "ap-agent" },
+      assertion: "a.b.c",
+      artifactHash: "sha-256:x",
+      verifiedAt: new Date(at).toISOString(),
+      facts: {},
+    };
+    const committed = await own.reserve(record, at);
+    expect(committed).toBeDefined();
+    expect(own.commit(committed as string, "par:store-test", at, at + 3_600_000)).toBe(true);
+    own.release(committed as string);
+    expect(own.accepted(record.iss, record.jti, at)?.submissionRef).toBe("par:store-test");
+    expect(await own.reserve({ ...record }, at)).toBeUndefined();
+    // The control: a reservation does release, and its pair is free again.
+    const reserved = await own.reserve({ ...record, jti: "store-reserved" }, at);
+    expect(reserved).toBeDefined();
+    own.release(reserved as string);
+    expect(await own.reserve({ ...record, jti: "store-reserved" }, at)).toBeDefined();
+  });
+
   it("refuses a verification with neither an admission scope nor an accepted reference, before any signature verification", async () => {
     const signed = await mint();
     const before = verifications();

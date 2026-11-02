@@ -12,8 +12,9 @@
  * - **Commit** flips a reservation to committed and binds it to the accepted
  *   submission's reference.
  * - **Release** removes a reservation, idempotently. Nothing releases a
- *   committed pair: the admission scope that owns the reservation releases
- *   nothing once committed (`SubmissionAdmission`).
+ *   committed pair: the store releases only a reservation, and the
+ *   admission scope that owns it releases nothing once committed
+ *   (`SubmissionAdmission`).
  *
  * A reservation never outlives `exp` plus the clock-skew allowance. A
  * committed pair is retained until the later of that instant and the end of
@@ -75,7 +76,7 @@ export interface RequestProvenanceStore {
    * gone at `nowMs` (it lapsed, or was released).
    */
   commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean;
-  /** Release the reservation `token`. Idempotent; no effect on another token. */
+  /** Release the reservation `token`. Idempotent; no effect on another token, nor on a committed pair. */
   release(token: string): void;
   /** The committed acceptance of (`iss`, `jti`) while it is retained, else undefined. */
   accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined;
@@ -143,7 +144,8 @@ export class InMemoryRequestProvenanceStore implements RequestProvenanceStore {
 
   release(token: string): void {
     const found = this.#byToken(token);
-    if (found !== undefined) this.#rows.delete(found[0]);
+    // Only a reservation: a committed pair keeps its acceptance record until its retention ends.
+    if (found !== undefined && found[1].state === "reserved") this.#rows.delete(found[0]);
   }
 
   accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined {
