@@ -150,7 +150,9 @@ a ceiling drawdown's minted token
 (`services/authorization-server/test/progressive-drawdown-endpoint.test.ts`),
 and the carryover cascade above
 (`services/authorization-server/test/expansion-endpoint.test.ts`) are
-witnessed under a configuration requiring the reference.
+witnessed under a configuration requiring the reference. The cascade's
+witness asserts its committed result, not how the Expansion's approval
+page renders it.
 
 ## Rolling back
 
