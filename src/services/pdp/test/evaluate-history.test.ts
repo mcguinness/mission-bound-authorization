@@ -33,6 +33,7 @@ import {
   type EvidenceKeyResolver,
   type HistoryBinding,
   type HistoryPredicate,
+  type HistorySelectionInput,
   type MissionView,
   REFUSAL_RECORD_MEDIA_TYPE,
   relationForAction,
@@ -248,6 +249,20 @@ describe("the History Context evaluates policy-selected predicates against verif
     const unbound = await evaluate(request(), options(undefined));
     expect(unbound.decision).toBe(true);
     expect(historyOf(unbound)).toBeUndefined();
+  });
+
+  it("selects predicates from the validated operation target and audience, never the request's resource type or id", async () => {
+    const inputs: HistorySelectionInput[] = [];
+    const binding: HistoryBinding = {
+      ...historyBinding([]),
+      policy: (input) => {
+        inputs.push(input);
+        return [WRITE_COMPLETED];
+      },
+    };
+    const decision = await evaluate(request(), options(binding));
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(inputs).toEqual([{ action: READ, operationTarget: RESOURCE, audience: RESOURCE, mission: { id: MISSION, issuer: ISSUER } }]);
   });
 
   it("denies history_not_satisfied, recording not_satisfied, when no permit of the class is retained", async () => {

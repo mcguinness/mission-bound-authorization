@@ -47,11 +47,17 @@ export interface HistoryPredicateResult {
   outcome: HistoryOutcome;
 }
 
-/** What the PDP's history policy selects predicates from: the operation, never a request-supplied selection. */
+/**
+ * What the PDP's history policy selects predicates from: the operation, never
+ * a request-supplied selection. `operationTarget` and `audience` are the
+ * values the PDP validated, never the AuthZEN resource object's `type` or
+ * `id`, which name no operation the PDP checked.
+ */
 export interface HistorySelectionInput {
   action: string;
   actionPhase?: string;
-  resource: { type: string; id: string };
+  operationTarget: string;
+  audience: string;
   mission: { id: string; issuer: string };
 }
 

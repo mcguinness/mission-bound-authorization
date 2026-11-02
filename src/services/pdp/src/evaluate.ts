@@ -1577,20 +1577,6 @@ async function evaluateInner(
   history: HistoryTrace,
 ): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
-  // @spec authzen#context-history (#2015): the predicates this PDP's own
-  // policy selects for the operation; the request selects none. Each is
-  // recorded `unavailable` until the Mission is established below.
-  if (opts.history) {
-    history.selected = [
-      ...opts.history.policy({
-        action: req.action.name,
-        ...(isActionPhase(req.context.action_phase) ? { actionPhase: req.context.action_phase } : {}),
-        resource: { type: req.resource.type, id: req.resource.id },
-        mission: { id: req.context.mission.id, issuer: req.context.mission.issuer },
-      }),
-    ];
-    history.results = unavailableHistory(history.selected);
-  }
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
   // @spec runtime#classification (#1735, #1994): every class whose
@@ -1702,6 +1688,23 @@ async function evaluateInner(
   // @spec authzen#failure-condition-coverage); check 11 does not cover it.
   if (typeof audience !== "string" || audience.length === 0) return deny("out_of_authority");
 
+  // @spec authzen#context-history (#2015): the predicates this PDP's own
+  // policy selects for the operation, from the validated operation target
+  // and audience; the request selects none. Each is recorded `unavailable`
+  // until the Mission is established below.
+  if (opts.history) {
+    history.selected = [
+      ...opts.history.policy({
+        action: req.action.name,
+        ...(isActionPhase(req.context.action_phase) ? { actionPhase: req.context.action_phase } : {}),
+        operationTarget,
+        audience,
+        mission: { id: req.context.mission.id, issuer: req.context.mission.issuer },
+      }),
+    ];
+    history.results = unavailableHistory(history.selected);
+  }
+
   // 1. View consistency (@spec: view_inconsistent). `id`/`issuer` are the
   // mandatory identity check; `authority_hash` and `policy_view_id` (#702:
   // authority_hash is no longer on the baseline claim) are present-then-check
@@ -1720,7 +1723,7 @@ async function evaluateInner(
   // 1-hist. History (@spec authzen#context-history, #2015): with the Mission
   // established, each selected predicate is evaluated against the retained
   // evidence, verified and linked, for this Mission. Recorded on every
-  // decision from here; the deny is taken after Resource policy (step 6b).
+  // decision from here; the deny is taken after Resource policy (step 6c).
   if (opts.history && history.selected.length > 0) {
     history.results = await evaluateHistory(opts.history, history.selected, { id: view.id, issuer: view.issuer });
   }
@@ -2658,7 +2661,7 @@ async function evaluateInner(
     return { decision: false, context: base({ denial_reason: "resource_policy", reason: "resource_policy", next_action: "none" }) };
   }
 
-  // 6b. History (@spec authzen#context-history, #2015): a policy-required
+  // 6c. History (@spec authzen#context-history, #2015): a policy-required
   // predicate that is unsatisfied or cannot be established denies
   // `history_not_satisfied`. No outcome comes from any request member.
   if (history.results.some((r) => r.outcome !== "satisfied")) return deny("history_not_satisfied");
