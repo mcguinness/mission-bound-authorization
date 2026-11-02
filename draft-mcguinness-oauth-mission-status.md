@@ -2310,6 +2310,10 @@ Mission Termination Reasons registry
   the Mission Status operation and introspection.
 - The Lifecycle `mission_id` member and base-operations list point to
   the Mission Status request and the Legal Transitions table.
+- Where the Lifecycle endpoint is the issuance profile's
+  token-independent revocation means, the AS accepts `revoke` through
+  client authentication without requiring any token, and still
+  authorizes the caller (#1895, D1114).
 
 -00
 

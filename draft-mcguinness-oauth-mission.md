@@ -7401,6 +7401,9 @@ resolve before interoperating.
   surface may omit each provenance element's `verified_at`, which the
   AS generates at each verification, and no other member (#1897,
   D1035).
+- Revocation: a deployment-defined surface satisfies the
+  token-independent revocation requirement when it authenticates the
+  revoking party independent of possession of any token (#1895, D1114).
 
 -01
 
