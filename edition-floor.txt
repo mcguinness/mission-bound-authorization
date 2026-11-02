@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-02T20:44:02Z
-Source repository commit: e5caa173dad37c45d84a165f66d9d92a0abcd892
+Generated: 2026-11-02T22:11:42Z
+Source repository commit: 3f301c11ec25f537a5de57bc8a175fa9ad70e792
 Member count: 7
 
 Reading order:
@@ -3144,8 +3144,16 @@ Table of Contents
    Between those two architectures sits the issuance join
    ([I-D.draft-mcguinness-oauth-mission-issuance-grant]): the MAS
    remains the Mission Issuer while estate authorization servers redeem
-   Mission Issuance Grants for Mission-bound, state-gated tokens,
-   restoring the token-layer chokepoint without moving approval.
+   Mission Issuance Grants for Mission-bound tokens, restoring the
+   token-layer chokepoint without moving approval.  The MAS mints a
+   grant only for an active Mission.  A consuming AS with a Mission-
+   state integration also checks the Mission at redemption and at every
+   refresh.  Without a Mission-state integration, the consuming AS
+   issues no refresh tokens, and its revocation latency, the summed
+   residual of Section 10.4, includes every interval during which the
+   path can proceed without another state check, including pending
+   authorization requests and authorization codes under PAR carriage, as
+   Issuance Grant's Security Considerations specifies.
 
 11.  Mission Assurance Levels
 
@@ -3294,11 +3302,21 @@ Table of Contents
       summed residual of Section 10.4 where it does not).
 
       Runtime-Enforced is the smallest deployment that turns a Mission
-      from governed issuance into action-time defense.  Every normative
-      dependency it needs is a family document intended for the
-      Standards Track.  It is a substantial build, not a wedge: a
-      deployment sizes the effort from the runtime profile's conformance
-      section rather than from this level's one-line summary.
+      from governed issuance into action-time defense.  Every family
+      document it depends on normatively is intended for the Standards
+      Track.  Outside the family, the level's documents cite normatively
+      two AuthZEN working-group drafts, from the AuthZEN profile
+      ([AuthZEN.ARAP], [AuthZEN.Obligations]), and, with the OAuth
+      binding, an OAuth working-group draft
+      ([I-D.draft-ietf-oauth-rar-metadata-remediation]) and two
+      individual drafts ([I-D.draft-mcguinness-oauth-actor-profile] and,
+      also cited by the AuthZEN profile,
+      [I-D.draft-mcguinness-oauth-client-instance-id]).  A family
+      document they cite, such as Cross-Domain Projection, carries its
+      own dependencies.  The level is a substantial build, not a wedge:
+      a deployment sizes the effort from the runtime profile's
+      conformance section rather than from this level's one-line
+      summary.
 
       *Proof obligations*: PEP-placement completeness and the declared
       freshness source and bound.
@@ -4648,6 +4666,11 @@ Table of Contents
               <https://openid.github.io/authzen/authzen-access-request-
               approval-profile-1_0.html>.
 
+   [AuthZEN.Obligations]
+              OpenID Foundation, "OpenID AuthZEN Obligations Profile
+              1.0", 2026, <https://openid.github.io/authzen/authzen-
+              obligations-profile-1_0.html>.
+
    [FAPI.GrantManagement]
               OpenID Foundation, "Grant Management for OAuth 2.0", 2023,
               <https://openid.net/specs/oauth-v2-grant-management.html>.
@@ -4802,6 +4825,13 @@ Table of Contents
               Managed Access (UMA) 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-uma.html>.
+
+   [I-D.draft-mcguinness-oauth-actor-profile]
+              McGuinness, K., "OAuth Actor Profile for Delegation", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              profile-01, 8 October 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
@@ -6423,6 +6453,14 @@ Appendix I.  Mission Document Map
 Appendix J.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Runtime-Enforced names its normative dependencies outside the
+      family: two AuthZEN working-group drafts, and, with the OAuth
+      binding, an OAuth working-group draft and two individual drafts.
+      The issuance-join summary states both consuming-AS modes and, for
+      the mode without a Mission-state integration, points to Issuance
+      Grant's Security Considerations for every interval its revocation
+      latency includes.  No requirement changed (#1090).
 
    *  Standing consent is cited from Approval Governance's Approval
       Basis Contract.  No requirement changed (#1915).
@@ -8893,9 +8931,7 @@ Table of Contents
 
    Resource AS:  An authorization server in another trust domain that
       honors a Mission it did not issue, minting its own tokens for its
-      resources; it is never the Mission Issuer.  The companion Mission
-      Cross-Domain Projection profile specifies cross-domain projection
-      ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+      resources; it is never the Mission Issuer.
 
    Mission Intent:  The structured description of the task the client
       submits (Section 4).
@@ -8926,11 +8962,10 @@ Table of Contents
 
    Derivation:  One issuance operation the issuer AS performs for a
       single request (Section 7.1): the initial authorization-code
-      exchange, a refresh, a Token Exchange, a cross-domain grant
-      issuance, or the redemption of a profile-defined grant, such as
-      the Template profile's handoff grant.  Distinct from Authority Set
-      derivation, which some section titles and fixed phrases, such as
-      "derivation policy", also call derivation.
+      exchange, a refresh, a Token Exchange, or the redemption of a
+      profile-defined grant.  Distinct from Authority Set derivation,
+      which some section titles and fixed phrases, such as "derivation
+      policy", also call derivation.
 
    Mission:  The durable authorization object that binds a disclosed
       task (its Mission Intent) to an explicitly approved Authority Set
@@ -9023,11 +9058,7 @@ Table of Contents
    document defines no runtime lookup of it.
 
    The record's (subject.iss, subject.sub) and the token's (AS iss, sub)
-   identify the same Subject in two issuer namespaces.  Across trust
-   domains, the cross-domain companion conveys Subject identity through
-   its own subject-resolution claims, not a Mission lookup, and a token
-   minted in another domain preserves the mission claim unchanged
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   identify the same Subject in two issuer namespaces.
 
    Issuer roles obey two invariants: a Mission has exactly one Mission
    Issuer, its issuer, and a Resource AS never creates or alters a
@@ -9270,9 +9301,7 @@ Table of Contents
       size, the Intent's total size and the lengths of its arrays, and
       the count and per-entry sizes of evidence entries, refusing a
       submission that exceeds the deployment-defined limits with
-      invalid_request.  The verification-cost bound of
-      [I-D.draft-mcguinness-oauth-mission-submission-evidence]
-      accompanies these.
+      invalid_request.
 
    The following is an example of a Submission envelope carrying a
    compact Intent and one evidence entry of an illustrative, deployment-
@@ -9361,11 +9390,6 @@ Table of Contents
       as Section 14 permits); and
 
    *  the grant binding (Section 6.4).
-
-   The experimental Mission Device Authorization profile
-   ([I-D.draft-mcguinness-oauth-mission-device-authorization]) defines
-   such a carriage for a client that cannot complete the authorization-
-   code path, on the device authorization grant [RFC8628].
 
 4.3.  Authority Proposal
 
@@ -10439,9 +10463,7 @@ Table of Contents
 
    issuer:  REQUIRED.  A string.  The issuer URL of the Mission Issuer
       that approved the Mission.  Equals the iss of tokens that AS
-      derives; for cross-domain tokens it remains the issuer AS that
-      approved the Mission even though the issuing iss differs
-      ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+      derives (Section 7.8).
 
    state:  REQUIRED.  A string.  The current lifecycle state: active or
       terminated in this document, or an additional state defined by a
@@ -10966,8 +10988,8 @@ Table of Contents
       redemption emits one, the refresh-token family that follows it; or
 
    *  another profile-defined reusable grant, such as a refresh-token
-      family a continuation transport establishes later for the same
-      Mission ([I-D.draft-mcguinness-oauth-mission-continuation]).
+      family a Token Exchange establishes later for the same Mission
+      (Section 6.4.2).
 
 6.4.1.  Establishing and Resolving a Binding
 
@@ -11003,16 +11025,15 @@ Table of Contents
       identified by its client authentication, Section 8.2); or
 
    *  a profile-defined grant, through the authenticated mission
-      reference it carries, such as the Template profile's handoff grant
-      ([I-D.draft-mcguinness-oauth-mission-template]).
+      reference it carries.
 
    It then applies the gating of Section 7.1.
 
    A Mission MAY carry zero or more grant bindings.  Beyond any
    authorization-code lineage established at approval, a refresh-token
-   family a continuation transport establishes later (above) is a
-   further binding, or the Mission's first where it has none, rooted in
-   the Mission its own subject_token resolved to.
+   family a Token Exchange establishes later (above) is a further
+   binding, or the Mission's first where it has none, rooted in the
+   Mission its own subject_token resolved to.
 
    The AS MUST resolve a bound grant lineage to the same Mission on
    every derivation performed against it: the mapping is fixed for the
@@ -11024,10 +11045,7 @@ Table of Contents
    Identifier alongside a credential, the identifier is a non-
    authoritative cross-check: the AS MUST verify it against the Mission
    the credential resolves to and refuse a mismatch with the
-   invalid_grant error code.  The predecessor parameter of
-   [I-D.draft-mcguinness-oauth-mission-expansion] is an example: it
-   selects the Mission a successor is created from and does not reassign
-   an existing binding.
+   invalid_grant error code.
 
    Because the grant, not the identifier, determines the Mission, a
    client does not supply mission_id to obtain a derivation, and an AS
@@ -11038,49 +11056,47 @@ Table of Contents
 
    The grant binding relates to other mechanisms as follows:
 
-   *  *Token Exchange.* A Token Exchange derivation ([RFC8693]) that
-      returns only an access token establishes no new grant lineage:
-      ordinary in-Mission delegation (Section 8) and self-exchange down-
-      scoping (Section 7.5) both work this way, and the issued token is
-      a derived token (Section 7.8) whose mission claim identifies the
-      one Mission its subject_token resolved to.  Where the
-      subject_token was issued under a grant lineage, the issued token
-      retains that grant provenance, and a later redemption of a
-      designation derived from it validates all applicable backing-grant
-      state (Section 8.2).  A Token Exchange that instead establishes a
-      redeemable grant lineage, such as the continuation profile's
-      delegation-family-creating exchange
-      ([I-D.draft-mcguinness-oauth-mission-continuation]), creates a new
-      grant binding, rooted in that same Mission.  Three Token Exchanges
-      are covered by the two items below instead: cross-domain
-      projection and child creation, which return a JWT authorization
-      grant, and expansion, which creates a successor.
+   *  *Issuance under an existing binding.* A Token Exchange derivation
+      ([RFC8693]) that returns only an access token establishes no new
+      grant lineage: ordinary in-Mission delegation (Section 8) and
+      self-exchange down-scoping (Section 7.5) both work this way, and
+      the issued token is a derived token (Section 7.8) whose mission
+      claim identifies the one Mission its subject_token resolved to.
+      Where the subject_token was issued under a grant lineage, the
+      issued token retains that grant provenance, and a later redemption
+      of a designation derived from it validates all applicable backing-
+      grant state (Section 8.2).  A Token Exchange that creates another
+      Mission, or that returns a grant for a Resource AS to consume,
+      falls under the third or fourth item instead.
 
-   *  *Cross-domain projection.* A cross-domain projection
-      ([I-D.draft-mcguinness-oauth-mission-cross-domain]) establishes no
-      destination-side grant binding.  A Resource AS consumes the cross-
-      domain grant, and the local access token it mints there is a
-      derived token: it identifies the one originating Mission
-      (mission.id, mission.issuer) but is not backed by a persistent
-      local lineage.  A Resource AS holds a destination-side grant
-      binding only where it separately establishes a redeemable grant
-      lineage mapped to the Mission, such as a refresh-token family.
+   *  *Establishing a new binding.* A Token Exchange that establishes a
+      redeemable grant lineage, such as by issuing a refresh token,
+      creates a new grant binding, rooted in the Mission its
+      subject_token resolved to.
 
-   *  *Child Missions and successors.* A Child Mission
-      ([I-D.draft-mcguinness-oauth-mission-child-delegation]) and an
-      expansion successor
-      ([I-D.draft-mcguinness-oauth-mission-expansion]) are new Missions.
-      Any grant binding or derived token they carry is their own under
-      the same rules, not an extension of the origin Mission's binding.
-      They relate to their origin only by lineage (the child's parent
-      member, the successor's predecessor member).
+   *  *Creating another Mission.* Missions created from an existing
+      Mission's authority are new Missions.  Any grant binding or
+      derived token they carry is their own under the same rules, not an
+      extension of the origin Mission's binding.  They relate to their
+      origin only by lineage, a record member their specification
+      defines (Section 6.2).
 
-   A decision-time runtime join, such as the Mission Join of
-   [I-D.draft-mcguinness-mission-authority-server], in which a policy
-   decision point joins an ordinary OAuth credential to a Mission per
-   request, is not a Mission grant binding: it does not make the joined
-   OAuth grant Mission-bound, and it rests on its own authenticated
-   inputs and evidence, never on a Mission grant binding.
+   *  *Transient exchange artifacts.* A grant the Mission issuer returns
+      for a Resource AS to consume establishes no destination-side grant
+      binding.  The Resource AS consumes it, and the local access token
+      it mints there is a derived token: it identifies the one
+      originating Mission (mission.id, mission.issuer) but is not backed
+      by a persistent local lineage.  A Resource AS holds a destination-
+      side grant binding only where it separately establishes a
+      redeemable grant lineage mapped to the Mission, such as a refresh-
+      token family.
+
+   *  *Runtime joins.* A decision-time runtime join, in which a policy
+      decision point joins an ordinary OAuth credential to a Mission per
+      request, is not a Mission grant binding: it does not make the
+      joined OAuth grant Mission-bound, and it rests on its own
+      authenticated inputs and evidence, never on a Mission grant
+      binding.
 
 6.4.3.  Mission State Across Bindings
 
@@ -11122,10 +11138,7 @@ Table of Contents
 
    A derivation is one issuance operation the issuer AS performs for a
    single request: the initial authorization-code exchange, a refresh, a
-   Token Exchange, a cross-domain grant issuance
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]), or the
-   redemption of a profile-defined grant, such as the Template profile's
-   handoff grant ([I-D.draft-mcguinness-oauth-mission-template]).  A
+   Token Exchange, or the redemption of a profile-defined grant.  A
    companion profile bounds the number of derivations under a Mission
    ([I-D.draft-mcguinness-oauth-mission-derivation-limits]).
 
@@ -11368,9 +11381,8 @@ Table of Contents
    the cost is the stolen-token exposure (Section 17.4.1).
 
    A delegated token is sender-constrained to the delegate's own key
-   (Section 8.2); the cross-domain companion requires sender-constraint
-   for credentials that cross a trust domain
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   (Section 8.2), and the Cross-Domain capability sender-constrains
+   every credential that crosses a trust domain (Section 15.2).
 
    An AS that issues Mission-bound JWT access tokens for resource
    servers to consume MUST publish its token verification keys (for
@@ -11621,10 +11633,7 @@ Table of Contents
 
    A credential the Mission Issuer derives MUST have an exp that does
    not exceed the Mission's expires_at, so that no credential outlives
-   the approved Mission.  The cross-domain companion
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) specifies how
-   this bound extends transitively to tokens minted in another trust
-   domain.
+   the approved Mission.
 
    Within that bound, a derived token's lifetime is the AS's policy,
    which Section 7.1.3 recommends keeping short.  Token Exchange does
@@ -11775,8 +11784,7 @@ Table of Contents
    issuer:  REQUIRED.  A string.  The Mission's issuer (Section 6.2).  A
       credential's iss names the party that minted it; mission.issuer
       names the party that approved and serves the Mission, and the two
-      differ for tokens minted in another trust domain
-      ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+      differ for tokens minted in another trust domain (Section 7.8.1).
 
    The id and issuer members identify the Mission and carry no authority
    of their own; the token's own signature authenticates the pair, and
@@ -12206,20 +12214,14 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).
 
    Because the policy lives in the entry, authority_hash commits it with
-   the rest of the Authority Set, and it is carried with the entries
-   wherever they go, including across a cross-domain projection where
-   that profile's provenance rule keeps it
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   the rest of the Authority Set.
 
    *Delegation depth.* The delegation depth of a token is the number of
    delegations between the approved agent and the token's current actor:
    the agent's own non-delegated token is depth 0, the first delegate is
    depth 1, and each further delegate adds 1.  The depth checked against
    max_depth is that of the token being issued, computed after appending
-   the new outermost actor, not the depth of the delegating token.  A
-   credential projected across a trust domain carries no act chain and
-   enters the target domain at depth 0
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   the new outermost actor, not the depth of the delegating token.
 
    *Depth accounting.* The AS MUST establish delegation depth from
    accounting it maintains for the tokens it issues under the Mission
@@ -12230,12 +12232,10 @@ Table of Contents
 
    Over the exchanges this document defines, the accounting is complete:
 
-   *  each delegated exchange adds exactly one delegate;
+   *  each delegated exchange adds exactly one delegate; and
 
    *  a designation (Section 8.1) and a self-exchange (Section 7.5) add
-      none; and
-
-   *  a cross-domain projection is the one defined reset.
+      none.
 
    A profile that issues Mission-bound tokens by another path specifies
    how it preserves or reconstructs this accounting and any reset it
@@ -13091,7 +13091,7 @@ Table of Contents
    | its type's validation or        |                                 |
    | verification (Section 4.4), or  |                                 |
    | a required evidence type        |                                 |
-   | absent                          |                                 |
+   | absent (Section 4.5)            |                                 |
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: invalid, unknown, or   | [RFC8707]).  Detail: safe       |
@@ -13364,10 +13364,9 @@ Table of Contents
 
                    Table 6: Protected resource challenges
 
-   In these tables, which evidence types are required follows
-   [I-D.draft-mcguinness-oauth-mission-submission-evidence], and
-   invalid_client_attestation is the error code that Section 5.2 of
-   [I-D.draft-mcguinness-oauth-client-instance-id] specifies.
+   In these tables, invalid_client_attestation is the error code that
+   Section 5.2 of [I-D.draft-mcguinness-oauth-client-instance-id]
+   specifies.
 
 12.  Authorization Server Metadata
 
@@ -13840,11 +13839,7 @@ Table of Contents
    under the dispatch and refusal rules (Section 4.4): a structurally
    invalid entry with the invalid_request error code, and any other
    entry, as an unsupported type, with the
-   invalid_mission_intent_evidence error code.  It need not implement
-   the evidence framework of
-   [I-D.draft-mcguinness-oauth-mission-submission-evidence] for this
-   configuration.  The companion defines conformance for ASs supporting
-   an evidence type, whether its evidence is optional or required.
+   invalid_mission_intent_evidence error code.
 
    A *Mission-aware Resource Server* implements resource server
    enforcement (Section 9.1).  It enforces a JWT from the token's own
@@ -13911,16 +13906,25 @@ Table of Contents
 
       3.  projection performed only by, or under the authorization of,
           the Mission issuer, gated on the Mission's active state
-          (Section 10, Section 7.1); and
+          (Section 10, Section 7.1);
 
       4.  projected credential lifetimes capped by the Mission's
-          expires_at (Section 7.6).
+          expires_at (Section 7.6);
+
+      5.  projected credentials sender-constrained to their presenter
+          (Section 7.2), never bearer credentials, each recipient
+          verifying the proof of possession and refusing a credential
+          whose binding is absent or invalid (Section 9.1); and
+
+      6.  renewal only through the Mission issuer: a projected grant is
+          redeemable once, and the other trust domain issues no renewal
+          authority on it, so a further credential there needs a new
+          projection.
 
       This bar is self-contained in this document.  The companion
       Mission Cross-Domain Projection profile
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) specifies the
-      interoperable mechanism that satisfies it, and implementations
-      that interoperate across the hop implement that companion.
+      interoperable mechanism that satisfies it.
 
    Mission Approved-Set Verification
    ([I-D.draft-mcguinness-oauth-mission-approved-set-verification])
@@ -14404,10 +14408,8 @@ Table of Contents
 18.1.  Mission Identifier Correlation
 
    This document carries a single canonical Mission Identifier on every
-   derived token, and cross-domain projection
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) carries it across
-   trust domains unchanged.  Any party that observes credentials for the
-   same Mission, whether a resource server, a Resource AS, or an auditor
+   derived token.  Any party that observes credentials for the same
+   Mission, whether a resource server, a Resource AS, or an auditor
    spanning audiences, can correlate that activity by the Mission
    Identifier, and mission.issuer further identifies the issuing AS.
 
@@ -15200,12 +15202,6 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-consent-
               evidence.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-continuation]
-              McGuinness, K., "Mission Continuation for OAuth 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-
-              continuation.html>.
-
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -15223,12 +15219,6 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-derivation-
               limits.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-device-authorization]
-              McGuinness, K., "Mission Device Authorization for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-device-
-              authorization.html>.
 
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
@@ -15276,11 +15266,6 @@ Table of Contents
               Writing an IANA Considerations Section in RFCs", BCP 26,
               RFC 8126, DOI 10.17487/RFC8126, June 2017,
               <https://www.rfc-editor.org/rfc/rfc8126>.
-
-   [RFC8628]  Denniss, W., Bradley, J., Jones, M., and H. Tschofenig,
-              "OAuth 2.0 Device Authorization Grant", RFC 8628,
-              DOI 10.17487/RFC8628, August 2019,
-              <https://www.rfc-editor.org/rfc/rfc8628>.
 
    [RFC8792]  Watsen, K., Auerswald, E., Farrel, A., and Q. Wu,
               "Handling Long Lines in Content of Internet-Drafts and
@@ -16138,7 +16123,7 @@ Appendix E.  Document History
    Policy appendices and other material on the family rather than the
    protocol move to the Architecture, the security analysis to the
    Mission Security Model, and the mechanics a companion profile defines
-   to that profile (#1794, #1892).
+   to that profile (#1794, #1892, #2009).
 
    *Editorial and structure.* The sections follow processing order, with
    Mission Creation, Mission-Bound Token Issuance, Delegation Within a
@@ -16152,8 +16137,9 @@ Appendix E.  Document History
    the Mission Mandate, and Mission Offline Attenuation as informative.
    FAPI Grant Management, the Cedar RAR draft, SPIFFE client
    authentication, Transaction Tokens, GNAP, the Attenuating Agent
-   Tokens draft, and the Containment, Progressive, and Work Products
-   companions are no longer cited.
+   Tokens draft, RFC 8628, and the Containment, Continuation, Device
+   Authorization, Progressive, and Work Products companions are no
+   longer cited.
 
    -01
 
@@ -19468,34 +19454,37 @@ Table of Contents
    The following are the RECOMMENDED default freshness postures per
    class, adopted absent a documented, consequence-specific analysis:
 
-      +================+============================================+
-      | Class          | Suggested freshness posture                |
-      +================+============================================+
-      | Consequential  | Token lifetime or a short state lease;     |
-      | read           | tighter for privacy-sensitive, cross-      |
-      |                | tenant, or bulk reads                      |
-      +----------------+--------------------------------------------+
-      | Consequential  | A short state lease, typically measured in |
-      | write          | minutes                                    |
-      +----------------+--------------------------------------------+
-      | Irreversible   | Active source required; immediate check or |
-      | action         | single-use permit, target under 300 s      |
-      +----------------+--------------------------------------------+
-      | External       | Active source required; immediate check or |
-      | commitment     | single-use permit, plus an egress PEP for  |
-      |                | external communication, target under 300 s |
-      +----------------+--------------------------------------------+
-      | Privileged     | Active source required; immediate check,   |
-      | administration | suitable for composition with local step-  |
-      |                | up, target under 300 s                     |
-      +----------------+--------------------------------------------+
-      | Audit-only     | No active freshness required               |
-      +----------------+--------------------------------------------+
+        +================+=======================================+
+        | Class          | Suggested freshness posture           |
+        +================+=======================================+
+        | Consequential  | Token lifetime or a short state       |
+        | read           | lease; tighter for privacy-sensitive, |
+        |                | cross-tenant, or bulk reads           |
+        +----------------+---------------------------------------+
+        | Consequential  | A short state lease, typically        |
+        | write          | measured in minutes                   |
+        +----------------+---------------------------------------+
+        | Irreversible   | Active source required; immediate     |
+        | action         | check or single-use permit, target    |
+        |                | under 300 s                           |
+        +----------------+---------------------------------------+
+        | External       | Active source required; immediate     |
+        | commitment     | check or single-use permit, target    |
+        |                | under 300 s                           |
+        +----------------+---------------------------------------+
+        | Privileged     | Active source required; immediate     |
+        | administration | check, suitable for composition with  |
+        |                | local step-up, target under 300 s     |
+        +----------------+---------------------------------------+
+        | Audit-only     | No active freshness required          |
+        +----------------+---------------------------------------+
 
-                                  Table 1
+                                 Table 1
 
-   A deployment justifies any looser value for a high-consequence class
-   in its Enforcement Scope Statement.
+   For an external-communication action (Section 5.4), whatever its
+   class, each of these default postures also includes an egress PEP
+   (Section 5.6).  A deployment justifies any looser value for a high-
+   consequence class in its Enforcement Scope Statement.
 
    For a Mission carrying a nonzero containment overlay
    ([I-D.draft-mcguinness-oauth-mission-containment]), the RECOMMENDED
@@ -20882,57 +20871,62 @@ Table of Contents
    document defines a default classification a deployment SHOULD adopt,
    and a floor it MUST observe.
 
-   +===================+==================+==========+================+
-   | Class             | Examples         | PDP gate | Parameter      |
-   |                   |                  |          | binding        |
-   +===================+==================+==========+================+
-   | Non-consequential | internal         | not      | n/a            |
-   |                   | reasoning, cache | required |                |
-   |                   | reads, planning  |          |                |
-   +-------------------+------------------+----------+----------------+
-   | Consequential     | reading user     | MUST     | not required   |
-   | read              | data, querying   |          |                |
-   |                   | logged APIs      |          |                |
-   +-------------------+------------------+----------+----------------+
-   | Consequential     | updating         | MUST     | MUST           |
-   | write             | records, posting |          |                |
-   |                   | messages         |          |                |
-   +-------------------+------------------+----------+----------------+
-   | Irreversible      | sending mail,    | MUST     | MUST, with     |
-   | action            | payment,         |          | TOCTOU         |
-   |                   | deletion         |          | reverification |
-   |                   |                  |          | and evidence   |
-   +-------------------+------------------+----------+----------------+
-   | External          | signing,         | MUST     | MUST, with     |
-   | commitment        | accepting terms  |          | TOCTOU         |
-   |                   | for the user     |          | reverification |
-   |                   |                  |          | and evidence   |
-   +-------------------+------------------+----------+----------------+
-   | Privileged        | granting access, | MUST     | MUST, with     |
-   | administration    | changing policy  |          | TOCTOU and     |
-   |                   |                  |          | evidence       |
-   +-------------------+------------------+----------+----------------+
+    +===================+================+==========+================+
+    | Class             | Examples       | PDP gate | Parameter      |
+    |                   |                |          | binding        |
+    +===================+================+==========+================+
+    | Non-consequential | internal       | not      | n/a            |
+    |                   | reasoning,     | required |                |
+    |                   | cache reads,   |          |                |
+    |                   | planning       |          |                |
+    +-------------------+----------------+----------+----------------+
+    | Consequential     | reading user   | MUST     | not required   |
+    | read              | data, querying |          |                |
+    |                   | logged APIs    |          |                |
+    +-------------------+----------------+----------+----------------+
+    | Consequential     | updating       | MUST     | MUST           |
+    | write             | records,       |          |                |
+    |                   | posting        |          |                |
+    |                   | messages       |          |                |
+    +-------------------+----------------+----------+----------------+
+    | Irreversible      | sending mail,  | MUST     | MUST, with     |
+    | action            | payment,       |          | TOCTOU         |
+    |                   | deletion       |          | reverification |
+    |                   |                |          | and evidence   |
+    +-------------------+----------------+----------+----------------+
+    | External          | signing,       | MUST     | MUST, with     |
+    | commitment        | accepting      |          | TOCTOU         |
+    |                   | terms for the  |          | reverification |
+    |                   | user, payment, |          | and evidence   |
+    |                   | sending mail   |          |                |
+    +-------------------+----------------+----------+----------------+
+    | Privileged        | granting       | MUST     | MUST, with     |
+    | administration    | access,        |          | TOCTOU and     |
+    |                   | changing       |          | evidence       |
+    |                   | policy         |          |                |
+    +-------------------+----------------+----------+----------------+
 
                                  Table 5
 
    The table's per-class requirements (the PDP gate and parameter
    binding) are requirements for an action *once it is assigned to that
-   class*. Assigning an action to a class is deployment policy, bounded
-   by the floor below and by any Resource-policy minimum (Section 7):
-   the profile does not require every read to reach a PDP.  A read that
-   is already fully constrained by the token's audience, resource, and
-   the resource server's object-level authorization, and that does not
-   materially affect the resource set or disclosure risk, need not be
-   classified a consequential read, and is then not separately PDP-gated
-   by this profile.  A request that does reach the PDP within a mediated
-   scope with no action class established, where the Enforcement Scope
-   Statement declares action classes, is a request fault: it is refused
-   before evaluation, never evaluated under a class it was not assigned,
-   and no class is recorded for it
-   ([I-D.draft-mcguinness-mission-runtime-evidence]).  A deployment MUST
-   NOT, however, use classification to evade the floor or a Resource-
-   policy minimum, and once an action is a consequential write or higher
-   it MUST be gated and bound as the table requires.
+   class*, and for an action that satisfies that class's predicate under
+   the multi-predicate rule below.  Assigning an action to a class is
+   deployment policy, bounded by the floor below and by any Resource-
+   policy minimum (Section 7): the profile does not require every read
+   to reach a PDP.  A read that is already fully constrained by the
+   token's audience, resource, and the resource server's object-level
+   authorization, and that does not materially affect the resource set
+   or disclosure risk, need not be classified a consequential read, and
+   is then not separately PDP-gated by this profile.  A request that
+   does reach the PDP within a mediated scope with no action class
+   established, where the Enforcement Scope Statement declares action
+   classes, is a request fault: it is refused before evaluation, never
+   evaluated under a class it was not assigned, and no class is recorded
+   for it ([I-D.draft-mcguinness-mission-runtime-evidence]).  A
+   deployment MUST NOT, however, use classification to evade the floor
+   or a Resource-policy minimum, and once an action is a consequential
+   write or higher it MUST be gated and bound as the table requires.
 
    One predicate cuts across the classes.  An *external-communication
    action* is a consequential action, of any class, whose effect carries
@@ -20943,7 +20937,8 @@ Table of Contents
    class's requirements, and rules stated over "external-communication
    and external-commitment actions" (the taint rule, trifecta
    containment, egress metering) apply to any action satisfying the
-   predicate or classified external_commitment.
+   external-communication or External commitment predicate, whatever its
+   class, and to any action classified external_commitment.
 
    The three highest classes are defined by predicates; the table's
    examples illustrate them:
@@ -20958,6 +20953,30 @@ Table of Contents
    Privileged administration:  the action changes who holds authority or
       how authority is evaluated.
 
+   An action can satisfy more than one predicate: a payment to an
+   outside party, or mail sent outside the deployment, is irreversible
+   and also binds the Subject to that party, so the table lists each
+   under both classes.  Every requirement of each class whose predicate
+   the action satisfies applies to it: classification under one class
+   MUST NOT waive a requirement arising from another applicable
+   predicate.  Where requirements impose comparable bounds, the tighter
+   bound applies.  Where they are not comparable, each applies, and an
+   action that cannot satisfy every applicable requirement is refused.
+   An exception stated for one class or predicate relieves only the
+   requirement it names, never one that another applicable predicate
+   imposes.
+
+   The classes are ordered only in part: consequential read ranks above
+   non-consequential, consequential write above consequential read, and
+   each of the three highest classes above consequential write, while
+   the three highest classes are not ordered among themselves.  An
+   action is at or above a class when a class that applies to it is that
+   class or ranks above it, and raising, lowering, and a stricter class
+   refer to this order.  A minimum classification is met only by an
+   action at or above it, so a minimum of one of the three highest
+   classes is met only where that class applies.  Audit-only, a
+   freshness posture (Section 2.5), is outside this order.
+
    Classification remains deployment-scoped: each deployment applies the
    predicates to its own actions and systems.  The predicates make the
    resulting classifications comparable across deployments and
@@ -20970,10 +20989,10 @@ Table of Contents
    invocation, from its normalized parameters, by a classifier the
    deployment declares in its Enforcement Scope Statement (Section 5.2).
    An invocation the classifier cannot affirmatively place MUST be
-   treated as the widest class the operation can reach, and the floor
-   below applies to the classifier's assignments as to any other: a
-   class the deployment cannot justify by its predicate is not a basis
-   to leave the invocation ungated.
+   treated under every class the operation can reach, taking the
+   requirements of each, and the floor below applies to the classifier's
+   assignments as to any other: a class the deployment cannot justify by
+   its predicate is not a basis to leave the invocation ungated.
 
    *Classification floor.* Four rules bound classification:
 
@@ -22390,9 +22409,10 @@ Table of Contents
       rule; otherwise the harness does, and the scope statement says
       which.
 
-   *  *External communication.* The external-communication and external-
-      commitment classes are mediated: no unmediated path, the scope
-      statement's egress-channel enumeration covers them
+   *  *External communication.* Every action that satisfies the
+      external-communication or External commitment predicate
+      (Section 5.4), whatever its class, is mediated: no unmediated
+      path, the scope statement's egress-channel enumeration covers it
       ([I-D.draft-mcguinness-mission-harness]), and the sender-
       constraint keys are held by the mediating PEP (Section 5.7).
 
@@ -23921,6 +23941,27 @@ Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Classes are ordered only in part, and the three highest are not
+      ordered among themselves; an invocation the classifier cannot
+      place is treated under every class the operation can reach.
+      Trifecta containment's external-communication leg reaches every
+      action that satisfies the external-communication or External
+      commitment predicate, whatever its class.  A minimum class is met
+      only by an action at or above it, and Audit-only is outside the
+      order (#1994).
+
+   *  Changes a requirement (#1735, D1153, D1164): an action that
+      satisfies more than one class predicate takes the requirements of
+      every class whose predicate it satisfies, and classification under
+      one class waives none of them.  Comparable bounds resolve to the
+      tighter; otherwise each applies, and an action that cannot satisfy
+      every applicable requirement is refused.  The External commitment
+      examples add payment and sending mail, and the egress PEP is
+      stated once, for any external-communication action.  An exception
+      relieves only the requirement it names, and the rules stated over
+      external-communication and external-commitment actions apply
+      wherever either predicate holds.
+
    *  Changes a requirement (#854, D814): the record retention floor is
       the Mission's retention period as its Mission Substrate Binding
       declares it, realized in the OAuth binding as the audit horizon
@@ -24640,13 +24681,21 @@ Table of Contents
       The PDP computes and records it directly; no decision-API wire
       echo is required.
 
-   action_class:  REQUIRED.  A string.  The runtime action class the PDP
-      applied to the action: one of consequential_read,
+   action_class:  REQUIRED.  A string.  The runtime action class
+      assigned to the action: one of consequential_read,
       consequential_write, irreversible_action, external_commitment, or
       privileged_administration, naming the classes of
       [I-D.draft-mcguinness-mission-runtime].  Every decision this
       document records is on a consequential action, so the member is
       always present.
+
+   action_classes:  REQUIRED when more than one runtime action class
+      applies to the action ([I-D.draft-mcguinness-mission-runtime],
+      Section "Action Classification"); omitted otherwise.  An array of
+      distinct strings from the value space of action_class: every class
+      whose requirements the PDP applied, action_class among them.
+      action_class remains the class assigned to the action, which
+      class_source describes.
 
    class_source:  REQUIRED when action_class is present.  A string.  How
       the applied class was assigned: default (the runtime profile's
@@ -24900,18 +24949,20 @@ Table of Contents
       requesting PEP is authorized for
       ([I-D.draft-mcguinness-mission-authzen]),
       operation_target_invalid; for a mediated request with no action
-      class established, where the runtime Enforcement Scope Statement
-      declares action classes, action_class_missing, recorded with no
-      class; for one whose action phase is outside the defined set, or
-      is absent where the PDP's trusted operation declaration requires a
-      phase, phase_invalid; for a compensate-phase request with no
-      compensates_evaluation_id, or a request whose
-      compensates_evaluation_id is malformed, compensation_link_invalid;
-      for one whose evaluation-context binding inputs are missing,
-      malformed, or incompatible with the declared binding, for an
-      operation the runtime profile's Evaluation-Context Binding
-      extension covers, evaluation_context_invalid; and for one carrying
-      a work-item context that is not well-formed (the harness profile,
+      class established (none carried or assigned, or a carried class
+      other than the one the PDP's trusted declaration assigns), where
+      the runtime Enforcement Scope Statement declares action classes,
+      action_class_missing, recorded with no class; for one whose action
+      phase is outside the defined set, or is absent where the PDP's
+      trusted operation declaration requires a phase, phase_invalid; for
+      a compensate-phase request with no compensates_evaluation_id, or a
+      request whose compensates_evaluation_id is malformed,
+      compensation_link_invalid; for one whose evaluation-context
+      binding inputs are missing, malformed, or incompatible with the
+      declared binding, for an operation the runtime profile's
+      Evaluation-Context Binding extension covers,
+      evaluation_context_invalid; and for one carrying a work-item
+      context that is not well-formed (the harness profile,
       [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
       last four describe decision inputs the PDP cannot use, not an
       evaluated policy denial; evaluation_context_unresolvable is
@@ -27151,6 +27202,14 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Decision Evidence: action_classes records every class whose
+      requirements the PDP applied, when more than one applies;
+      action_class is defined as the assigned class (#1994).
+
+   *  Refusal Record: action_class_missing also records a mediated
+      request carried with a class other than the one the PDP's trusted
+      declaration assigns (#1994).
+
    *  Refusal Record: action_class_missing records a PDP refusal of a
       mediated request with no action class established, where the
       runtime Enforcement Scope Statement declares classes, with no
@@ -28389,8 +28448,8 @@ Table of Contents
       owned by the harness profile
       ([I-D.draft-mcguinness-mission-harness]), which defines the
       predicate and how the PEP computes it.  REQUIRED for every action
-      in a class for which the deployment declares PDP-enforced taint;
-      OPTIONAL otherwise.
+      to which a class applies for which the deployment declares PDP-
+      enforced taint; OPTIONAL otherwise.
 
 5.13.  Taint Context
 
@@ -28399,10 +28458,11 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-harness]), which defines the member
       shape (tainted, granularity, source_class) and the taint-state
       trust rules.  Where the deployment's Enforcement Scope Statement
-      declares PDP-enforced taint for the action's class, the fail-
-      closed default applies: the PDP MUST deny with
-      taint_context_missing (Section 6.5) when context.taint is absent
-      from an in-scope decision.
+      declares PDP-enforced taint for a class that applies to the action
+      ([I-D.draft-mcguinness-mission-runtime], Section "Action
+      Classification"), the fail-closed default applies: the PDP MUST
+      deny with taint_context_missing (Section 6.5) when context.taint
+      is absent from an in-scope decision.
 
 5.14.  Work-Item Context
 
@@ -28426,11 +28486,11 @@ Table of Contents
    context.work_item is present but not of that shape: an unusable
    input, recorded as the Refusal Record work_item_invalid
    (Section 6.8), never an evaluated denial.  Where the deployment's
-   Enforcement Scope Statement claims work-item attribution for the
-   action's class, the PDP MUST deny with work_item_context_missing
-   (Section 6.5) a decision from which context.work_item is absent.
-   Elsewhere its absence relaxes nothing, and the deployment claims
-   Mission-level attribution only.
+   Enforcement Scope Statement claims work-item attribution for a class
+   that applies to the action, the PDP MUST deny with
+   work_item_context_missing (Section 6.5) a decision from which
+   context.work_item is absent.  Elsewhere its absence relaxes nothing,
+   and the deployment claims Mission-level attribution only.
 
    The member is part of the authorization binding and the cache key
    (Section 5.17), so no cached decision or resumed execution crosses
@@ -28510,12 +28570,15 @@ Table of Contents
    This document defines one predicate type that policy MAY name,
    action_class_completed.  It is satisfied when the PDP's evidence
    store holds, for the established Mission, at least one Decision
-   Evidence record with decision permit and a named action_class, and
-   every such record has a linked Execution Evidence record
+   Evidence record with decision permit to which the named class
+   applied, and every such record has a linked Execution Evidence record
    ([I-D.draft-mcguinness-mission-runtime-evidence]) whose outcome is
-   completed.  The predicate carries an action_class: a runtime action
-   class name, from the same value space as the Decision Evidence
-   action_class member
+   completed.  The named class applied to a record when its
+   action_classes member lists that class or, in a record without
+   action_classes, its action_class is that class, so an execution the
+   class applied to counts whichever class was assigned.  The predicate
+   carries an action_class: a runtime action class name, from the same
+   value space as the Decision Evidence action_class member
    ([I-D.draft-mcguinness-mission-runtime-evidence]).  For a migration
    Mission whose copy steps are consequential writes, policy names the
    delete step's precondition this way:
@@ -28786,11 +28849,12 @@ Table of Contents
    Likewise, where the runtime Enforcement Scope Statement declares
    action classes, a mediated request that reaches the PDP with no
    action class established, neither carried from the PEP's Operation
-   Profile nor assigned by the PDP's own trusted declaration, is
-   malformed: the PDP MUST refuse it before evaluation, MUST NOT
-   evaluate it under a default class or record a class in Decision
-   Evidence, and MUST record the refusal as a Refusal Record with
-   denial_reason action_class_missing
+   Profile nor assigned by the PDP's own trusted declaration, or carried
+   with a class other than the one that declaration assigns its
+   operation and phase, is malformed: the PDP MUST refuse it before
+   evaluation, MUST NOT evaluate it under a default class or record a
+   class in Decision Evidence, and MUST record the refusal as a Refusal
+   Record with denial_reason action_class_missing
    ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
    In addition to evaluating the decision inputs the runtime profile
@@ -29520,14 +29584,15 @@ Table of Contents
       next_action values Section 5.15 lists.
 
    *  taint_context_missing: the deployment declares PDP-enforced taint
-      for the action's class, as the harness profile defines
-      ([I-D.draft-mcguinness-mission-harness]), and the decision request
-      carries no context.taint (Section 5.13).
+      for a class that applies to the action, as the harness profile
+      defines ([I-D.draft-mcguinness-mission-harness]), and the decision
+      request carries no context.taint (Section 5.13).
 
    *  work_item_context_missing: the deployment claims work-item
-      attribution for the action's class and the decision request
-      carries no context.work_item (Section 5.14).  A malformed one is
-      the pre-evaluation refusal work_item_invalid instead.
+      attribution for a class that applies to the action and the
+      decision request carries no context.work_item (Section 5.14).  A
+      malformed one is the pre-evaluation refusal work_item_invalid
+      instead.
 
    *  stale_state: the Mission state the decision relies on is not
       current: the PEP-supplied freshness is outside the deployment's
@@ -29895,7 +29960,10 @@ Table of Contents
    |mediated request where   |           |                                 |
    |the Enforcement Scope    |           |                                 |
    |Statement declares action|           |                                 |
-   |classes, at the PDP      |           |                                 |
+   |classes, or a carried    |           |                                 |
+   |class other than the one |           |                                 |
+   |the PDP's declaration    |           |                                 |
+   |assigns, at the PDP      |           |                                 |
    +-------------------------+-----------+---------------------------------+
    |action_phase outside the |Refusal    |phase_invalid                    |
    |closed set, or absent    |Record     |                                 |
@@ -29992,7 +30060,8 @@ Table of Contents
    |Work-item context absent |PDP denial |work_item_context_missing        |
    |where work-item          |           |                                 |
    |attribution is claimed   |           |                                 |
-   |for the action's class   |           |                                 |
+   |for a class that applies |           |                                 |
+   |to the action            |           |                                 |
    +-------------------------+-----------+---------------------------------+
    |Required act chain       |PDP denial |actor_invalid                    |
    |missing or malformed     |           |                                 |
@@ -30346,9 +30415,9 @@ Table of Contents
    *  denial_reason carries the value returned in context.reason
       (Section 6.5).
 
-   *  action_class, class_source, and mission_state_version are not on
-      this profile's wire: the PDP computes them and records them
-      directly.
+   *  action_class, action_classes, class_source, and
+      mission_state_version are not on this profile's wire: the PDP
+      computes them and records them directly.
 
    The runtime evidence companion's integrity envelope is this profile's
    one signing convention for evidence objects: the default envelope
@@ -30931,6 +31000,18 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Changes a requirement (#1994): a mediated request carried with an
+      action class other than the one the PDP's trusted declaration
+      assigns its operation and phase has no class established, and the
+      PDP refuses it before evaluation as action_class_missing.
+
+   *  Taint, Work-Item and History Context: PDP-enforced taint, the
+      external_communication member and work-item attribution apply when
+      a class that applies to the action calls for them, and
+      action_class_completed counts a permit when the named class is in
+      its action_classes, or is its action_class where the record
+      carries no action_classes (#1994).
 
    *  Credential Decision Context: requiring a credential's whole
       authority description to be evaluable is this profile's credential

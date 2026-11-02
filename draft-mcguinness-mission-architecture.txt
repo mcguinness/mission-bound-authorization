@@ -3120,8 +3120,16 @@ Table of Contents
    Between those two architectures sits the issuance join
    ([I-D.draft-mcguinness-oauth-mission-issuance-grant]): the MAS
    remains the Mission Issuer while estate authorization servers redeem
-   Mission Issuance Grants for Mission-bound, state-gated tokens,
-   restoring the token-layer chokepoint without moving approval.
+   Mission Issuance Grants for Mission-bound tokens, restoring the
+   token-layer chokepoint without moving approval.  The MAS mints a
+   grant only for an active Mission.  A consuming AS with a Mission-
+   state integration also checks the Mission at redemption and at every
+   refresh.  Without a Mission-state integration, the consuming AS
+   issues no refresh tokens, and its revocation latency, the summed
+   residual of Section 10.4, includes every interval during which the
+   path can proceed without another state check, including pending
+   authorization requests and authorization codes under PAR carriage, as
+   Issuance Grant's Security Considerations specifies.
 
 11.  Mission Assurance Levels
 
@@ -3270,11 +3278,21 @@ Table of Contents
       summed residual of Section 10.4 where it does not).
 
       Runtime-Enforced is the smallest deployment that turns a Mission
-      from governed issuance into action-time defense.  Every normative
-      dependency it needs is a family document intended for the
-      Standards Track.  It is a substantial build, not a wedge: a
-      deployment sizes the effort from the runtime profile's conformance
-      section rather than from this level's one-line summary.
+      from governed issuance into action-time defense.  Every family
+      document it depends on normatively is intended for the Standards
+      Track.  Outside the family, the level's documents cite normatively
+      two AuthZEN working-group drafts, from the AuthZEN profile
+      ([AuthZEN.ARAP], [AuthZEN.Obligations]), and, with the OAuth
+      binding, an OAuth working-group draft
+      ([I-D.draft-ietf-oauth-rar-metadata-remediation]) and two
+      individual drafts ([I-D.draft-mcguinness-oauth-actor-profile] and,
+      also cited by the AuthZEN profile,
+      [I-D.draft-mcguinness-oauth-client-instance-id]).  A family
+      document they cite, such as Cross-Domain Projection, carries its
+      own dependencies.  The level is a substantial build, not a wedge:
+      a deployment sizes the effort from the runtime profile's
+      conformance section rather than from this level's one-line
+      summary.
 
       *Proof obligations*: PEP-placement completeness and the declared
       freshness source and bound.
@@ -4624,6 +4642,11 @@ Table of Contents
               <https://openid.github.io/authzen/authzen-access-request-
               approval-profile-1_0.html>.
 
+   [AuthZEN.Obligations]
+              OpenID Foundation, "OpenID AuthZEN Obligations Profile
+              1.0", 2026, <https://openid.github.io/authzen/authzen-
+              obligations-profile-1_0.html>.
+
    [FAPI.GrantManagement]
               OpenID Foundation, "Grant Management for OAuth 2.0", 2023,
               <https://openid.net/specs/oauth-v2-grant-management.html>.
@@ -4778,6 +4801,13 @@ Table of Contents
               Managed Access (UMA) 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-uma.html>.
+
+   [I-D.draft-mcguinness-oauth-actor-profile]
+              McGuinness, K., "OAuth Actor Profile for Delegation", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              profile-01, 8 October 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
@@ -6399,6 +6429,14 @@ Appendix I.  Mission Document Map
 Appendix J.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Runtime-Enforced names its normative dependencies outside the
+      family: two AuthZEN working-group drafts, and, with the OAuth
+      binding, an OAuth working-group draft and two individual drafts.
+      The issuance-join summary states both consuming-AS modes and, for
+      the mode without a Mission-state integration, points to Issuance
+      Grant's Security Considerations for every interval its revocation
+      latency includes.  No requirement changed (#1090).
 
    *  Standing consent is cited from Approval Governance's Approval
       Basis Contract.  No requirement changed (#1915).

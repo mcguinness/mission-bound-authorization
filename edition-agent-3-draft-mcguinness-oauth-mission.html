@@ -2038,9 +2038,7 @@ rule that registration triggers.<a href="#section-3.1-1.12.1" class="pilcrow">¶
           <dd style="margin-left: 1.5em" id="section-3.1-1.16">
             <p id="section-3.1-1.16.1">An authorization server in another trust domain that honors a
 Mission it did not issue, minting its own tokens for its resources;
-it is never the Mission Issuer. The companion Mission Cross-Domain
-Projection profile specifies cross-domain projection
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-3.1-1.16.1" class="pilcrow">¶</a></p>
+it is never the Mission Issuer.<a href="#section-3.1-1.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.1-1.17">Mission Intent:</dt>
@@ -2092,9 +2090,8 @@ proposal, in narrowing or configured-mapping mode
           <dd style="margin-left: 1.5em" id="section-3.1-1.30">
             <p id="section-3.1-1.30.1">One issuance operation the issuer AS performs for a single request
 (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>): the initial authorization-code exchange, a
-refresh, a Token Exchange, a cross-domain grant issuance, or the
-redemption of a profile-defined grant, such as the Template
-profile's handoff grant.
+refresh, a Token Exchange, or the redemption of a profile-defined
+grant.
 Distinct from Authority Set derivation, which some section titles
 and fixed phrases, such as "derivation policy", also call
 derivation.<a href="#section-3.1-1.30.1" class="pilcrow">¶</a></p>
@@ -2228,11 +2225,7 @@ identifier as <code>subject.iss</code> and <code>subject.sub</code>: the externa
 identity, carried as provenance for audit and not on the token. This
 document defines no runtime lookup of it.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
 <p id="section-3.2-5">The record's (<code>subject.iss</code>, <code>subject.sub</code>) and the token's (AS
-<code>iss</code>, <code>sub</code>) identify the same Subject in two issuer namespaces.
-Across trust domains, the cross-domain companion conveys Subject
-identity through its own subject-resolution claims, not a Mission
-lookup, and a token minted in another domain preserves the <code>mission</code>
-claim unchanged (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<code>iss</code>, <code>sub</code>) identify the same Subject in two issuer namespaces.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
 <p id="section-3.2-6">Issuer roles obey two invariants: a Mission has exactly one Mission
 Issuer, its <code>issuer</code>, and a Resource AS never creates or alters a
 Mission.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
@@ -2578,9 +2571,7 @@ members are unknown envelope members.<a href="#section-4.2.1-5.2.1" class="pilcr
 total size, the Intent's total size and the lengths of its arrays,
 and the count and per-entry sizes of <code>evidence</code> entries, refusing
 a submission that exceeds the deployment-defined limits with
-<code>invalid_request</code>. The verification-cost bound of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>
-accompanies these.<a href="#section-4.2.1-5.3.1" class="pilcrow">¶</a></p>
+<code>invalid_request</code>.<a href="#section-4.2.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 <p id="section-4.2.1-6">The following is an example of a Submission envelope carrying a
@@ -2689,11 +2680,6 @@ approval relocated only as <a href="#extensibility" class="auto internal xref">S
               <p id="section-4.2.3-3.5.1">the grant binding (<a href="#grant-binding" class="auto internal xref">Section 6.4</a>).<a href="#section-4.2.3-3.5.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-4.2.3-4">The experimental Mission Device Authorization profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-device-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-device-authorization</a>]</span>) defines
-such a carriage for a client that cannot complete the
-authorization-code path, on the device authorization grant
-<span>[<a href="#RFC8628" class="cite xref">RFC8628</a>]</span>.<a href="#section-4.2.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3963,10 +3949,8 @@ or defined by the profile that uses it.<a href="#section-6.2-5" class="pilcrow">
 <code>issuer</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-6.2.1-1.4">
               <p id="section-6.2.1-1.4.1"><span class="bcp14">REQUIRED</span>. A string. The issuer URL of the Mission Issuer that
-approved the Mission. Equals the <code>iss</code> of tokens that AS derives;
-for cross-domain tokens it remains the issuer AS that approved the
-Mission even though the issuing <code>iss</code> differs
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-6.2.1-1.4.1" class="pilcrow">¶</a></p>
+approved the Mission. Equals the <code>iss</code> of tokens that AS derives
+(<a href="#mission-claim" class="auto internal xref">Section 7.8</a>).<a href="#section-6.2.1-1.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-6.2.1-1.5">
@@ -4693,8 +4677,8 @@ redemption emits one, the refresh-token family that follows it; or<a href="#sect
 </li>
           <li class="normal" id="section-6.4-4.2">
             <p id="section-6.4-4.2.1">another profile-defined reusable grant, such as a refresh-token
-family a continuation transport establishes later for the same
-Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>).<a href="#section-6.4-4.2.1" class="pilcrow">¶</a></p>
+family a Token Exchange establishes later for the same Mission
+(<a href="#grant-binding-related" class="auto internal xref">Section 6.4.2</a>).<a href="#section-6.4-4.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="grant-binding-resolution">
@@ -4735,16 +4719,15 @@ identified by its client authentication, <a href="#delegated-exchange" class="au
 </li>
             <li class="normal" id="section-6.4.1-5.4">
               <p id="section-6.4.1-5.4.1">a profile-defined grant, through the authenticated <code>mission</code>
-reference it carries, such as the Template profile's handoff grant
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>).<a href="#section-6.4.1-5.4.1" class="pilcrow">¶</a></p>
+reference it carries.<a href="#section-6.4.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 <p id="section-6.4.1-6">It then applies the gating of <a href="#issuance-gating" class="auto internal xref">Section 7.1</a>.<a href="#section-6.4.1-6" class="pilcrow">¶</a></p>
 <p id="section-6.4.1-7">A Mission <span class="bcp14">MAY</span> carry zero or more grant bindings. Beyond any
 authorization-code lineage established at approval, a refresh-token
-family a continuation transport establishes later (above) is a
-further binding, or the Mission's first where it has none, rooted in
-the Mission its own <code>subject_token</code> resolved to.<a href="#section-6.4.1-7" class="pilcrow">¶</a></p>
+family a Token Exchange establishes later (above) is a further
+binding, or the Mission's first where it has none, rooted in the
+Mission its own <code>subject_token</code> resolved to.<a href="#section-6.4.1-7" class="pilcrow">¶</a></p>
 <p id="section-6.4.1-8">The AS <span class="bcp14">MUST</span> resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
 lineage's lifetime and is never reassigned to a different Mission.
@@ -4754,10 +4737,7 @@ closed on that lineage.<a href="#section-6.4.1-8" class="pilcrow">¶</a></p>
 Identifier alongside a credential, the identifier is a
 non-authoritative cross-check: the AS <span class="bcp14">MUST</span> verify it against the
 Mission the credential resolves to and refuse a mismatch with the
-<code>invalid_grant</code> error code. The <code>predecessor</code> parameter of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span> is an example: it
-selects the Mission a successor is created from and does not reassign
-an existing binding.<a href="#section-6.4.1-9" class="pilcrow">¶</a></p>
+<code>invalid_grant</code> error code.<a href="#section-6.4.1-9" class="pilcrow">¶</a></p>
 <p id="section-6.4.1-10">Because the grant, not the identifier, determines the Mission, a
 client does not supply <code>mission_id</code> to obtain a derivation, and an AS
 <span class="bcp14">MUST NOT</span> derive Mission-bound authority from a client-supplied
@@ -4772,53 +4752,52 @@ client does not supply <code>mission_id</code> to obtain a derivation, and an AS
 <p id="section-6.4.2-1">The grant binding relates to other mechanisms as follows:<a href="#section-6.4.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6.4.2-2.1">
-              <p id="section-6.4.2-2.1.1"><strong>Token Exchange.</strong> A Token Exchange derivation (<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>) that
-returns only an access token establishes no new grant lineage:
-ordinary in-Mission delegation (<a href="#delegation" class="auto internal xref">Section 8</a>) and self-exchange
-down-scoping (<a href="#self-exchange" class="auto internal xref">Section 7.5</a>) both work this way, and the issued
-token is a derived token (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>) whose <code>mission</code> claim
-identifies the one Mission its <code>subject_token</code> resolved to. Where
-the <code>subject_token</code> was issued under a grant lineage, the issued
-token retains that grant provenance, and a later redemption of a
-designation derived from it validates all applicable backing-grant
-state (<a href="#delegated-exchange" class="auto internal xref">Section 8.2</a>). A Token
-Exchange that instead establishes a redeemable grant
-lineage, such as the continuation profile's
-delegation-family-creating exchange
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), creates a
-new grant binding, rooted in that same Mission. Three Token
-Exchanges are covered by the two items below instead: cross-domain
-projection and child creation, which return a JWT authorization
-grant, and expansion, which creates a successor.<a href="#section-6.4.2-2.1.1" class="pilcrow">¶</a></p>
+              <p id="section-6.4.2-2.1.1"><strong>Issuance under an existing binding.</strong> A Token Exchange derivation
+(<span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>) that returns only an access token establishes no new
+grant lineage: ordinary in-Mission delegation (<a href="#delegation" class="auto internal xref">Section 8</a>) and
+self-exchange down-scoping (<a href="#self-exchange" class="auto internal xref">Section 7.5</a>) both work this way,
+and the issued token is a derived token (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>) whose
+<code>mission</code> claim identifies the one Mission its <code>subject_token</code>
+resolved to. Where the <code>subject_token</code> was issued under a grant
+lineage, the issued token retains that grant provenance, and a later
+redemption of a designation derived from it validates all applicable
+backing-grant state (<a href="#delegated-exchange" class="auto internal xref">Section 8.2</a>). A Token Exchange that
+creates another Mission, or that returns a grant for a Resource AS
+to consume, falls under the third or fourth item instead.<a href="#section-6.4.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.4.2-2.2">
-              <p id="section-6.4.2-2.2.1"><strong>Cross-domain projection.</strong> A cross-domain projection
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) establishes
-no destination-side grant binding. A Resource AS consumes the
-cross-domain grant, and the local access token it mints there is a
-derived token: it identifies the one originating Mission
-(<code>mission.id</code>, <code>mission.issuer</code>) but is not backed by a persistent
-local lineage. A Resource AS holds a destination-side grant binding
-only where it separately establishes a redeemable grant lineage
-mapped to the Mission, such as a refresh-token family.<a href="#section-6.4.2-2.2.1" class="pilcrow">¶</a></p>
+              <p id="section-6.4.2-2.2.1"><strong>Establishing a new binding.</strong> A Token Exchange that establishes a
+redeemable grant lineage, such as by issuing a refresh token,
+creates a new grant binding, rooted in the Mission its
+<code>subject_token</code> resolved to.<a href="#section-6.4.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.4.2-2.3">
-              <p id="section-6.4.2-2.3.1"><strong>Child Missions and successors.</strong> A Child Mission
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) and an
-expansion successor
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>) are new
-Missions. Any grant binding or derived token they carry is their
-own under the same rules, not an extension of the origin Mission's
-binding. They relate to their origin only by lineage (the
-child's <code>parent</code> member, the successor's <code>predecessor</code> member).<a href="#section-6.4.2-2.3.1" class="pilcrow">¶</a></p>
+              <p id="section-6.4.2-2.3.1"><strong>Creating another Mission.</strong> Missions created from an existing
+Mission's authority are new Missions. Any grant binding or derived
+token they carry is their own under the same rules, not an extension
+of the origin Mission's binding. They relate to their origin only by
+lineage, a record member their specification defines
+(<a href="#mission-record" class="auto internal xref">Section 6.2</a>).<a href="#section-6.4.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          </ul>
-<p id="section-6.4.2-3">A decision-time runtime join, such as the Mission Join of
-<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, in which a policy
+            <li class="normal" id="section-6.4.2-2.4">
+              <p id="section-6.4.2-2.4.1"><strong>Transient exchange artifacts.</strong> A grant the Mission <code>issuer</code>
+returns for a Resource AS to consume establishes no
+destination-side grant binding. The Resource AS consumes it, and
+the local access token it mints there is a derived token: it
+identifies the one originating Mission (<code>mission.id</code>,
+<code>mission.issuer</code>) but is not backed by a persistent local lineage. A
+Resource AS holds a destination-side grant binding only where it
+separately establishes a redeemable grant lineage mapped to the
+Mission, such as a refresh-token family.<a href="#section-6.4.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.4.2-2.5">
+              <p id="section-6.4.2-2.5.1"><strong>Runtime joins.</strong> A decision-time runtime join, in which a policy
 decision point joins an ordinary OAuth credential to a Mission per
 request, is not a Mission grant binding: it does not make the joined
-OAuth grant Mission-bound, and it rests on its own authenticated inputs
-and evidence, never on a Mission grant binding.<a href="#section-6.4.2-3" class="pilcrow">¶</a></p>
+OAuth grant Mission-bound, and it rests on its own authenticated
+inputs and evidence, never on a Mission grant binding.<a href="#section-6.4.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
 </section>
 </div>
 <div id="grant-binding-state">
@@ -4877,10 +4856,7 @@ scope projection (<a href="#scope-projection" class="auto internal xref">Section
         </h3>
 <p id="section-7.1-1">A derivation is one issuance operation the issuer AS performs for a
 single request: the initial authorization-code exchange, a refresh, a
-Token Exchange, a cross-domain grant issuance
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), or the
-redemption of a profile-defined grant, such as the Template profile's
-handoff grant (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>). A
+Token Exchange, or the redemption of a profile-defined grant. A
 companion profile bounds the number of derivations under a Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>).<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <p id="section-7.1-2">This document defines five issuance paths:<a href="#section-7.1-2" class="pilcrow">¶</a></p>
@@ -5176,9 +5152,9 @@ servers while retaining
 <span><a href="https://rfc-editor.org/rfc/rfc9700#section-2.2.1" class="relref">Section 2.2.1</a> of [<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>'s recommendation; the cost is the
 stolen-token exposure (<a href="#token-theft" class="auto internal xref">Section 17.4.1</a>).<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <p id="section-7.2-4">A delegated token is sender-constrained to the delegate's own key
-(<a href="#delegated-exchange" class="auto internal xref">Section 8.2</a>); the cross-domain companion requires
-sender-constraint for credentials that cross a trust domain
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-7.2-4" class="pilcrow">¶</a></p>
+(<a href="#delegated-exchange" class="auto internal xref">Section 8.2</a>), and the Cross-Domain capability
+sender-constrains every credential that crosses a trust domain
+(<a href="#optional-capabilities" class="auto internal xref">Section 15.2</a>).<a href="#section-7.2-4" class="pilcrow">¶</a></p>
 <p id="section-7.2-5">An AS that issues Mission-bound JWT access tokens for resource servers
 to consume <span class="bcp14">MUST</span> publish its token verification keys (for example, at
 its <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> <code>jwks_uri</code>, as <span><a href="https://rfc-editor.org/rfc/rfc9068#section-4" class="relref">Section 4</a> of [<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> recommends);
@@ -5456,10 +5432,7 @@ a Mission-bound token's authority; a <code>scope</code> claim
 carry per-entry <code>constraints</code>.<a href="#section-7.6-3" class="pilcrow">¶</a></p>
 <p id="section-7.6-4">A credential the Mission Issuer derives <span class="bcp14">MUST</span> have an <code>exp</code> that does
 not exceed the Mission's <code>expires_at</code>, so that no credential outlives
-the approved Mission. The cross-domain companion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) specifies how
-this bound extends transitively to tokens minted in another trust
-domain.<a href="#section-7.6-4" class="pilcrow">¶</a></p>
+the approved Mission.<a href="#section-7.6-4" class="pilcrow">¶</a></p>
 <p id="section-7.6-5">Within that bound, a derived token's lifetime is the AS's policy,
 which <a href="#derived-token-lifetime" class="auto internal xref">Section 7.1.3</a> recommends keeping short. Token
 Exchange does not tightly couple an issued token's lifetime to its
@@ -5661,7 +5634,7 @@ or restoring a consumed token.<a href="#section-7.7.6-1" class="pilcrow">¶</a><
 credential's <code>iss</code> names the party that minted it; <code>mission.issuer</code>
 names the party that approved and serves the Mission, and the two
 differ for tokens minted in another trust domain
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-7.8-2.4.1" class="pilcrow">¶</a></p>
+(<a href="#mission-claim-reservation" class="auto internal xref">Section 7.8.1</a>).<a href="#section-7.8-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -6160,19 +6133,14 @@ whose concrete depth and matcher conditions the Mission Resource
 Access Profile defines
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <p id="section-8.4-2">Because the policy lives in the entry, <code>authority_hash</code> commits it
-with the rest of the Authority Set, and it is carried with the entries
-wherever they go, including across a cross-domain projection where
-that profile's provenance rule keeps it
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-8.4-2" class="pilcrow">¶</a></p>
+with the rest of the Authority Set.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
 <p id="section-8.4-3"><strong>Delegation depth.</strong> The delegation depth of a token is the number
 of delegations between the approved agent and the token's current
 actor: the agent's own non-delegated token is depth 0, the first
 delegate is depth 1, and each further delegate adds 1. The depth
 checked against <code>max_depth</code> is that of the token being issued,
 computed after appending the new outermost actor, not the depth of
-the delegating token. A credential projected across a trust domain
-carries no <code>act</code> chain and enters the target domain at depth 0
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+the delegating token.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
 <p id="section-8.4-4"><strong>Depth accounting.</strong> The AS <span class="bcp14">MUST</span> establish delegation depth from
 accounting it maintains for the tokens it issues under the Mission
 and associates with the credential it validates (for example, recorded
@@ -6183,14 +6151,11 @@ the source of the count.<a href="#section-8.4-4" class="pilcrow">¶</a></p>
 <p id="section-8.4-5">Over the exchanges this document defines, the accounting is complete:<a href="#section-8.4-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.4-6.1">
-            <p id="section-8.4-6.1.1">each delegated exchange adds exactly one delegate;<a href="#section-8.4-6.1.1" class="pilcrow">¶</a></p>
+            <p id="section-8.4-6.1.1">each delegated exchange adds exactly one delegate; and<a href="#section-8.4-6.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.4-6.2">
             <p id="section-8.4-6.2.1">a designation (<a href="#designation" class="auto internal xref">Section 8.1</a>) and a self-exchange
-(<a href="#self-exchange" class="auto internal xref">Section 7.5</a>) add none; and<a href="#section-8.4-6.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-8.4-6.3">
-            <p id="section-8.4-6.3.1">a cross-domain projection is the one defined reset.<a href="#section-8.4-6.3.1" class="pilcrow">¶</a></p>
+(<a href="#self-exchange" class="auto internal xref">Section 7.5</a>) add none.<a href="#section-8.4-6.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-8.4-7">A profile that issues Mission-bound tokens by another path specifies
@@ -7221,7 +7186,7 @@ exchange rows of the third table.<a href="#section-11-4" class="pilcrow">¶</a><
         </thead>
         <tbody>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>), or a required evidence type absent</td>
+            <td class="text-left" rowspan="1" colspan="1">PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>), or a required evidence type absent (<a href="#submission-processing" class="auto internal xref">Section 4.5</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_mission_intent_evidence</code> (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>). Detail: safe <code>error_description</code>
 </td>
@@ -7466,9 +7431,7 @@ exchange rows of the third table.<a href="#section-11-4" class="pilcrow">¶</a><
           </tr>
         </tbody>
       </table>
-<p id="section-11-9">In these tables, which evidence types are required follows
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, and
-<code>invalid_client_attestation</code> is the error code that
+<p id="section-11-9">In these tables, <code>invalid_client_attestation</code> is the error code that
 <span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01#section-5.2" class="relref">Section 5.2</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>
 specifies.<a href="#section-11-9" class="pilcrow">¶</a></p>
 </section>
@@ -8054,11 +8017,7 @@ Submission Evidence type. Such an AS refuses every presented entry
 under the dispatch and refusal rules (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>):
 a structurally invalid entry with the <code>invalid_request</code> error code, and
 any other entry, as an unsupported type, with the
-<code>invalid_mission_intent_evidence</code> error code. It need not implement the
-evidence framework of
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span> for this
-configuration. The companion defines conformance for ASs supporting an
-evidence type, whether its evidence is optional or required.<a href="#section-15.1-4" class="pilcrow">¶</a></p>
+<code>invalid_mission_intent_evidence</code> error code.<a href="#section-15.1-4" class="pilcrow">¶</a></p>
 <p id="section-15.1-5">A <strong>Mission-aware Resource Server</strong> implements resource server
 enforcement (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>). It enforces a JWT from the token's
 own claims, needing no Mission-state store and no call to the AS.
@@ -8138,19 +8097,30 @@ claiming this capability preserves, across the hop:<a href="#section-15.2-2.4.1"
               <li id="section-15.2-2.4.2.3">
                 <p id="section-15.2-2.4.2.3.1">projection performed only by, or under the authorization of, the
 Mission <code>issuer</code>, gated on the Mission's <code>active</code> state
-(<a href="#lifecycle" class="auto internal xref">Section 10</a>, <a href="#issuance-gating" class="auto internal xref">Section 7.1</a>); and<a href="#section-15.2-2.4.2.3.1" class="pilcrow">¶</a></p>
+(<a href="#lifecycle" class="auto internal xref">Section 10</a>, <a href="#issuance-gating" class="auto internal xref">Section 7.1</a>);<a href="#section-15.2-2.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
               <li id="section-15.2-2.4.2.4">
                 <p id="section-15.2-2.4.2.4.1">projected credential lifetimes capped by the Mission's
-<code>expires_at</code> (<a href="#token-authentication-lifetime" class="auto internal xref">Section 7.6</a>).<a href="#section-15.2-2.4.2.4.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (<a href="#token-authentication-lifetime" class="auto internal xref">Section 7.6</a>);<a href="#section-15.2-2.4.2.4.1" class="pilcrow">¶</a></p>
+</li>
+              <li id="section-15.2-2.4.2.5">
+                <p id="section-15.2-2.4.2.5.1">projected credentials sender-constrained to their presenter
+(<a href="#token-claims" class="auto internal xref">Section 7.2</a>), never bearer credentials, each recipient
+verifying the proof of possession and refusing a credential whose
+binding is absent or invalid (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>); and<a href="#section-15.2-2.4.2.5.1" class="pilcrow">¶</a></p>
+</li>
+              <li id="section-15.2-2.4.2.6">
+                <p id="section-15.2-2.4.2.6.1">renewal only through the Mission <code>issuer</code>: a projected grant is
+redeemable once, and the other trust domain issues no renewal
+authority on it, so a further credential there needs a new
+projection.<a href="#section-15.2-2.4.2.6.1" class="pilcrow">¶</a></p>
 </li>
             </ol>
 <p id="section-15.2-2.4.3">
 This bar is self-contained in this document. The companion Mission
 Cross-Domain Projection profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) specifies the
-interoperable mechanism that satisfies it, and implementations that
-interoperate across the hop implement that companion.<a href="#section-15.2-2.4.3" class="pilcrow">¶</a></p>
+interoperable mechanism that satisfies it.<a href="#section-15.2-2.4.3" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-15.2-3">Mission Approved-Set Verification
@@ -8746,9 +8716,7 @@ callers (<a href="#caller-authorization-and-minimization" class="auto internal x
 <a href="#section-18.1" class="section-number selfRef">18.1. </a><a href="#name-mission-identifier-correlat" class="section-name selfRef">Mission Identifier Correlation</a>
         </h3>
 <p id="section-18.1-1">This document carries a single canonical Mission Identifier on every
-derived token, and cross-domain projection
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) carries it across
-trust domains unchanged. Any party that observes credentials for the
+derived token. Any party that observes credentials for the
 same Mission, whether a resource server, a Resource AS, or an auditor
 spanning audiences, can correlate that activity by the Mission
 Identifier, and <code>mission.issuer</code> further identifies the issuing AS.<a href="#section-18.1-1" class="pilcrow">¶</a></p>
@@ -9703,10 +9671,6 @@ member's registration in its own IANA considerations.<a href="#section-20.9-9" c
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-9-draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-continuation">[I-D.draft-mcguinness-oauth-mission-continuation]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Continuation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -9718,10 +9682,6 @@ member's registration in its own IANA considerations.<a href="#section-20.9-9" c
 <dt id="I-D.draft-mcguinness-oauth-mission-derivation-limits">[I-D.draft-mcguinness-oauth-mission-derivation-limits]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Derivation Limits for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-device-authorization">[I-D.draft-mcguinness-oauth-mission-device-authorization]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Device Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-device-authorization.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-device-authorization.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
@@ -9758,10 +9718,6 @@ member's registration in its own IANA considerations.<a href="#section-20.9-9" c
 <dt id="RFC8126">[RFC8126]</dt>
         <dd>
 <span class="refAuthor">Cotton, M.</span>, <span class="refAuthor">Leiba, B.</span>, and <span class="refAuthor">T. Narten</span>, <span class="refTitle">"Guidelines for Writing an IANA Considerations Section in RFCs"</span>, <span class="seriesInfo">BCP 26</span>, <span class="seriesInfo">RFC 8126</span>, <span class="seriesInfo">DOI 10.17487/RFC8126</span>, <time datetime="2017-06" class="refDate">June 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8126" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc8126</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC8628">[RFC8628]</dt>
-        <dd>
-<span class="refAuthor">Denniss, W.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"OAuth 2.0 Device Authorization Grant"</span>, <span class="seriesInfo">RFC 8628</span>, <span class="seriesInfo">DOI 10.17487/RFC8628</span>, <time datetime="2019-08" class="refDate">August 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8628" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc8628</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8792">[RFC8792]</dt>
         <dd>
@@ -10700,7 +10656,7 @@ deprovisioned (#830, #1892, #1895).<a href="#appendix-E-4.8.1" class="pilcrow">�
 Policy appendices and other material on the family rather than the
 protocol move to the Architecture, the security analysis to the
 Mission Security Model, and the mechanics a companion profile defines
-to that profile (#1794, #1892).<a href="#appendix-E-5" class="pilcrow">¶</a></p>
+to that profile (#1794, #1892, #2009).<a href="#appendix-E-5" class="pilcrow">¶</a></p>
 <p id="appendix-E-6"><strong>Editorial and structure.</strong> The sections follow processing order,
 with Mission Creation, Mission-Bound Token Issuance, Delegation Within
 a Mission, Token Consumption, and Mission Lifecycle as chapters, and
@@ -10712,8 +10668,9 @@ stated as obligations carry BCP 14 keywords, with no new requirement
 protocol, the Mission Mandate, and Mission Offline Attenuation as
 informative. FAPI Grant Management, the Cedar RAR draft, SPIFFE client
 authentication, Transaction Tokens, GNAP, the Attenuating Agent Tokens
-draft, and the Containment, Progressive, and Work Products companions
-are no longer cited.<a href="#appendix-E-7" class="pilcrow">¶</a></p>
+draft, RFC 8628, and the Containment, Continuation, Device
+Authorization, Progressive, and Work Products companions are no longer
+cited.<a href="#appendix-E-7" class="pilcrow">¶</a></p>
 <p id="appendix-E-8">-01<a href="#appendix-E-8" class="pilcrow">¶</a></p>
 <p id="appendix-E-9"><strong>Breaking wire changes</strong><a href="#appendix-E-9" class="pilcrow">¶</a></p>
 <ul class="compact">

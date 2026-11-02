@@ -2493,7 +2493,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-   *  Specification document(s): this document, Section 5.3
+   *  Specification document(s): this document, Section 5.3; also
+      carried by the child delegation profile
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation])
 
    *  Parameter name: creation_request_id
 
@@ -2518,7 +2520,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-   *  Specification document(s): this document, Section 5.3
+   *  Specification document(s): this document, Section 5.3; also used
+      by the child delegation profile
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation])
 
 17.  References
 
@@ -2721,6 +2725,10 @@ Appendix A.  End-to-End Example
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The mission_continuation and mission_interaction_required
+      registrations note that the child delegation profile also uses
+      them, for its interactive child creation (#1130).
 
    *  A successor created from an exchange carrying a proposal records
       proposed_authority, its proposal_hash recorded or implied (#1917).

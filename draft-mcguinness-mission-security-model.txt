@@ -382,18 +382,23 @@ Table of Contents
       with the PEP, evidence detects this after the fact but does not
       prevent it ([I-D.draft-mcguinness-mission-runtime]).
 
+   Materialized policy view:  Carries the Mission's compiled authority
+      where the PDP evaluates one, never its lifecycle state, so it is
+      not a Mission state source: the PDP takes Mission state from a
+      state source.  It must be integrity-protected, bound to the
+      Mission by its identifier and authority_hash, and never broader
+      than the current effective authority.  A stale or tampered view
+      feeds the PDP wrong authority
+      ([I-D.draft-mcguinness-mission-runtime]).
+
    Mission state source:  Reports current Mission state for the
       freshness the runtime layer requires, whether by introspection,
-      the Status surface, pushed Signals, or a materialized policy view.
-      It must report accurately within the staleness bound and be
-      authenticated and integrity-protected.  A compromised or spoofed
-      state source can report active for a Mission that is revoked,
-      defeating the kill switch; the runtime layer fails closed when
-      state cannot be established within the bound.  The materialized
-      policy view carries authority as well as state, so a stale or
-      tampered view feeds the PDP wrong authority; its integrity and
-      staleness bounds are part of the trusted base
-      ([I-D.draft-mcguinness-oauth-mission-status],
+      the Status surface, or pushed Signals.  It must report accurately
+      within the staleness bound and be authenticated and integrity-
+      protected.  A compromised or spoofed state source can report
+      active for a Mission that is revoked, defeating the kill switch;
+      the runtime layer fails closed when state cannot be established
+      within the bound ([I-D.draft-mcguinness-oauth-mission-status],
       [I-D.draft-mcguinness-oauth-mission-signals],
       [I-D.draft-mcguinness-mission-runtime]).
 
@@ -1863,6 +1868,11 @@ Appendix A.  OWASP Agentic Threat Coverage
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Trusted Base gives a materialized policy view its own entry:
+      it carries compiled authority, never Mission lifecycle state, and
+      is no longer listed as a Mission state source, as the runtime core
+      states (#1129).
 
    *  The Untrusted Agent states the three legs of injection-driven
       exfiltration and which of them issuance constrains; the bypass

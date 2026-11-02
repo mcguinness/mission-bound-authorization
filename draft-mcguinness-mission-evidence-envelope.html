@@ -2356,7 +2356,8 @@ not-verified; and<a href="#section-6-5.2.1" class="pilcrow">¶</a></p>
 key is identified as compromised.<a href="#section-6-5.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-6-6">An AS supporting Intent Admission Evidence MUST:<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-6">An AS supporting Intent Admission Evidence conforms to
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span> and MUST:<a href="#section-6-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6-7.1">
           <p id="section-6-7.1.1">perform the ten-step procedure of <a href="#intent-admission-verification" class="auto internal xref">Section 5.2</a>
@@ -2860,6 +2861,11 @@ under this registry's policy until it is published.<a href="#section-9.2-7" clas
 <li class="normal" id="appendix-A-2.1">
           <p id="appendix-A-2.1.1">The intent admission cross-check compares <code>payload.intent_hash</code>
 with the Mission Record's <code>intent_hash</code>, recorded or implied (#1917).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">An AS supporting Intent Admission Evidence conforms to Mission
+Intent Submission Evidence, which the OAuth binding no longer
+imposes on it (#2009).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-3">Initial version. Defines the Mission Evidence Envelope, the Mission
