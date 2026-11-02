@@ -4,12 +4,14 @@
  * (#956, D814): a mediated request that reaches the PDP with no action class
  * established is a request fault. It is refused before evaluation as a
  * Refusal Record `action_class_missing`, never evaluated under, or recorded
- * as, a default class such as `consequential_read`.
+ * as, a default class such as `consequential_read`. So is one carried with a
+ * class other than the one the PDP's own declaration assigns (#1994).
  */
 import { generateKeyPairSync } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { evaluateRemote } from "../src/client.js";
 import { type DecisionEvidenceEmitter, evaluationRequestDigest } from "../src/decision-evidence.js";
+import type { ExecutionCapabilityDeclaration } from "../src/enforcement-scope.js";
 import {
   type DecisionOptions,
   DecisionRequestRefused,
@@ -174,6 +176,90 @@ describe("an unclassified mediated request is a request fault (@spec runtime#cla
     expect(calls()).toBe(0);
     expect(policy.queries).toHaveLength(0);
     // Control: the same channel evaluates the request carrying its class.
+    const served = await ask(request("consequential_read"));
+    expect(served.decision, JSON.stringify(served.context)).toBe(true);
+    expect(retained).toHaveLength(1);
+  });
+});
+
+describe("a carried class other than the one the PDP's own declaration assigns establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner review)", () => {
+  /** This PDP's own declaration: the read is assigned consequential_read. */
+  const DECLARED = [{ operation: READ, action_class: "consequential_read" } as unknown as ExecutionCapabilityDeclaration];
+
+  it("records the refusal of a request carried with another class as a PDP-signed Refusal Record action_class_missing naming no class, with no decision work", async () => {
+    const retained: PdpRefusalRecord[] = [];
+    const { refusals, resolve } = recorder(retained);
+    const { fga, calls } = countingFga();
+    const policy = resourcePolicyFixture();
+    const emitted: unknown[] = [];
+    const evidence = { emit: async (record: unknown) => emitted.push(record) } as unknown as DecisionEvidenceEmitter;
+    const options = {
+      ...decisionOptions(fga),
+      resourcePolicy: policy,
+      evidence,
+      refusals,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      operationDeclarations: DECLARED,
+    };
+    const mislabeled = request("consequential_write");
+    await expect(evaluateRequest(mislabeled, options)).rejects.toBeInstanceOf(DecisionRequestRefused);
+    expect(retained).toHaveLength(1);
+    const record = retained[0] as PdpRefusalRecord;
+    expect(record).toMatchObject({
+      denial_reason: "action_class_missing",
+      decision: "deny",
+      evaluation_request_digest: evaluationRequestDigest(mislabeled),
+      emitter: { id: "pdp.example", role: "pdp" },
+    });
+    expect(record).not.toHaveProperty("action_class");
+    expect(record).not.toHaveProperty("class_source");
+    expect(record).not.toHaveProperty("evaluation_id");
+    expect(JSON.stringify(record)).not.toContain("consequential_");
+    expect(await verifyEvidenceEnvelope(record, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+    expect(emitted).toHaveLength(0);
+    expect(calls()).toBe(0);
+    expect(policy.queries).toHaveLength(0);
+    // Control: the class the declaration assigns is evaluated and permitted, with Decision Evidence.
+    const declared = await evaluateRequest(request("consequential_read"), options);
+    expect(declared.decision, JSON.stringify(declared.context)).toBe(true);
+    expect(emitted).toHaveLength(1);
+    expect(retained).toHaveLength(1);
+  });
+
+  it("the remote PDP refuses a request carried with another class before evaluation as action_class_missing, with a signed Refusal Record and no decision work", async () => {
+    const retained: PdpRefusalRecord[] = [];
+    const { refusals, resolve } = recorder(retained);
+    const { fga, calls } = countingFga();
+    const policy = resourcePolicyFixture();
+    handle = await createPdpHttpServer({
+      peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE] }]]),
+      getOptions: () => decisionOptions(fga),
+      evaluateFn: evaluateRequest,
+      resourcePolicy: policy,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      operationDeclarations: DECLARED,
+      refusals,
+    });
+    const server = handle;
+    const ask = (req: EvaluationRequest) => evaluateRemote(req, { url: server.url, pepId: PEP_ID, secret: SECRET });
+    const mislabeled = request("consequential_write");
+    const refused = await ask(mislabeled);
+    expect(refused.decision).toBe(false);
+    expect(refused.context).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 400 });
+    expect(refused.context).not.toHaveProperty("decision_evidence");
+    expect(refused.context).not.toHaveProperty("evaluation_id");
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toMatchObject({
+      denial_reason: "action_class_missing",
+      decision: "deny",
+      evaluation_request_digest: evaluationRequestDigest(mislabeled),
+      emitter: { id: "pdp.example", role: "pdp" },
+    });
+    expect(retained[0]).not.toHaveProperty("action_class");
+    expect(await verifyEvidenceEnvelope(retained[0] as PdpRefusalRecord, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+    expect(calls()).toBe(0);
+    expect(policy.queries).toHaveLength(0);
+    // Control: the same channel evaluates the request carrying the declared class.
     const served = await ask(request("consequential_read"));
     expect(served.decision, JSON.stringify(served.context)).toBe(true);
     expect(retained).toHaveLength(1);

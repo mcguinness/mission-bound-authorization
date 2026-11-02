@@ -240,8 +240,13 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
     expect(assignedClassConflicts(RUNTIME_POSTURE.extensions?.execution_capabilities ?? [], "external_commitment", REMIT)).toBe(false);
   });
 
-  it("refuses phase_invalid, before evaluation, a phase on remittance.send, which the declarations name without one; an undeclared preflight of a compound action decides under its assigned class alone", async () => {
-    refusedAs(await outcomeOf(request(REMIT, "external_commitment", 0, { ...AMOUNT, action_phase: "commit" })), "phase_invalid", "commit");
+  it("refuses phase_invalid, before evaluation, a phase on an operation the declarations name without one, with further classes (remittance.send) or without (payment.schedule, whose read label would otherwise match no declaration); an undeclared preflight of a compound action decides under its assigned class alone", async () => {
+    refusedAs(await outcomeOf(request(REMIT, "external_commitment", 0, { ...AMOUNT, action_phase: "commit" })), "phase_invalid", "remittance.send");
+    refusedAs(
+      await outcomeOf(request("payments:payment.schedule", "consequential_read", 0, { ...AMOUNT, action_phase: "commit" })),
+      "phase_invalid",
+      "payment.schedule",
+    );
     const preflight = await evaluate(
       request(PAY, "consequential_read", 0, { ...AMOUNT, action_phase: "preflight" }),
       options([PAY], { evidence: emitter() }),
