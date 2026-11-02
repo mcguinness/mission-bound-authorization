@@ -21,7 +21,11 @@
 
 import {
   type ActionPhase,
+  AUTHORITY_ENTRY_TYP,
+  authorityHash,
+  computeAnchor,
   establishOperationTarget,
+  type JsonValue,
   matchResource,
   RESOURCE_CONTRACT_STATES,
   ResourceContractDeclarations,
@@ -30,6 +34,7 @@ import {
 } from "@mission/core";
 import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
+  committedEntry,
   createDecisionChannel,
   createEphemeralDecisionPoint,
   type EvaluationRequest,
@@ -165,6 +170,8 @@ async function build(
   opts: {
     pdpContracts?: ResourceContractDeclarations;
     now?: () => Date;
+    /** The PDP's own clock, where it differs from the PEP's (`now`). */
+    pdpNow?: () => Date;
     requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
     /** Perform under the shipped `RETAINED_OPERATION_PROFILES` rather than this file's retained table. */
     shippedRetainedProfiles?: boolean;
@@ -208,7 +215,7 @@ async function build(
       view,
       fga,
       modelId: "test",
-      now,
+      now: opts.pdpNow ?? now,
       stalenessBound,
       relationForAction,
       stateSourcePlacement: "pep" as const,
@@ -338,6 +345,11 @@ describe("the payments resource declares its contract versions (@spec runtime#re
           ? x.server.callWriteTool.bind(x.server)
           : x.server.callTransactionTool.bind(x.server);
     };
+    // The compensate crossing binds the reversal form over the committed
+    // wire's own record, witnessed live in compound-actions.test.ts ("reverses
+    // exactly the committed amount whatever the invoice now reads"), whose
+    // fields the first test above pins to the declared form.
+    expect(operations.reverse_wire_transfer).toMatchObject({ parameters: "reversal", idempotency_key: true });
     for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
       if (tool === "reverse_wire_transfer") continue;
       const declaredOp = operations[tool] as { parameters: string; idempotency_key?: boolean; recipients?: boolean };
@@ -498,6 +510,85 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       const stmt = structuredClone(RUNTIME_SCOPE_CONFIG) as { extensions: { resource_contracts: Array<{ versions: Array<Record<string, unknown>> }> } };
       mutate(stmt.extensions.resource_contracts[0]?.versions[0] as Record<string, unknown>);
       expect(() => loadRuntimePosture(stmt), label).toThrow(/extensions\.resource_contracts/);
+    }
+  });
+});
+
+// @spec runtime#resource-contract, resource-access#initial-common-constraints
+// (#249, D1104): the declared inputs of the two constraints no other witness
+// tells apart from an alternative source. Every other clause of the document's
+// `constraints` is witnessed where its constraint is enforced (the ledger row
+// runtime.resource-contract.new-version-on-change lists each).
+describe("the declared constraint inputs the payments resource reads (@spec runtime#resource-contract, #249)", () => {
+  const [shipped] = RESOURCE_CONTRACTS.declarations;
+  const current = shipped?.versions.find((v) => v.state === "current");
+  const constraints = (current?.document as { constraints: Record<string, string> } | undefined)?.constraints ?? {};
+  const pinnedRef = { id: CONTRACT, version: current?.version as string, digest: current?.digest as string };
+  const read = (x: Built, view: MissionView) => x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+
+  it("time_window reads each evaluating component's own clock, never a time the request carries: past the window's end on the PDP's clock is denied what the PEP's clock let through, and past it on the PEP's clock is refused before any decision", async () => {
+    expect(constraints.time_window).toBe("the evaluating component's own clock");
+    // Over the remote channel, the one whose PDP evaluates with its own
+    // options and clock; a co-resident PDP decides in the PEP's process, on
+    // its clock.
+    const t = NOW().getTime();
+    const at = (ms: number) => () => new Date(ms);
+    const windowed = viewOf([entry(pinnedRef, CANONICAL_RESOURCE, { constraints: { time_window: { not_after: new Date(t + 60_000).toISOString() } } } as Partial<Entry>)]);
+    const both = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t), pdpNow: at(t) });
+    try {
+      const res = await read(both, windowed);
+      expect(res.ok, JSON.stringify(res)).toBe(true);
+    } finally {
+      await both.close();
+    }
+    const pdpPast = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t), pdpNow: at(t + 120_000) });
+    try {
+      const res = await read(pdpPast, windowed);
+      expect(res, JSON.stringify(res)).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+      expect(pdpPast.decided).toHaveLength(1);
+    } finally {
+      await pdpPast.close();
+    }
+    const pepPast = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t + 120_000), pdpNow: at(t) });
+    try {
+      const res = await read(pepPast, windowed);
+      expect(res.ok, JSON.stringify(res)).toBe(false);
+      expect(pepPast.decided).toHaveLength(0);
+    } finally {
+      await pepPast.close();
+    }
+  });
+
+  it("terminal_when reads the Mission Issuer's discharge state: the entry the issuer's view lists as discharged is denied authority_discharged at the decision, and the same entry undischarged is performed, nothing at the resource differing", async () => {
+    expect(constraints.terminal_when).toBe("the Mission Issuer's discharge state");
+    const completing = entry(pinnedRef, CANONICAL_RESOURCE, {
+      constraints: { terminal_when: [{ event_type: "accounting-period-closed", discharge_authority: "close-management-2026-q3" }] },
+    } as Partial<Entry>);
+    // A view that holds its committed set, so the PDP can source the
+    // credential entry's completion condition from the Mission's.
+    const live: MissionView = { ...viewOf([completing]), authority_hash: authorityHash(ISSUER, [committedEntry(completing)] as unknown as JsonValue[]) };
+    const discharged: MissionView = {
+      ...live,
+      version: 2,
+      discharged: { entry_digests: [computeAnchor(AUTHORITY_ENTRY_TYP, ISSUER, committedEntry(completing) as unknown as JsonValue)] },
+    };
+    for (const mode of MODES) {
+      const performed = await build(mode, live, RESOURCE_CONTRACTS);
+      try {
+        const res = await read(performed, live);
+        expect(res.ok, `${mode}: ${JSON.stringify(res)}`).toBe(true);
+      } finally {
+        await performed.close();
+      }
+      const denied = await build(mode, discharged, RESOURCE_CONTRACTS);
+      try {
+        const res = await read(denied, discharged);
+        expect(res, `${mode}: ${JSON.stringify(res)}`).toMatchObject({ ok: false, denial_reason: "authority_discharged" });
+        expect(denied.decided, mode).toHaveLength(1);
+        expect(res.result, mode).toBeUndefined();
+      } finally {
+        await denied.close();
+      }
     }
   });
 });
