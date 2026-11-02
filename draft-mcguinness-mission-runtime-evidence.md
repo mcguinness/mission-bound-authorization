@@ -468,8 +468,8 @@ canonicalization, and integrity envelope a deployment emits.
   records it directly; no decision-API wire echo is required.
 
 `action_class`:
-: REQUIRED. A string. The runtime action class the PDP applied to the
-  action: one of `consequential_read`, `consequential_write`,
+: REQUIRED. A string. The runtime action class assigned to the action:
+  one of `consequential_read`, `consequential_write`,
   `irreversible_action`, `external_commitment`, or
   `privileged_administration`, naming the classes of
   {{I-D.draft-mcguinness-mission-runtime}}. Every decision this
@@ -2717,7 +2717,7 @@ evidence representation their shared envelope carries (using the
 
 - Decision Evidence: `action_classes` records every class whose
   requirements the PDP applied, when more than one applies;
-  `action_class` stays the assigned class (#1994).
+  `action_class` is defined as the assigned class (#1994).
 
 - Refusal Record: `action_class_missing` records a PDP refusal of a
   mediated request with no action class established, where the runtime
