@@ -336,6 +336,14 @@ Table of Contents
    digest MAY be reused in assertions for the same capture, only within
    the workflow authorized to submit and revise that request.
 
+   Progressing through an accepted submission is distinct from
+   submitting again (Section 9): a revision that changes intent_hash is
+   a new submission and needs a fresh assertion.  The intake issues it
+   from the same capture only while the capture is within the
+   deployment's maximum capture age; after that, a new capture is
+   needed, which means receiving the instruction from the originator
+   again.
+
 7.  The Request Digest
 
    The request digest is HMAC-SHA-256 ([RFC2104], [RFC6234]) under the
@@ -401,7 +409,10 @@ Table of Contents
    9.   Confirm intent_hash equals the provisional intent_hash of the
         submitted Intent, and presenter agrees with the presenter the
         containing exchange established
-        ([I-D.draft-mcguinness-oauth-mission-submission-evidence]).
+        ([I-D.draft-mcguinness-oauth-mission-submission-evidence]).  A
+        presenter carrying cnf where the exchange established no
+        confirmation key does not agree: no key is inferred from the
+        assertion.
 
    10.  Reserve the pair (iss, jti) (Section 9).
 
@@ -425,10 +436,28 @@ Table of Contents
       reservation.  A committed pair is retained at least until exp plus
       the clock-skew allowance.
 
-   *  *Release.* When the AS refuses the containing submission for any
-      reason, including another evidence entry failing, it releases the
-      reservation.  A reservation never outlives exp plus the clock-skew
-      allowance.
+   *  *Release.* When the AS refuses the containing submission before
+      accepting it, for any reason, including another evidence entry
+      failing, it releases the reservation.  A reservation never
+      outlives exp plus the clock-skew allowance.
+
+   Later steps of an accepted submission, such as rendering it for
+   approval, the approval decision, or a deferred activation, do not
+   verify the assertion again.  They rely on an acceptance record the AS
+   keeps for that submission: it binds the intended AS, the exact
+   Intent, the established presenter, and the unchanged evidence entry,
+   and keeps the original verification's time and facts (Section 10).  A
+   step that finds no acceptance record, or one that does not match,
+   refuses the submission.  The assertion's exp, or the capture passing
+   the maximum capture age, after acceptance does not refuse the
+   accepted submission; the submission's own pending-operation lifetime
+   still applies.  A refusal after acceptance, such as an approval
+   denial, releases nothing, so an accepted assertion is never reusable.
+   Any other submission carrying the same evidence is verified in full,
+   including the replay check.  Relying on the acceptance record relaxes
+   no other check: the AS's authorization, required-evidence, and
+   approval checks still apply at each step.  This reliance applies to
+   this evidence type only; it changes no other type's verification.
 
    On a surface that carries a Mission-creation idempotency fingerprint,
    presented evidence is a member of that fingerprint
@@ -440,9 +469,10 @@ Table of Contents
    the AS refuses the retry with invalid_request as a different
    operation.  The AS resolves an exact retry by its fingerprint and
    returns the recorded outcome or continuation without verifying the
-   assertion again, so the committed jti does not refuse it.  Any
-   submission other than an exact retry follows Section 8 in full,
-   including the replay check.
+   assertion again, so the committed jti does not refuse it; the
+   surface's other recovery conditions still apply.  Any submission
+   other than an exact retry follows Section 8 in full, including the
+   replay check.
 
    On any other surface, such as PAR, a client that retries after losing
    the response to an accepted submission presents a fresh assertion:
@@ -473,7 +503,10 @@ Table of Contents
    These facts are material verified provenance, rendered for approval
    under the OAuth binding's submission steps
    ([I-D.draft-mcguinness-oauth-mission], Section "Submission Processing
-   Order").  They carry no instruction text and no secret.
+   Order").  They carry no instruction text and no secret.  These facts
+   authenticate capture and origin.  They do not establish that the
+   Intent interprets the instruction, and a reader of them cannot
+   establish it (Section 11).
 
 11.  What Verification Establishes
 
@@ -510,6 +543,12 @@ Table of Contents
    audit storage, never in the assertion.  The capture record may list
    the assertions issued from it; no assertion commits to its capture
    record.
+
+   Where a deployment records a claim about how far an Intent departs
+   from the captured instruction, it MUST associate that claim with the
+   capture's request_digest in access-controlled audit storage, so that
+   an authorized audit holding the capture can test the claim.  The
+   claim never enters the assertion or the recorded facts.
 
 13.  Conformance
 
@@ -796,10 +835,11 @@ Appendix C.  Document History
       isolation, the closed entry and signed assertion, capture before
       shaping and signing from the same workflow's capture record, the
       secret-keyed request digest with test vectors, verification,
-      replay reservation with commit on acceptance, recorded facts, the
-      limits of what verification establishes, audit and retention, and
-      the privacy treatment of direct and indirect commitments to the
-      instruction.
+      replay reservation with commit on acceptance, the processing of an
+      accepted submission from its acceptance record, recorded facts,
+      the limits of what verification establishes, audit and retention,
+      and the privacy treatment of direct and indirect commitments to
+      the instruction.
 
 Author's Address
 
