@@ -321,7 +321,13 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
         ? derivedAudiences(entry, decided)
         : (fresh?.[i] ?? []),
   );
-  kernel.insertRecord(record, undefined, { source: resolvedSource, audiences: { inherited: successorAudiences } });
+  kernel.insertRecord(record, undefined, {
+    source: resolvedSource,
+    audiences: { inherited: successorAudiences },
+    // @spec progressive#sec-drawdown-policy (#1017, D1162): a re-consent pins
+    // its policy version again at the successor it commits.
+    ...(input.ceilingReconsent?.drawdown_policy ? { drawdownPolicyConsent: input.ceilingReconsent.drawdown_policy } : {}),
+  });
 
   // @spec containment#restoration — the anti-laundering MUST: surface a
   // non-empty predecessor containment history at expansion consent, rather

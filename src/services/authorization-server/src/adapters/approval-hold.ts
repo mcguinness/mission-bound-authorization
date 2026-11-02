@@ -48,6 +48,7 @@ import { BoundGrantIndexWriteError } from "../kernel/mission-bound-grant-store.j
 import { RecoveryUncertainError } from "../kernel/recovery-witness.js";
 import type { MissionRecord } from "../kernel/types.js";
 import { serializeApprovalEvent } from "./approval-render-revision.js";
+import { terminalDeviceCodes } from "./device-authorization.js";
 
 /** A direct approval decided and not yet committed. */
 export interface HeldApproval {
@@ -165,7 +166,11 @@ export function missionProviderAdapter(deps: {
 }): AdapterFactory {
   return (name: string) => {
     const inner = new MemoryAdapter(name);
-    return name === "AuthorizationCode" ? fenceAuthorizationCodes(inner, deps) : inner;
+    if (name === "AuthorizationCode") return fenceAuthorizationCodes(inner, deps);
+    // @spec device-authorization#outcomes (#1202, D1181): a session the AS
+    // ended stays ended whatever later writes its device code.
+    if (name === "DeviceCode") return terminalDeviceCodes(inner);
+    return inner;
   };
 }
 

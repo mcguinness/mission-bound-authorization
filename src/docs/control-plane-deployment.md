@@ -518,6 +518,7 @@ a check at the next guarded transaction, after that write committed.
 | `discharge_selectors` | `discharge-selector-store.ts` | managed (`selectorFor`) |
 | `approval_governance_records` | `approval-governance.ts` | managed |
 | `direct_approval_rules`, `direct_approval_inputs` | `direct-approval-record.ts` | managed |
+| `drawdown_policy_pins` | `drawdown-policy-pins.ts` | managed (with the ceiling consent's Mission insert, and with the re-consent decision); statement (the backfill at open, only where a retained consent is unpinned) |
 | `drawdown_recording_rules`, `drawdown_record_inputs` | `drawdown-approval-record.ts` | managed |
 | `template_recording_rules`, `template_record_inputs` | `template-approval-record.ts` | managed (with the standing-payment instance insert) |
 | `standing_payment_budget_bindings` | `standing-payment.ts` | managed (`bindBudget`, at template consent) |
@@ -562,7 +563,8 @@ Mission of that issuer. Each of these commits as one transaction or not at all:
   claim and its Mission.
 
 Outside any one transaction: the provider access-token hook's count and the
-token it pays for (#935), and the provider's Grants and refresh tokens, which
+token it pays for, a settled limitation (D772, D874, D954), and the provider's
+Grants and refresh tokens, which
 oidc-provider keeps in memory ([Restart inventory](#restart-inventory)).
 
 ### Authoritative observation mechanism
@@ -680,8 +682,9 @@ The control-plane ledger rows not yet `tested`, which are why the reference
 makes no claim:
 
 - `control-plane.consistency.serialization`: a counted derivation and the
-  provider token it pays for are not one transaction (#935); no multi-process
-  serialization (#641).
+  provider token it pays for are not one transaction, a settled limitation
+  with no atomicity claim (D874, D954); no multi-process serialization, which
+  waits on #641's deployment trigger.
 - `control-plane.consistency.state-surfaces`: the surfaces are read in the
   kernel, not over HTTP; the absence of a parallel snapshot protocol is a
   documented inventory conclusion (D874).
@@ -720,9 +723,9 @@ makes no claim:
 
 Outside those rows: the provider's Grants and refresh tokens do not survive a
 restart; the delegation accounting and the Dispatch Handoff consumption records
-are invalidated by one; an ambiguous delivery after a crash stays counted
-(#935); and the #914 refresh pre-check window is an accepted single-process
-residual (D772). On the file-backed kernel, a crash after the approval commit
+are invalidated by one; an ambiguous delivery after a crash stays counted,
+the fail-safe (D772, D954); and the #914 refresh pre-check window is an
+accepted single-process residual (D772). On the file-backed kernel, a crash after the approval commit
 leaves the Mission `active` until `expires_at` or a revocation, and its
 authorization code is lost with provider memory: the same end state as the
 delivery gap (#1863, D1001).

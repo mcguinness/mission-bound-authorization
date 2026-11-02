@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ALL_PROVIDER_CAPABILITIES,
   ApprovalSessionStore,
+  DEVICE_SESSION_ENDED,
   buildAuthorizationServer,
   type BuiltAs,
   IntentError,
@@ -28,6 +29,12 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
+import {
+  claimDeviceDecision,
+  DEVICE_THROTTLE_OVERFLOW_KEY,
+  DeviceVerificationThrottle,
+  releaseDeviceDecision,
+} from "../src/adapters/device-authorization.js";
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
@@ -1376,5 +1383,296 @@ describe("the first device_code redemption is a counted derivation (@spec device
     const repeat = await poll(PUBLIC, s.deviceCode, keys);
     expect(repeat.body.error).toBe("invalid_grant");
     expect(as.kernel.get(id)?.derivation_count).toBe(1);
+  });
+});
+
+describe("the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121)", () => {
+  it("ends a pending session by its displayed or its normalized user_code: the next poll is access_denied with the AS's reason, and the Approver's decision on the still-open interaction creates no Mission", async () => {
+    const s = await pendingSession();
+    expect(await as.cancelDeviceSession(s.userCode)).toBe("ended");
+    // The Approver, still on the approval page, decides after the AS ended the session.
+    await decide(s.uid, s.headers, CONFIRMED);
+    expect(missionOf(s.uid)).toBeUndefined();
+    const res = await poll(PUBLIC, s.deviceCode, await newKeys());
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("access_denied");
+    expect(res.body.error_description).toBe(DEVICE_SESSION_ENDED);
+    expect(res.body.access_token).toBeUndefined();
+
+    const normalized = await pendingSession();
+    expect(await as.cancelDeviceSession(normalized.userCode.replace(/-/g, "").toLowerCase())).toBe("ended");
+    expect((await poll(PUBLIC, normalized.deviceCode, await newKeys())).body.error_description).toBe(DEVICE_SESSION_ENDED);
+  });
+
+  it("leaves a session no longer pending as it is: an approved session still redeems, an ended one stays ended, and an unknown code is unknown", async () => {
+    const approved = await approvedSession();
+    expect(await as.cancelDeviceSession(approved.userCode)).toBe("not_pending");
+    const redeemed = await poll(PUBLIC, approved.deviceCode, await newKeys());
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+    expect(missionOf(approved.uid)?.state).toBe("active");
+
+    const ended = await pendingSession();
+    expect(await as.cancelDeviceSession(ended.userCode)).toBe("ended");
+    expect(await as.cancelDeviceSession(ended.userCode)).toBe("not_pending");
+
+    expect(await as.cancelDeviceSession("XXXX-XXXX")).toBe("unknown");
+  });
+
+  it("keeps the cancellation terminal against a code confirmation already in progress: its stale save keeps the denial, the decision creates no Mission, and the poll answers no token", async () => {
+    const da = await deviceAuthorize(PUBLIC);
+    expect(da.status, JSON.stringify(da.body)).toBe(200);
+    const userCode = da.body.user_code as string;
+    const jar: Jar = new Map();
+    let res = await fetch(`${ISSUER}/device`, { headers: { cookie: cookieOf(jar) }, redirect: "manual" });
+    keep(jar, res);
+    res = await fetch(`${ISSUER}/device`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { ...FORM, cookie: cookieOf(jar) },
+      body: new URLSearchParams({ xsrf: hidden(await res.text(), "xsrf"), user_code: userCode }).toString(),
+    });
+    keep(jar, res);
+    const confirmXsrf = hidden(await res.text(), "xsrf");
+    // Hold the confirmation at its save of the device code it loaded before the cancellation.
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    let atSave!: () => void;
+    const reached = new Promise<void>((r) => {
+      atSave = r;
+    });
+    const proto = as.provider.DeviceCode.prototype as unknown as { save: (...a: unknown[]) => Promise<unknown> };
+    const save = proto.save;
+    const held = vi.spyOn(proto, "save").mockImplementation(async function (this: { inFlight?: boolean }, ...a: unknown[]) {
+      if (this.inFlight) {
+        atSave();
+        await gate;
+      }
+      return save.apply(this, a);
+    });
+    let confirmed: Response;
+    try {
+      const confirming = fetch(`${ISSUER}/device`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { ...FORM, cookie: cookieOf(jar) },
+        body: new URLSearchParams({ xsrf: confirmXsrf, user_code: userCode, confirm: "yes" }).toString(),
+      });
+      await reached;
+      expect(await as.cancelDeviceSession(userCode)).toBe("ended");
+      release();
+      confirmed = await confirming;
+    } finally {
+      held.mockRestore();
+    }
+    keep(jar, confirmed);
+    const uid = (confirmed.headers.get("location") ?? "").split("/interaction/")[1];
+    expect(uid, "the confirmation goes on to the approval interaction").toBeTruthy();
+    await decide(uid as string, browserApprovalHeaders(SESSIONS, uid as string, ALICE_BY_BOB, cookieOf(jar)), CONFIRMED);
+    expect(missionOf(uid as string)).toBeUndefined();
+    const polled = await poll(PUBLIC, da.body.device_code as string, await newKeys());
+    expect(polled.body.error).toBe("access_denied");
+    expect(polled.body.error_description).toBe(DEVICE_SESSION_ENDED);
+    expect(polled.body.access_token).toBeUndefined();
+  });
+
+  it("does not end a session whose decision is committing: the decision's claim holds it, and the outcome is deciding", async () => {
+    const s = await pendingSession();
+    const code = await as.provider.DeviceCode.findByUserCode(s.userCode.replace(/-/g, ""), { ignoreExpiration: true });
+    if (!code) throw new Error("no device code for the session");
+    expect(claimDeviceDecision(code.jti)).toBe(true);
+    try {
+      expect(await as.cancelDeviceSession(s.userCode)).toBe("deciding");
+      expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("authorization_pending");
+    } finally {
+      releaseDeviceDecision(code.jti);
+    }
+    expect(await as.cancelDeviceSession(s.userCode)).toBe("ended");
+  });
+});
+
+describe("the verification page throttles codes that match no session, and ends none (RFC 8628 Section 5.1, #1202, D1121)", () => {
+  const T_PORT = 14765;
+  const T_ISSUER = `http://localhost:${T_PORT}`;
+  let throttled: BuiltAs;
+  let tServer: Server;
+  let t = Date.now();
+
+  beforeAll(async () => {
+    throttled = await buildAuthorizationServer({
+      issuer: T_ISSUER,
+      approvalSessions: SESSIONS,
+      capabilities: new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "device-authorization"]),
+      testClients: [deviceClient({ client_id: PUBLIC, token_endpoint_auth_method: "none" })],
+      deviceVerificationThrottle: { maxFailures: 3, windowMs: 60_000, now: () => t },
+    });
+    tServer = throttled.provider.listen(T_PORT);
+  });
+  afterAll(() => {
+    tServer?.close();
+  });
+
+  /** One code entry at the verification page, from a fresh user agent at this test's address. */
+  async function enter(userCode: string): Promise<{ status: number; html: string }> {
+    const jar: Jar = new Map();
+    let res = await fetch(`${T_ISSUER}/device`, { redirect: "manual" });
+    keep(jar, res);
+    const html = await res.text();
+    res = await fetch(`${T_ISSUER}/device`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { ...FORM, cookie: cookieOf(jar) },
+      body: new URLSearchParams({ xsrf: hidden(html, "xsrf"), user_code: userCode }).toString(),
+    });
+    return { status: res.status, html: await res.text() };
+  }
+
+  /** The client's poll at the throttled AS. */
+  async function pollThrottled(deviceCode: string): Promise<{ status: number; body: Record<string, unknown> }> {
+    const k = await newKeys();
+    const htu = `${T_ISSUER}/token`;
+    const dpop = await new SignJWT({ htu, htm: "POST" })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: k.jwk })
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(k.privateKey);
+    const res = await fetch(htu, {
+      method: "POST",
+      headers: { ...FORM, dpop },
+      body: new URLSearchParams({ grant_type: DEVICE_GRANT, device_code: deviceCode, client_id: PUBLIC }).toString(),
+    });
+    return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+  }
+
+  it("refuses an address's entries after three codes that match no session, a valid code included, ending no session; once the window moves on, the valid code is admitted", async () => {
+    const da = await deviceAuthorize(PUBLIC, {}, { issuer: T_ISSUER });
+    expect(da.status, JSON.stringify(da.body)).toBe(200);
+    const userCode = da.body.user_code as string;
+    for (const guess of ["BCDF-GHJK", "LMNP-QRST", "VWXZ-BCDF"]) {
+      const r = await enter(guess);
+      expect(r.status, guess).toBe(200);
+      expect(r.html, guess).toMatch(/not accepted/);
+    }
+    const refused = await enter(userCode);
+    expect(refused.status).toBe(429);
+    expect(refused.html).toMatch(/Too many codes were not accepted/);
+    // Nothing ended the session: the client is still told to wait.
+    expect((await pollThrottled(da.body.device_code as string)).body.error).toBe("authorization_pending");
+    t += 60_001;
+    const admitted = await enter(userCode);
+    expect(admitted.status).toBe(200);
+    expect(admitted.html).toMatch(/Confirm the device code/);
+  });
+
+  it("reserves each entry's place before the lookup: of six overlapping codes that match no session, three reach the lookup and three are refused 429", async () => {
+    t += 120_000;
+    const forms = await Promise.all(
+      Array.from({ length: 6 }, async () => {
+        const jar: Jar = new Map();
+        const res = await fetch(`${T_ISSUER}/device`, { redirect: "manual" });
+        keep(jar, res);
+        return { jar, xsrf: hidden(await res.text(), "xsrf") };
+      }),
+    );
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const DeviceCode = throttled.provider.DeviceCode as unknown as { findByUserCode: (...a: unknown[]) => Promise<unknown> };
+    const lookup = DeviceCode.findByUserCode.bind(DeviceCode);
+    let lookups = 0;
+    let refused = 0;
+    const held = vi.spyOn(DeviceCode, "findByUserCode").mockImplementation(async (...a: unknown[]) => {
+      lookups += 1;
+      await gate;
+      return lookup(...a);
+    });
+    try {
+      const guesses = ["BCDF-GHJK", "LMNP-QRST", "VWXZ-BCDF", "GHJK-LMNP", "QRST-VWXZ", "CDFG-HJKL"];
+      const entries = forms.map((f, i) =>
+        fetch(`${T_ISSUER}/device`, {
+          method: "POST",
+          redirect: "manual",
+          headers: { ...FORM, cookie: cookieOf(f.jar) },
+          body: new URLSearchParams({ xsrf: f.xsrf, user_code: guesses[i] as string }).toString(),
+        }).then(async (r) => {
+          if (r.status === 429) refused += 1;
+          return { status: r.status, html: await r.text() };
+        }),
+      );
+      // Every entry has either reached the lookup, where the admitted ones wait, or been refused.
+      await vi.waitFor(() => expect(lookups + refused).toBe(6), { timeout: 15_000 });
+      release();
+      const answers = await Promise.all(entries);
+      expect(lookups).toBe(3);
+      expect(answers.filter((a) => a.status === 429)).toHaveLength(3);
+      expect(answers.filter((a) => a.status === 200 && /not accepted/.test(a.html))).toHaveLength(3);
+    } finally {
+      release();
+      held.mockRestore();
+    }
+  });
+
+  it("counts only codes that match no session: a code whose session ended is not accepted, yet never counts toward the limit", async () => {
+    t += 120_000;
+    const ended = await deviceAuthorize(PUBLIC, {}, { issuer: T_ISSUER });
+    expect(await throttled.cancelDeviceSession(ended.body.user_code as string)).toBe("ended");
+    for (let i = 0; i < 4; i++) {
+      const r = await enter(ended.body.user_code as string);
+      expect(r.status).toBe(200);
+      expect(r.html).toMatch(/not accepted/);
+    }
+    const live = await deviceAuthorize(PUBLIC, {}, { issuer: T_ISSUER });
+    const admitted = await enter(live.body.user_code as string);
+    expect(admitted.status).toBe(200);
+    expect(admitted.html).toMatch(/Confirm the device code/);
+  });
+});
+
+
+describe("the verification throttle's accounting (RFC 8628 Section 5.1, #1202, D1181)", () => {
+  it("keeps each address's budget apart, and counts the places of entries in flight against it", () => {
+    let t = 0;
+    const throttle = new DeviceVerificationThrottle({ maxFailures: 2, windowMs: 1000, now: () => t });
+    const first = throttle.admit("192.0.2.1");
+    const second = throttle.admit("192.0.2.1");
+    expect(first && second).toBeTruthy();
+    expect(throttle.admit("192.0.2.1"), "two entries in flight fill the budget").toBeUndefined();
+    expect(throttle.admit("198.51.100.7"), "another address is unaffected").toBeDefined();
+    throttle.settle(first as never, true);
+    throttle.settle(second as never, false);
+    expect(throttle.admit("192.0.2.1"), "one counted, one released: one place left").toBeDefined();
+    expect(throttle.admit("192.0.2.1")).toBeUndefined();
+    t += 1001;
+    expect(throttle.admit("192.0.2.1"), "the window moved on: the counted code no longer counts").toBeDefined();
+  });
+
+  it("forgets an address that settles with nothing counted, and sweeps one that never returns once its window passes", () => {
+    let t = 0;
+    const throttle = new DeviceVerificationThrottle({ maxFailures: 3, windowMs: 1000, now: () => t });
+    throttle.settle(throttle.admit("192.0.2.1") as never, false);
+    expect(throttle.tracked()).toBe(0);
+    throttle.settle(throttle.admit("192.0.2.2") as never, true);
+    expect(throttle.tracked()).toBe(1);
+    t += 1001;
+    throttle.settle(throttle.admit("192.0.2.3") as never, false);
+    expect(throttle.tracked()).toBe(0);
+  });
+
+  it("bounds tracking without resetting an active limit: past maxAddresses, a new address counts under one shared key", () => {
+    let t = 0;
+    const throttle = new DeviceVerificationThrottle({ maxFailures: 1, windowMs: 1000, maxAddresses: 2, now: () => t });
+    throttle.settle(throttle.admit("192.0.2.1") as never, true);
+    throttle.settle(throttle.admit("192.0.2.2") as never, true);
+    expect(throttle.tracked()).toBe(2);
+    const third = throttle.admit("192.0.2.3");
+    expect(third?.key).toBe(DEVICE_THROTTLE_OVERFLOW_KEY);
+    throttle.settle(third as never, true);
+    expect(throttle.admit("192.0.2.4"), "the shared key is over its limit").toBeUndefined();
+    expect(throttle.admit("192.0.2.1"), "a tracked address keeps its limit").toBeUndefined();
+    t += 1001;
+    expect(throttle.admit("192.0.2.5")?.key, "the sweep made room").toBe("192.0.2.5");
+    expect(throttle.tracked()).toBe(1);
   });
 });
