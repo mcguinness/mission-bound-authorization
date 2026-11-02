@@ -267,6 +267,10 @@ class ObservedStore implements RequestProvenanceStore {
     return this.inner.reserve(record, nowMs);
   }
 
+  committable(token: string, nowMs: number): boolean {
+    return this.inner.committable(token, nowMs);
+  }
+
   commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean {
     return this.inner.commit(token, ref, nowMs, retainUntilMs);
   }
@@ -946,9 +950,66 @@ describe("replay at PAR (@spec request-provenance#replay, #939 slice 2a-2)", () 
     expect(armed).toBe(false);
     expectAccepted(await push(main, envelope([signed.entry])));
   });
+
+  /** Inside the admission wrapper, after the provider answered 201: the clock passes `ms` before the scope commits. */
+  function lapseBeforeAcceptance(header: string, ms: number): { fired: () => boolean } {
+    let armed = true;
+    main.as.provider.use(async (ctx, next) => {
+      await next();
+      if (armed && ctx.get(header) === "1" && ctx.status === 201) {
+        armed = false;
+        controlledClock.advance(ms);
+      }
+    });
+    return { fired: () => !armed };
+  }
+
+  it.each([false, true])(
+    "commits nothing when one of two reservations lapses before the push is accepted, so the still-valid assertion is accepted next (the short assertion first: %s)",
+    async (shortFirst) => {
+      const long = await mint({ lifetimeS: 20 });
+      const short = await mint({ lifetimeS: 1 });
+      const header = `x-test-lapse-${shortFirst ? "short" : "long"}-first`;
+      // Past the short assertion's exp plus the 5 s allowance, within the long one's.
+      const lapse = lapseBeforeAcceptance(header, 7000);
+      const evidence = shortFirst ? [short.entry, long.entry] : [long.entry, short.entry];
+      const r = await push(main, envelope(evidence), { [header]: "1" });
+      expect(r.status).toBe(500);
+      expect(lapse.fired()).toBe(true);
+      expect(acceptanceOf(long.entry.assertion)).toBeUndefined();
+      expect(acceptanceOf(short.entry.assertion)).toBeUndefined();
+      expectAccepted(await push(main, envelope([long.entry])));
+    },
+  );
+
+  it("commits nothing when the one reservation lapses before the push is accepted", async () => {
+    const short = await mint({ lifetimeS: 1 });
+    const lapse = lapseBeforeAcceptance("x-test-lapse-single", 7000);
+    const r = await push(main, envelope([short.entry]), { "x-test-lapse-single": "1" });
+    expect(r.status).toBe(500);
+    expect(lapse.fired()).toBe(true);
+    expect(acceptanceOf(short.entry.assertion)).toBeUndefined();
+  });
 });
 
 describe("later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2)", () => {
+  it("one accepted push opens two interactions, each relying on the one acceptance record without verifying again, and a new push of the assertion is still replay", async () => {
+    const signed = await mint();
+    const ref = expectAccepted(await push(main, envelope([signed.entry])));
+    const before = verifications();
+    const a = await authorize(main, ref);
+    const b = await authorize(main, ref);
+    expect(a.uid).toBeTruthy();
+    expect(b.uid).toBeTruthy();
+    expect(a.uid).not.toBe(b.uid);
+    for (const opened of [a, b]) {
+      const uid = opened.uid as string;
+      expect((await render(main, uid, approverHeaders(uid, opened.jar))).status).toBe(200);
+    }
+    expect(verifications()).toBe(before);
+    expectEvidenceRefusal(await push(main, envelope([signed.entry])), "replay");
+  });
+
   it("the authorization endpoint, the rendering and the decision succeed after exp and the capture age pass, verify nothing again, and record the push's verification time and facts", async () => {
     // iat 10 s ago, exp 10 s ahead, captured 30 s ago (the maximum capture age).
     const signed = await mint({ iatOffsetS: -10, lifetimeS: 20, captureAgeS: 20 });
@@ -1328,7 +1389,7 @@ describe("the admission scope at the dispatch (@spec request-provenance#replay, 
     const recorded = new SubmissionAdmission();
     let holdReleases = 0;
     recorded.hold({
-      commit() {},
+      prepare: () => () => {},
       release() {
         holdReleases += 1;
       },
@@ -1374,6 +1435,22 @@ describe("the admission scope at the dispatch (@spec request-provenance#replay, 
       ),
     ).rejects.toThrow("binds another presenter");
   });
+
+  it.each([false, true])(
+    "settles all or nothing: when one hold can no longer commit, none commits and every hold is released (the lapsed hold first: %s)",
+    (lapsedFirst) => {
+      const admission = new SubmissionAdmission();
+      const commits: string[] = [];
+      let releases = 0;
+      const live = { prepare: (ref: string) => () => void commits.push(ref), release: () => void (releases += 1) };
+      const lapsed = { prepare: () => undefined, release: () => void (releases += 1) };
+      for (const hold of lapsedFirst ? [lapsed, live] : [live, lapsed]) admission.hold(hold);
+      expect(() => admission.commit("par:all-or-nothing")).toThrow("nothing is committed");
+      expect(commits).toEqual([]);
+      expect(releases).toBe(2);
+      expect(admission.state).toBe("released");
+    },
+  );
 
   it("the replay store releases only a reservation: releasing a committed pair's token keeps its acceptance record and its pair", async () => {
     const own = new InMemoryRequestProvenanceStore();

@@ -71,6 +71,12 @@ export interface RequestProvenanceStore {
    */
   reserve(record: RequestProvenanceRecord, nowMs: number): Promise<string | undefined>;
   /**
+   * Whether the reservation `token` can still commit at `nowMs`: it is held
+   * and has not lapsed. Changes nothing; the admission scope asks every hold
+   * before it commits any (all or nothing).
+   */
+  committable(token: string, nowMs: number): boolean;
+  /**
    * Commit the reservation `token` for the accepted submission `ref`,
    * retained at least until `retainUntilMs`. False when the reservation is
    * gone at `nowMs` (it lapsed, or was released).
@@ -128,6 +134,15 @@ export class InMemoryRequestProvenanceStore implements RequestProvenanceStore {
   #byToken(token: string): [string, Row] | undefined {
     for (const entry of this.#rows) if (entry[1].token === token) return entry;
     return undefined;
+  }
+
+  committable(token: string, nowMs: number): boolean {
+    const found = this.#byToken(token);
+    return (
+      found !== undefined &&
+      found[1].state === "reserved" &&
+      InMemoryRequestProvenanceStore.#lapsesAt(found[1]) > nowMs
+    );
   }
 
   commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean {

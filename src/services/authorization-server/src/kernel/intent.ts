@@ -202,11 +202,17 @@ export interface IntentSubmissionPresenter {
 /**
  * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): what a type
  * holds in a {@link SubmissionAdmission} while the containing submission is
- * decided: `commit` when the carrier accepts it, under the carrier's
- * reference for the accepted submission, and `release` otherwise.
+ * decided: prepared, then committed, when the carrier accepts it under the
+ * carrier's reference for the accepted submission; released otherwise.
  */
 export interface SubmissionAdmissionHold {
-  commit(ref: string): void;
+  /**
+   * Check, changing nothing, that the reservation can still commit under
+   * `ref`, and return the step that commits it; undefined when it cannot
+   * (it lapsed). The scope prepares every hold before it runs any step, in
+   * one synchronous turn, so a prepared step does not fail.
+   */
+  prepare(ref: string): (() => void) | undefined;
   release(): void;
 }
 
@@ -238,20 +244,32 @@ export class SubmissionAdmission {
     this.#holds.push(hold);
   }
 
-  /** The carrier accepted the submission: commit every hold under `ref`. */
+  /**
+   * The carrier accepted the submission: commit every hold under `ref`, all
+   * or nothing. Every hold is prepared before any commits; when one can no
+   * longer commit, the scope releases every hold and throws, committing
+   * none, so each still-valid assertion stays retryable.
+   */
   commit(ref: string): void {
     if (this.#state === "committed") return;
     if (this.#state === "released") throw new Error("a released admission commits nothing");
-    this.#state = "committed";
-    let failure: unknown;
+    const steps: Array<() => void> = [];
     for (const hold of this.#holds) {
+      let step: (() => void) | undefined;
       try {
-        hold.commit(ref);
+        step = hold.prepare(ref);
       } catch (e) {
-        failure ??= e;
+        this.release();
+        throw e;
       }
+      if (step === undefined) {
+        this.release();
+        throw new Error("a reservation lapsed before the submission was accepted: nothing is committed");
+      }
+      steps.push(step);
     }
-    if (failure !== undefined) throw failure;
+    this.#state = "committed";
+    for (const step of steps) step();
   }
 
   /** Any outcome but acceptance: release every hold, once. A committed scope releases nothing. */

@@ -128,11 +128,15 @@ export function createRequestProvenanceEvidenceType(
         throw refuse("step 10: replay: another submission has reserved or committed this (iss, jti)");
       }
       admission.hold({
-        commit(ref) {
+        prepare(ref) {
+          // One reading of the clock for the check and the commit it returns.
           const at = now().getTime();
-          if (!opts.store.commit(token, ref, at, at + retentionMs)) {
-            throw new Error("the (iss, jti) reservation lapsed before the submission was accepted");
-          }
+          if (!opts.store.committable(token, at)) return undefined;
+          return () => {
+            if (!opts.store.commit(token, ref, at, at + retentionMs)) {
+              throw new Error("a prepared (iss, jti) reservation did not commit");
+            }
+          };
         },
         release() {
           opts.store.release(token);
