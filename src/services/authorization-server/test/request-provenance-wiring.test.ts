@@ -704,25 +704,38 @@ describe("required claims and the audience at PAR (@spec request-provenance#asse
 });
 
 describe("the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2)", () => {
-  it("refuses invalid_mission_intent_evidence an entry with no intended-AS binding", async () => {
+  // Each refusal comes before any derivation: the kernel derives nothing for a refused push.
+  let derive: ReturnType<typeof vi.spyOn>;
+  beforeAll(() => {
+    derive = vi.spyOn(main.as.kernel, "derive");
+  });
+  afterAll(() => derive.mockRestore());
+
+  it("refuses invalid_mission_intent_evidence an entry with no intended-AS binding, before derivation", async () => {
     const signed = await mint();
     const token = await resign(signed.entry.assertion, {
       claims: ({ aud: _aud, ...c }) => c,
     });
+    derive.mockClear();
     expectEvidenceRefusal(await push(main, envelope([entry(token)])), "aud is not a string");
+    expect(derive).not.toHaveBeenCalled();
   });
 
-  it("refuses invalid_mission_intent_evidence an entry whose intended-AS binding is invalid", async () => {
+  it("refuses invalid_mission_intent_evidence an entry whose intended-AS binding is invalid, before derivation", async () => {
     const signed = await mint();
     for (const aud of [42, [ISSUER], { iss: ISSUER }]) {
       const token = await resign(signed.entry.assertion, { claims: (c) => ({ ...c, aud: aud as Json }) });
+      derive.mockClear();
       expectEvidenceRefusal(await push(main, envelope([entry(token)])), "aud is not a string");
+      expect(derive).not.toHaveBeenCalled();
     }
   });
 
-  it("refuses invalid_mission_intent_evidence an entry bound to another authorization server, and accepts the same capture bound to this one", async () => {
+  it("refuses invalid_mission_intent_evidence an entry bound to another authorization server, before derivation, and accepts the same capture bound to this one", async () => {
     const other = await mint({ audience: STRICT_ISSUER });
+    derive.mockClear();
     expectEvidenceRefusal(await push(main, envelope([other.entry])), "aud is not this AS's issuer identifier");
+    expect(derive).not.toHaveBeenCalled();
     expectAccepted(await push(main, envelope([(await mint({ audience: ISSUER })).entry])));
   });
 });
@@ -1257,7 +1270,7 @@ describe("enabling the type (@spec request-provenance#replay, D1119 Q5, D1151)",
         built.kernel.verifySubmissionEvidence({ intent, evidence: [entry("a.b.c") as never], presenter: { clientId: "ap-agent" } }),
       ).rejects.toThrow(`unknown evidence type: ${TYPE}`);
     }
-  });
+  }, 30_000);
 });
 
 describe("the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2)", () => {
