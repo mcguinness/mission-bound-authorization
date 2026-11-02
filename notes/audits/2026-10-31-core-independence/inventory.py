@@ -51,7 +51,10 @@ def package(slug, anchor):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("revision", help="Commit or ref to audit")
-    parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parent)
+    parser.add_argument(
+        "--output", type=Path, required=True,
+        help="Directory for CITATIONS.md and citations.json; not this one, which holds the pinned baseline",
+    )
     args = parser.parse_args()
     revision = subprocess.check_output(
         ["git", "rev-parse", f"{args.revision}^{{commit}}"], text=True

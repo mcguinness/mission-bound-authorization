@@ -1,10 +1,28 @@
 # OAuth binding independence implementation plan
 
+Revision 3, 2026-11-02. Revision 2 (2026-10-31) is this file's first committed version.
+
 The OAuth binding will define a complete direct approval and issuance protocol, together with the invariants and extension rules that other specifications must preserve. An authorization server must be able to obtain useful Mission functionality without implementing a Mission companion. Companions will define their additional mechanisms and explain how they satisfy the binding's contracts.
 
 This plan implements the owner's direction to remove companion dependencies and reduce the knowledge needed to implement the binding. The owner's subsequent direction is to be aggressive for `-02`: complete the independence pass before publishing that revision, rather than defer its substantive work to a later revision. It separates editorial removals from changes to normative ownership. It does not create a smaller conformance class or another specification.
 
-Revision 2 incorporates the critique of sequencing, extension-contract ownership, size controls, citations, examples and validation. Package IDs remain stable so the citation inventory still applies; execution order is P0, P3, P2, P1, P4, P5.
+Revision 2 incorporated the critique of sequencing, extension-contract ownership, size controls, citations, examples and validation. Revision 3 updates the execution text for what has landed, without changing the gate. Package IDs remain stable so the citation inventory still applies; the remaining execution order is P0, the extension-contract review, P2, P1, P4, P5.
+
+## Revision 3 status
+
+Landed since Revision 2:
+
+- **P3's dependency inversion:** #1974, merged as `f02a1306` (#1967, D1167) under D1134's option B. The binding's `normative:` list holds no Mission family draft, and it states its standing-consent requirements locally. A profile defined elsewhere may use another mechanism while meeting them, which D1134 records as an intentional normative relaxation. The Approval Basis Contract stays in Governance and keeps binding its adopters.
+- **The Contract rows:** Governance's Approval Basis Contract rows leave the binding's baseline profiles (#1992, #1985, D1189).
+- **The manifest edge:** the family manifest's conditional Governance edge on the binding is removed (#2006, D1198).
+
+Not complete, per the review against these criteria at `1988e136` (D1192), as corrected by the owner's assessment (D1195):
+
+- **The extension contract (exit condition 5)** is not demonstrated, since no clause-by-clause audit of the hooks has been performed. The preparatory commit Revision 2 placed before the dependency removal cannot now precede it, so the contract review is its own step.
+- **P2, P1 and P4** have not started. Grant Bindings and Related Mechanisms still carries the mechanism catalogue that P2 item 1 replaces.
+- **P5** has not run, and neither P0's tracking issue nor its execution baseline exists.
+
+D1195 confirms this plan's eight exit conditions, P5 and completion record as the full gate for `-02`, subject to D1134's semantic ruling. The text below keeps the gate as written; passages about work that has since landed carry dated status notes.
 
 ## Baseline and delivery status
 
@@ -17,13 +35,13 @@ Completed for this plan:
 - Open issues and PRs have been checked for overlapping work.
 - The implementation sequence, requirement-transfer controls and acceptance exercises are specified below.
 
-The plan and its inventory are local, untracked working files. No specification, ledger, issue, PR or decision-log entry has been changed by this planning pass. Implementation PRs are the next deliverables; the plan is not evidence that their acceptance checks have passed.
+Revision 2 and its inventory were local, untracked working files; Revision 3 commits them (#1944). The planning pass changed no specification, ledger, issue, PR or decision-log entry. The plan is not evidence that any acceptance check has passed.
 
 Supporting files:
 
 - [Companion citation inventory](CITATIONS.md) identifies each occurrence and its source section.
 - [Machine-readable citation inventory](citations.json) records the same occurrences for subsequent comparison.
-- [Inventory generator](inventory.py) regenerates the inventory from an explicit git revision without changing the checkout.
+- [Inventory generator](inventory.py) regenerates the inventory from an explicit git revision without changing the checkout. It requires `--output`; the inventory files beside it are the pinned baseline.
 
 ## The implementation boundary
 
@@ -46,11 +64,13 @@ A resource server either enforces the selected authorization-details type or use
 7. The ledger and family manifest describe the resulting dependency graph and obligation ownership accurately. Citation and keyword counts are diagnostics, not proof of correctness or readability.
 8. The completed series does not increase the protocol body's prose word count or the Extensibility chapter's prose word count against the frozen execution baseline. A builder reports each PR's additions and removals, including intermediate growth. A necessary exception must identify the unique obligation that cannot be stated within the budget and receive explicit review; it must never be hidden by removing another necessary rule. This is a scope budget, not evidence of improved readability.
 
+D1195 (2026-11-02): these eight conditions, P5 and the completion record are the full gate for `-02`, subject to D1134's semantic ruling.
+
 The zero-reference target is for Mission-family dependencies. External OAuth dependencies, including Actor Profile and RAR remediation where retained requirements use them, must remain honestly classified. The client-instance question has its own existing decision and is handled separately below.
 
 ## Current dependency inventory
 
-The binding contains 114 citation occurrences to 28 in-repository family documents. The count covers citation markup from the abstract through the material before Document History. It excludes bibliography declarations and historical notes. Another 16 occurrences cite three adjacent McGuinness documents outside the family manifest: client-instance-id, Actor Profile and client-attesters.
+At the baseline, the binding contained 114 citation occurrences to 28 in-repository family documents. The count covers citation markup from the abstract through the material before Document History. It excludes bibliography declarations and historical notes. Another 16 occurrences cite three adjacent McGuinness documents outside the family manifest: client-instance-id, Actor Profile and client-attesters.
 
 | Family document or group | Occurrences | Primary problem | Planned treatment |
 | --- | ---: | --- | --- |
@@ -63,23 +83,25 @@ The binding contains 114 citation occurrences to 28 in-repository family documen
 | Architecture, Child Delegation and Security Model | 4 each | Explanatory navigation and optional mechanism comparisons interrupt the main flow. | Retain only indispensable generic explanations; place family navigation in Architecture. |
 | Other family documents | 31 | Small references accumulate across creation, issuance, security, privacy and extensibility. | Classify each occurrence using the disposition procedure below. |
 
-The only in-family normative reference is Approval Governance. The family manifest already has an empty unconditional `adoption_requires` list for the binding, and a conditional Governance dependency for standing-consent activation. Therefore this project removes a real conditional dependency and a much larger reading burden; it does not repair a requirement that every existing AS implement the whole family.
+At the baseline, the only in-family normative reference was Approval Governance. The family manifest had an empty unconditional `adoption_requires` list for the binding, and a conditional Governance dependency for standing-consent activation. Therefore this project removes a real conditional dependency and a much larger reading burden; it does not repair a requirement that every existing AS implement the whole family.
+
+Status (2026-11-02): the normative reference and the conditional edge are both removed (#1974, D1167; #2006, D1198). At `1988e136` the inventory generator counts 112 occurrences to 29 family documents. Approval Governance's 12 are now 9, a Mandate citation was added, and every other document's count is unchanged.
 
 ## Decisions retained and decisions revised
 
 | Decision or issue | Treatment in this plan |
 | --- | --- |
-| D1057 and D1058, Approval Basis Contract | The independence direction requires an explicit supersession of the decision that the binding imports Governance normatively. P0 states the exact change for recording and P3 exposes it for normative review; no superseding D-row is claimed to exist yet. Keep the contract in Governance. Put its adoption requirements in every companion using it, while retaining universal creation invariants in the binding. |
+| D1057 and D1058, Approval Basis Contract | D1134 (2026-11-01, option B) records the supersession, in its own wording. The binding states its standing-consent requirements locally, and a profile defined elsewhere may use another mechanism while meeting them. The Contract stays in Governance and keeps binding its adopters: Template, Progressive, Child Delegation and `governed_policy`. D1054 and D1056's mandatory connection is superseded only to that extent. It landed in #1974 (D1167). |
 | D1061 and D1070, implied anchors | Preserve computation from authoritative immutable inputs, the specified algorithm, rejection of mismatching stored anchors, creation-time availability and whole-record member presence. This work does not make commitments weaker or change their preimages. |
-| D1081 and PR #1941, direct approval procedure | Preserve the seven numbered steps, their order and atomicity, and the topic subsections that now own their rules. Do not recreate the former long procedure. |
+| D1081 and PR #1941 (merged), direct approval procedure | Preserve the seven numbered steps, their order and atomicity, and the topic subsections that now own their rules. Do not recreate the former long procedure. |
 | #1915 and #1917 | Keep these completed issues closed. This plan concerns dependency direction, not unfinished execution of their old proposals. Record the limited supersession of D1057 in the new work's issue and D-row. |
 | #1723 and #1793 | Keep their measured results and closures. Previous reader work did not demonstrate the proposed improvement. Do not reuse keyword totals or those results as evidence that this plan succeeds. |
 | #1412 and D559, client-instance composition | Reuse #1412. Its current decision keeps the normative reference until its publication trigger and destination conditions are met. This work must not silently move the material into an unsuitable companion or downgrade the citation. The optional extraction is not a prerequisite of Mission-family independence. |
 | #207, Mission Model split | Remain parked. This work makes the OAuth binding self-contained and introduces no normative Substrate dependency. It neither executes the split nor retires or merges documents. |
-| #1895, token-independent revocation | An [explicit owner ruling was posted](https://github.com/mcguinness/mission-bound-authorization/issues/1895#issuecomment-6553145841), adopting A with B's clarification. The issue remains open and labelled `decide`; no implementing merge or dedicated ruling D-row was established by this review. Preserve the ruling, reconcile its stale issue state, and coordinate implementation with P2. The ruling is not evidence that the text has landed. |
-| #1937 and PR #1939, issued-token validity | Incorporate the resulting consumer-specific revocation wording when it lands. Do not restore an unconditional claim that every issued token remains valid until expiry. |
-| #1504 and PR #1942, editorial residue and legacy states | Reconcile against the merged result before touching overlapping sections. Do not reintroduce removed legacy interpretations or duplicate the consumption-mode rewrite. |
-| #1927, record and evidence follow-ups | Keep its ledger, commitment-input and Consent Evidence work separate. Re-anchor its rows if this plan changes their owning sections; do not silently change the proposed `verified_at` behavior. |
+| #1895, token-independent revocation | Ruled (D1114, adopting A with B's clarification) and implemented by PR #1960 (merged as `208f2aaf`, D1123); #1895 is closed as completed. Preserve the token-independent authorization result in P2. |
+| #1937 and PR #1939, issued-token validity | PR #1939 is merged and #1937 is closed; the consumer-specific revocation wording is on main. Do not restore an unconditional claim that every issued token remains valid until expiry. |
+| #1504 and PR #1942, editorial residue and legacy states | PR #1942 is merged and #1504 is closed. Work from the merged result in overlapping sections. Do not reintroduce removed legacy interpretations or duplicate the consumption-mode rewrite. |
+| #1927, record and evidence follow-ups | #1927 is closed as completed. Re-anchor its rows if this plan changes their owning sections, and do not silently change its `verified_at` outcome. |
 
 The owner's instruction authorizes developing this plan and the independence direction. It does not turn every implementation choice below into an already-published protocol rule. Any actual requirement change must be identified in its PR. Early-draft status removes the need to invent a legacy compatibility mode, but it does not justify losing an obligation during relocation.
 
@@ -146,6 +168,8 @@ Re-quote and re-anchor rows in the same commit as the text. Split or retire a ro
 
 ### P0 Establish the work record
 
+**Status (2026-11-02):** D1134 records the D1057 supersession in its own wording (see the decisions table), so the text quoted below is historical. #1895 is closed (PR #1960, D1123). Still to do: the tracking issue, its #302 row and the execution-baseline freeze. The issue is filed only on the owner's word.
+
 The inventory and this plan complete the initial local preparation. The owner's direction authorizes pursuing independence for `-02`; the plan itself is not a substitute for an explicit record of which previous decision is superseded. The P0 record must state:
 
 > For `-02`, supersede D1057 only as to the OAuth binding's normative import of Approval Governance. Keep the Approval Basis Contract in Governance, place its adoption duties in each profile that uses it, and retain the universal creation invariants in the binding. Do not publish `-02` until the independence acceptance criteria pass. Retain useful informative citations at their extension hooks; impose no single-pointer limit.
@@ -159,6 +183,8 @@ Before changing the Editor's Draft, file a self-contained tracking issue with fo
 The issue body must include the scope, required invariants, D1057 supersession, PR order and closure criteria; it must not depend on these local files being available. Add the issue to #302 after re-reading its current body. Record the owner's direction and the limited supersession in one fresh D-row, taking the number only after fetching current main. Do not rewrite historical D-rows.
 
 ### P3 Remove the Approval Governance dependency
+
+**Status (2026-11-02):** the dependency inversion has landed (#1974, D1167; #1992, D1189; #2006, D1198), under D1134's option B, which differs from the steps below. The binding states local standing-consent requirements, and a profile defined elsewhere may meet them by another mechanism. The extension-contract work remains, as its own reviewable step. Its preparatory commit can no longer precede the landed change, and P3's acceptance item "direct-only conformance is fully answerable from the binding" is not demonstrated (D1195). The steps below stay as the record of the intended preservation checks. Do not restore the import or undo D1134's relaxation to recreate their order.
 
 **Files:** the binding, Approval Governance, every existing standing-consent profile that adopts its contract, and the family and conformance manifests. Determine the adopter list from both normative references and actual `approval_basis.type` producers; searching only the phrase Approval Basis Contract is insufficient.
 
@@ -302,13 +328,13 @@ Keep all changed source pins current. Inspect rendered tables, examples, interna
 
 ## Sequencing and concurrent work
 
-P0 precedes any draft edit. Land P3 first, including its extension-contract commit and adopter updates, then P2, P1 and P4. P5 evaluates the combined result. Package IDs are stable labels, not execution order. This yields four main implementation PRs; do not create a fifth restructuring PR merely for the extension contract. If P3 must be split for review, its preparation lands destination-first and the source deletion waits. P2 never starts relocating against an unwritten contract.
+P0 precedes any further draft edit. P3's dependency inversion has landed (D1167, D1189, D1198). Next comes the extension-contract review as its own reviewable step, then P2, P1 and P4. P5 evaluates the combined result. Package IDs are stable labels, not execution order. The remaining work is four main implementation PRs: the extension contract, P2, P1 and P4. P2 never starts relocating against an unwritten contract.
 
-The dependency removal is the first useful stopping point: if the series pauses, a completed P3 has achieved normative family independence. It has not completed the `-02` release gate. The owner has selected aggressive scope for `-02`; do not move P1, P2 or P4 to a later revision solely to preserve the current schedule. Present any newly discovered semantic blocker explicitly instead of quietly publishing a partial pass.
+The dependency removal was the first useful stopping point, and the series has reached it: normative family independence (D1167). It has not completed the `-02` release gate (D1192, D1195). The owner has selected aggressive scope for `-02`; do not move P1, P2 or P4 to a later revision solely to preserve the current schedule. Present any newly discovered semantic blocker explicitly instead of quietly publishing a partial pass.
 
 Queue reviews one implementation PR at a time. Prepare inventories and fixtures while a PR is reviewed, but avoid four competing rewrites of the same binding sections. This reduces repeated conflict resolution without weakening the `-02` scope.
 
-Build from a fresh `origin/main` in an isolated worktree. Do not modify this older checkout's tracked draft. Before beginning a package, re-read the tracking issue, current open PRs and the affected sections. PR #1942 overlaps broad editorial work; PR #1939 overlaps Revocation. Prefer incorporating their merged results rather than resolving competing rewrites by retaining whichever hunk applies cleanly.
+Build from a fresh `origin/main` in an isolated worktree. Do not modify this older checkout's tracked draft. Before beginning a package, re-read the tracking issue, current open PRs and the affected sections. PR #1942 (broad editorial work) and PR #1939 (Revocation) have merged; work from their results, not from any earlier hunk.
 
 Keep each PR independently reviewable, state whether it is editorial, normative relocation or behavior-changing, and include its paragraph disposition. PRs say Part of the tracking issue until all exit conditions are satisfied. Every applicable check must pass at the actual reviewed merge head. Regenerate `DRAFTS.md` rather than resolving generated counts by hand. A semantic conflict resolution returns for review.
 
@@ -316,7 +342,7 @@ The owner retains merge, publication and upstream actions. Publication of `-02` 
 
 ## Size measurement and the Mapping Assessment
 
-At P0 freeze the execution baseline after incorporating any already-merged overlapping PRs. Count whitespace-separated prose tokens from Introduction to before IANA Considerations, excluding fenced code blocks, bibliography and Document History. Count the Extensibility chapter separately under the same rules. Keep the exact extraction script and both baseline values with the issue's acceptance record. Report appendix and example growth separately so moving text outside the measured body cannot conceal extra baseline reading. P5 compares the same regions and requires no net growth; a correctness-driven exception is an explicit reviewed change to the budget, not a silent waiver.
+At P0 freeze the execution baseline after incorporating any already-merged overlapping PRs. Status (2026-11-02): it is not yet frozen; freeze it before renewed package work, on a commit that includes #1974 (D1195). Count whitespace-separated prose tokens from Introduction to before IANA Considerations, excluding fenced code blocks, bibliography and Document History. Count the Extensibility chapter separately under the same rules. Keep the exact extraction script and both baseline values with the issue's acceptance record. Report appendix and example growth separately so moving text outside the measured body cannot conceal extra baseline reading. P5 compares the same regions and requires no net growth; a correctness-driven exception is an explicit reviewed change to the budget, not a silent waiver.
 
 Architecture's Mapping Assessment is an assessment of its pinned older binding snapshot. P5 must run check (t), confirm that the assessed snapshot and its scope warning remain accurate, and confirm the new binding does not claim that the old assessment covers it. Do not update the pin as mechanical housekeeping. A current-revision assessment requires a separate substantive clause-by-clause reassessment and its own disposition record. Keeping the honestly labelled historical assessment is compatible with `-02` publication; claiming current coverage without that reassessment is not.
 

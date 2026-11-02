@@ -17,6 +17,16 @@ The plan is revised for the owner's direction to be aggressive for `-02`. Public
 | Use a small defect review instead of a scored study. | Accepted. Two independent readers and Karl as adjudicator are specified, with identities recorded before execution. Resolve findings individually; no aggregate score substitutes for complete baseline requirements. |
 | Check incoming title references in P2 and P3. | Accepted. Both packages require anchor and section-title checks, including whether the destination still states the cited obligation. |
 
+## Addendum: Revision 3 (2026-11-02)
+
+The rows above are kept as written. Since then:
+
+- **"Do the actual Governance dependency removal first":** done (#1974, D1167).
+- **"Assign the extension-contract rewrite":** overtaken by D1134. The import was removed under option B before any contract commit. The contract review remains its own step, and exit condition 5 is not demonstrated (D1195).
+- **"Do not silently reverse D1057":** D1134 records the supersession, in its own wording, not in P0's proposed text.
+- **"Treat #1895 as undecided":** ruled (D1114) and implemented (PR #1960, D1123); #1895 is closed.
+- **"State publication timing":** confirmed by D1112 and D1195. `-02` waits for the full gate: the eight exit conditions, P5 and the completion record, subject to D1134.
+
 ## Evidence for the qualifications
 
 The [posted owner ruling for #1895](https://github.com/mcguinness/mission-bound-authorization/issues/1895#issuecomment-6553145841) explicitly adopts A with B's clarification. It preserves the token-independent requirement and authorizes one reviewable PR. An open issue and stale label do not negate that ruling, but the comment does not prove implementation has landed.
@@ -27,4 +37,4 @@ At `3d3185378604c70e655a663c7b6ef103366ba5d5`, the [conformance manifest](https:
 
 ## Status
 
-Only the local plan and this disposition have changed. The baseline citation inventory remains pinned to its original commit. No issue, D-row, specification, ledger or PR has been modified by this revision, and no review exercise or example implementation is claimed complete.
+Committed with the plan in Revision 3 (#1944, 2026-11-02). Its later records are D1134, D1167, D1189, D1192, D1195 and D1198. The baseline citation inventory remains pinned to its original commit. No review exercise or example implementation is claimed complete.
