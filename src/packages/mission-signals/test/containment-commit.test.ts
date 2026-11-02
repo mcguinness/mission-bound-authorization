@@ -31,12 +31,13 @@ import {
   MissionSignalReceiver,
   signLifecycleEvent,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const CONSUMER_AUD = "https://erp.consumer.test";
 const RESOURCE = "https://payments.test/mcp";
 const NOW = new Date("2026-08-06T12:00:00Z");
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 const URI = statusListUri(ISS);
 
 const POLICY = {
