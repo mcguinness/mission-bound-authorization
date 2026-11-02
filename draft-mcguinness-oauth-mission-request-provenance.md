@@ -336,6 +336,13 @@ exception
 be reused in assertions for the same capture, only within the
 workflow authorized to submit and revise that request.
 
+Progressing through an accepted submission is distinct from submitting
+again ({{replay}}): a revision that changes `intent_hash` is a new
+submission and needs a fresh assertion. The intake issues it from the
+same capture only while the capture is within the deployment's
+maximum capture age; after that, a new capture is needed, which means
+receiving the instruction from the originator again.
+
 
 # The Request Digest {#request-digest}
 
@@ -393,7 +400,10 @@ bound:
 9. Confirm `intent_hash` equals the provisional `intent_hash` of the
    submitted Intent, and `presenter` agrees with the presenter the
    containing exchange established
-   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}).
+   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}). A
+   `presenter` carrying `cnf` where the exchange established no
+   confirmation key does not agree: no key is inferred from the
+   assertion.
 10. Reserve the pair (`iss`, `jti`) ({{replay}}).
 
 The deployment declares its maximum assertion lifetime, maximum
@@ -415,10 +425,29 @@ atomically, with single-writer-wins semantics:
   succeeds or returns a pending continuation), it commits the
   reservation. A committed pair is retained
   at least until `exp` plus the clock-skew allowance.
-- **Release.** When the AS refuses the containing submission for any
-  reason, including another evidence entry failing, it releases the
-  reservation. A reservation never outlives `exp` plus the clock-skew
-  allowance.
+- **Release.** When the AS refuses the containing submission before
+  accepting it, for any reason, including another evidence entry
+  failing, it releases the reservation. A reservation never outlives
+  `exp` plus the clock-skew allowance.
+
+Later steps of an accepted submission, such as rendering it for
+approval, the approval decision, or a deferred activation, do not
+verify the assertion again. They rely on an acceptance record the AS
+keeps for that submission: it binds the intended AS, the exact
+Intent, the established presenter, and the unchanged evidence entry,
+and keeps the original verification's time and facts
+({{recorded-facts}}). A step that finds no acceptance record, or one
+that does not match, refuses the submission. The assertion's `exp`,
+or the capture passing the maximum capture age, after acceptance
+does not refuse the accepted submission; the submission's own
+pending-operation lifetime still applies. A refusal after
+acceptance, such as an approval denial, releases nothing, so an
+accepted assertion is never reusable. Any other submission carrying
+the same evidence is verified in full, including the replay check.
+Relying on the acceptance record relaxes no other check: the AS's
+authorization, required-evidence, and approval checks still apply at
+each step. This reliance applies to this evidence type only; it
+changes no other type's verification.
 
 On a surface that carries a Mission-creation idempotency
 fingerprint, presented evidence is a member of that fingerprint
@@ -430,9 +459,9 @@ a fresh assertion changes the fingerprint, and the AS refuses the
 retry with `invalid_request` as a different operation. The AS
 resolves an exact retry by its fingerprint and returns the recorded
 outcome or continuation without verifying the assertion again, so
-the committed `jti` does not refuse it. Any submission other than an
-exact retry follows {{verification}} in full, including the replay
-check.
+the committed `jti` does not refuse it; the surface's other recovery
+conditions still apply. Any submission other than an exact retry
+follows {{verification}} in full, including the replay check.
 
 On any other surface, such as PAR, a client that retries after losing
 the response to an accepted submission presents a fresh assertion:
@@ -471,6 +500,9 @@ These facts are material verified provenance, rendered for approval
 under the OAuth binding's submission steps
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission
 Processing Order"). They carry no instruction text and no secret.
+These facts authenticate capture and origin. They do not establish
+that the Intent interprets the instruction, and a reader of them
+cannot establish it ({{verification-scope}}).
 
 
 # What Verification Establishes {#verification-scope}
@@ -507,6 +539,12 @@ of the same request, it keeps that association in access-controlled
 audit storage, never in the assertion. The capture record may list
 the assertions issued from it; no assertion commits to its capture
 record.
+
+Where a deployment records a claim about how far an Intent departs
+from the captured instruction, it MUST associate that claim with the
+capture's `request_digest` in access-controlled audit storage, so
+that an authorized audit holding the capture can test the claim. The
+claim never enters the assertion or the recorded facts.
 
 
 # Conformance {#conformance}
@@ -719,6 +757,7 @@ hmac-sha-256:NGW2Oglh0SHnmQJaPUBHXG0LTjHwBoY67TokgLxS_g8
   isolation, the closed entry and signed assertion, capture before
   shaping and signing from the same workflow's capture record, the
   secret-keyed request digest with test vectors, verification, replay
-  reservation with commit on acceptance, recorded facts, the limits of
+  reservation with commit on acceptance, the processing of an accepted
+  submission from its acceptance record, recorded facts, the limits of
   what verification establishes, audit and retention, and the privacy
   treatment of direct and indirect commitments to the instruction.
