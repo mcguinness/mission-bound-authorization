@@ -154,6 +154,7 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
+import { DrawdownPolicyPinStore } from "./drawdown-policy-pins.js";
 import { JoinEvidenceStore } from "./join-evidence-store.js";
 import { type ApprovalGovernanceRecord, ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
 import {
@@ -1200,6 +1201,11 @@ export class MissionKernel {
    */
   readonly activationPolicySnapshots: ActivationPolicySnapshotStore;
   /**
+   * @spec progressive#sec-drawdown-policy (#1017, D1162): each drawdown policy
+   * version a ceiling consent committed, pinned to its one content.
+   */
+  readonly drawdownPolicyPins: DrawdownPolicyPinStore;
+  /**
    * @spec authority-server#join-assertion-artifact (#1560): the join evidence
    * events, one per Join Assertion minted, on this kernel's database and kept
    * for the audit horizon of the Mission each names. An audit read only: no
@@ -1402,6 +1408,7 @@ export class MissionKernel {
     // snapshot horizon is each Mission's expiry plus the SAME declared audit
     // retention the tombstones compose, so the deployment declares one audit
     // horizon, not two that can drift.
+    this.drawdownPolicyPins = new DrawdownPolicyPinStore(this.db);
     this.activationPolicySnapshots = new ActivationPolicySnapshotStore(this.db, {
       now: this.now,
       auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
@@ -2256,15 +2263,21 @@ export class MissionKernel {
       this.directRule && !this.findByApprovalEvent(input.approvalEventId)
         ? this.prepareDirectRecord(record, input, resolvedSource.rootId, ceiling?.authority_ceiling)
         : undefined;
+    const insert = {
+      source: resolvedSource,
+      audiences: "fresh" as const,
+      // @spec progressive#sec-drawdown-policy (#1017, D1162): a ceiling consent pins its policy version.
+      ...(ceiling?.drawdown_policy ? { drawdownPolicyConsent: ceiling.drawdown_policy } : {}),
+    };
     try {
       if (governance) {
         withTransaction(this.db, () => {
-          this.insertRecord(record, undefined, { source: resolvedSource, audiences: "fresh" });
+          this.insertRecord(record, undefined, insert);
           this.directApprovalRecords.retainInCallerTx(record.id, this.opts.issuer, governance.ref, governance.rule, governance.inputs);
           this.governanceRecords.retainInCallerTx(record.id, governance.signed);
         });
       } else {
-        this.insertRecord(record, undefined, { source: resolvedSource, audiences: "fresh" });
+        this.insertRecord(record, undefined, insert);
       }
     } catch (e) {
       if (e instanceof UniqueViolationError) {
@@ -2434,6 +2447,13 @@ export class MissionKernel {
        * bytes that do not reproduce the committed digest refuse the creation.
        */
       activationPolicies?: readonly EvaluatedActivationPolicy[];
+      /**
+       * @spec progressive#sec-drawdown-policy (#1017, D1162): the drawdown
+       * policy a ceiling consent or re-consent this record gives commits. Its
+       * version is pinned to its digest in the record transaction; a version
+       * an earlier consent committed with other content refuses the creation.
+       */
+      drawdownPolicyConsent?: ActivationPolicyRef;
       /**
        * @spec mission#transformation-capabilities (#1503 finding 7, D733),
        * REQUIRED: how each entry's original approved audience is established.
@@ -2704,6 +2724,11 @@ export class MissionKernel {
       // record, for this Mission's audit horizon.
       for (const evaluated of options.activationPolicies ?? []) {
         this.activationPolicySnapshots.retainInCallerTx(record, evaluated);
+      }
+      // @spec progressive#sec-drawdown-policy (#1017, D1162): the consent and
+      // its policy version's pin commit together, or neither does.
+      if (options.drawdownPolicyConsent) {
+        this.drawdownPolicyPins.pinInCallerTx(record.issuer, options.drawdownPolicyConsent, record.created_at);
       }
       // The activating event: version 1, no prior_state. Shared by approve()
       // and expansion; the commit is built from the persisted row and its
