@@ -960,7 +960,11 @@ describe("the executing PEP leases an action several classes apply to for the ti
     const external = declared.extensions.transaction_assurance.find((d) => d.mediated_class_or_scope === "external_commitment");
     if (!external) throw new Error("fixture: no external_commitment declaration");
     external.execution_lease_max_seconds = 60;
+    // Remote mode: the PDP reads its options from the channel (getOptions), so
+    // the opened staleness bound reaches the decision and the permit window
+    // allows more than either lease.
     const h = await harness({
+      mode: "remote",
       statement: loadRuntimePosture(declared),
       stalenessBound: () => ({ kind: "bounded", seconds: 600 }),
       extraActions: ["payments:remittance.send"],
