@@ -145,7 +145,7 @@ async function suppliedStatement(issuer: string): Promise<{ statement: RuntimePo
     ...base,
     claims: [...(base.claims ?? []), "budget_metering"],
     extensions: { ...base.extensions, budget_metering: { ...shipped.budget_metering, budgets: [{ ...budget, policies: [pin] }] } },
-  } as RuntimePosture;
+  } as unknown as RuntimePosture;
   return { statement, pin: pin as unknown as Json };
 }
 
