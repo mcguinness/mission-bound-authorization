@@ -8123,6 +8123,16 @@ async function decide(
     if (atCommit.outcome === "refused") throw new IntentError("access_denied", atCommit.reason);
   };
   const holds = approvalHoldsOf(provider);
+  // @spec device-authorization#session-binding (#1202): whether the device
+  // path's client is public, read from the AS-held registration before the
+  // approval's writes, so the check in `commitApproval` awaits nothing. A
+  // client the AS cannot find counts as public.
+  const devicePublicClient = deviceJti
+    ? !deviceClientView({
+        clientId: String(params.client_id),
+        clientAuthMethod: (await provider.Client.find(String(params.client_id)))?.clientAuthMethod,
+      }).authenticated
+    : false;
 
   // The approval's writes, shared by the browser and device paths: the retry
   // check, the prepared approval, the reservation and the provider grant, in
@@ -8167,6 +8177,21 @@ async function decide(
           return undefined;
         }
         throw e;
+      }
+      // @spec device-authorization#session-binding (#1202): a public client's
+      // `client_id` cannot establish a `service_owned` authority source for
+      // that client. The decision creates no Mission, and the session ends
+      // `denied`, so its next poll receives `access_denied`.
+      if (devicePublicClient && prepared.resolvedSource.provenance.type === "service_owned") {
+        await finish(
+          decisionRefusal(
+            new IntentError(
+              "access_denied",
+              "a public client's client_id cannot establish a service_owned authority source; no Mission was created",
+            ),
+          ),
+        );
+        return undefined;
       }
     }
     // The interaction's approval is reserved for this decision before the

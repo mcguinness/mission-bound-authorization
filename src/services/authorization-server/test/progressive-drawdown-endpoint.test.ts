@@ -36,6 +36,7 @@ import { type Server } from "node:http";
 import {
   RESOURCE_CONTRACTS,
   APPROVAL_FLOOR,
+  contractsRequiring,
   CANONICAL_RESOURCE,
   DERIVATION_POLICY,
   loadProgressiveProfile,
@@ -482,6 +483,16 @@ async function shippedClient(id: string, kid: string, jwk: Record<string, unknow
   return { id, kid, key, dpop: await generateKeyPair("ES256", { extractable: true }) };
 }
 
+/**
+ * The controlled clock every component here reads, installed before any
+ * import runs, so module-level timestamps (the approval fixture's login) are
+ * taken on it too (#249, D1091; review of #1959).
+ */
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+
 beforeAll(async () => {
   const secondPair = await generateKeyPair("ES256", { extractable: true });
   second = {
@@ -611,6 +622,7 @@ describe("recorded ceiling drawdowns at the token endpoint (@spec approval-gover
 
 afterAll(() => {
   for (const s of servers) s.close();
+  controlledClock.restore();
 });
 
 /** PAR -> /auth -> GET the approval page at `issuer`, the Intent carrying `intentExtra`. */
@@ -710,6 +722,37 @@ describe("ceiling consent under a configuration requiring a contract reference (
     expect(reads.length).toBeGreaterThan(0);
     for (const entry of reads) expect(entry.resource_contract).toEqual(consented);
   }
+
+  // #249 (D1104): a drawdown is preservation-only, so a ceiling consented
+  // before the cutover, with no reference, yields a successor with none, and
+  // the token minted for it (mintMissionAccessToken) carries none, under the
+  // configuration that now requires one.
+  it("a drawdown from a ceiling consented before the cutover completes, its successor and the token minted for it carrying no reference, under the configuration now requiring one", async () => {
+    const before = vi.spyOn(asContract.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+    let m: Awaited<ReturnType<typeof issueMission>>;
+    try {
+      const decided = assembledCeilingOffer(ceilingOf(), contractsRequiring([])) as CeilingDecision;
+      m = await issueMission(READ, ceilingOf(), { client: apContract, issuer: CONTRACT_ISSUER, decided });
+    } finally {
+      before.mockRestore();
+    }
+    const readsOf = (entries: ReadonlyArray<{ actions: string[]; resource_contract?: unknown }> | undefined) =>
+      (entries ?? []).filter((e) => e.actions.includes("payments:invoice.read"));
+    const ceilingReads = readsOf(asContract.kernel.get(m.missionId)?.authority_ceiling);
+    expect(ceilingReads.length).toBeGreaterThan(0);
+    for (const entry of ceilingReads) expect(entry.resource_contract).toBeUndefined();
+
+    const res = await tokenRequest(expansionParams(m.accessToken, crypto.randomUUID(), READ_LIST), apContract, CONTRACT_ISSUER);
+    const body = (await res.json()) as { mission_id?: string; access_token?: string; authorization_details?: Array<{ actions: string[]; resource_contract?: unknown }> };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const successorReads = readsOf(asContract.kernel.get(body.mission_id as string)?.authority_set);
+    expect(successorReads.length).toBeGreaterThan(0);
+    for (const entry of successorReads) expect(entry.resource_contract).toBeUndefined();
+    const minted = readsOf((decodeJwt(body.access_token as string) as { authorization_details?: Array<{ actions: string[]; resource_contract?: unknown }> }).authorization_details);
+    expect(minted.length).toBeGreaterThan(0);
+    for (const entry of minted) expect(entry.resource_contract).toBeUndefined();
+    for (const entry of readsOf(body.authorization_details)) expect(entry.resource_contract).toBeUndefined();
+  });
 
   // The drawdown's creation resolves fresh capability bindings; the ceiling's
   // reference is inherited before they are added, so they cannot block it.

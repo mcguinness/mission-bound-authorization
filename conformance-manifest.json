@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "8eef493b7cf0b2e9ad0bfa3a8f424c4ae422b086",
-    "content_sha256": "e0b473aa2d1355ec1e0bf6af119de88a0a8fd5bd9fd5ca87f85e285570a2e9c2"
+    "revision": "3755fbd58f51482cb927694a2d19ed2371adc8c9",
+    "content_sha256": "1b2269ceb6332d10c32a210a1ea7a5ede3a54b4a37b864c4f42105eca3b3634c"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "b576809d4bb1d8d5a9065e4b1bcc5e6868e8e2b2",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "d131da9e0904af175e50b2887b2bb053a9195ddf",
-    "content_sha256": "52ff5383147dcdccdbbdfabb5cc35c929216569b8ba1da12d913055e4c0f9ed3"
+    "revision": "7294757e5da766a0fb039e123d7a303bee478716",
+    "content_sha256": "ae3f71a445897aaf13f9776c5402cba638ac72e1b9b77a5c12be596ed143039c"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -163,8 +163,8 @@
     "content_sha256": "9af0d69fb3397fc1c4341de0f9b98855f0b7b70a6cb4149e8a1e9d8860a078ee"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
-    "revision": "40e49936775a6b6b2d64a33d5041dc6e34b69928",
-    "content_sha256": "0ac4d8599783e6c38568ec167a45f3d18d3ba13677bf8d854b5b9efd0f657c13"
+    "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
+    "content_sha256": "326fffad3b3d743d6dc9cd9bb9e2fb5d831933a4aee401817490c9379cee8859"
    }
   }
  },
@@ -239,6 +239,7 @@
    "core.introspected-consumption",
    "status.lifecycle",
    "status.lifecycle-revoke",
+   "status.lifecycle-revocation-means",
    "status.discharge",
    "status.mission-status",
    "status.introspection-projection",
@@ -26390,6 +26391,42 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#972 (D1088): no row quoted this clause before. The reference does not claim the access-token path, which the draft permits, and publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`); todo with #1946. The quote's MUST belongs to the token-audience rule, which `status.lifecycle.token-audience` covers; this row's obligation is the present-tense publication, so its strength is stated. #1948 (#1864 item 6) defines the same row."
+  },
+  {
+   "id": "status.lifecycle.revocation-means-client-auth",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "the AS MUST accept `revoke` through client authentication, without requiring an access token or any token issued under the Mission. Client authentication grants no revocation authority by itself: the AS still authorizes the caller for `revoke` on that Mission ({{lifecycle-authorization}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle-revocation-means"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the Lifecycle endpoint is the deployment's token-independent revocation means, a caller that authenticates only by client authentication, presenting no access token and holding no token issued under the Mission, revokes a Mission it is authorized to revoke; a caller so authenticated without lifecycle authorization for that Mission is refused with the not-found response and the Mission stays active",
+    "local": "the reference's revoke-only Lifecycle deployment is the binding's revocation means (`core.revocation.revoke-by-mission-id`) and accepts `private_key_jwt` alone; the witnesses use clients registered with no grant types, under a fresh assertion and no Authorization header"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the binding's token-independent revocation means (@spec status#mission-lifecycle-endpoint, mission#revocation, #1895) > revokes for an authorized client that presents a fresh private_key_jwt assertion and no access token, and has no grant under which it could hold a token issued under the Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the binding's token-independent revocation means (@spec status#mission-lifecycle-endpoint, mission#revocation, #1895) > refuses a client authenticated the same way but not authorized for revoke with the not-found response, leaving the Mission active",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1895 (D1114): option A, the Status side of the binding's token-independent revocation requirement. Both witnesses are mutation-proved: refusing a revoke that carries no Authorization header fails the first, and granting the lifecycle scope on client authentication alone fails the second."
   },
   {
    "id": "status.auth.invalid-client",
@@ -72155,7 +72192,7 @@
     "normative": "a derived, refreshed, exchanged or delegated entry that removes, replaces or adds a resource_contract reference relative to its Mission entry is not a subset and is refused; one that carries it unchanged passes this step"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
@@ -72198,9 +72235,39 @@
      "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that adds a reference to an entry approved without one is refused: an unpinned approval never gains one",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation and its redemption carry the entry's resource contract reference exactly, and an entry approved without one gains none (@spec resource-access#resource-contract, mission#designation, #249, D1104) > a Mission approved against the contract: the designation and the delegated token carry its reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > a child of a parent approved against the contract carries the parent entry's reference unchanged in its record, its child-bound grant and its redeemed token",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > refuses, creating no child, a proposal that restates the current reference under a parent approved without one: a proposal never adds it (invalid_request, not_strict_subset)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > the dispatched instance, the handoff grant and the Agent's redeemed token carry the template ceiling's reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > refuses invalid_authorization_details, minting no grant, a handoff that restates the current reference on an instance without one: a request never adds it",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: derivation, the code exchange, refresh, introspection and the async-delegation Token Exchange are witnessed; dispatch handoff and child creation are not (they reach the same derivation and subset step 4, unwitnessed end to end). The Token Exchange refusal is held by two layers, subset step 4 and the projection's equality: disabling both fails the refusal tests, either alone does not."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Derivation, the code exchange, refresh, introspection and the async-delegation Token Exchange are witnessed; and, end to end (D1104), child creation through its redemption, the Dispatch handoff through its redemption, and the designation through its redemption carry the reference unchanged, while a child proposal or a handoff request restating the current reference on authority approved without one is refused. The Token Exchange refusal is held by two layers, subset step 4 and the projection's equality: disabling both fails the refusal tests, either alone does not. D1104: the child-creation refusal is held by two layers, the presented-token bound and the strict-subset proof, both deciding through subset step 4; disabling either alone does not fail its witness. Letting step 4 accept a reference the granting entry lacks (equality still required where it carries one) lets the proposal through both: the child is created and its child-bound grant issued, which fails the witness's refusal assertions and, with those removed, its no-child assertion alone. The handoff refusal is held by the presented and effective subset checks and the projection's equality with issued-whole: disabling all three together mints the requested reference and fails its witness, and any one alone does not. Proved by mutation, each alone: stripping the reference from the designation's or the delegated token's entries, inheriting no reference into a child, or stripping it from the handoff grant, each fails its preservation witness."
   },
   {
    "id": "resource-access.resource-contract.unconfigured-reference-refused",
@@ -72514,11 +72581,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "text": "Every derivation, narrowing, and delegation preserves it exactly",
    "observation": {
     "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
-    "local": "witnessed for child delegation, template Dispatch, governed activation and ceiling drawdown (through the wire, #249 B.4); token derivation, refresh, token exchange and carryover are not yet witnessed here (the #249 cutover, D875). An Expansion is a new approval, so it assembles rather than preserves (#249 B.3)"
+    "local": "witnessed for child delegation, template Dispatch, governed activation and ceiling drawdown (through the wire, #249 B.4); and, end to end, the code exchange, refresh, introspection, the handle-based async-delegation Token Exchange, the designation and its redemption, child creation and its redemption, the Dispatch handoff and its redemption, and carryover (D1104). An Expansion is a new approval, so it assembles rather than preserves (#249 B.3)"
    },
    "tests": [
     {
@@ -72586,9 +72653,57 @@
      "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes once the consented version is superseded within its retention, with no current version",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a refreshed access token and introspection carry it unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > an async-delegation Token Exchange carries it, whether it requests nothing narrower or restates it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that removes or replaces the reference is refused invalid_authorization_details: neither is narrowing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > the approval records the proposed current reference, authority_hash commits it, and the code-exchanged token carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation and its redemption carry the entry's resource contract reference exactly, and an entry approved without one gains none (@spec resource-access#resource-contract, mission#designation, #249, D1104) > a Mission approved against the contract: the designation and the delegated token carry its reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > a child of a parent approved against the contract carries the parent entry's reference unchanged in its record, its child-bound grant and its redeemed token",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > the dispatched instance, the handoff grant and the Agent's redeemed token carry the template ceiling's reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > carries a child pinned to the contract into a replacement that carries the old child's reference exactly",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness. A ceiling drawdown (#249 B.4, D875) is preservation-only: every wire drawdown check (the non-widening check, the encounter facts and the decision) decides on drawdownRequested's set, and the creation inherits onto the derivation before capability bindings are added, both carrying the consented ceiling's reference through inheritResourceContract, never one assembled afresh, and checking it as a carried one. Two endpoint witnesses draw down through /token: under unchanged configuration, and with the consented version superseded within its retention and no current version. Proved by mutation, each alone: inheriting after capability bindings are added fails both endpoint witnesses; deciding the non-widening check, or every wire check, on the assembled derivation fails the superseded one; and not inheriting in either place, or skipping the carried check, fails a witness."
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. D1104: the end-to-end paths are witnessed too, each proved by a mutation that strips the reference at the path's own carry point (the designation's and the delegated token's entries, the child's inheritance, the handoff grant, the carried replacement's authority), which fails its witness. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness. A ceiling drawdown (#249 B.4, D875) is preservation-only: every wire drawdown check (the non-widening check, the encounter facts and the decision) decides on drawdownRequested's set, and the creation inherits onto the derivation before capability bindings are added, both carrying the consented ceiling's reference through inheritResourceContract, never one assembled afresh, and checking it as a carried one. Two endpoint witnesses draw down through /token: under unchanged configuration, and with the consented version superseded within its retention and no current version. Proved by mutation, each alone: inheriting after capability bindings are added fails both endpoint witnesses; deciding the non-widening check, or every wire check, on the assembled derivation fails the superseded one; and not inheriting in either place, or skipping the carried check, fails a witness. D1104: the endpoint suite's existing witnesses are cited here: a refreshed token and introspection carry the reference unchanged, the handle-based async-delegation Token Exchange carries it, and a Token Exchange removing or replacing it is refused invalid_authorization_details. Each was already cited on resource-access.subset.contract-preserved-exactly with its proof."
   },
   {
    "id": "resource-access.resource-contract.no-reference-without-approval",
@@ -72604,11 +72719,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; and, once configuration requires a reference for an operation of the resource, a refresh and a Token Exchange through a delegation handle of a grant approved without one, and a template Dispatch from a ceiling consented without one, carry none, with the Mission record and its authority_hash unchanged (#1847, D989); the delegated exchange without a handle, the designation exchange, a child-creation exchange and carryover of a grant approved without a reference are not yet witnessed"
+    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; and, once configuration requires a reference for an operation of the resource, a refresh and a Token Exchange through a delegation handle of a grant approved without one, and a template Dispatch from a ceiling consented without one, carry none, with the Mission record and its authority_hash unchanged (#1847, D989); and (D1104) the designation and the delegated exchange without a handle, child creation and its redemption, the Dispatch handoff, a drawdown and the token mintMissionAccessToken issues for it carry none, a request or proposal restating the current reference is refused, and carryover never pins a child approved without one: that child is cascaded, not carried, because the Expansion's successor, a new approval, carries the current reference"
    },
    "tests": [
     {
@@ -72646,9 +72761,57 @@
      "name": "the payments contract cutover's witnesses in the composed stack, under the shipped configuration (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference; both still perform a read",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that adds a reference to an entry approved without one is refused: an unpinned approval never gains one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation and its redemption carry the entry's resource contract reference exactly, and an entry approved without one gains none (@spec resource-access#resource-contract, mission#designation, #249, D1104) > a Mission approved before the cutover, with no reference: the designation and the delegated token carry none, the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > a child of a parent approved before the cutover carries none, through creation and redemption, under the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > refuses, creating no child, a proposal that restates the current reference under a parent approved without one: a proposal never adds it (invalid_request, not_strict_subset)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > an instance of a template consented before the cutover carries none at any hop, under the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > refuses invalid_authorization_details, minting no grant, a handoff that restates the current reference on an instance without one: a request never adds it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > a drawdown from a ceiling consented before the cutover completes, its successor and the token minted for it carrying no reference, under the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > cascades, never pinning it, a child approved before the cutover when its parent's Expansion is approved against the contract: no replacement, an excluded not_strict_subset row, and the old child terminated",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875 (fresh approval, never retroactive pinning). #1847 (D989): refresh and a Token Exchange through a delegation handle are witnessed through /token, and template Dispatch at the kernel, each after configuration starts requiring a reference for the resource. Proved by mutation, each alone: re-assembling the refreshed grant's projection fails the refresh assertion; re-assembling the delegation family's token authority fails the exchange assertion; re-assembling the Dispatch instance fails the Dispatch witness; and re-assembling the effective Authority Set every token path reads fails the endpoint witness. Partial until the other derivations are witnessed: re-assembling at the delegated exchange without a handle, at a child-creation derivation, or at mintMissionAccessToken is caught by no witness, and carryover of an unpinned grant is untested. C.3a (#249, D1071): the composed stack's refresh of a token approved without a reference, after the requirement applies, carries none in any entry, and the refreshed credential is refused at the PEP. Still partial for the derivations named above."
+   "notes": "#1751, D875 (fresh approval, never retroactive pinning). #1847 (D989): refresh and a Token Exchange through a delegation handle are witnessed through /token, and template Dispatch at the kernel, each after configuration starts requiring a reference for the resource. Proved by mutation, each alone: re-assembling the refreshed grant's projection fails the refresh assertion; re-assembling the delegation family's token authority fails the exchange assertion; re-assembling the Dispatch instance fails the Dispatch witness; and re-assembling the effective Authority Set every token path reads fails the endpoint witness. D1104: re-assembling at the designation, at the delegated exchange without a handle, at a child-creation derivation (with the current reference), at the child-bound grant, at the handoff grant, or at mintMissionAccessToken fails a witness, each alone; and pinning a carried replacement with the successor's reference, with the old child's ceiling relaxed to let it through, fails the carryover witness, so the cascade is what keeps an unpinned child from gaining one. Carryover's witness is a cascade, which satisfies 'gains one only through a new approval': the child gains none, and is not carried. C.3a (#249, D1071): the composed stack's refresh of a token approved without a reference, after the requirement applies, carries none in any entry, and the refreshed credential is refused at the PEP. D1104: the endpoint suite's existing witness that a Token Exchange adding a reference to an entry approved without one is refused is cited here. A child proposal restating the current reference under a parent approved without one is refused, creating no child: letting subset step 4 accept a reference the granting entry lacks creates the child and fails that witness, as recorded on resource-access.subset.contract-preserved-exactly."
   },
   {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
@@ -85951,12 +86114,34 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Consent Evidence object carries mission: for approved, id, issuer, intent_hash, authority_hash, proposal_hash when the Mission records a proposal, and consent_rendering_hash when recorded on the Mission; for declined or narrowed, issuer and the intent_hash and authority_hash (with proposal_hash where present) equal to the disclosure's source_hashes"
+    "normative": "every Consent Evidence object carries mission: for approved, id, issuer, intent_hash, authority_hash, consent_rendering_hash, and proposal_hash when the Mission records a proposal; for declined or narrowed, issuer, the consent_rendering_hash of the disclosure the decision was made on, and the intent_hash and authority_hash (with proposal_hash where present) equal to the disclosure's source_hashes"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. #1956 (D1107): the observation lists consent_rendering_hash on every branch."
+  },
+  {
+   "id": "consent-evidence.consent-evidence.approved-rendering-hash",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "When `decision` is `approved`, it contains `id`, `issuer`, `intent_hash`, `authority_hash`, `consent_rendering_hash`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission descriptor of approved evidence carries consent_rendering_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1107). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
    "id": "consent-evidence.consent-evidence.declined-no-id",
@@ -85981,6 +86166,28 @@
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
+   "id": "consent-evidence.consent-evidence.declined-rendering-hash",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "It instead contains `issuer`, the `consent_rendering_hash` of the disclosure the Approver declined",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission descriptor of declined evidence carries the consent_rendering_hash of the disclosure the Approver declined"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1107). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+  },
+  {
    "id": "consent-evidence.consent-evidence.narrowed-no-id",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "consent-evidence",
@@ -86001,6 +86208,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+  },
+  {
+   "id": "consent-evidence.consent-evidence.narrowed-rendering-hash",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "Like a decline, it contains `issuer`, the reviewed disclosure's `consent_rendering_hash`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the mission descriptor of narrowed evidence carries the reviewed disclosure's consent_rendering_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1107). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
    "id": "consent-evidence.consent-evidence.approval-context-commitment-approved-only",
@@ -86133,6 +86362,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+  },
+  {
+   "id": "consent-evidence.consent-evidence.disclosure-reference-hash-equal",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "That paired value MUST equal `mission.consent_rendering_hash`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when disclosure is a durable reference, the consent_rendering_hash paired with it equals mission.consent_rendering_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1124). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
    "id": "consent-evidence.consent-evidence.co-approvals-correspond-agr",
@@ -86631,7 +86882,7 @@
    "id": "consent-evidence.integrity.verify-approved-anchors",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "integrity",
-   "text": "when `decision` is `approved`, verifies that the Mission anchors in `mission` match the Mission record being audited.",
+   "text": "when `decision` is `approved`, verifies that the Mission anchors in `mission`, `consent_rendering_hash` among them, match the Mission record being audited.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -86642,18 +86893,18 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "approved evidence whose mission anchors (id, issuer, intent_hash, authority_hash and the rest present) differ from the audited Mission record fails verification"
+    "normative": "approved evidence whose mission anchors (id, issuer, intent_hash, authority_hash, consent_rendering_hash and the rest present) differ from the audited Mission record fails verification"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures. #1956 (D1107): re-quoted; every decision's descriptor carries consent_rendering_hash."
   },
   {
    "id": "consent-evidence.integrity.verify-declined-narrowed-descriptor",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "integrity",
-   "text": "the verifier instead confirms the `mission` descriptor carries `issuer` and the two `source_hashes` anchors and no `id`;",
+   "text": "the verifier instead confirms the `mission` descriptor carries `issuer`, `consent_rendering_hash`, and the two `source_hashes` anchors, and no `id`;",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -86664,12 +86915,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "declined or narrowed evidence whose mission descriptor lacks issuer or either source_hashes anchor, or carries id, fails verification"
+    "normative": "declined or narrowed evidence whose mission descriptor lacks issuer, consent_rendering_hash or either source_hashes anchor, or carries id, fails verification"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures. #1956 (D1107): re-quoted; every decision's descriptor carries consent_rendering_hash."
   },
   {
    "id": "consent-evidence.integrity.verify-rendering-confirmation",
@@ -86741,7 +86992,7 @@
    "id": "consent-evidence.integrity.disclosure-reconstruction",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "integrity",
-   "text": "when the disclosure object is inlined, a verifier recomputes `consent_rendering_hash` over it and compares; when it is carried by reference ({{minimization}}), the verifier retrieves it and verifies it against `consent_rendering_hash`.",
+   "text": "when the disclosure object is inlined, a verifier recomputes `consent_rendering_hash` over it and compares it with the `mission` descriptor's value; when it is carried by reference ({{minimization}}), the verifier retrieves it and verifies it against that value.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -86757,7 +87008,29 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures. #1956 (D1107): re-quoted; every decision's descriptor carries consent_rendering_hash."
+  },
+  {
+   "id": "consent-evidence.integrity.reference-hash-mismatch",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "integrity",
+   "text": "a verifier MUST compare its paired `consent_rendering_hash` with `mission.consent_rendering_hash` and treat unequal values as an integrity failure of the evidence record.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "evidence whose disclosure reference pairs a consent_rendering_hash unequal to mission.consent_rendering_hash fails verification as an integrity failure, decided without retrieving the disclosure"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1124). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Gated on consent-evidence.verification, as the other verifier rows (D1099)."
   },
   {
    "id": "consent-evidence.integrity.unretrievable-not-integrity-failure",
@@ -99662,9 +99935,76 @@
     "normative": "Against an AS whose validated metadata does not advertise both members as true, including one that advertises only RFC 8628 device-grant metadata, or that names a different device_authorization_endpoint, the client sends no device authorization request carrying mission_intent."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against RFC 8628 device-grant metadata alone, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against the OAuth binding's member without the profile's, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against the profile's member without the OAuth binding's, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a support member that is the string \"true\", not the boolean, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against both members true but another device_authorization_endpoint than the one the client uses, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against both members true and no device_authorization_endpoint, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against metadata naming another issuer, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a metadata document that is JSON null, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a metadata document that is a JSON array, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against an AS advertising both members and naming the endpoint the client uses, sends one device authorization request carrying mission_intent",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client against the reference AS (@spec device-authorization#discovery, device-authorization#issuance, #1202) > refuses the default assembly, which leaves the profile off, before any device request, and creates no Mission",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference client (demo/src/device-mission-client.ts) reads metadata at the configured issuer, refuses it unless its issuer equals that issuer, and sends a device authorization request only when both support members are the boolean true and the metadata names the device_authorization_endpoint the client is configured to use. Witnessed against stub authorization servers that record every request, since the reference AS never serves the refused metadata: device-grant metadata alone, either support member alone, a non-boolean member, another endpoint, no endpoint, another issuer and a document that is not a JSON object each leave the metadata read as the only request; the control, with both members and the configured endpoint, sends one request carrying mission_intent. The reference AS's default assembly, which leaves the profile off, gets no device request and creates no Mission. Proved by dropping each of the two member checks, the endpoint match and the issuer check: a stub then receives the request. Without the JSON-object check, a null document throws instead of reporting unsupported."
   },
   {
    "id": "device-authorization.discovery.no-ordinary-fallback",
@@ -99684,9 +100024,34 @@
     "normative": "When the AS does not advertise mission_device_authorization_supported, the client sends no device authorization request carrying the Mission's authority as scope or as authorization_details, and reports the inability."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against RFC 8628 device-grant metadata alone, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against the OAuth binding's member without the profile's, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a support member that is the string \"true\", not the boolean, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client against the reference AS (@spec device-authorization#discovery, device-authorization#issuance, #1202) > refuses the default assembly, which leaves the profile off, before any device request, and creates no Mission",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference client has no ordinary device authorization path: against an AS that does not advertise mission_device_authorization_supported it returns the outcome unsupported with the reason, and sends nothing after the metadata read, so no request carries the authority as scope or as authorization_details. Witnessed against stub authorization servers that record every request (device-grant metadata alone, the OAuth binding's member alone, a member that is the string \"true\"), and against the reference AS's default assembly, which leaves the profile off. Proved by dropping the profile member's check: a stub then receives the device request."
   },
   {
    "id": "device-authorization.request.no-request-object",
@@ -99958,9 +100323,16 @@
     "normative": "An approval whose service_owned authority source would rest on a public client's client_id creates no Mission."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built, but this requirement is not: the decision applies no public-client check to a service_owned source, and the shipped catalog's only service_owned source names a confidential client, so no witness can be built without a configurable catalog."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a service_owned source and a public client (@spec device-authorization#session-binding, #1202) > creates no Mission when a service_owned source would rest on a public client's client_id, and the next poll is access_denied",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the device decision reads the client's registration before the approval's writes and refuses a service_owned authority source resolved for a public client (token_endpoint_auth_method none, or a client the AS cannot find). The test configures the shipped catalog's service_owned source ledger-reconciler with a public and a confidential device client. The witness observes no Mission and access_denied at the public client's next poll; the control, a confidential client of the same source, gets its service_owned Mission. Proved by removing the check: the public client's approval then creates a Mission."
   },
   {
    "id": "device-authorization.approval.user-code-not-authentication",
@@ -100349,15 +100721,23 @@
     "capability": "device-authorization.carriage"
    },
    "profiles": [],
-   "surface": "introspection",
+   "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A Mission whose approved session's device_code expired unredeemed is reported terminated by revocation, or active until its expires_at, by the deployment's one documented choice."
+    "normative": "A Mission whose approved session's device_code expired unredeemed is reported terminated by revocation, or active until its expires_at, by the deployment's one documented choice.",
+    "local": "This deployment lets the Mission run to its expires_at and never revokes it because its approved session's device_code expired unredeemed. Mission Status reports it active until its expires_at and terminated with reason expired after it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built. This deployment never revokes the Mission of an approved session whose device_code expired unredeemed, so the Mission runs to its expires_at, but the choice is not yet documented as deployment documentation and has no introspection witness."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1202: this deployment's one choice is to let the Mission run to its expires_at, never revoking it for an unredeemed device_code, as it does for an unredeemed authorization code; docs/provider-integration-port.md, section 3.4, documents it. The surface is Mission Status, since an unredeemed session issued no token to introspect. The witness lapses two approved sessions' device codes: each poll answers expired_token and Mission Status reports both Missions active; with the kernel's clock advanced past the shorter Mission's expires_at, it reports that Mission terminated with reason expired, and the other stays active. The choice is the absence of a revocation, so there is no guard to remove."
   },
   {
    "id": "device-authorization.issuance.mission-id-required",
@@ -100494,9 +100874,40 @@
     "normative": "Given a success response lacking any of the three members, the client presents none of its tokens and reports a failed Mission creation."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > treats a success response lacking mission_id as a failed Mission creation and presents none of its tokens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > treats a success response lacking mission_expires_at as a failed Mission creation and presents none of its tokens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > treats a success response lacking authorization_details as a failed Mission creation and presents none of its tokens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > returns the Mission members and tokens of a response carrying all three",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client against the reference AS (@spec device-authorization#discovery, device-authorization#issuance, #1202) > creates a Mission through the device flow and uses its tokens only with mission_id, mission_expires_at and the granted authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference client returns a success response's tokens only when it carries mission_id, mission_expires_at and the granted authorization_details; otherwise it reports the outcome no_mission with mission_members_missing and discards the tokens. Witnessed against stub authorization servers, since the reference AS always sends the three members: for each missing member, the tokens are absent from the client's result and from every request it sends, and the token response is its last request. The control is the same response with all three; one Mission is created end to end against the reference AS. Proved by dropping the member check: each stub case then returns the tokens."
   },
   {
    "id": "device-authorization.issuance.first-redemption-gated",

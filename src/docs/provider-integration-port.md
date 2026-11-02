@@ -611,6 +611,16 @@ the store.
   The device flow commits at its decision and activates the device code after
   the commit (#1202), unchanged by the hold.
 
+  When the `device_code` of an approved device session expires unredeemed,
+  this deployment lets the Mission run to its `expires_at` and never revokes
+  it for that reason, the same choice it makes for an unredeemed
+  authorization code (the delivery gap below). The choice applies to every
+  such session. A poll after the code's lifetime answers `expired_token`, and
+  Mission Status reports the Mission `active` until its `expires_at` and
+  `terminated` with reason `expired` after it:
+  `Mission Device Authorization polling (@spec device-authorization#polling, #1202) > lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked`
+  (`device-authorization.test.ts`).
+
   The refresh token inherits the binding by construction: `createRefreshToken`
   copies the code's `grantId` (`lib/helpers/grant_common.js`).
 - **Resolution.** `kernel.findByGrant`, then the delegation-family store, then
