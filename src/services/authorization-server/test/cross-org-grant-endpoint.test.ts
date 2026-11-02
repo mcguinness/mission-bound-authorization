@@ -49,6 +49,7 @@ import {
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
 import { SCOPE_PROJECTION } from "@mission/demo-data";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14503;
 const ISSUER = `http://localhost:${PORT}`;
@@ -191,7 +192,7 @@ async function buildChain(
   const leafKeys = await newKeys();
   const mission = originKernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Cross-org reconcile", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Cross-org reconcile", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: [
       {

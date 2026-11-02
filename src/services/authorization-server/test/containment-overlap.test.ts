@@ -28,6 +28,7 @@ import { mintActivationPolicyRef } from "../src/kernel/activation-policy.js";
 import { restrictedSinceAdjudication } from "../src/kernel/expansion.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.overlap.test";
 const SERVICE = "https://payments.test/mcp";
@@ -95,7 +96,7 @@ function approve(kernel: Kernel, proposed: AuthorityEntry[]) {
       JSON.stringify({
         goal: "Pay and reconcile Acme invoices",
         target_resources: [...new Set(proposed.map((e) => e.resource))],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     proposedAuthority: proposed,
@@ -260,7 +261,7 @@ describe("containment propagates by overlap to existing children (@spec child-de
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Pay invoice 2", target_resources: [INV2], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Pay invoice 2", target_resources: [INV2], expires_at: FIXTURE_EXPIRES_AT }),
       ),
       proposedAuthority: [entry(INV2, [READ, SEND])],
       childActor: { sub: "child-a", sub_profile: "ai_agent" },
@@ -268,7 +269,7 @@ describe("containment propagates by overlap to existing children (@spec child-de
     const { child: filesChild } = createChildMission(kernel, {
       parentId: parent.id,
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Read files", target_resources: [FILES], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Read files", target_resources: [FILES], expires_at: FIXTURE_EXPIRES_AT }),
       ),
       proposedAuthority: [entry(FILES, ["files:doc.read"])],
       childActor: { sub: "child-b", sub_profile: "ai_agent" },
@@ -298,7 +299,7 @@ describe("containment propagates by overlap to existing children (@spec child-de
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Pay invoice 1", target_resources: [INV1], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Pay invoice 1", target_resources: [INV1], expires_at: FIXTURE_EXPIRES_AT }),
       ),
       proposedAuthority: [entry(INV1, [READ, SEND])],
       childActor: { sub: "child-c", sub_profile: "ai_agent" },

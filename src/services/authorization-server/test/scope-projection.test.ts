@@ -43,6 +43,7 @@ import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { browserApprovalHeaders, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14620;
 const RS_PORT = 14621;
@@ -230,7 +231,7 @@ async function authorize(
       code_challenge_method: "S256",
       login_hint: "alice",
       mission_intent: JSON.stringify({
-        intent: { goal: "Publish the quarterly reports", target_resources: targetResources, expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Publish the quarterly reports", target_resources: targetResources, expires_at: FIXTURE_EXPIRES_AT },
       }),
       ...(proposal ? { authorization_details: JSON.stringify(proposal) } : {}),
       client_assertion: await clientAssertion(),
@@ -722,7 +723,7 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
     return body.template_id as string;
   }
   const submission = (goal: string) =>
-    JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" } });
+    JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: FIXTURE_EXPIRES_AT } });
 
   it("a template dispatch to the scope-only target carries only the scope the instance's template-bounded entry proves, which the plain RS enforces, and refuses invalid_target while the target's mapping is unknown", async () => {
     const templateId = await newTemplate();
@@ -807,7 +808,7 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
         as.expansionDeferrals.approve(opened.body.deferral_code as string, {
           approver: { iss: ISSUER, sub: "bob" },
           approvalEventId: `scope-exp-${crypto.randomUUID()}`,
-          approvedUntil: "2027-01-01T00:00:00Z",
+          approvedUntil: FIXTURE_EXPIRES_AT,
         });
         const polled = await token(
           {
@@ -1193,7 +1194,7 @@ describe("the Intent-only completion workaround is never a client proposal (@spe
         code_challenge_method: "S256",
         login_hint: "alice",
         mission_intent: JSON.stringify({
-          intent: { goal: "Publish the quarterly reports", target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" },
+          intent: { goal: "Publish the quarterly reports", target_resources: [PLAIN], expires_at: FIXTURE_EXPIRES_AT },
         }),
         ...extra,
         client_assertion: await clientAssertion(),

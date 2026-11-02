@@ -31,6 +31,7 @@ import {
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14763;
 const ISSUER = `http://localhost:${PORT}`;
@@ -38,7 +39,7 @@ const OFF_PORT = 14764;
 const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
-const INTENT = { goal: "Reconcile Q3 invoices.", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" };
+const INTENT = { goal: "Reconcile Q3 invoices.", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT };
 /** The device authorization parameters of a Mission Intent expiring `ms` from now, not at the fixed INTENT date. */
 const intentExpiringIn = (ms: number): Record<string, string> => ({
   mission_intent: JSON.stringify({

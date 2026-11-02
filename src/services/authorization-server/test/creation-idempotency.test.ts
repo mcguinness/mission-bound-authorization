@@ -49,12 +49,13 @@ import {
 } from "../src/index.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14520;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-01-01T00:00:00Z";
+const FAR_EXP = FIXTURE_EXPIRES_AT;
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
 

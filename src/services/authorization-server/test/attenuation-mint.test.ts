@@ -30,6 +30,7 @@ import {
 } from "../src/index.js";
 import { holderKey } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RES = "https://pay.example/mcp";
@@ -189,7 +190,7 @@ describe("the issued root (@spec attenuation#request-discovery, attenuation#root
       statusKid: "as-status",
     });
     const record = kernel.approve({
-      intent: validateMissionIntent(JSON.stringify({ goal: "g", target_resources: [RES], expires_at: "2027-01-01T00:00:00Z" })),
+      intent: validateMissionIntent(JSON.stringify({ goal: "g", target_resources: [RES], expires_at: FIXTURE_EXPIRES_AT })),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "agent",

@@ -32,7 +32,7 @@ import {
   validateMissionIntentSubmission,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
-import { EARLIER_EXPIRES_AT } from "./relative-expiry.helper.js";
+import { EARLIER_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -41,7 +41,7 @@ const intent = (over: Record<string, unknown> = {}) =>
   JSON.stringify({
     goal: "Pay Acme invoices for Q3",
     target_resources: [RESOURCE],
-    expires_at: "2027-01-01T00:00:00Z",
+    expires_at: FIXTURE_EXPIRES_AT,
     ...over,
   });
 
@@ -492,7 +492,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
   it("a deployment ceiling shorter than the request narrows the committed expires_at", async () => {
     const k = await ceilingKernel(3600, () => new Date(CREATED));
     const record = k.approve({
-      intent: k.validateIntent(intent({ expires_at: "2027-01-01T00:00:00Z" })),
+      intent: k.validateIntent(intent({ expires_at: FIXTURE_EXPIRES_AT })),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "ap-agent",
@@ -501,7 +501,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
     // Shortening is measured from the COMMITTED created_at, not a second read.
     expect(record.created_at).toBe("2026-07-01T00:00:00.000Z");
     expect(record.expires_at).toBe("2026-07-01T01:00:00.000Z");
-    expect(Date.parse(record.expires_at)).toBeLessThan(Date.parse("2027-01-01T00:00:00Z"));
+    expect(Date.parse(record.expires_at)).toBeLessThan(Date.parse(FIXTURE_EXPIRES_AT));
   });
 
   it("a request narrower than the deployment ceiling keeps the requested value verbatim", async () => {
@@ -520,13 +520,13 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
   it("no deployment ceiling leaves the requested value unchanged", async () => {
     const k = await ceilingKernel(null, () => new Date(CREATED));
     const record = k.approve({
-      intent: k.validateIntent(intent({ expires_at: "2027-01-01T00:00:00Z" })),
+      intent: k.validateIntent(intent({ expires_at: FIXTURE_EXPIRES_AT })),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "bob" },
       clientId: "ap-agent",
       approvalEventId: "apev-ceiling-none",
     });
-    expect(record.expires_at).toBe("2027-01-01T00:00:00Z");
+    expect(record.expires_at).toBe(FIXTURE_EXPIRES_AT);
   });
 
   it("insertRecord refuses a record whose expires_at is later than intent.expires_at", async () => {

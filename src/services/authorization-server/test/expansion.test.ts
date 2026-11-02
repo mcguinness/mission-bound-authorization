@@ -13,10 +13,11 @@ import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createExpansion, ExpansionDeferralStore, MissionKernel, validateMissionIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
-const EXP = "2027-01-01T00:00:00Z";
+const EXP = FIXTURE_EXPIRES_AT;
 const now = () => new Date("2026-07-01T00:00:00Z");
 
 const proposed = (actions: string[]) => [

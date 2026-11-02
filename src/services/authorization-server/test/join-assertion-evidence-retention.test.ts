@@ -37,6 +37,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { CLIENT_ASSERTION_TYPE, type LifecycleTestClient, lifecycleClientAssertion, newLifecycleClient } from "./lifecycle-endpoint.helper.js";
+import { FIXTURE_EXPIRES_AT, daysFromNow } from "./relative-expiry.helper.js";
 
 /** Never listened on: the service is driven directly. */
 const ISSUER = "http://localhost:14915";
@@ -110,7 +111,7 @@ function boot(files?: { ring: string; file: string }, now?: () => Date, auditRet
   });
 }
 
-function approve(kernel: MissionKernel, expiresAt = "2027-01-01T00:00:00Z"): MissionRecord {
+function approve(kernel: MissionKernel, expiresAt = FIXTURE_EXPIRES_AT): MissionRecord {
   approvals += 1;
   return kernel.approve({
     intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: expiresAt })),
@@ -219,8 +220,8 @@ describe("Join evidence retention (@spec authority-server#join-assertion-artifac
     const now = () => new Date(clockMs);
     const files = await deploymentFiles();
     const first = await boot(files, now);
-    const early = approve(first.kernel, "2027-01-01T00:00:00Z");
-    const later = approve(first.kernel, "2027-03-01T00:00:00Z");
+    const early = approve(first.kernel, FIXTURE_EXPIRES_AT);
+    const later = approve(first.kernel, daysFromNow(120));
     expect(first.kernel.tombstones.horizons().audit_retention_seconds).toBe(DEFAULT_AUDIT_RETENTION_S);
     await minted(first, early.id, actingToken());
     await minted(first, later.id, actingToken());
@@ -334,13 +335,13 @@ describe("Join evidence retention (@spec authority-server#join-assertion-artifac
       iat: 1,
       exp: 2,
     };
-    expect(() => store.record({ issuer: ISSUER, id: "msn_b", expires_at: "2027-01-01T00:00:00Z" }, event)).toThrow(JoinEvidenceRetentionError);
-    expect(() => store.record({ issuer: "https://other.example", id: "msn_a", expires_at: "2027-01-01T00:00:00Z" }, event)).toThrow(
+    expect(() => store.record({ issuer: ISSUER, id: "msn_b", expires_at: FIXTURE_EXPIRES_AT }, event)).toThrow(JoinEvidenceRetentionError);
+    expect(() => store.record({ issuer: "https://other.example", id: "msn_a", expires_at: FIXTURE_EXPIRES_AT }, event)).toThrow(
       JoinEvidenceRetentionError,
     );
     expect(() => store.record({ issuer: ISSUER, id: "msn_a", expires_at: "not a date" }, event)).toThrow(JoinEvidenceRetentionError);
     expect(store.all()).toEqual([]);
-    expect(store.record({ issuer: ISSUER, id: "msn_a", expires_at: "2027-01-01T00:00:00Z" }, event).retain_until).toBe("2027-01-01T00:01:00.000Z");
+    expect(store.record({ issuer: ISSUER, id: "msn_a", expires_at: FIXTURE_EXPIRES_AT }, event).retain_until).toBe(new Date(Date.parse(FIXTURE_EXPIRES_AT) + 60_000).toISOString());
     expect(store.all().map((r) => r.event)).toEqual([event]);
     db.close();
   });

@@ -55,11 +55,12 @@ import {
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const T0 = Date.parse("2026-07-01T00:00:00Z");
 const now = () => new Date(T0);
-const EXP = "2027-01-01T00:00:00Z";
+const EXP = FIXTURE_EXPIRES_AT;
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const LEDGER = TOPOLOGY.resources.saas;
 const ALICE = { iss: ISS, sub: "alice" };

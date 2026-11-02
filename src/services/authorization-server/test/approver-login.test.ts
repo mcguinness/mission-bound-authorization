@@ -24,6 +24,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, loginCookieName } from "../src/index.js";
 import type { AuthorityEntry } from "../src/kernel/types.js";
 import { renderedRevision } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14921;
 const ISSUER = `http://localhost:${PORT}`;
@@ -228,7 +229,7 @@ async function pendingApproval(authority: AuthorityEntry[]): Promise<{ uid: stri
       code_challenge: createHash("sha256").update(VERIFIER).digest("base64url"),
       code_challenge_method: "S256",
       mission_intent: JSON.stringify({
-        intent: { goal: "Pay Acme invoices", target_resources: [PAYMENTS], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Pay Acme invoices", target_resources: [PAYMENTS], expires_at: FIXTURE_EXPIRES_AT },
       }),
       authorization_details: JSON.stringify(authority),
       client_assertion: assertion,

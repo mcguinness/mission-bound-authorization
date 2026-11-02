@@ -55,6 +55,7 @@ import {
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "@mission/pdp/test-support";
 import type { EvaluationRequest } from "@mission/pdp";
 import { withCredential } from "../../pdp/test/with-credential.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -87,7 +88,7 @@ function deriveDemoAuthoritySet() {
     JSON.stringify({
       goal: "Pay the payable Acme invoices within your mission's limits.",
       target_resources: [CANONICAL_RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     }),
   );
   // As an approval records it: with the reference configuration names for

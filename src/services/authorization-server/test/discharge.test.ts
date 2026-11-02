@@ -63,11 +63,12 @@ import {
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { verifyStatusResponse } from "./discharge-consumer.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.discharge.test";
 const RES = "https://payments.test/mcp";
 const NOW = new Date("2026-08-20T12:00:00Z");
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 const CLOSE_EVENT = "accounting-period-closed";
 const CLOSE_POLICY = "close-management-2026-q3";

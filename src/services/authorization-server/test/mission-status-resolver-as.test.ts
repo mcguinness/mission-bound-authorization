@@ -33,6 +33,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { type LifecycleTestClient, newLifecycleClient } from "./lifecycle-endpoint.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14827;
 const ISSUER = `http://localhost:${PORT}`;
@@ -121,7 +122,7 @@ function resolver(extra: Partial<MissionStatusResolverOptions> = {}): MissionSta
 function approve(label: string): MissionRecord {
   return as.kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: `Resolver: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" }),
+      JSON.stringify({ goal: `Resolver: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
     ),
     proposedAuthority: [
       {
