@@ -70,25 +70,8 @@ informative:
   I-D.draft-ietf-wimse-arch:
   RFC8126:
   RFC7009:
-  RFC8935:
   RFC9493:
   RFC8792:
-  I-D.draft-mcguinness-oauth-mission-child-delegation:
-    title: "Mission Child Delegation for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-template:
-    title: "Mission Template for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
@@ -106,25 +89,9 @@ informative:
     seriesinfo:
       Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-mcguinness-oauth-client-attesters:
-  I-D.draft-mcguinness-oauth-mission-attenuation:
-    title: "Mission Offline Attenuation for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-signals:
-    title: "Mission Lifecycle Signals for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-signals.html
     author:
       -
         ins: K. McGuinness
@@ -138,33 +105,9 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
-    title: "Mission Cross-Organizational Delegation for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-derivation-limits:
-    title: "Mission Derivation Limits for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-approval-governance:
     title: "Mission Approval Governance"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-authority-server:
-    title: "Mission Authority Server"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authority-server.html
     author:
       -
         ins: K. McGuinness
@@ -210,22 +153,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-capability-binding:
-    title: "Mission Capability Binding"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-expansion:
-    title: "Mission Expansion for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
@@ -250,14 +177,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-consent-evidence:
-    title: "Mission Consent Evidence for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
@@ -274,33 +193,9 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-audit:
-    title: "Mission Audit Transparency"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-management:
-    title: "Mission Management for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-mandate:
-    title: "Mission Mandate"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
     author:
       -
         ins: K. McGuinness
@@ -6808,15 +6703,19 @@ a Mission, Token Consumption, and Mission Lifecycle as chapters, and
 procedures open Issuance Gating and Preparing the Approval. Text that
 restated a rule stated elsewhere becomes a pointer, and rules already
 stated as obligations carry BCP 14 keywords, with no new requirement
-(#1723, #1793, #1892).
+(#1723, #1793, #1892). Applicability states the baseline an
+implementation needs and provides, and companion pointers remain only
+where they explain the hook they sit at (#2009).
 
 **References.** RFC 9110 is added as normative, and the AAuth
-protocol, the Mission Mandate, and Mission Offline Attenuation as
-informative. FAPI Grant Management, the Cedar RAR draft, SPIFFE client
-authentication, Transaction Tokens, GNAP, the Attenuating Agent Tokens
-draft, RFC 8628, and the Containment, Continuation, Device
-Authorization, Progressive, and Work Products companions are no longer
-cited.
+protocol as informative. FAPI Grant Management, the Cedar RAR draft,
+SPIFFE client authentication, Transaction Tokens, GNAP, the Attenuating
+Agent Tokens draft, RFC 8628, RFC 8935, and the Audit, Capability
+Binding, Child Delegation, Consent Evidence, Containment,
+Continuation, Cross-Organizational Delegation, Derivation Limits,
+Device Authorization, Expansion, Management, Mission Authority Server,
+Progressive, Signals, Template, and Work Products companions are no
+longer cited.
 
 -01
 
