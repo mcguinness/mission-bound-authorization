@@ -95,6 +95,7 @@ export {
   ApproverLoginRelyingParty,
   type ApproverIdentityMapping,
   type ApproverLoginOptions,
+  type ValidatedLogin,
 } from "./adapters/approver-login.js";
 import { type DpopProofReplay, newDpopProofReplay } from "./adapters/dpop-replay.js";
 import {

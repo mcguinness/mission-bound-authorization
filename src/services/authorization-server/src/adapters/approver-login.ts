@@ -22,6 +22,14 @@
  * published approval-authentication floor evaluates the recorded context at
  * the approval decision (`evaluateApprovalFloor`), so a password-only login
  * still approves authority the floor does not cover.
+ *
+ * @spec request-provenance#capture (#939 slice 2b-1, D1119 Q6): the demo
+ * request intake reuses this relying party, under its own client
+ * registration and callback path, to authenticate an originator. Beside the
+ * mapped principal, a completed login also returns the validated ID Token's
+ * issuer-qualified identity and its `acr`, `auth_time` and `amr` as issued,
+ * which the intake records as the originator and the channel facts. The
+ * approval surface reads only the principal.
  */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createRemoteJWKSet, errors as joseErrors, jwtVerify, type JWTPayload } from "jose";
@@ -66,6 +74,20 @@ export interface ApproverLoginOptions {
   maxIdTokenAgeSeconds?: number;
   /** Clock skew tolerated on `exp` and `iat`, in seconds. Default 5. */
   clockToleranceSeconds?: number;
+}
+
+/**
+ * The validated ID Token of a completed login: its issuer-qualified identity,
+ * `acr` and `auth_time` as validated, and `amr` exactly as issued (OIDC Core
+ * 1.0 Section 2 makes it optional; the caller that relies on it checks its
+ * shape).
+ */
+export interface ValidatedLogin {
+  iss: string;
+  sub: string;
+  acr: string;
+  auth_time: number;
+  amr?: unknown;
 }
 
 /** A refused login: no approval session is recorded. */
@@ -125,15 +147,22 @@ export class ApproverLoginRelyingParty {
   private jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
   readonly redirectUri: string;
 
+  /**
+   * `callbackPath` is the redirect URI's path under `asIssuer`, the relying
+   * party's own origin: the approval surface's {@link APPROVER_LOGIN_CALLBACK_PATH},
+   * the one path the AS routes, unless another relying party reuses this class.
+   */
   constructor(
     private readonly opts: ApproverLoginOptions,
     asIssuer: string,
     private readonly now: () => number = () => Date.now(),
+    private readonly callbackPath: string = APPROVER_LOGIN_CALLBACK_PATH,
   ) {
     if (!opts.issuer || !opts.clientId || !opts.clientSecret || opts.idTokenSigningAlgs.length === 0) {
       throw new Error("the approver login needs a provider issuer, a client registration and its ID Token algorithms");
     }
-    this.redirectUri = `${asIssuer}${APPROVER_LOGIN_CALLBACK_PATH}`;
+    if (!callbackPath.startsWith("/")) throw new Error("the login callback path must be an absolute path");
+    this.redirectUri = `${asIssuer}${this.callbackPath}`;
   }
 
   /** The provider's metadata, read once; its `issuer` must be the configured one (OIDC Discovery 4.3). */
@@ -198,21 +227,21 @@ export class ApproverLoginRelyingParty {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     return {
       location: url.toString(),
-      cookie: `${loginCookieName(state)}=${binding}; Path=${APPROVER_LOGIN_CALLBACK_PATH}; Max-Age=${lifetime}; HttpOnly; SameSite=Lax`,
+      cookie: `${loginCookieName(state)}=${binding}; Path=${this.callbackPath}; Max-Age=${lifetime}; HttpOnly; SameSite=Lax`,
     };
   }
 
   /**
    * Complete a login at the callback: the authorization response in `query`,
-   * in the user agent that started it. Returns the interaction and the
-   * Approver's achieved context from the validated ID Token; throws
-   * {@link ApproverLoginError} for any refusal. A started login completes
-   * at most once.
+   * in the user agent that started it. Returns the interaction, the
+   * Approver's achieved context and the validated login, all from the
+   * validated ID Token; throws {@link ApproverLoginError} for any refusal. A
+   * started login completes at most once.
    */
   async complete(
     query: Record<string, string | string[] | undefined>,
     cookieHeader: string,
-  ): Promise<{ uid: string; principal: ApprovalPrincipal }> {
+  ): Promise<{ uid: string; principal: ApprovalPrincipal; login: ValidatedLogin }> {
     const state = single(query, "state");
     const login = state ? this.started.get(state) : undefined;
     if (!state || !login) throw new ApproverLoginError("the login response names no login this server started");
@@ -262,6 +291,13 @@ export class ApproverLoginRelyingParty {
         acr: claims.acr as string,
         auth_time: claims.auth_time as number,
         ...(login.subject ? { subject: login.subject } : {}),
+      },
+      login: {
+        iss: claims.iss as string,
+        sub: claims.sub as string,
+        acr: claims.acr as string,
+        auth_time: claims.auth_time as number,
+        ...(claims.amr !== undefined ? { amr: claims.amr } : {}),
       },
     };
   }
