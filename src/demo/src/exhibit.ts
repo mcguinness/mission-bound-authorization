@@ -41,6 +41,7 @@ import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { label as humanName } from "./labels.js";
 import { clientAssertionSigner, dpopProofFor, tokenGrantRequest } from "./oauth-client.js";
 import { issueMissionToken } from "./approval-console.js";
+import { defaultMissionExpiry } from "./mission-expiry.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -1147,7 +1148,7 @@ async function main() {
     intent: {
       goal: "Pay approved Acme invoices for Q3 and post the corresponding ledger entries",
       target_resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: defaultMissionExpiry(stack.kernel.nowDate()),
     },
   });
   // The authority proposal rides the standard RFC 9396 authorization_details
@@ -1891,7 +1892,8 @@ async function main() {
     JSON.stringify({
       goal: "Pay approved Acme invoices for Q3 (expanded: also schedule payments)",
       target_resources: [CANONICAL_RESOURCE, SAAS_RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      // The successor asks for, and is approved up to, its predecessor's own expiry.
+      expires_at: predecessor.expires_at,
     }),
   );
   hop("Operator", "AS", "expand mission — successor from a fresh approval (kernel op)", "in-process");
@@ -1919,7 +1921,7 @@ async function main() {
     proposedAuthority: widened,
     approver: { iss: asUrl, sub: "bob" },
     approvalEventId: "apev-exhibit-successor",
-    approvedUntil: "2027-01-01T00:00:00Z",
+    approvedUntil: predecessor.expires_at,
   });
   block("successor Mission Record (fresh approval, widened authority)", {
     id: expansion.successor.id,

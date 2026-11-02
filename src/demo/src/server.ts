@@ -32,6 +32,7 @@ import {
 } from "./oauth-client.js";
 import { completeMissionApproval, denyMissionApproval, issueMissionToken, logInAgain } from "./approval-console.js";
 import { installConsoleSessionBoundary } from "./console-session-boundary.js";
+import { defaultMissionExpiry } from "./mission-expiry.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -181,6 +182,21 @@ const readJson = (c: Context): Promise<Record<string, unknown>> =>
   c.req.json().catch(() => ({}) as Record<string, unknown>);
 
 /** Decode a compact JWS payload (base64url) without verifying, for display. */
+/**
+ * The demo server's Mission Intent Submission envelope: the semantic task
+ * context is its `intent` member, expiring a fixed distance after `now`, the
+ * stack's kernel clock (#1976).
+ */
+export function demoMissionIntent(now: Date): string {
+  return JSON.stringify({
+    intent: {
+      goal: "Pay approved Acme invoices and send remittance",
+      target_resources: [CANONICAL_RESOURCE],
+      expires_at: defaultMissionExpiry(now),
+    },
+  });
+}
+
 function decodeClaims(jwt: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
 }
@@ -211,13 +227,7 @@ async function main() {
   // resource calls and the AROP transaction endpoint.
   // The wire value is the Mission Intent Submission envelope; the semantic
   // task context is its `intent` member.
-  const missionIntent = JSON.stringify({
-    intent: {
-      goal: "Pay approved Acme invoices and send remittance",
-      target_resources: [CANONICAL_RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
-    },
-  });
+  const missionIntent = demoMissionIntent(stack.kernel.nowDate());
   // The authority proposal rides the standard RFC 9396 authorization_details
   // parameter, pushed through PAR alongside mission_intent.
   const authorizationDetails = JSON.stringify([
@@ -551,7 +561,7 @@ async function main() {
     const shaped = shapeIntent({
       goal: String(b.goal ?? ""),
       resources,
-      expiresAt: (b.expiresAt as string) ?? "2027-01-01T00:00:00Z",
+      expiresAt: (b.expiresAt as string) ?? defaultMissionExpiry(stack.kernel.nowDate()),
       ...(Array.isArray(b.actions) ? { proposedActions: b.actions as string[] } : {}),
       ...(Array.isArray(b.vendors) ? { vendors: b.vendors as string[] } : {}),
     });
