@@ -12,10 +12,13 @@
  * instance's budget binding from the kernel's committed Dispatch Policy
  * snapshot, never from the PEP's view.
  *
- * The opt-in `standing-payment-dispatch` capability (composeStack's test
- * fixture) and the `budget_metering` declaration (the statement built here)
- * are enabled in this file only; the shipped configuration enables neither.
- * Only the OpenFGA client is stubbed, so this file never skips.
+ * This file enables the opt-in `standing-payment-dispatch` capability through
+ * composeStack's test fixture and claims `budget_metering` in the statement
+ * built here, so its composition does not read `config/standing-payment.json`.
+ * The shared demo composition with the AS enables both from that file; the
+ * issuance-only deployment, the as-native target, the MAS pilot and the
+ * standalone AS enable neither. Only the OpenFGA client is stubbed, so this
+ * file never skips.
  */
 
 import { randomUUID } from "node:crypto";
