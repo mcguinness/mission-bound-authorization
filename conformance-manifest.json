@@ -36531,9 +36531,111 @@
      "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > refuses at load a statement whose declared document no longer hashes to its digest: published bytes are immutable for a reference",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > each declared parameter form is the fields its normal form carries, every optional member included, and no other form is declared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > the declared resource_match values are exactly those the matcher enforces",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > each operation binds the parameter form the document names, accepts an idempotency key and carries resolved recipients exactly where it declares them, and the none form binds no digest",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the declared constraint inputs the payments resource reads (@spec runtime#resource-contract, #249) > time_window reads each evaluating component's own clock, never a time the request carries: past the window's end on the PDP's clock is denied what the PEP's clock let through, and past it on the PEP's clock is refused before any decision",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the declared constraint inputs the payments resource reads (@spec runtime#resource-contract, #249) > terminal_when reads the Mission Issuer's discharge state: the entry the issuer's view lists as discharged is denied authority_discharged at the decision, and the same entry undischarged is performed, nothing at the resource differing",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context-bindings.test.ts",
+     "name": "authoritative facts still reach policy beside the echoed context digest (@spec runtime#evaluation-context-binding, #773) > a covered crossing's request carries the amount and target facts policy evaluates, and an over-cap invoice is denied parameter_violation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies a reversal of a committed USD 125 wire under a USD 10 reversal ceiling after the invoice changed to USD 1, with zero connector effects",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > reverses exactly the committed amount whatever the invoice now reads, and the Decision Evidence and Execution Evidence carry the committed-effect parameters' digest",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a vendor lookup carries the store-resolved vendor, so both bounds evaluate it (@spec authzen#context-credential, authzen#runtime-denial-classification, D324) > sends the PDP the vendor the store resolved, as the vendor object the read targets",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > after the invoice moves from the vendor its wire paid to another, a tenant bound naming the paid vendor's tenant permits reversing that wire, and one naming the new vendor's tenant is denied at the decision (claiming the binding)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context-bindings.test.ts",
+     "name": "adoption keeps the approval and transaction-token bindings (@spec runtime#evaluation-context-binding, #773) > an action-bound approval bound to parameter_digest satisfies the gate under the claim, and stops satisfying it once the record moves before the decision",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > permits a read of an invoice the store records as issued within the window, carrying the store's fact",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > permits an invoice and a vendor whose records name the bound's tenant, carrying the store's fact",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > checks every recipient a distribution list expands to: one outside the domain refuses, with no email",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > permits an invoice whose label the bound names, carrying the store's label",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > refuses the other crossings of the same action, whose tools the bound does not name, with no effect",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten. #813, #816 (D877): the Operation Profile change to v16 is published as version 2026-10-27 with its own digest, differing from 2026-10-26 only in its version and profile; 2026-10-26 is not rewritten, and the supported-subset fixture tests check that the three superseded versions stay declared as frozen."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. #249 box 4 (D1104, build-time correspondence): the Operation Profile material the current 2026-10-27 document states corresponds to what the resource performs. Each declared parameter form is the field set its normal-form builder produces, every optional member included, and no other form is declared; each operation binds the form it names (its live parameter_digest recomputed from that form over the same records; the reversal's live binding is compound-actions.test.ts's), accepts an idempotency key exactly where it declares one (refusing one before any decision elsewhere) and carries resolved recipients exactly where it declares them; and the declared resource_match values are exactly those the matcher enforces. Each constraint-extraction clause is witnessed where its constraint is enforced, with the named source set apart from an alternative: max_amount from the invoice record (evaluation-context-bindings) and, for the reversal, from the wire's record (compound-actions); vendors from the store-resolved vendor (token-profile, evaluation-context-bindings) and, for the reversal, the wire's vendor (evaluation-context); requires_action_approval bound to parameter_digest (evaluation-context-bindings); issuance, tenant and classification from the invoice and vendor records and, for list_invoices, each member's (common-constraints-enforcement), the reversal's tenant from the paid vendor's current record (evaluation-context); recipient_domain over every final recipient of the routing and allowed_tools on the dispatched tool (common-constraints-enforcement); time_window on each evaluating component's own clock, over the remote channel, never a time the request carries; and terminal_when on the Mission Issuer's discharge state (resource-contract-pep). Proved by mutation, each alone and each committing the violation: the invoice form dropping a field, check_transfer binding another form with its decision proceeding, every keyed operation resolving recipients, intake accepting and dropping an undeclared key, the PEP never forwarding a key, the matcher enforcing an undeclared suffix form, the PDP evaluating on a time the request carries, the PEP evaluating the window on another clock, and the PDP not reading the discharge state each fail their witness. Still partial: the shipped Evaluation-Context Binding claim names a descriptor for payments:payment.execute, payments:remittance.send and payments:payment.reverse, and no contract version carries those references, so a descriptor change yields no new contract version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten. #813, #816 (D877): the Operation Profile change to v16 is published as version 2026-10-27 with its own digest, differing from 2026-10-26 only in its version and profile; 2026-10-26 is not rewritten, and the supported-subset fixture tests check that the three superseded versions stay declared as frozen."
   },
   {
    "id": "runtime.resource-contract.declared-states",
