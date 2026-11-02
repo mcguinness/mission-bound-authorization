@@ -11,6 +11,7 @@
     { "path": "packages/aauth-wire" },
     { "path": "packages/aauth-testkit" },
     { "path": "packages/resource-access-subset-consumer" },
+    { "path": "packages/request-provenance" },
     { "path": "services/authorization-server" },
     { "path": "services/pdp" },
     { "path": "services/mcp-payments" },
