@@ -99,10 +99,13 @@ export function vectorCapture(overrides: Partial<CaptureRequest> = {}): CaptureR
   };
 }
 
-/** A random source that returns the vector's fixed values, in the library's draw order. */
-export function vectorRandom(): (size: number) => Uint8Array {
+/**
+ * A random source that returns the vector's fixed values, in the library's
+ * draw order; `secretHex` replaces the capture secret.
+ */
+export function vectorRandom(secretHex = V.capture.secret_hex): (size: number) => Uint8Array {
   const draws = [
-    Buffer.from(V.capture.secret_hex, "hex"),
+    Buffer.from(secretHex, "hex"),
     Buffer.from(V.capture.capture_id, "base64url"),
     Buffer.from(V.sign.jti, "base64url"),
   ];

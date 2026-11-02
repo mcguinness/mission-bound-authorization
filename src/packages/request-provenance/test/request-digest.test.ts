@@ -8,7 +8,13 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { RequestProvenanceError, requestDigest, requestDigestInput } from "../src/index.js";
-import { assertionVector, digestVectors, vectorCapture, vectorIntake } from "./fixtures.js";
+import {
+  assertionVector,
+  digestVectors,
+  vectorCapture,
+  vectorIntake,
+  vectorRandom,
+} from "./fixtures.js";
 
 /** The draft's encoding, written out without the library. */
 function independentDigest(secretHex: string, mediaType: string, instructionHex: string): string {
@@ -82,7 +88,20 @@ describe("request digest construction (@spec request-provenance#request-digest, 
     expect(a).not.toBe(b);
   });
 
-  it("the intake's captured request_digest is the published value under the vector secret", async () => {
+  it("the intake's captured request_digest reproduces every vector under its secret", async () => {
+    // Each vector through capture, the intake's own path: its secret is the
+    // capture's first random draw.
+    for (const c of digestVectors) {
+      const each = vectorIntake({ randomBytes: vectorRandom(c.secret_hex) });
+      const captured = each.capture(
+        vectorCapture({
+          instruction: Buffer.from(c.instruction_hex, "hex"),
+          mediaType: c.media_type,
+        }),
+      );
+      expect(captured.requestDigest, c.id).toBe(c.request_digest);
+    }
+    // And the published value reaches the emitted assertion.
     const intake = vectorIntake();
     const receipt = intake.capture(vectorCapture());
     expect(receipt.requestDigest).toBe(PUBLISHED["rd-01"]);

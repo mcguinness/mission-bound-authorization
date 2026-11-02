@@ -26,6 +26,7 @@ import {
   assertionVector as V,
   vectorCapture,
   vectorIntake,
+  vectorRandom,
 } from "./fixtures.js";
 
 const MEDIA_TYPE = "text/plain;charset=utf-8";
@@ -159,9 +160,9 @@ describe("the assertion commits to no request content (@spec request-provenance#
     for (const f of forbidden) expect(artifacts.includes(f), f).toBe(false);
   });
 
-  it("changing only the instruction or the media type changes only request_digest", async () => {
-    const emit = async (capture: CaptureRequest) => {
-      const intake = vectorIntake();
+  it("changing only the instruction, the media type or the secret changes only request_digest", async () => {
+    const emit = async (capture: CaptureRequest, secretHex?: string) => {
+      const intake = vectorIntake({ randomBytes: vectorRandom(secretHex) });
       const receipt = intake.capture(capture);
       const signed = await intake.sign({
         captureId: receipt.captureId,
@@ -173,11 +174,12 @@ describe("the assertion commits to no request content (@spec request-provenance#
       return { receipt, ...decodeJws(signed.entry.assertion) };
     };
     const base = await emit(vectorCapture());
-    for (const variant of [
-      captureOf("Pay Acme."),
-      captureOf(V.capture.instruction_utf8, "text/markdown;charset=utf-8"),
+    const otherSecret = Buffer.from(Array.from({ length: 32 }, (_, i) => 0xff - i)).toString("hex");
+    for (const other of [
+      await emit(captureOf("Pay Acme.")),
+      await emit(captureOf(V.capture.instruction_utf8, "text/markdown;charset=utf-8")),
+      await emit(vectorCapture(), otherSecret),
     ]) {
-      const other = await emit(variant);
       expect(other.header).toEqual(base.header);
       expect(other.claims.request_digest).not.toBe(base.claims.request_digest);
       expect(claimsWithout(other.claims, "request_digest")).toEqual(
