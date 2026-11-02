@@ -680,8 +680,11 @@ export function contractsRequiring(
  * credential's scope mapping. Either an action list, a mapping that states no
  * contract, or `{actions, resource_contract}`, a mapping that grants its
  * actions under exactly that contract. A stated reference must be one the
- * declarations support for `resource` now: declared for it, not retired,
- * within its retention, with its digest, and defining every mapped action.
+ * declarations configure for `resource`: declared for it, not retired, with
+ * its digest, and defining every mapped action. A superseded version past its
+ * retention still loads (#249, D1185): the value then authorizes nothing,
+ * since retention is enforced at use, against the current clock, so a
+ * configuration never stops loading when a retention ends.
  * A scope's contract never changes; a new contract version takes a new,
  * distinguishable scope value, so a credential issued under a mapping that
  * stated none never gains one.
@@ -692,7 +695,6 @@ export function parseScopeMappingValue(
   resource: string,
   fail: (message: string) => never,
   contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
-  now: Date = new Date(),
 ): { actions: string[]; resource_contract?: ResourceContractRef } {
   const actionsOf = (value: unknown, at: string): string[] => {
     if (
@@ -715,10 +717,11 @@ export function parseScopeMappingValue(
   const actions = actionsOf(value.actions, `${ctx}.actions`);
   if (value.resource_contract === undefined)
     fail(`${ctx}.resource_contract is required in the object form`);
-  const violation = contracts.carriedViolation(
-    { resource, actions, resource_contract: value.resource_contract },
-    now,
-  );
+  const violation = contracts.declaredViolation({
+    resource,
+    actions,
+    resource_contract: value.resource_contract,
+  });
   if (violation !== undefined) fail(`${ctx}.resource_contract: ${violation}`);
   return { actions, resource_contract: value.resource_contract as ResourceContractRef };
 }

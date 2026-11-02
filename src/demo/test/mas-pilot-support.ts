@@ -105,11 +105,11 @@ export async function composeRecorded(
 export function approve(
   pilot: MasPilot,
   sub: string,
-  opts: { actions?: string[]; clientId?: string; delegable?: string; label: string },
+  opts: { actions?: string[]; clientId?: string; delegable?: string; label: string; expiresAt?: string },
 ): string {
   const actions = opts.actions ?? READ_ACTIONS;
   const intent = validateMissionIntent(
-    JSON.stringify({ goal: `MAS pilot: ${opts.label}`, target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
+    JSON.stringify({ goal: `MAS pilot: ${opts.label}`, target_resources: [CANONICAL_RESOURCE], expires_at: opts.expiresAt ?? LATER_EXPIRES_AT }),
   );
   return pilot.kernel.approve({
     intent,

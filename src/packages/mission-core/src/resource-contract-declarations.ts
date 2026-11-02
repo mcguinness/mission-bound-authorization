@@ -681,6 +681,39 @@ export class ResourceContractDeclarations {
     },
     now: Date,
   ): string | undefined {
+    return this.violation(entry, now);
+  }
+
+  /**
+   * @spec resource-access#resource-contract, runtime#resource-contract (#249,
+   * D1185): the violation for a reference a configuration names, independent
+   * of the clock: malformed, naming no version declared for the entry's
+   * resource, a retired version, a changed digest, or a version that does not
+   * define every action the entry lists. A superseded version is not refused
+   * here whatever its retention: a configuration that names one keeps
+   * loading after the retention ends, and the reference authorizes nothing
+   * from then on, since retention is enforced where the reference is used,
+   * against the current clock.
+   */
+  declaredViolation(entry: {
+    resource: unknown;
+    resource_match?: unknown;
+    actions: readonly string[];
+    resource_contract?: unknown;
+  }): string | undefined {
+    return this.violation(entry, undefined);
+  }
+
+  /** {@link carriedViolation}, with the retention test only when `now` is given. */
+  private violation(
+    entry: {
+      resource: unknown;
+      resource_match?: unknown;
+      actions: readonly string[];
+      resource_contract?: unknown;
+    },
+    now: Date | undefined,
+  ): string | undefined {
     const ref = entry.resource_contract;
     if (ref === undefined) return undefined;
     if (!isResourceContractRef(ref)) return "resource_contract is malformed";
@@ -689,7 +722,7 @@ export class ResourceContractDeclarations {
     if (!declaration || !version)
       return "resource_contract names no contract version configured for the entry's resource";
     if (version.state === "retired") return "resource_contract names a retired version";
-    if (version.state === "superseded") {
+    if (version.state === "superseded" && now !== undefined) {
       const until = parseRfc3339Instant(version.retained_until);
       if (until === undefined || compareInstants(instantFromMs(now.getTime()), until) > 0) {
         return "resource_contract names a superseded version outside its retention";
