@@ -72192,7 +72192,7 @@
     "normative": "a derived, refreshed, exchanged or delegated entry that removes, replaces or adds a resource_contract reference relative to its Mission entry is not a subset and is refused; one that carries it unchanged passes this step"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
@@ -72235,9 +72235,39 @@
      "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that adds a reference to an entry approved without one is refused: an unpinned approval never gains one",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation and its redemption carry the entry's resource contract reference exactly, and an entry approved without one gains none (@spec resource-access#resource-contract, mission#designation, #249, D1104) > a Mission approved against the contract: the designation and the delegated token carry its reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > a child of a parent approved against the contract carries the parent entry's reference unchanged in its record, its child-bound grant and its redeemed token",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > refuses, creating no child, a proposal that restates the current reference under a parent approved without one: a proposal never adds it (invalid_request, not_strict_subset)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > the dispatched instance, the handoff grant and the Agent's redeemed token carry the template ceiling's reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > refuses invalid_authorization_details, minting no grant, a handoff that restates the current reference on an instance without one: a request never adds it",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: derivation, the code exchange, refresh, introspection and the async-delegation Token Exchange are witnessed; dispatch handoff and child creation are not (they reach the same derivation and subset step 4, unwitnessed end to end). The Token Exchange refusal is held by two layers, subset step 4 and the projection's equality: disabling both fails the refusal tests, either alone does not."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Derivation, the code exchange, refresh, introspection and the async-delegation Token Exchange are witnessed; and, end to end (D1104), child creation through its redemption, the Dispatch handoff through its redemption, and the designation through its redemption carry the reference unchanged, while a child proposal or a handoff request restating the current reference on authority approved without one is refused. The Token Exchange refusal is held by two layers, subset step 4 and the projection's equality: disabling both fails the refusal tests, either alone does not. D1104: the child-creation refusal is held by two layers, the presented-token bound and the strict-subset proof, both deciding through subset step 4; disabling either alone does not fail its witness. Letting step 4 accept a reference the granting entry lacks (equality still required where it carries one) lets the proposal through both: the child is created and its child-bound grant issued, which fails the witness's refusal assertions and, with those removed, its no-child assertion alone. The handoff refusal is held by the presented and effective subset checks and the projection's equality with issued-whole: disabling all three together mints the requested reference and fails its witness, and any one alone does not. Proved by mutation, each alone: stripping the reference from the designation's or the delegated token's entries, inheriting no reference into a child, or stripping it from the handoff grant, each fails its preservation witness."
   },
   {
    "id": "resource-access.resource-contract.unconfigured-reference-refused",
@@ -72551,11 +72581,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "text": "Every derivation, narrowing, and delegation preserves it exactly",
    "observation": {
     "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
-    "local": "witnessed for child delegation, template Dispatch, governed activation and ceiling drawdown (through the wire, #249 B.4); token derivation, refresh, token exchange and carryover are not yet witnessed here (the #249 cutover, D875). An Expansion is a new approval, so it assembles rather than preserves (#249 B.3)"
+    "local": "witnessed for child delegation, template Dispatch, governed activation and ceiling drawdown (through the wire, #249 B.4); and, end to end, the code exchange, refresh, introspection, the handle-based async-delegation Token Exchange, the designation and its redemption, child creation and its redemption, the Dispatch handoff and its redemption, and carryover (D1104). An Expansion is a new approval, so it assembles rather than preserves (#249 B.3)"
    },
    "tests": [
     {
@@ -72623,9 +72653,57 @@
      "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes once the consented version is superseded within its retention, with no current version",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a refreshed access token and introspection carry it unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > an async-delegation Token Exchange carries it, whether it requests nothing narrower or restates it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that removes or replaces the reference is refused invalid_authorization_details: neither is narrowing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > the approval records the proposed current reference, authority_hash commits it, and the code-exchanged token carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation and its redemption carry the entry's resource contract reference exactly, and an entry approved without one gains none (@spec resource-access#resource-contract, mission#designation, #249, D1104) > a Mission approved against the contract: the designation and the delegated token carry its reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > a child of a parent approved against the contract carries the parent entry's reference unchanged in its record, its child-bound grant and its redeemed token",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > the dispatched instance, the handoff grant and the Agent's redeemed token carry the template ceiling's reference unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > carries a child pinned to the contract into a replacement that carries the old child's reference exactly",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness. A ceiling drawdown (#249 B.4, D875) is preservation-only: every wire drawdown check (the non-widening check, the encounter facts and the decision) decides on drawdownRequested's set, and the creation inherits onto the derivation before capability bindings are added, both carrying the consented ceiling's reference through inheritResourceContract, never one assembled afresh, and checking it as a carried one. Two endpoint witnesses draw down through /token: under unchanged configuration, and with the consented version superseded within its retention and no current version. Proved by mutation, each alone: inheriting after capability bindings are added fails both endpoint witnesses; deciding the non-widening check, or every wire check, on the assembled derivation fails the superseded one; and not inheriting in either place, or skipping the carried check, fails a witness."
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. D1104: the end-to-end paths are witnessed too, each proved by a mutation that strips the reference at the path's own carry point (the designation's and the delegated token's entries, the child's inheritance, the handoff grant, the carried replacement's authority), which fails its witness. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness. A ceiling drawdown (#249 B.4, D875) is preservation-only: every wire drawdown check (the non-widening check, the encounter facts and the decision) decides on drawdownRequested's set, and the creation inherits onto the derivation before capability bindings are added, both carrying the consented ceiling's reference through inheritResourceContract, never one assembled afresh, and checking it as a carried one. Two endpoint witnesses draw down through /token: under unchanged configuration, and with the consented version superseded within its retention and no current version. Proved by mutation, each alone: inheriting after capability bindings are added fails both endpoint witnesses; deciding the non-widening check, or every wire check, on the assembled derivation fails the superseded one; and not inheriting in either place, or skipping the carried check, fails a witness. D1104: the endpoint suite's existing witnesses are cited here: a refreshed token and introspection carry the reference unchanged, the handle-based async-delegation Token Exchange carries it, and a Token Exchange removing or replacing it is refused invalid_authorization_details. Each was already cited on resource-access.subset.contract-preserved-exactly with its proof."
   },
   {
    "id": "resource-access.resource-contract.no-reference-without-approval",
@@ -72641,11 +72719,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; and, once configuration requires a reference for an operation of the resource, a refresh and a Token Exchange through a delegation handle of a grant approved without one, and a template Dispatch from a ceiling consented without one, carry none, with the Mission record and its authority_hash unchanged (#1847, D989); the delegated exchange without a handle, the designation exchange, a child-creation exchange and carryover of a grant approved without a reference are not yet witnessed"
+    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; and, once configuration requires a reference for an operation of the resource, a refresh and a Token Exchange through a delegation handle of a grant approved without one, and a template Dispatch from a ceiling consented without one, carry none, with the Mission record and its authority_hash unchanged (#1847, D989); and (D1104) the designation and the delegated exchange without a handle, child creation and its redemption, the Dispatch handoff, a drawdown and the token mintMissionAccessToken issues for it carry none, a request or proposal restating the current reference is refused, and carryover never pins a child approved without one: that child is cascaded, not carried, because the Expansion's successor, a new approval, carries the current reference"
    },
    "tests": [
     {
@@ -72683,9 +72761,57 @@
      "name": "the payments contract cutover's witnesses in the composed stack, under the shipped configuration (@spec runtime#resource-contract, resource-access#resource-contract, txn-authorization#resource-challenge, #249, D967, D1071) > refuses, with no decision and no effect, an unpinned credential issued before the requirement and its refresh after it, for every tool of the cutover's actions the deployment issues, and refreshing stamps no reference; both still perform a read",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that adds a reference to an entry approved without one is refused: an unpinned approval never gains one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation and its redemption carry the entry's resource contract reference exactly, and an entry approved without one gains none (@spec resource-access#resource-contract, mission#designation, #249, D1104) > a Mission approved before the cutover, with no reference: the designation and the delegated token carry none, the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > a child of a parent approved before the cutover carries none, through creation and redemption, under the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104) > refuses, creating no child, a proposal that restates the current reference under a parent approved without one: a proposal never adds it (invalid_request, not_strict_subset)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > an instance of a template consented before the cutover carries none at any hop, under the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104) > refuses invalid_authorization_details, minting no grant, a handoff that restates the current reference on an instance without one: a request never adds it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > a drawdown from a ceiling consented before the cutover completes, its successor and the token minted for it carrying no reference, under the configuration now requiring one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > cascades, never pinning it, a child approved before the cutover when its parent's Expansion is approved against the contract: no replacement, an excluded not_strict_subset row, and the old child terminated",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875 (fresh approval, never retroactive pinning). #1847 (D989): refresh and a Token Exchange through a delegation handle are witnessed through /token, and template Dispatch at the kernel, each after configuration starts requiring a reference for the resource. Proved by mutation, each alone: re-assembling the refreshed grant's projection fails the refresh assertion; re-assembling the delegation family's token authority fails the exchange assertion; re-assembling the Dispatch instance fails the Dispatch witness; and re-assembling the effective Authority Set every token path reads fails the endpoint witness. Partial until the other derivations are witnessed: re-assembling at the delegated exchange without a handle, at a child-creation derivation, or at mintMissionAccessToken is caught by no witness, and carryover of an unpinned grant is untested. C.3a (#249, D1071): the composed stack's refresh of a token approved without a reference, after the requirement applies, carries none in any entry, and the refreshed credential is refused at the PEP. Still partial for the derivations named above."
+   "notes": "#1751, D875 (fresh approval, never retroactive pinning). #1847 (D989): refresh and a Token Exchange through a delegation handle are witnessed through /token, and template Dispatch at the kernel, each after configuration starts requiring a reference for the resource. Proved by mutation, each alone: re-assembling the refreshed grant's projection fails the refresh assertion; re-assembling the delegation family's token authority fails the exchange assertion; re-assembling the Dispatch instance fails the Dispatch witness; and re-assembling the effective Authority Set every token path reads fails the endpoint witness. D1104: re-assembling at the designation, at the delegated exchange without a handle, at a child-creation derivation (with the current reference), at the child-bound grant, at the handoff grant, or at mintMissionAccessToken fails a witness, each alone; and pinning a carried replacement with the successor's reference, with the old child's ceiling relaxed to let it through, fails the carryover witness, so the cascade is what keeps an unpinned child from gaining one. Carryover's witness is a cascade, which satisfies 'gains one only through a new approval': the child gains none, and is not carried. C.3a (#249, D1071): the composed stack's refresh of a token approved without a reference, after the requirement applies, carries none in any entry, and the refreshed credential is refused at the PEP. D1104: the endpoint suite's existing witness that a Token Exchange adding a reference to an entry approved without one is refused is cited here. A child proposal restating the current reference under a parent approved without one is refused, creating no child: letting subset step 4 accept a reference the granting entry lacks creates the child and fails that witness, as recorded on resource-access.subset.contract-preserved-exactly."
   },
   {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
