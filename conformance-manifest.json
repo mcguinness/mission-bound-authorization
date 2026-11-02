@@ -337,7 +337,9 @@
    "core.cross-domain",
    "consent-evidence.verification",
    "consent-evidence.rung-1",
-   "consent-evidence.rung-3"
+   "consent-evidence.rung-3",
+   "consent-evidence.rung-2",
+   "consent-evidence.rung-4"
   ]
  },
  "profiles": [
@@ -84089,7 +84091,9 @@
     "kind": "capabilities",
     "any_of": [
      "consent-evidence.rung-1",
-     "consent-evidence.rung-3"
+     "consent-evidence.rung-2",
+     "consent-evidence.rung-3",
+     "consent-evidence.rung-4"
     ]
    },
    "profiles": [],
@@ -84101,7 +84105,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies to a deployment claiming Rung 1 or above (D1107): gated on any_of rung-1 to rung-4, because each higher rung inherits the duties of the rungs below it."
   },
   {
    "id": "consent-evidence.consent-disclosure.locale",
@@ -85337,8 +85341,7 @@
    "role": "client",
    "strength": "MAY",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "kind": "unconditional"
    },
    "profiles": [],
    "surface": "par",
@@ -85349,7 +85352,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1107: ungated: sending the parameter needs no prior support discovery, and it remains a permission, not a requirement that every client send it."
   },
   {
    "id": "consent-evidence.shaping-evidence-hash-parameter.refuse-malformed",
@@ -85557,22 +85560,81 @@
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
-    "kind": "capabilities",
-    "any_of": [
-     "consent-evidence.recording",
-     "consent-evidence.verification"
-    ]
+    "kind": "unconditional"
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a consumer treats consent_rendering_hash as audit data only and never grants or widens authority on its presence or value; checking it against the committed disclosure and refusing a mismatch does not breach this"
+    "normative": "a verifier that consumes consent_rendering_hash treats it as audit data only and never grants or widens authority on its presence or value; checking it against the committed disclosure and refusing a mismatch does not breach this"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on any_of recording or verification because the clause binds every consumer of the value, inside a recording deployment and at an independent verifier, and the observation forbids granting or widening authority, not checking the commitment and refusing a mismatch."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1107: split by consuming role, each unconditional with the observation conditioned on consuming the value: neither recording nor verification support is a prerequisite for the prohibition on granting authority from it."
+  },
+  {
+   "id": "consent-evidence.consent-rendering-hash.consumers-audit-only-rs",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-rendering-hash",
+   "text": "Consumers MUST treat the value as audit data only.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resource server that consumes consent_rendering_hash, from a Mission claim extended to carry it, treats it as audit data only: its presence or value never grants or widens the authority a request is allowed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1107: split by consuming role, each unconditional with the observation conditioned on consuming the value: neither recording nor verification support is a prerequisite for the prohibition on granting authority from it."
+  },
+  {
+   "id": "consent-evidence.consent-rendering-hash.consumers-audit-only-pdp",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-rendering-hash",
+   "text": "Consumers MUST treat the value as audit data only.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy decision point that consumes consent_rendering_hash treats it as audit data only: its presence or value never grants or widens the authority a decision permits"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1107: split by consuming role, each unconditional with the observation conditioned on consuming the value: neither recording nor verification support is a prerequisite for the prohibition on granting authority from it."
+  },
+  {
+   "id": "consent-evidence.consent-rendering-hash.consumers-audit-only-as",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-rendering-hash",
+   "text": "Consumers MUST treat the value as audit data only.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorization server that consumes consent_rendering_hash outside recording it treats it as audit data only: its presence or value never grants or widens the authority it derives or issues; checking it and refusing a mismatch does not breach this"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1107: split by consuming role, each unconditional with the observation conditioned on consuming the value: neither recording nor verification support is a prerequisite for the prohibition on granting authority from it."
   },
   {
    "id": "consent-evidence.consent-rendering-hash.no-authority",
@@ -87562,19 +87624,18 @@
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "kind": "unconditional"
    },
    "profiles": [],
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "an RS refuses a request presenting Consent Evidence in place of an access token"
+    "normative": "a resource server presented with Consent Evidence in place of an access token never accepts it as a token, grant or authority: the request is refused"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Anchored at the parent: the subsection Evidence Does Not Grant Authority has no anchor."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Anchored at the parent: the subsection Evidence Does Not Grant Authority has no anchor. D1107: unconditional, the observation conditioned on the evidence being presented; no recording support is a prerequisite."
   },
   {
    "id": "consent-evidence.security-considerations.test-templates-against-fixtures",
@@ -87675,7 +87736,9 @@
     "kind": "capabilities",
     "any_of": [
      "consent-evidence.rung-1",
-     "consent-evidence.rung-3"
+     "consent-evidence.rung-2",
+     "consent-evidence.rung-3",
+     "consent-evidence.rung-4"
     ]
    },
    "profiles": [],
@@ -87687,7 +87750,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies to a deployment claiming Rung 1 or above (D1107): gated on any_of rung-1 to rung-4, because each higher rung inherits the duties of the rungs below it."
   },
   {
    "id": "consent-evidence.experimental-rungs.rung1-template-digest",
@@ -87700,7 +87763,9 @@
     "kind": "capabilities",
     "any_of": [
      "consent-evidence.rung-1",
-     "consent-evidence.rung-3"
+     "consent-evidence.rung-2",
+     "consent-evidence.rung-3",
+     "consent-evidence.rung-4"
     ]
    },
    "profiles": [],
@@ -87712,7 +87777,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies to a deployment claiming Rung 1 or above (D1107): gated on any_of rung-1 to rung-4, because each higher rung inherits the duties of the rungs below it."
   },
   {
    "id": "consent-evidence.experimental-rungs.rung1-template-retrievable",
@@ -87725,7 +87790,9 @@
     "kind": "capabilities",
     "any_of": [
      "consent-evidence.rung-1",
-     "consent-evidence.rung-3"
+     "consent-evidence.rung-2",
+     "consent-evidence.rung-3",
+     "consent-evidence.rung-4"
     ]
    },
    "profiles": [],
@@ -87737,7 +87804,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies to a deployment claiming Rung 1 or above (D1107): gated on any_of rung-1 to rung-4, because each higher rung inherits the duties of the rungs below it."
   },
   {
    "id": "consent-evidence.experimental-rungs.rung3-high-risk",
@@ -87747,8 +87814,11 @@
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.rung-3"
+    "kind": "capabilities",
+    "any_of": [
+     "consent-evidence.rung-3",
+     "consent-evidence.rung-4"
+    ]
    },
    "profiles": [],
    "surface": "evidence-emission",
@@ -87759,7 +87829,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 3; no Rung 3 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on consent-evidence.rung-3 because the clause binds only a deployment claiming Rung 3."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies to a deployment claiming Rung 3 or above (D1107): gated on any_of rung-3 or rung-4, because Rung 4 inherits the Rung 3 duties."
   },
   {
    "id": "core.instance-context.current-presenter-binding",
