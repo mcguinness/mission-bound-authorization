@@ -334,7 +334,10 @@
    "metering.child-accounting",
    "metering.escrow-allocation",
    "consent-evidence.recording",
-   "core.cross-domain"
+   "core.cross-domain",
+   "consent-evidence.verification",
+   "consent-evidence.rung-1",
+   "consent-evidence.rung-3"
   ]
  },
  "profiles": [
@@ -7226,7 +7229,7 @@
    "surface": "par",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a submission carrying evidence that verifies lands its verified facts on the Mission Record's submission_evidence at activation, request-derived and outside every integrity anchor"
+    "normative": "a submission carrying evidence that verifies lands its verified facts on the Mission Record's submission_evidence at activation, request-derived; the facts are outside the intent_hash, authority_hash and proposal_hash commitments, and the Approval Context Commitment commits them through submission_evidence_commitment"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -7238,7 +7241,7 @@
      "surface": "par"
     }
    ],
-   "notes": "#1927 (D1082). A3. The step list's lead is keyword-free; the procedure is the AS's."
+   "notes": "#1927 (D1082). A3. The step list's lead is keyword-free; the procedure is the AS's. D1099: observation corrected to what the clause requires."
   },
   {
    "id": "core.submission-evidence.structural-entry-refusal",
@@ -12975,7 +12978,7 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a committed record carries created_at, an RFC 3339 timestamp equal to the instant of its creation commit: on the direct path the decision's commit instant (a lifetime measured from a later decision moves neither it nor expires_at), and on Template Dispatch the reservation's instant"
+    "normative": "a committed record carries created_at, an RFC 3339 timestamp equal to the instant of its atomic creation commit, whether the commit follows a direct decision or a Template Dispatch"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -12993,7 +12996,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1927 (D1082). A1. Witnessed on the direct decision and on Dispatch; other creation paths set created_at through the same insertRecord."
+   "notes": "#1927 (D1082). A1. Witnessed on the direct decision and on Dispatch; other creation paths set created_at through the same insertRecord. D1099: the observation drops the expires_at claim and the Dispatch reservation, which the clause does not state; both mapped tests still assert created_at at the commit instant, the direct decision's and the Dispatch's."
   },
   {
    "id": "core.mission-record.expires-after-created",
@@ -28701,12 +28704,33 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission listing filtered by created_after or created_before returns exactly the Missions whose created_at is strictly after, respectively strictly before, the value"
+    "normative": "created_after or created_before matches a Mission exactly when its record's created_at is strictly after, respectively strictly before, the value (an equal created_at does not match), in conjunction with the filter's other members and within the caller's filter scope"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 (D1082). A4. The reference implements no Mission Management listing or filter."
+   "notes": "#1927 (D1082). A4. The reference implements no Mission Management listing or filter. D1099: the observation states the member's match rule and keeps the filter's conjunction and caller scope, which a returns-exactly listing dropped."
+  },
+  {
+   "id": "management.enumeration-response.summary-created-at",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "enumeration-response",
+   "text": "`client_id`, `created_at`, and `expires_at` from the Mission record",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each Mission summary in an enumeration response carries created_at equal to the Mission record's created_at"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1927 A4 (D1099). The summary facet of created_at; the reference implements no Mission Management enumeration."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -84062,8 +84086,11 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "kind": "capabilities",
+    "any_of": [
+     "consent-evidence.rung-1",
+     "consent-evidence.rung-3"
+    ]
    },
    "profiles": [],
    "surface": "commitment",
@@ -84074,7 +84101,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
   },
   {
    "id": "consent-evidence.consent-disclosure.locale",
@@ -84333,12 +84360,12 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a source value outside subject, delegator, platform, regulatory and judicial is accepted as descriptive, not refused"
+    "normative": "a disclosure whose constraint_provenance source is a value other than subject, delegator, platform, regulatory or judicial still conforms: the value is descriptive"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation states the deployment's permission the clause grants, not a duty on a receiver to accept the value."
   },
   {
    "id": "consent-evidence.consent-disclosure.delegation-summary",
@@ -84921,12 +84948,12 @@
    "surface": "approval-ceremony",
    "assertion": "refusal",
    "observation": {
-    "normative": "an approval submitted with any acknowledgment the disclosure carries left incomplete records no approved decision and creates no Mission"
+    "normative": "an approval submitted with any acknowledgment the disclosure carries left incomplete records no approved decision"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation drops the Mission-creation consequence, which the clause does not state and the binding-to-mission rows carry."
   },
   {
    "id": "consent-evidence.material-notices.record-acknowledgment-completion",
@@ -85163,12 +85190,12 @@
    "surface": "commitment",
    "assertion": "output-bound",
    "observation": {
-    "normative": "under layered rendering the committed disclosure object, and so consent_rendering_hash, is identical to the one an unlayered rendering commits"
+    "normative": "under layered rendering the committed Consent Disclosure object keeps the full coverage Consent Disclosure Object requires: layering removes no member from it (its disclosure identifier and rendering instant may differ from an unlayered rendering's, and so may consent_rendering_hash)"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: observation corrected to what the clause requires."
   },
   {
    "id": "consent-evidence.layered-rendering.proviso-notices-first-layer",
@@ -85251,12 +85278,12 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every answer the consent surface gives in its own voice is drawn from Shaping Evidence, constraint provenance, or identified deployment policy, and its interrogation entry names that source"
+    "normative": "every answer the consent surface gives in its own voice is drawn from recorded material: Shaping Evidence, constraint provenance, or identified deployment policy"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation drops the recording of answer_source, a separate duty rowed at consent-evidence.conformance.record-offered-interrogation."
   },
   {
    "id": "consent-evidence.interrogation.relayed-answer-inert",
@@ -85471,12 +85498,12 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "rendering the same disclosure object with the same template_id, template_version, rendering_template_digest and locale twice yields the same rendered form"
+    "normative": "rendering the same disclosure object with the same template_id, template_version, rendering_template_digest and locale twice in one presentation modality yields the same rendered form"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation restores the section's per-modality scope, since renderings in different modalities legitimately differ."
   },
   {
    "id": "consent-evidence.consent-rendering-hash.record-on-mission-record",
@@ -85530,19 +85557,22 @@
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "kind": "capabilities",
+    "any_of": [
+     "consent-evidence.recording",
+     "consent-evidence.verification"
+    ]
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a consumer's authorization outcome does not depend on consent_rendering_hash: present, absent or altered, it changes no decision"
+    "normative": "a consumer treats consent_rendering_hash as audit data only and never grants or widens authority on its presence or value; checking it against the committed disclosure and refusing a mismatch does not breach this"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on any_of recording or verification because the clause binds every consumer of the value, inside a recording deployment and at an independent verifier, and the observation forbids granting or widening authority, not checking the commitment and refusing a mismatch."
   },
   {
    "id": "consent-evidence.consent-rendering-hash.no-authority",
@@ -85559,12 +85589,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "no derivation, token issuance or decision consults consent_rendering_hash, so changing it alone changes no authority"
+    "normative": "consent_rendering_hash never grants or widens authority: no derivation or issuance gains authority from it; checking the commitment and refusing a mismatch remain permitted"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: observation corrected to what the clause requires."
   },
   {
    "id": "consent-evidence.consent-rendering-hash.construct-after-derivation-before-approval",
@@ -85603,12 +85633,12 @@
    "surface": "approval-ceremony",
    "assertion": "refusal",
    "observation": {
-    "normative": "after any listed input changes between construction and decision, a decision against the prior disclosure records no approval, and the approval proceeds only over a newly constructed disclosure; an unchanged-input control keeps the original disclosure"
+    "normative": "after any listed input changes between construction and decision, the prior disclosure is discarded: a decision against it records no approval, and the approval proceeds only over a newly constructed disclosure"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation drops the unchanged-input control, which required keeping a disclosure the clause does not require kept."
   },
   {
    "id": "consent-evidence.consent-rendering-hash.no-reuse-hash",
@@ -86310,7 +86340,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86321,7 +86351,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Steps 1, 2 and 4 of the verifier procedure; conformance.verifier-implements-integrity makes the steps binding."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Steps 1, 2 and 4 of the verifier procedure; conformance.verifier-implements-integrity makes the steps binding. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.integrity.verify-typ-and-kid",
@@ -86332,7 +86362,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86343,7 +86373,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.integrity.verify-signing-key",
@@ -86354,7 +86384,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86365,7 +86395,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.integrity.verify-approved-anchors",
@@ -86376,7 +86406,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86387,7 +86417,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.integrity.verify-declined-narrowed-descriptor",
@@ -86398,7 +86428,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86409,7 +86439,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.integrity.verify-rendering-confirmation",
@@ -86420,7 +86450,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86431,7 +86461,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, not a rung, because step 7 binds every verifier whenever a rendering_confirmation is present, with or without a Rung 3 claim."
   },
   {
    "id": "consent-evidence.integrity.verify-governance-digest",
@@ -86442,18 +86472,18 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a present approval_governance_digest that differs from the recomputed digest of the verified Approval Governance Record is an integrity failure; an unavailable record is reported as an audit failure, not an integrity failure"
+    "normative": "a present approval_governance_digest that differs from the recomputed digest of the verified Approval Governance Record is an integrity failure; a record unavailable within its retention obligation is an audit failure of the deployment, not an integrity failure of the evidence"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification (step 8 binds a verifier whenever the digest is present), and the observation restores the clause's retention-obligation condition on the audit-failure outcome."
   },
   {
    "id": "consent-evidence.integrity.verify-rendering-attestation",
@@ -86464,18 +86494,18 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a present rendering_attestation that the verifier cannot validate leaves the evidence verified at the rung below Rung 2, not failed; an absent one is not a failure"
+    "normative": "a present rendering_attestation whose component identity or attestation the verifier cannot validate against its configured trust anchors is treated as unverified, not as an integrity failure of the record: the evidence then asserts no rung above the one the verifier can check; an absent one is not a failure"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, not a rung, because step 9 binds every verifier whenever an attestation is present, and the observation no longer fixes the outcome at Rung 1 where the clause says no rung above the one the verifier can check."
   },
   {
    "id": "consent-evidence.integrity.disclosure-reconstruction",
@@ -86486,7 +86516,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86497,7 +86527,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.integrity.unretrievable-not-integrity-failure",
@@ -86508,18 +86538,18 @@
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a referenced disclosure the verifier cannot retrieve leaves the evidence record's integrity verdict unchanged and is reported as an audit failure"
+    "normative": "a referenced disclosure the verifier cannot retrieve leaves the evidence record's integrity verdict unchanged; failure to retrieve it within the retention window is an audit failure, not a signature or anchor failure"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, and the observation restores the retention-window condition under which non-retrieval is an audit failure."
   },
   {
    "id": "consent-evidence.integrity.unsupported-format-rejected",
@@ -86530,7 +86560,7 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -86541,7 +86571,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.binding-to-mission.derive-and-compute-anchors",
@@ -86756,12 +86786,12 @@
    "surface": "evidence-emission",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "after a decline no Mission record, mission claim, token or authority exists for the request, and the request's code or request_uri redeems nothing"
+    "normative": "recording declined evidence creates no Mission record, mission claim, token or authority"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation drops the code and request_uri redemption mechanism, which the clause does not name."
   },
   {
    "id": "consent-evidence.revision-events.narrowed-no-authority",
@@ -87201,7 +87231,7 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -87212,7 +87242,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.minimization.redact-free-form",
@@ -87317,12 +87347,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where interrogation is offered, the evidence's interrogation member lists each question in the order asked, with what it concerned and its answer_source (shaping_evidence, constraint_provenance, policy or agent)"
+    "normative": "where interrogation is offered, the evidence's interrogation member lists each question in the order asked, with what it concerned when one was identified and its answer_source (shaping_evidence, constraint_provenance, policy or agent)"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation restores the condition that applies_to is recorded when an entry, constraint or notice was identified."
   },
   {
    "id": "consent-evidence.conformance.should-further-material-notices",
@@ -87421,18 +87451,18 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a verifier applies every applicable step of the integrity procedure, and evidence failing any step is not accepted as verified"
+    "normative": "a verifier applies every applicable step of the Integrity and Verification procedure and does not accept as verified evidence that fails a step the procedure treats as an integrity failure; an attestation it cannot validate lowers the rung the evidence asserts, and an unavailable governance record or referenced disclosure is an audit failure, neither one an integrity failure"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, and the observation no longer rejects evidence for outcomes that steps 8 and 9 and the retrieval rule classify as an unverified rung or an audit failure."
   },
   {
    "id": "consent-evidence.conformance.verifier-unretrievable-audit-failure",
@@ -87443,7 +87473,7 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.verification"
    },
    "profiles": [],
    "surface": "verification",
@@ -87454,7 +87484,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures."
   },
   {
    "id": "consent-evidence.rendering-confusion.evaluate-rung3-high-risk",
@@ -87471,12 +87501,12 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment needing authenticator-level assurance documents its Rung 3 evaluation for its high-risk classes"
+    "normative": "a deployment that needs assurance that the Approver's authenticator confirmed a specific disclosure commitment evaluates Rung 3 for its high-risk classes"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation drops the documentation requirement, since the clause asks for an evaluation only."
   },
   {
    "id": "consent-evidence.template-downgrade.reject-unapproved-templates",
@@ -87583,12 +87613,12 @@
    "surface": "deployment-documentation",
    "assertion": "privacy",
    "observation": {
-    "normative": "access to Consent Evidence requires at least the authorization that access to Mission records and runtime evidence requires"
+    "normative": "Consent Evidence receives protection at least as strong as the deployment gives Mission records and runtime evidence, access authorization included"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation covers the protection the clause names, not only access authorization."
   },
   {
    "id": "consent-evidence.privacy-considerations.portable-hashes-or-references",
@@ -87605,12 +87635,12 @@
    "surface": "evidence-emission",
    "assertion": "privacy",
    "observation": {
-    "normative": "portable evidence carries hashes or references in place of full rendered text, and an authorized auditor can still reconstruct the disclosure"
+    "normative": "where possible, portable evidence carries hashes or references in place of full rendered text, and an authorized auditor can still reconstruct the disclosure"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: the observation restores the clause's where-possible condition."
   },
   {
    "id": "consent-evidence.privacy-considerations.sequence-not-global",
@@ -87642,8 +87672,11 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "kind": "capabilities",
+    "any_of": [
+     "consent-evidence.rung-1",
+     "consent-evidence.rung-3"
+    ]
    },
    "profiles": [],
    "surface": "approval-ceremony",
@@ -87654,7 +87687,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
   },
   {
    "id": "consent-evidence.experimental-rungs.rung1-template-digest",
@@ -87664,8 +87697,11 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "kind": "capabilities",
+    "any_of": [
+     "consent-evidence.rung-1",
+     "consent-evidence.rung-3"
+    ]
    },
    "profiles": [],
    "surface": "commitment",
@@ -87676,7 +87712,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
   },
   {
    "id": "consent-evidence.experimental-rungs.rung1-template-retrievable",
@@ -87686,8 +87722,11 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "kind": "capabilities",
+    "any_of": [
+     "consent-evidence.rung-1",
+     "consent-evidence.rung-3"
+    ]
    },
    "profiles": [],
    "surface": "deployment-documentation",
@@ -87698,7 +87737,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 1; no Rung 1 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on any_of rung-1 or rung-3 because the duty binds a deployment claiming Rung 1 or above, and the cumulative rule makes a Rung 3 claim satisfy Rung 1."
   },
   {
    "id": "consent-evidence.experimental-rungs.rung3-high-risk",
@@ -87709,7 +87748,7 @@
    "strength": "SHOULD",
    "applicability": {
     "kind": "capability",
-    "capability": "consent-evidence.recording"
+    "capability": "consent-evidence.rung-3"
    },
    "profiles": [],
    "surface": "evidence-emission",
@@ -87720,7 +87759,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 3; no Rung 3 capability is declared in model.capabilities, so the rung condition sits in the observation."
+   "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Applies only to a deployment claiming Rung 3; no Rung 3 capability is declared in model.capabilities, so the rung condition sits in the observation. D1099: gated on consent-evidence.rung-3 because the clause binds only a deployment claiming Rung 3."
   },
   {
    "id": "core.instance-context.current-presenter-binding",
@@ -100555,7 +100594,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission derived from a submitted proposal records proposed_authority as the submitted array, persisted unchanged; a Mission derived without one (template or configured-mapping mode) records none"
+    "normative": "a Mission whose request carried an authority proposal records proposed_authority as the submitted authorization_details array, exactly as submitted; a Mission whose request carried none, such as one derived in configured-mapping mode, records none"
    },
    "level": "unit",
    "coverage": "tested",
@@ -100573,7 +100612,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1927 (D1082). A2. The clause text recurs on other conditional members; the anchor scopes it to proposed_authority, the first member of the section carrying it."
+   "notes": "#1927 (D1082). A2. The clause text recurs on other conditional members; the anchor scopes it to proposed_authority, the first member of the section carrying it. D1099: the observation keys on whether a proposal was submitted, as the clause does, and drops a template mode the OAuth binding does not define, since a Dispatch carrying a proposal records one."
   },
   {
    "id": "core.integrity-anchors.implied-construction",
