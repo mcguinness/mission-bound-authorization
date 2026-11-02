@@ -53,6 +53,9 @@ import {
   type DpopKeys,
   dpopProofFor,
   type McpPaymentsServer,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  type RefusalRecord,
+  verifyEvidenceEnvelope,
 } from "@mission/mcp-payments";
 import { DOMAIN_MODEL, Fga } from "@mission/pdp";
 import { ID_JAG_TYP, initRasRedemptionStore } from "@mission/ras";
@@ -1760,6 +1763,174 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       const after = await read(issued);
       expect(after.ok, JSON.stringify(after)).toBe(true);
       expect((after.result as { id?: string } | undefined)?.id).toBe("inv-1");
+    } finally {
+      await second.close();
+    }
+  });
+
+  // @spec runtime-evidence#pre-decision-refusal, txn-authorization#offline-verification
+  // (#1337, #831, #250): with a key ring the AS's keys survive a restart, so a
+  // pre-restart Mission-bound token and a pre-restart transaction token both
+  // still verify; with no kernel file the Mission is gone, and the resource's
+  // pending operations are in memory. Each is refused for what it names, never
+  // for its signature: the Mission token unknown_mission before any decision,
+  // with one verifiable signed state_unavailable Refusal Record naming no
+  // Mission; the transaction token txn_unknown. Nothing executes.
+  it("refuses, after a restart on the same key ring with the kernel and the pending operations in memory, a pre-restart Mission-bound token unknown_mission and a pre-restart transaction token txn_unknown, before any decision and with no effect (#1337)", { timeout: 30_000 }, async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const dir = mkdtempSync(join(tmpdir(), "as-native-restart-memory-"));
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const env = { MISSION_KEY_RING: ring, MISSION_KEY_BINDINGS: await bindingsFor(ring), MISSION_RAS_REDEMPTIONS: rasStore() };
+    const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
+    const remittance = { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
+
+    const first = await launchAsNative(launchOptions(env, files));
+    let issued: IssuedMission;
+    let txnToken: string;
+    try {
+      const as = first.stack.authServer;
+      if (!as) throw new Error("the as-native target runs the AS");
+      issued = await issueMissionToken(
+        as.asUrl,
+        as.agentClientJwk,
+        {
+          missionIntent: JSON.stringify({
+            intent: {
+              goal: "Read approved Acme invoices and send their remittance",
+              target_resources: [CANONICAL_RESOURCE],
+              expires_at: "2027-01-01T00:00:00Z",
+            },
+          }),
+          authorizationDetails: JSON.stringify([
+            {
+              type: "mission_resource_access",
+              resource: CANONICAL_RESOURCE,
+              actions: ["payments:invoice.read", "payments:remittance.send"],
+              constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+            },
+          ]),
+        },
+        as.approverConsole,
+      );
+      // Before the restart: the Mission token reads.
+      const reader = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
+      try {
+        const control = await reader.client.callTool("get_invoice", { invoice_id: "inv-1" });
+        expect(control.ok, JSON.stringify(control)).toBe(true);
+      } finally {
+        await reader.close();
+      }
+      // And a challenged remittance yields a transaction token: the challenge,
+      // the transaction endpoint, Bob's approval, then the token.
+      const agent = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys, {
+        "accept-txn-challenge": "?1",
+      });
+      let challenge: string;
+      try {
+        const challenged = await agent.client.callTool("send_remittance_email", remittance);
+        expect(challenged.error, JSON.stringify(challenged)).toBe("transaction_authorization_required");
+        challenge = challenged.transaction_challenge as string;
+        expect(challenge).toBeTruthy();
+      } finally {
+        await agent.close();
+      }
+      const meta = (await (await fetch(`${as.asUrl}/.well-known/openid-configuration`)).json()) as Record<string, string>;
+      const txnEndpoint = meta.transaction_authorization_endpoint as string;
+      const assertion = await clientAssertionSigner(as.asUrl, as.agentClientJwk);
+      const postTxn = async (payload: Record<string, string>) => {
+        const res = await fetch(txnEndpoint, {
+          method: "POST",
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+            dpop: await dpopProofFor(issued.dpopKeys, txnEndpoint, "POST"),
+          },
+          body: new URLSearchParams({
+            client_id: "ap-agent",
+            client_assertion: await assertion(),
+            client_assertion_type: CLIENT_ASSERTION_TYPE,
+            ...payload,
+          }).toString(),
+        });
+        return { status: res.status, body: (await res.json()) as Record<string, string> };
+      };
+      const admitted = await postTxn({ transaction_challenge: challenge, subject_token: issued.accessToken, subject_token_type: AT_TYPE });
+      expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+      const handle = admitted.body.transaction_authorization_id as string;
+      const task = first.stack.ars.pending()[0];
+      if (!task) throw new Error("the transaction endpoint opened no approval task");
+      await first.stack.ars.adjudicate(task.id, "approve", "bob");
+      const granted = await postTxn({ transaction_authorization_id: handle });
+      expect(granted.status, JSON.stringify(granted.body)).toBe(200);
+      txnToken = granted.body.access_token as string;
+    } finally {
+      await first.close();
+    }
+
+    // The whole target restarts on the same configured files: the key ring and
+    // its key binding record, the RAS redemption store, and the PDP claim and
+    // write-reservation files. With no kernel file, nothing keeps the Missions,
+    // and the resource's pending operations were only ever in memory.
+    const second = await launchAsNative(launchOptions(env, files));
+    try {
+      const decisions: unknown[] = [];
+      second.stack.onEnforce((e) => {
+        decisions.push(e);
+      });
+      const refusals = () => second.stack.evidence.all().filter((e): e is RefusalRecord => e.kind === "refusal");
+
+      // The Mission-bound token verifies, and the kernel holds no Mission for it.
+      const holder = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
+      try {
+        const cases: [string, Record<string, unknown>, string][] = [
+          ["get_invoice", { invoice_id: "inv-1" }, "payments:invoice.read"],
+          ["send_remittance_email", remittance, "payments:remittance.send"],
+        ];
+        for (const [tool, args, action] of cases) {
+          const refusalsBefore = refusals().length;
+          const res = await holder.client.callTool(tool, args);
+          expect(res.ok, tool).toBe(false);
+          expect(res.refusal_reason, `${tool} ${JSON.stringify(res)}`).toBe("unknown_mission");
+          expect(res.result, tool).toBeUndefined();
+          const added = refusals().slice(refusalsBefore);
+          expect(added, tool).toHaveLength(1);
+          const refusal = (added[0] as RefusalRecord).content;
+          expect(refusal, tool).toMatchObject({
+            decision: "deny",
+            denial_reason: "state_unavailable",
+            audience: CANONICAL_RESOURCE,
+            action: { name: action },
+            emitter: { role: "pep" },
+            request_digest_input: "pre_request",
+          });
+          // No Mission was established, so the record names none.
+          expect(refusal, tool).not.toHaveProperty("mission");
+          // Verified against the key set the restarted deployment publishes.
+          expect(
+            await verifyEvidenceEnvelope(refusal, REFUSAL_RECORD_MEDIA_TYPE, second.stack.evidenceKeySets.resolver()),
+            tool,
+          ).toEqual({ valid: true });
+        }
+      } finally {
+        await holder.close();
+      }
+
+      // The transaction token verifies, and its pending operation went with the
+      // process. The HTTP gate verifies a transaction credential in full before
+      // any transport, so it answers 401 invalid_token; the resource's own
+      // verification names why.
+      await expect(createHttpMediatedClient(CANONICAL_RESOURCE, txnToken, issued.dpopKeys)).rejects.toThrow(/invalid_token/);
+      const htu = canonicalHtu(new URL(CANONICAL_RESOURCE));
+      const verified = await second.stack.server.verifyTransactionCredential(txnToken, {
+        proof: await dpopProofFor(issued.dpopKeys, htu, "POST", txnToken),
+        htu,
+        htm: "POST",
+      });
+      expect(verified).toEqual({ ok: false, refusal_reason: "txn_unknown" });
+      // No decision request, and nothing executed on any connector: no wire,
+      // no reversal and no remittance email.
+      expect(decisions).toHaveLength(0);
+      expect(second.stack.connectors.committedEffects()).toHaveLength(0);
     } finally {
       await second.close();
     }
