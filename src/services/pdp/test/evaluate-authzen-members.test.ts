@@ -16,7 +16,7 @@ import type { Fga } from "../src/fga.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
 
@@ -59,6 +59,9 @@ const options = (over: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
   relationForAction,
   resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   claims: CLAIMS,
+  // #1994: no operation declarations: a payments operation is decided
+  // under its assigned class alone, with no phase required.
+  operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
   ...over,
 });
 

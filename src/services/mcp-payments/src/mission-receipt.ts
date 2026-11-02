@@ -217,6 +217,13 @@ function receiptShape(value: unknown): value is MissionReceiptObject {
 }
 
 /** Base content checks are distinct from envelope integrity and later cross-record joins. */
+const RUNTIME_ACTION_CLASSES: readonly string[] = ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"];
+
+/** @spec runtime-evidence#decision-evidence-object (#1994): every class the record says was applied. */
+function appliedClasses(p: Record<string, unknown>): readonly string[] {
+  return Array.isArray(p.action_classes) ? (p.action_classes as unknown[]).map(String) : [String(p.action_class)];
+}
+
 function recordShape(type: ReceiptResolvedRecord["type"], value: unknown): boolean {
   const p = objectOf(value), emitter = objectOf(p?.emitter);
   if (!p || !emitter || !nonempty(emitter.id) || !nonempty(p.audience)) return false;
@@ -231,7 +238,15 @@ function recordShape(type: ReceiptResolvedRecord["type"], value: unknown): boole
       (conditions.parameter_digest !== undefined && conditions.parameter_digest !== p.parameter_digest))) return false;
     if (p.decision === "permit" && (!conditions || !timestamp(conditions.valid_until) ||
       (!nonempty(p.entry_digest) && !objectOf(p.authorizing_entry)) ||
-      (["irreversible_action", "external_commitment", "privileged_administration"].includes(p.action_class as string) && conditions.use_limit !== 1))) return false;
+      appliedClasses(p).some((c) => ["irreversible_action", "external_commitment", "privileged_administration"].includes(c)) &&
+        conditions.use_limit !== 1)) return false;
+    // @spec runtime-evidence#decision-evidence-object `action_classes` (#1994):
+    // when present, more than one distinct known class, the assigned one among them.
+    if (p.action_classes !== undefined) {
+      const set = p.action_classes;
+      if (!Array.isArray(set) || set.length < 2 || new Set(set).size !== set.length ||
+        !set.every((c) => RUNTIME_ACTION_CLASSES.includes(c as string)) || !set.includes(p.action_class)) return false;
+    }
     if (p.decision === "deny" && !nonempty(p.denial_reason)) return false;
     if (p.contributing_constraints !== undefined && (!Array.isArray(p.contributing_constraints) || !p.contributing_constraints.every(nonempty))) return false;
     if (p.parameter_digest === undefined ? !nonempty(p.evaluation_request_digest) : !nonempty(p.parameter_digest) || p.evaluation_request_digest !== undefined) return false;
@@ -239,7 +254,7 @@ function recordShape(type: ReceiptResolvedRecord["type"], value: unknown): boole
       nonempty(p.evidence_id) && nonempty(p.evaluation_id) && integer(p.sequence) && timestamp(p.evaluated_at) &&
       !!subject && nonempty(subject.id) && !!resource && nonempty(resource.type) && nonempty(resource.id) && !!action && nonempty(action.name) &&
       ["permit", "deny"].includes(p.decision as string) &&
-      ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"].includes(p.action_class as string) &&
+      RUNTIME_ACTION_CLASSES.includes(p.action_class as string) &&
       ["default", "resource_floor", "deployment"].includes(p.class_source as string);
   }
   if (type === "execution") return ["pep", "executor"].includes(emitter.role as string) &&
@@ -620,10 +635,20 @@ async function verifyReceipt(
     if (!v.valid) {
       return { valid: false, reason: "referenced_record_invalid" };
     }
-    if (!recordShape(r.type, r.record) || !claimsWithinScope(scope.statement, {
-      resource: r.record.audience,
-      ...(r.type === "decision" ? { action_class: r.record.action_class } : {}),
-    })) {
+    // @spec runtime-evidence#decision-evidence-object `action_classes`
+    // (#1994): a decision is within the issuer's scope only where every class
+    // it applied is a class the statement mediates.
+    const scoped: ReadonlyArray<string | undefined> =
+      r.type === "decision" ? appliedClasses(r.record as unknown as Record<string, unknown>) : [undefined];
+    if (
+      !recordShape(r.type, r.record) ||
+      !scoped.every((action_class) =>
+        claimsWithinScope(scope.statement, {
+          resource: r.record.audience,
+          ...(action_class !== undefined ? { action_class } : {}),
+        }),
+      )
+    ) {
       return { valid: false, reason: "referenced_record_invalid" };
     }
     const digest = canonicalDigest(r.record as unknown as JsonValue);

@@ -59,6 +59,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
+import { openScenarioClaims, pepDecisionInputs } from "./pep-decision-inputs.helper.js";
 import { STATUS_ENDPOINT_PATH } from "../src/adapters/lifecycle-endpoint.js";
 import {
   CLIENT_ASSERTION_TYPE,
@@ -70,6 +71,7 @@ import {
   readAnswer,
 } from "./lifecycle-endpoint.helper.js";
 import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+
 
 const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) => evaluateRequest(withCredential(req), opts);
 
@@ -96,6 +98,8 @@ function sourceWith(changes: Record<string, Omit<SourceRecord, "sub"> | null> = 
 
 let source: unknown = sourceWith();
 let nowMs = Date.now();
+/** #1994: the claim domain this scenario's high-consequence permits are claimed in. */
+const SCENARIO_CLAIMS = openScenarioClaims(() => new Date(nowMs));
 /** While set, each read waits for the test to complete it (`held[i](records)`), as a slow read does. */
 let held: Array<(records: unknown) => void> | undefined;
 const read = async () => {
@@ -193,6 +197,7 @@ async function decide(id: string, action = READ, dependency: AuthorityDependency
   // The reference an enforcement point sends: the one the Mission entry
   // covering the action carries, if any (#249, D865).
   const ref = view.authority_set.find((e) => e.actions.includes(action))?.resource_contract;
+  const inputs = pepDecisionInputs(action, view.state, new Date(nowMs));
   return evaluate(
     {
       subject: { id: view.subject.sub, properties: { iss: ISSUER } },
@@ -201,9 +206,12 @@ async function decide(id: string, action = READ, dependency: AuthorityDependency
         id: "inv-1",
         properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme", ...(ref ? { resource_contract: ref } : {}) },
       },
-      action: { name: action },
+      action: { name: action, ...(inputs.actionProperties ? { properties: inputs.actionProperties } : {}) },
       context: {
         ...capabilityPresentationFor(action),
+        // #1994: the class the payments PEP assigns, with what that class's
+        // gates require (a fresh observation; a digest and key where high).
+        ...inputs.context,
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
         actor: { client_id: "ap-agent" },
         amount: { amount: "100.00", currency: "USD" },
@@ -221,6 +229,8 @@ async function decide(id: string, action = READ, dependency: AuthorityDependency
       // #773: this direct PDP call stands for a deployment that does not claim
       // Evaluation-Context Binding; the claimed path has its own witnesses.
       evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      stateSourcePlacement: "pep",
+      claims: SCENARIO_CLAIMS,
     },
   );
 }

@@ -686,10 +686,13 @@ class, adopted absent a documented, consequence-specific analysis:
 | Consequential read | Token lifetime or a short state lease; tighter for privacy-sensitive, cross-tenant, or bulk reads |
 | Consequential write | A short state lease, typically measured in minutes |
 | Irreversible action | Active source required; immediate check or single-use permit, target under 300 s |
-| External commitment | Active source required; immediate check or single-use permit, plus an egress PEP for external communication, target under 300 s |
+| External commitment | Active source required; immediate check or single-use permit, target under 300 s |
 | Privileged administration | Active source required; immediate check, suitable for composition with local step-up, target under 300 s |
 | Audit-only | No active freshness required |
 
+For an external-communication action ({{classification}}), whatever
+its class, each of these default postures also includes an egress PEP
+({{pep-placement}}).
 A deployment justifies any looser value for a high-consequence class
 in its Enforcement Scope Statement.
 
@@ -1893,12 +1896,14 @@ and a floor it MUST observe.
 | Consequential read | reading user data, querying logged APIs | MUST | not required |
 | Consequential write | updating records, posting messages | MUST | MUST |
 | Irreversible action | sending mail, payment, deletion | MUST | MUST, with TOCTOU reverification and evidence |
-| External commitment | signing, accepting terms for the user | MUST | MUST, with TOCTOU reverification and evidence |
+| External commitment | signing, accepting terms for the user, payment, sending mail | MUST | MUST, with TOCTOU reverification and evidence |
 | Privileged administration | granting access, changing policy | MUST | MUST, with TOCTOU and evidence |
 
 The table's per-class requirements (the PDP gate and parameter
 binding) are requirements for an action **once it is assigned to that
-class**. Assigning an action to a class is deployment policy, bounded
+class**, and for an action that satisfies that class's predicate under
+the multi-predicate rule below. Assigning an action to a class is
+deployment policy, bounded
 by the floor below and by any Resource-policy minimum
 ({{decision}}): the profile does not require every read to reach a PDP.
 A read that is already fully constrained by the token's audience,
@@ -1925,7 +1930,9 @@ property, not a sixth class: an external-communication action keeps
 its class and that class's requirements, and rules stated over
 "external-communication and external-commitment actions" (the taint
 rule, trifecta containment, egress metering) apply to any action
-satisfying the predicate or classified `external_commitment`.
+satisfying the external-communication or External commitment
+predicate, whatever its class, and to any action classified
+`external_commitment`.
 
 The three highest classes are defined by predicates; the table's
 examples illustrate them:
@@ -1942,6 +1949,30 @@ Privileged administration:
 : the action changes who holds authority or how authority is
   evaluated.
 
+An action can satisfy more than one predicate: a payment to an outside
+party, or mail sent outside the deployment, is irreversible and also
+binds the Subject to that party, so the table lists each under both
+classes. Every
+requirement of each class whose predicate the action satisfies
+applies to it: classification under one class MUST NOT waive a
+requirement arising from another applicable predicate. Where
+requirements impose comparable bounds, the tighter bound applies.
+Where they are not comparable, each applies, and an action that
+cannot satisfy every applicable requirement is refused. An exception
+stated for one class or predicate relieves only the requirement it
+names, never one that another applicable predicate imposes.
+
+The classes are ordered only in part: consequential read ranks above
+non-consequential, consequential write above consequential read, and
+each of the three highest classes above consequential write, while
+the three highest classes are not ordered among themselves. An action
+is at or above a class when a class that applies to it is that class
+or ranks above it, and raising, lowering, and a stricter class refer
+to this order. A minimum classification is met only by an action at or
+above it, so a minimum of one of the three highest classes is met only
+where that class applies. Audit-only, a freshness posture
+({{state-freshness}}), is outside this order.
+
 Classification remains deployment-scoped: each deployment applies the
 predicates to its own actions and systems. The predicates make the
 resulting classifications comparable across deployments and auditable:
@@ -1954,9 +1985,10 @@ on its arguments. Such an argument-dependent operation is classified
 per invocation, from its normalized parameters, by a classifier the
 deployment declares in its Enforcement Scope Statement
 ({{runtime-conformance}}). An invocation the classifier cannot
-affirmatively place MUST be treated as the widest class the
-operation can reach, and the floor below applies to the classifier's
-assignments as to any other: a class the deployment cannot justify
+affirmatively place MUST be treated under every class the operation
+can reach, taking the requirements of each, and the floor below
+applies to the classifier's assignments as to any other: a class the
+deployment cannot justify
 by its predicate is not a basis to leave the invocation ungated.
 
 **Classification floor.** Four rules bound classification:
@@ -3260,9 +3292,10 @@ of its base-profile level:
   ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
   rule; otherwise the harness does, and the scope statement says
   which.
-- **External communication.** The external-communication and
-  external-commitment classes are mediated: no unmediated path, the
-  scope statement's egress-channel enumeration covers them
+- **External communication.** Every action that satisfies the
+  external-communication or External commitment predicate
+  ({{classification}}), whatever its class, is mediated: no unmediated
+  path, the scope statement's egress-channel enumeration covers it
   ({{I-D.draft-mcguinness-mission-harness}}), and the
   sender-constraint keys are held by the mediating PEP ({{custody}}).
 
@@ -4285,6 +4318,26 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Classes are ordered only in part, and the three highest are not
+  ordered among themselves; an invocation the classifier cannot place
+  is treated under every class the operation can reach. Trifecta
+  containment's external-communication leg reaches every action that
+  satisfies the external-communication or External commitment
+  predicate, whatever its class. A minimum class is met only by an
+  action at or above it, and Audit-only is outside the order (#1994).
+
+- Changes a requirement (#1735, D1153, D1164): an action that
+  satisfies more than one class predicate takes the requirements of
+  every class whose predicate it satisfies, and classification under
+  one class waives none of them. Comparable bounds resolve to the
+  tighter; otherwise each applies, and an action that cannot satisfy
+  every applicable requirement is refused. The External commitment
+  examples add payment and sending mail, and the egress PEP is stated
+  once, for any external-communication action. An exception relieves
+  only the requirement it names, and the rules stated over
+  external-communication and external-commitment actions apply wherever
+  either predicate holds.
 
 - Changes a requirement (#854, D814): the record retention floor is the
   Mission's retention period as its Mission Substrate Binding declares
