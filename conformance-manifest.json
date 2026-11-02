@@ -93075,15 +93075,9 @@
      "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-altered-claim: refused at step 4",
      "level": "unit",
      "surface": "verification"
-    },
-    {
-     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
-     "name": "step 4, the signature (@spec request-provenance#verification, #939) > refuses at step 4 a JWS whose signed payload is not the claims set the later steps read (b64 false)",
-     "level": "unit",
-     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 3 looks the signer up by the iss claim and the protected kid in configuration only, refuses a key not mapped to this type, and checks alg against the key's algs before step 4 verifies with jose under that one algorithm and confirms the verified payload is the claims set the later steps read. Mutations: taking the first signer or first key regardless of iss or kid accepts the unknown-iss and unmapped-kid cases; skipping the alg check moves neg-alg-hs256 to step 4; bypassing signature verification accepts neg-altered-claim; skipping the payload comparison accepts the b64 false JWS. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 3 looks the signer up by the iss claim and the protected kid in configuration only, refuses a key not mapped to this type, and checks alg against the key's algs before step 4 verifies with jose under that one algorithm. Strictness the draft implies, tested in the same block and not cited here: step 4 confirms the verified payload is the claims set the later steps read, which refuses a b64 false JWS. Mutations: taking the first signer or first key regardless of iss or kid accepts the unknown-iss and unmapped-kid cases; skipping the alg check moves neg-alg-hs256 to step 4; bypassing signature verification accepts neg-altered-claim; skipping the payload comparison accepts the (uncited) b64 false JWS. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.claims-and-audience",
@@ -93312,24 +93306,12 @@
     },
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
-     "name": "step 7, the time window (@spec request-provenance#verification, #939) > refuses at step 7 exp equal to iat, though exp minus iat does not exceed the maximum lifetime and neither iat nor exp is outside the skew allowance (strictness the draft implies)",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
-     "name": "step 7, the time window (@spec request-provenance#verification, #939) > refuses at step 7 exp ten seconds before iat, though exp minus iat does not exceed the maximum lifetime and neither iat nor exp is outside the skew allowance (strictness the draft implies)",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
      "name": "step 7, the time window (@spec request-provenance#verification, #939) > accepts at each edge of the window: iat at the skew allowance ahead, exp just inside the allowance, lifetime and capture age at their maxima, captured_at at iat",
      "level": "unit",
      "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-1. The clock-skew allowance applies where the AS's clock meets the signer's (iat not in the future, exp not passed); the lifetime, the capture age and captured_at against iat compare the signer's own claims and take none, a reading of the step's opening clause. exp must be strictly after iat, or the lifetime check would pass a negative difference. Mutations: removing each check accepts its case; exp > instead of >= at the skew edge, iat >= instead of >, and >= instead of > at the lifetime and capture-age maxima each fail the edge tests; allowing skew on captured_at fails the one-second case; dropping exp after iat accepts both ordering cases. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. The clock-skew allowance applies where the AS's clock meets the signer's (iat not in the future, exp not passed); the lifetime, the capture age and captured_at against iat compare the signer's own claims and take none, a reading of the step's opening clause. Strictness the draft implies, tested in the same block and not cited here: exp strictly after iat, or the lifetime check would pass a negative difference. Mutations: removing each check accepts its case; exp > instead of >= at the skew edge, iat >= instead of >, and >= instead of > at the lifetime and capture-age maxima each fail the edge tests; allowing skew on captured_at fails the one-second case; dropping exp after iat accepts both (uncited) ordering cases. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.signer-scope",
