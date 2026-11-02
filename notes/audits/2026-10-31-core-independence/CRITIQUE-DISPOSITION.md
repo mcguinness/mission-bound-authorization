@@ -27,6 +27,13 @@ The rows above are kept as written. Since then:
 - **"Treat #1895 as undecided":** ruled (D1114) and implemented (PR #1960, D1123); #1895 is closed.
 - **"State publication timing":** confirmed by D1112 and D1195. `-02` waits for the full gate: the eight exit conditions, P5 and the completion record, subject to D1134.
 
+## Addendum: the execution baseline (2026-11-02, after #2007)
+
+- **"Add a size budget":** the baseline is frozen at `c79d84ad` with `measure.py`. The extension contract is funded from Extensibility's existing text, unless the owner rules a single body budget.
+- **The tracking issue:** the owner ruled that #1944 carries the gate, so P0's proposed new issue is not filed (D1206).
+- **P3's remaining items:** A1, the adopter review and the Governance member explanations are listed beside the extension-contract review.
+- **"Reuse an RFC 9396 example":** the delegated example carries its entry unchanged, since the payment fields define no subset relation.
+
 ## Evidence for the qualifications
 
 The [posted owner ruling for #1895](https://github.com/mcguinness/mission-bound-authorization/issues/1895#issuecomment-6553145841) explicitly adopts A with B's clarification. It preserves the token-independent requirement and authorizes one reviewable PR. An open issue and stale label do not negate that ruling, but the comment does not prove implementation has landed.
@@ -37,4 +44,4 @@ At `3d3185378604c70e655a663c7b6ef103366ba5d5`, the [conformance manifest](https:
 
 ## Status
 
-Committed with the plan in Revision 3 (#1944, 2026-11-02). Its later records are D1134, D1167, D1189, D1192, D1195 and D1198. The baseline citation inventory remains pinned to its original commit. No review exercise or example implementation is claimed complete.
+Committed with the plan in Revision 3 (#1944, 2026-11-02). Its later records are D1134, D1167, D1189, D1192, D1195, D1198 and D1206; the execution baseline is frozen at `c79d84ad`. The baseline citation inventory remains pinned to its original commit. No review exercise or example implementation is claimed complete.
