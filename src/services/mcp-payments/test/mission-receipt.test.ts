@@ -1187,3 +1187,48 @@ describe("the receipt verifier reports each divergent digest pair whatever the r
     expect(await verifyExecution(invented, await signedDecision())).toEqual({ valid: false, reason: "join_failure" });
   });
 });
+
+describe("a decision receipt over an action several classes apply to (@spec runtime-evidence#decision-evidence-object `action_classes`, #1994)", () => {
+  const scopeOf = (classes: string[]) => {
+    const statement = receiptScope();
+    statement.mediated_scope.action_classes = classes;
+    return createReceiptIssuerScope(statement, new Map([[KEY_SET, [receiptKey]]]));
+  };
+  const verified = async (decision: DecisionEvidenceObject, issuers: ReturnType<typeof scopeOf>) =>
+    verifyMissionReceipt(
+      await buildAndSignMissionReceipt({ kind: "decision", mission: MISSION, decisionEvidence: decision }, "receipts.example.com", RECEIPT_SIGNER),
+      resolverFor({ decision }),
+      issuers,
+      resolveEvidenceKey,
+    );
+
+  it("verifies a set every class of which the issuer's statement mediates, and refuses one naming a class outside it", async () => {
+    const decision = await signedDecision({ action_classes: ["consequential_read", "consequential_write"] });
+    expect(await verified(decision, scopeOf(["consequential_read", "consequential_write"]))).toEqual({ valid: true });
+    expect(await verified(decision, scopeOf(["consequential_read"]))).toEqual({ valid: false, reason: "referenced_record_invalid" });
+  });
+
+  it("refuses a malformed set: one class, a repeated class, or a set without the assigned class", async () => {
+    const issuers = scopeOf(["consequential_read", "consequential_write", "irreversible_action"]);
+    for (const action_classes of [
+      ["consequential_read"],
+      ["consequential_read", "consequential_read"],
+      ["consequential_write", "irreversible_action"],
+    ] as Array<DecisionEvidenceObject["action_class"][]>) {
+      const decision = await signedDecision({ action_classes });
+      expect(await verified(decision, issuers), JSON.stringify(action_classes)).toEqual({ valid: false, reason: "referenced_record_invalid" });
+    }
+  });
+
+  it("requires use_limit 1 on a permit where any applied class is high-consequence", async () => {
+    const issuers = scopeOf(["consequential_read", "irreversible_action"]);
+    const unlimited = await signedDecision({ action_classes: ["consequential_read", "irreversible_action"] });
+    expect(await verified(unlimited, issuers)).toEqual({ valid: false, reason: "referenced_record_invalid" });
+    const single = await signedDecision({
+      action_classes: ["consequential_read", "irreversible_action"],
+      conditions: { valid_until: "2026-01-01T00:05:00.000Z", use_limit: 1 },
+    });
+    expect(await verified(single, issuers)).toEqual({ valid: true });
+  });
+});
+

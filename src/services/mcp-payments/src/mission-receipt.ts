@@ -635,10 +635,20 @@ async function verifyReceipt(
     if (!v.valid) {
       return { valid: false, reason: "referenced_record_invalid" };
     }
-    if (!recordShape(r.type, r.record) || !claimsWithinScope(scope.statement, {
-      resource: r.record.audience,
-      ...(r.type === "decision" ? { action_class: r.record.action_class } : {}),
-    })) {
+    // @spec runtime-evidence#decision-evidence-object `action_classes`
+    // (#1994): a decision is within the issuer's scope only where every class
+    // it applied is a class the statement mediates.
+    const scoped: ReadonlyArray<string | undefined> =
+      r.type === "decision" ? appliedClasses(r.record as unknown as Record<string, unknown>) : [undefined];
+    if (
+      !recordShape(r.type, r.record) ||
+      !scoped.every((action_class) =>
+        claimsWithinScope(scope.statement, {
+          resource: r.record.audience,
+          ...(action_class !== undefined ? { action_class } : {}),
+        }),
+      )
+    ) {
       return { valid: false, reason: "referenced_record_invalid" };
     }
     const digest = canonicalDigest(r.record as unknown as JsonValue);
