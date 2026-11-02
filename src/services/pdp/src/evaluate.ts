@@ -1263,8 +1263,12 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // evaluation_id and no Decision Evidence. It is never evaluated under a
   // default class such as `consequential_read`, and no class is recorded.
   // Checked after the evaluation context and the work item, so an earlier
-  // fault keeps its code.
-  if ((req as { context?: { action_class?: unknown } } | undefined)?.context?.action_class === undefined) {
+  // fault keeps its code. Only a non-empty string establishes a class (#1994,
+  // owner re-review): a JSON array or object that would stringify to a class
+  // name is no class, refused the same way, so no later control reads a value
+  // other than the one compared below.
+  const carriedClass = (req as { context?: { action_class?: unknown } } | undefined)?.context?.action_class;
+  if (typeof carriedClass !== "string" || carriedClass === "") {
     await recordPdpRefusal(opts.refusals, "action_class_missing", req);
     throw new DecisionRequestRefused("action_class_missing");
   }
@@ -1279,7 +1283,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
     typeof actionName === "string" &&
     assignedClassConflicts(
       declarationsOf(opts),
-      String((req as { context: { action_class: unknown } }).context.action_class),
+      carriedClass,
       actionName,
       isActionPhase(actionPhase) ? actionPhase : undefined,
     )

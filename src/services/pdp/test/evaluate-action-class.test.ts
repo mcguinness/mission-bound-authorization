@@ -265,3 +265,107 @@ describe("a carried class other than the one the PDP's own declaration assigns e
     expect(retained).toHaveLength(1);
   });
 });
+
+describe("a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review)", () => {
+  /** This PDP's own declaration: the read is assigned consequential_read. */
+  const DECLARED = [{ operation: READ, action_class: "consequential_read" } as unknown as ExecutionCapabilityDeclaration];
+  /** A JSON value that would stringify to the declared class. */
+  const arrayLabeled = (): EvaluationRequest => {
+    const req = request("consequential_read");
+    (req.context as { action_class: unknown }).action_class = ["consequential_read"];
+    return req;
+  };
+
+  it("records the refusal of an array label that would stringify to the declared class as a PDP-signed Refusal Record action_class_missing, with no decision work", async () => {
+    const retained: PdpRefusalRecord[] = [];
+    const { refusals, resolve } = recorder(retained);
+    const { fga, calls } = countingFga();
+    const policy = resourcePolicyFixture();
+    const emitted: unknown[] = [];
+    const evidence = { emit: async (record: unknown) => emitted.push(record) } as unknown as DecisionEvidenceEmitter;
+    const options = {
+      ...decisionOptions(fga),
+      resourcePolicy: policy,
+      evidence,
+      refusals,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      operationDeclarations: DECLARED,
+    };
+    const malformed = arrayLabeled();
+    await expect(evaluateRequest(malformed, options)).rejects.toBeInstanceOf(DecisionRequestRefused);
+    expect(retained).toHaveLength(1);
+    const record = retained[0] as PdpRefusalRecord;
+    expect(record).toMatchObject({
+      denial_reason: "action_class_missing",
+      decision: "deny",
+      evaluation_request_digest: evaluationRequestDigest(malformed),
+      emitter: { id: "pdp.example", role: "pdp" },
+    });
+    expect(record).not.toHaveProperty("action_class");
+    expect(record).not.toHaveProperty("evaluation_id");
+    expect(await verifyEvidenceEnvelope(record, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+    expect(emitted).toHaveLength(0);
+    expect(calls()).toBe(0);
+    expect(policy.queries).toHaveLength(0);
+    // Control: the same class as a string is evaluated and permitted, with Decision Evidence.
+    const declared = await evaluateRequest(request("consequential_read"), options);
+    expect(declared.decision, JSON.stringify(declared.context)).toBe(true);
+    expect(emitted).toHaveLength(1);
+    expect(retained).toHaveLength(1);
+  });
+
+  it("refuses a non-string class on an operation this PDP declares nothing for, with no decision work", async () => {
+    const retained: PdpRefusalRecord[] = [];
+    const { refusals } = recorder(retained);
+    const { fga, calls } = countingFga();
+    const policy = resourcePolicyFixture();
+    const options = {
+      ...decisionOptions(fga),
+      resourcePolicy: policy,
+      refusals,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      operationDeclarations: [],
+    };
+    const malformed = arrayLabeled();
+    await expect(evaluateRequest(malformed, options)).rejects.toBeInstanceOf(DecisionRequestRefused);
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toMatchObject({ denial_reason: "action_class_missing", decision: "deny" });
+    expect(calls()).toBe(0);
+    expect(policy.queries).toHaveLength(0);
+    // Control: where nothing is declared, the string label decides under the PEP's class.
+    const labeled = await evaluateRequest(request("consequential_read"), options);
+    expect(labeled.decision, JSON.stringify(labeled.context)).toBe(true);
+  });
+
+  it("the remote PDP refuses an array label before evaluation as action_class_missing, with a signed Refusal Record and no decision work", async () => {
+    const retained: PdpRefusalRecord[] = [];
+    const { refusals, resolve } = recorder(retained);
+    const { fga, calls } = countingFga();
+    const policy = resourcePolicyFixture();
+    handle = await createPdpHttpServer({
+      peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE] }]]),
+      getOptions: () => decisionOptions(fga),
+      evaluateFn: evaluateRequest,
+      resourcePolicy: policy,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      operationDeclarations: DECLARED,
+      refusals,
+    });
+    const server = handle;
+    const ask = (req: EvaluationRequest) => evaluateRemote(req, { url: server.url, pepId: PEP_ID, secret: SECRET });
+    const malformed = arrayLabeled();
+    const refused = await ask(malformed);
+    expect(refused.decision).toBe(false);
+    expect(refused.context).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 400 });
+    expect(refused.context).not.toHaveProperty("decision_evidence");
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toMatchObject({ denial_reason: "action_class_missing", decision: "deny" });
+    expect(await verifyEvidenceEnvelope(retained[0] as PdpRefusalRecord, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({ valid: true });
+    expect(calls()).toBe(0);
+    expect(policy.queries).toHaveLength(0);
+    // Control: the same channel evaluates the string label.
+    const served = await ask(request("consequential_read"));
+    expect(served.decision, JSON.stringify(served.context)).toBe(true);
+    expect(retained).toHaveLength(1);
+  });
+});

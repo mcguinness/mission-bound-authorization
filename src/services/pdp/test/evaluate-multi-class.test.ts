@@ -425,3 +425,44 @@ describe("the assigned class and the declared class agree, or the PDP refuses be
     expect((decision.context.conditions as { use_limit?: number }).use_limit).toBe(1);
   });
 });
+
+describe("a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review)", () => {
+  it("refuses an array label that would stringify to the declared write class, issuing no unkeyed scheduling permit", async () => {
+    const action = "payments:payment.schedule";
+    const req = request(action, "consequential_write", 0, AMOUNT);
+    req.context.action_class = ["consequential_write"] as unknown as string;
+    const outcome = await evaluate(req, options([action])).then(d => ({decision:d}), e => ({error:e}));
+    expect(outcome).toEqual({error:expect.any(DecisionRequestRefused)});
+  });
+  it("refuses an array label that would stringify to the prepare class, issuing no permit without single use", async () => {
+    const req = request(PAY, "consequential_write", 0, {...AMOUNT, action_phase:"prepare"});
+    req.context.action_class = ["consequential_write"] as unknown as string;
+    const outcome = await evaluate(req, options([PAY])).then(d => ({decision:d}), e => ({error:e}));
+    expect(outcome).toEqual({error:expect.any(DecisionRequestRefused)});
+  });
+  it("over the remote channel, refuses a non-string class instead of issuing an unkeyed scheduling permit", async () => {
+  const {createPdpHttpServer} = await import("../src/server.js");
+  const {evaluateRemote} = await import("../src/client.js");
+  const action = "payments:payment.schedule";
+  const req = request(action, "consequential_write", 0, AMOUNT);
+  req.context.action_class = ["consequential_write"] as unknown as string;
+  const handle = await createPdpHttpServer({
+    peps: new Map([["review-pep", {secret:"review-secret", scopes:[RESOURCE]}]]),
+    getOptions: () => options([action]),
+    evaluateFn: evaluate,
+    resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+  });
+  try {
+    const decision = await evaluateRemote(req, {url:handle.url, pepId:"review-pep", secret:"review-secret"});
+    expect(decision.context).toMatchObject({denial_reason:"decision_channel_refused",channel_status:400});
+  } finally { await handle.close(); }
+});
+
+  it("with the Decision Evidence emitter configured, refuses a non-string class as input before evaluation", async () => {
+  const action = "payments:payment.schedule";
+  const req = request(action, "consequential_write", 0, AMOUNT);
+  req.context.action_class = ["consequential_write"] as unknown as string;
+  await expect(evaluate(req, options([action], {evidence:emitter()}))).rejects.toBeInstanceOf(DecisionRequestRefused);
+});
+});
