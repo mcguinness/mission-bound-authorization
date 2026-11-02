@@ -229,8 +229,11 @@ import {
   ExpiryPassedError,
   IntentError,
   type IntentIntakeOptions,
+  type IntentSubmissionAcceptedReference,
+  type IntentSubmissionEvidenceTypes,
   type IntentSubmissionPresenter,
   provisionalIntentHash,
+  type SubmissionAdmission,
   type SubmissionEvidenceBounds,
   type SubmissionIntakeOptions,
   validateAuthorityProposal,
@@ -1077,6 +1080,14 @@ export interface KernelOptions {
    */
   submissionEvidenceVerificationWork?: number;
   /**
+   * @spec mission#intent-submission-evidence (#939 slice 2a-2): the evidence
+   * types this kernel's submissions accept beside the process-wide registry,
+   * consulted first. A type that holds per-AS state (the
+   * `mission-request-provenance` type's trust and replay store) is
+   * registered here. Absent: the process-wide registry alone.
+   */
+  submissionEvidenceTypes?: IntentSubmissionEvidenceTypes;
+  /**
    * @spec control-plane#fanout — bounded retry for durable subscriber
    * deliveries. Tests shorten it; production takes the defaults.
    */
@@ -1475,7 +1486,11 @@ export class MissionKernel {
     bounds?: SubmissionEvidenceBounds,
     opts: Pick<SubmissionIntakeOptions, "deferEvidenceDispatch" | "admitMaxBudget"> = {},
   ): MissionIntentSubmission {
-    return validateMissionIntentSubmission(raw, bounds, { ...opts, now: this.now() });
+    return validateMissionIntentSubmission(raw, bounds, {
+      ...opts,
+      now: this.now(),
+      ...(this.opts.submissionEvidenceTypes ? { evidenceTypes: this.opts.submissionEvidenceTypes } : {}),
+    });
   }
 
   /**
@@ -1496,6 +1511,16 @@ export class MissionKernel {
     presenter: IntentSubmissionPresenter;
     required?: readonly string[];
     requestContext?: Record<string, unknown>;
+    /**
+     * @spec request-provenance#replay (#939 slice 2a-2): the carrier's
+     * admission scope, where this call admits the submission (PAR).
+     */
+    admission?: SubmissionAdmission;
+    /**
+     * @spec request-provenance#replay (#939 slice 2a-2): a later step of a
+     * submission the carrier accepted under this reference.
+     */
+    accepted?: IntentSubmissionAcceptedReference;
   }): Promise<IntentSubmissionEvidenceFact[] | undefined> {
     return verifyIntentSubmissionEvidence(
       input.evidence,
@@ -1505,6 +1530,8 @@ export class MissionKernel {
         presenter: input.presenter,
         now: this.now(),
         ...(input.requestContext ? { requestContext: input.requestContext } : {}),
+        ...(input.admission ? { admission: input.admission } : {}),
+        ...(input.accepted ? { accepted: input.accepted } : {}),
       },
       input.required ?? [],
       // @spec submission-evidence#verification-bounds (#1962): every carrier's
@@ -1514,6 +1541,7 @@ export class MissionKernel {
           ? { maxVerificationWork: this.opts.submissionEvidenceVerificationWork }
           : {}),
       },
+      this.opts.submissionEvidenceTypes,
     );
   }
 

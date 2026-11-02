@@ -33,8 +33,15 @@ import {
   ACTION_APPROVAL_POLICY,
   type ActionApprovalPolicy,
   type ApprovalFloorPolicy,
+  type RequestProvenanceConfig,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
+import { DEFERRED_CODE_TTL_S as DEFERRED_AUTHORIZATION_CODE_TTL_S } from "./adapters/deferred-mission-approval.js";
+import { DEFERRAL_EXPIRES_IN } from "./kernel/deferral-lifetime.js";
+import { INTERACTION_TTL_S, PROVIDER_CLOCK_TOLERANCE_S } from "./kernel/interaction-lifetime.js";
+import { REQUEST_PROVENANCE_EVIDENCE_TYPE } from "./kernel/request-provenance.js";
+import { createRequestProvenanceEvidenceType } from "./kernel/request-provenance-evidence.js";
+import { InMemoryRequestProvenanceStore, type RequestProvenanceStore } from "./kernel/request-provenance-store.js";
 import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
 import {
   type AuthorityDependencyDeclaration,
@@ -318,12 +325,18 @@ export {
   DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK,
   INTENT_SUBMISSION_EVIDENCE_TYPES,
   IntentError,
+  type IntentSubmissionAcceptedReference,
+  type IntentSubmissionEvidenceResumed,
+  type IntentSubmissionEvidenceResumeInput,
   type IntentSubmissionEvidenceType,
+  type IntentSubmissionEvidenceTypes,
   type IntentSubmissionEvidenceVerifyInput,
   type IntentSubmissionEvidenceWork,
   type IntentSubmissionPresenter,
   provisionalIntentHash,
   registerIntentSubmissionEvidenceType,
+  SubmissionAdmission,
+  type SubmissionAdmissionHold,
   type SubmissionEvidenceBounds,
   type SubmissionIntakeOptions,
   unregisterIntentSubmissionEvidenceType,
@@ -333,6 +346,16 @@ export {
   validateMissionIntentSubmission,
   verifyIntentSubmissionEvidence,
 } from "./kernel/intent.js";
+export {
+  createRequestProvenanceEvidenceType,
+  type RequestProvenanceEvidenceTypeOptions,
+} from "./kernel/request-provenance-evidence.js";
+export {
+  InMemoryRequestProvenanceStore,
+  type RequestProvenanceAcceptance,
+  type RequestProvenanceRecord,
+  type RequestProvenanceStore,
+} from "./kernel/request-provenance-store.js";
 export {
   deriveAuthoritySet,
   deriveAuthoritySetWithProvenance,
@@ -1144,6 +1167,29 @@ export interface BuiltAs {
   };
 }
 
+/** oidc-provider 9.10.0's pushed authorization request lifetime (lib/actions/authorization, MAX_TTL). */
+const PUSHED_REQUEST_TTL_S = 60;
+
+/**
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q2): how long from
+ * acceptance a `mission-request-provenance` acceptance record is kept beyond
+ * `exp` plus the clock-skew allowance: the longest chain of pending
+ * operations an accepted push can begin. The pushed request's own lifetime,
+ * the interaction it opens (with the provider's clock tolerance), a deferred
+ * code and the pending approval that code opens, and the skew allowance.
+ * Each of those operations still ends at its own lifetime.
+ */
+export function requestProvenanceAcceptanceRetention(clockSkewSeconds: number, pendingLifetimeS?: number): number {
+  return (
+    PUSHED_REQUEST_TTL_S +
+    INTERACTION_TTL_S +
+    PROVIDER_CLOCK_TOLERANCE_S +
+    DEFERRED_AUTHORIZATION_CODE_TTL_S +
+    (pendingLifetimeS ?? DEFERRAL_EXPIRES_IN) +
+    clockSkewSeconds
+  );
+}
+
 export async function buildAuthorizationServer(opts: {
   issuer: string;
   allowHeadlessAdjudication?: boolean;
@@ -1272,6 +1318,20 @@ export async function buildAuthorizationServer(opts: {
    * (`DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK`).
    */
   submissionEvidenceVerificationWork?: number;
+  /**
+   * @spec request-provenance#verification, request-provenance#replay (#939
+   * slice 2a-2): register the `mission-request-provenance` evidence type on
+   * this AS, with this trust configuration (the shape `@mission/demo-data`'s
+   * `loadRequestProvenanceConfig` returns) and replay store (default
+   * in-memory). Registered only where `config.enabled` is true. The shipped
+   * `config/request-provenance.json` is disabled, and `server.ts` and
+   * `stack.ts` never pass this option: enabling the real verifier in the
+   * reference composition is unauthorized (D1151, D1157). With a file-backed
+   * kernel store, an enabled type refuses construction, since its replay
+   * history and acceptance records do not survive a restart (D1119 Q5,
+   * #1963).
+   */
+  requestProvenance?: { config: RequestProvenanceConfig; store?: RequestProvenanceStore };
   /**
    * @spec txn-authorization#challenge-redemption — the
    * transaction_authorization_endpoint's deployment configuration. The
@@ -1634,6 +1694,16 @@ export async function buildAuthorizationServer(opts: {
   const progressive = opts.progressive
     ? validateProgressiveDrawdownOptions(opts.progressive, opts.approvalFloor ?? APPROVAL_FLOOR)
     : undefined;
+  // @spec request-provenance#replay (#939 slice 2a-2, D1119 Q5): the type's
+  // replay store keeps its history and acceptance records in memory only, so
+  // a deployment whose kernel state survives a restart cannot enable it: a
+  // restart would accept an unexpired assertion again (#1963).
+  const requestProvenance = opts.requestProvenance?.config.enabled === true ? opts.requestProvenance : undefined;
+  if (requestProvenance && opts.kernelStore?.file) {
+    throw new Error(
+      "mission-request-provenance cannot be enabled on a file-backed kernel store: its replay history and acceptance records are in memory only and do not survive a restart (D1119 Q5, #1963)",
+    );
+  }
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
   // txn-bound single-use approval tokens (AROP Transaction Challenge), and
@@ -1898,6 +1968,26 @@ export async function buildAuthorizationServer(opts: {
     policy: (opts.derivationPolicy ?? DERIVATION_POLICY) as never,
     ...(opts.submissionEvidenceVerificationWork !== undefined
       ? { submissionEvidenceVerificationWork: opts.submissionEvidenceVerificationWork }
+      : {}),
+    // @spec request-provenance#verification (#939 slice 2a-2): this AS's own
+    // evidence types, consulted before the process-wide registry.
+    ...(requestProvenance
+      ? {
+          submissionEvidenceTypes: new Map([
+            [
+              REQUEST_PROVENANCE_EVIDENCE_TYPE,
+              createRequestProvenanceEvidenceType({
+                trust: requestProvenance.config,
+                store: requestProvenance.store ?? new InMemoryRequestProvenanceStore(),
+                acceptanceRetentionSeconds: requestProvenanceAcceptanceRetention(
+                  requestProvenance.config.clock_skew_seconds,
+                  opts.deferredApproval?.pendingLifetimeS,
+                ),
+                ...(opts.now ? { now: opts.now } : {}),
+              }),
+            ],
+          ]),
+        }
       : {}),
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;
     // the file-backed single-writer store is the declared opt-in.

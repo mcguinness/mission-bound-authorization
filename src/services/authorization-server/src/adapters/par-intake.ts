@@ -48,6 +48,7 @@ import type { IncomingMessage } from "node:http";
 import { parse as parseForm } from "node:querystring";
 import { DuplicateMemberError, type JsonValue, parseStrictJson } from "@mission/core";
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
+import { SubmissionAdmission } from "../kernel/intent.js";
 import { readForm } from "./device-authorization.js";
 
 /** oidc-provider 9.10.0's default pushed authorization request route. */
@@ -112,6 +113,44 @@ export async function pushedRequestIntake(ctx: KoaContextWithOIDC, next: () => P
   }
   (ctx.request as unknown as { body?: unknown }).body = form;
   await next();
+}
+
+/** oidc-provider 9.10.0's `request_uri` prefix for a pushed authorization request (lib/consts). */
+const PUSHED_REQUEST_URN = "urn:ietf:params:oauth:request_uri:";
+
+const admissions = new WeakMap<IncomingMessage, SubmissionAdmission>();
+
+/**
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): the admission
+ * scope of one pushed authorization request. Evidence verification at PAR
+ * reserves under it ({@link pushedRequestAdmissionFor}); the request is
+ * accepted when the provider answers `201` with the `request_uri` of the
+ * pushed request it saved, and then the scope commits under `par:<jti>`, the
+ * reference later steps of the submission name. Every other outcome, an
+ * error response or an exception, releases it, in a `finally`; a committed
+ * scope releases nothing.
+ */
+export async function pushedRequestAdmission(ctx: KoaContextWithOIDC, next: () => Promise<void>): Promise<void> {
+  if (ctx.method !== "POST" || !isParPath(ctx.path)) return next();
+  const admission = new SubmissionAdmission();
+  admissions.set(ctx.req, admission);
+  try {
+    await next();
+    const jti = (ctx.oidc?.entities as { PushedAuthorizationRequest?: { jti?: unknown } } | undefined)
+      ?.PushedAuthorizationRequest?.jti;
+    const requestUri = (ctx.body as { request_uri?: unknown } | undefined)?.request_uri;
+    if (ctx.status === 201 && typeof jti === "string" && requestUri === `${PUSHED_REQUEST_URN}${jti}`) {
+      admission.commit(`par:${jti}`);
+    }
+  } finally {
+    admission.release();
+    admissions.delete(ctx.req);
+  }
+}
+
+/** The admission scope of this pushed authorization request; undefined on any other request. */
+export function pushedRequestAdmissionFor(req: IncomingMessage): SubmissionAdmission | undefined {
+  return admissions.get(req);
 }
 
 /** The proposal the intake lifted off this request, removed once read. */
