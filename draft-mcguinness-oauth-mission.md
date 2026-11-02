@@ -6888,7 +6888,7 @@ resolve before interoperating.
 Policy appendices and other material on the family rather than the
 protocol move to the Architecture, the security analysis to the
 Mission Security Model, and the mechanics a companion profile defines
-to that profile (#1794, #1892).
+to that profile (#1794, #1892, #2009).
 
 **Editorial and structure.** The sections follow processing order,
 with Mission Creation, Mission-Bound Token Issuance, Delegation Within
@@ -6902,8 +6902,9 @@ stated as obligations carry BCP 14 keywords, with no new requirement
 protocol, the Mission Mandate, and Mission Offline Attenuation as
 informative. FAPI Grant Management, the Cedar RAR draft, SPIFFE client
 authentication, Transaction Tokens, GNAP, the Attenuating Agent Tokens
-draft, and the Containment, Progressive, and Work Products companions
-are no longer cited.
+draft, RFC 8628, and the Containment, Continuation, Device
+Authorization, Progressive, and Work Products companions are no longer
+cited.
 
 -01
 
