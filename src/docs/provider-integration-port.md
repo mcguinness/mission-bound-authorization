@@ -58,9 +58,11 @@ boot under `MISSION_EPHEMERAL_KEYS=1`. `server.ts`, `pnpm issuance-only` and
 `pnpm as-native` each refuse to start with neither or both
 (`signingKeysFromEnv`, #831 slice 1); a composition that names no source, as
 the tests and the shared demo do, generates them per boot
-(`buildAuthorizationServer`). A ring keeps the keys across a restart; it
-holds one generation per key, and rotation and resource-side JWKS refresh
-are #831's.
+(`buildAuthorizationServer`). A ring keeps the keys across a restart and
+holds each role's generations: `pnpm keys` rotates, retires and withdraws
+them as compromised, and the AS's consumers hold its keys through
+`IssuerKeys`, refreshed within the freshness `/jwks` declares (#831;
+`channel-key-matrix.md`).
 
 ## 2. Desired contract
 
@@ -1178,10 +1180,12 @@ this path, a restart on the file-backed kernel leaves:
 - **Stranded:** an `active` Mission whose grant is gone. Nothing can derive
   from it, and it stays `active` until `expires_at` or a revocation.
 
-A restart is not revocation either way: with per-boot keys a consumer holding
-the old key keeps accepting pre-restart tokens until `exp` plus tolerance,
-and with a ring the key does not change. Rotation and resource-side JWKS
-refresh are #831's.
+A restart is not revocation either way. With per-boot keys, a consumer that
+refreshes the AS's keys (`IssuerKeys`) stops accepting pre-restart tokens
+once its cached `/jwks` expires (300 s in the reference), and one holding a
+fixed copy of the old key keeps accepting them until `exp` plus tolerance.
+With a ring the key does not change. Rotation, retirement and compromise
+are `pnpm keys` operations (#831; `channel-key-matrix.md`).
 
 Committed authority-source roots are the one thing reconciled at kernel
 construction (#827). A row that predates them gains one only from trusted
@@ -1328,10 +1332,14 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Crash and recovery.** The DPoP replay cache is in memory. The AS signing
   keys are generated per boot or kept in a key ring (§1). With per-boot keys
   a pre-restart token fails signature validation. With a ring it validates,
-  but the Mission it names does not survive: the kernel runs in memory on
-  `pnpm as-native`, so the PEP's loader finds no Mission and refuses
-  `unknown_mission` before any decision (§5.3). The PEP fetches the AS JWKS
-  once at assembly (`stack.ts:638`); refresh is #831's.
+  and its Mission survives only with a kernel file (`MISSION_KERNEL_STORE`,
+  with a recovery witness). With the kernel in memory, the default, the
+  PEP's loader finds no Mission and refuses `unknown_mission` before any
+  decision (§5.3), witnessed across a key-ring restart:
+  `the as-native launcher in process, OpenFGA client stubbed (D332) > refuses, after a restart on the same key ring with the kernel and the pending operations in memory, a pre-restart Mission-bound token unknown_mission and a pre-restart transaction token txn_unknown, before any decision and with no effect (#1337)`.
+  The PEP holds the AS's keys through `IssuerKeys`, refreshed within the
+  freshness `/jwks` declares, not a copy taken at assembly
+  (`channel-key-matrix.md`).
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
