@@ -6,6 +6,7 @@
  * (D25).
  */
 
+import { createPublicKey } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve as resolvePath } from "node:path";
@@ -3509,3 +3510,253 @@ function loadToolCatalogs(): TrustedToolCatalog[] {
   }
   return out;
 }
+
+/** The JWS algorithm a request-provenance signer key may use: ES256 alone. */
+export const REQUEST_PROVENANCE_ALGS = ["ES256"] as const;
+
+/**
+ * @spec request-provenance#verification (#939): the caps on the declared
+ * bounds, in seconds. Each declared bound is a positive integer no larger
+ * than its cap.
+ */
+export const REQUEST_PROVENANCE_BOUND_CAPS = {
+  clock_skew_seconds: 300,
+  max_assertion_lifetime_seconds: 3600,
+  max_capture_age_seconds: 3600,
+} as const;
+
+/** One verification key of an authorized signer. */
+export interface RequestProvenanceKeyConfig {
+  kid: string;
+  /** The public key's curve and coordinates only; `use` and `key_ops` are not kept. */
+  public_jwk: { kty: "EC"; crv: "P-256"; x: string; y: string };
+  /** The evidence types this configuration maps the key to. */
+  evidence_types: string[];
+  algs: (typeof REQUEST_PROVENANCE_ALGS)[number][];
+}
+
+/**
+ * An originator a signer may attest for. With `sub`, the signer is a
+ * user-device signer, and this entry, its only one, is the AS's own binding
+ * of the signer's keys to that originator.
+ */
+export interface RequestProvenanceOriginatorConfig {
+  iss: string;
+  sub?: string;
+}
+
+/** One authorized signer (@spec request-provenance#trust-configuration). */
+export interface RequestProvenanceSignerConfig {
+  /** The signer identifier, which the assertion's `iss` carries. */
+  iss: string;
+  keys: RequestProvenanceKeyConfig[];
+  originators: RequestProvenanceOriginatorConfig[];
+  channel_types: string[];
+}
+
+/**
+ * @spec request-provenance#trust-configuration, request-provenance#verification
+ * (#939): the AS's trust configuration for the `mission-request-provenance`
+ * evidence type, and its declared bounds.
+ */
+export interface RequestProvenanceConfig {
+  /** Whether the AS accepts the type. The shipped reference does not. */
+  enabled: boolean;
+  clock_skew_seconds: number;
+  max_assertion_lifetime_seconds: number;
+  max_capture_age_seconds: number;
+  signers: RequestProvenanceSignerConfig[];
+}
+
+const RP_ROOT_MEMBERS = new Set([
+  "enabled",
+  "clock_skew_seconds",
+  "max_assertion_lifetime_seconds",
+  "max_capture_age_seconds",
+  "signers",
+]);
+const RP_SIGNER_MEMBERS = new Set(["iss", "keys", "originators", "channel_types"]);
+const RP_KEY_MEMBERS = new Set(["kid", "public_jwk", "evidence_types", "algs"]);
+const RP_ORIGINATOR_MEMBERS = new Set(["iss", "sub"]);
+/** Public JWK members a configured key may carry; `use` and `key_ops` are accepted and ignored. */
+const RP_JWK_MEMBERS = new Set(["kty", "crv", "x", "y", "alg", "kid", "use", "key_ops"]);
+/** JWK members that carry private or symmetric key material (RFC 7518 Section 6). */
+const RP_PRIVATE_JWK_MEMBERS = ["d", "p", "q", "dp", "dq", "qi", "oth", "k"];
+
+/**
+ * Parse a request-provenance trust configuration from its JSON value. Refuses
+ * an unknown member at any level; a duplicate signer `iss`, or a `kid`
+ * repeated within one signer; a JWK with private members, a `kty` or `crv`
+ * that does not fit ES256, or coordinates that are not a P-256 point; any alg
+ * other than ES256; an empty key, originator, channel-type or evidence-type
+ * list; an originator carrying `sub` beside another originator; and a bound
+ * that is not a positive integer or exceeds its cap
+ * ({@link REQUEST_PROVENANCE_BOUND_CAPS}).
+ */
+export function parseRequestProvenanceConfig(
+  raw: unknown,
+  file = "request-provenance.json",
+): RequestProvenanceConfig {
+  const root = asObject(file, raw, "request-provenance");
+  onlyMembers(file, root, RP_ROOT_MEMBERS, "request-provenance");
+  const enabled = reqBoolean(file, root, "enabled", "request-provenance");
+  const bound = (key: keyof typeof REQUEST_PROVENANCE_BOUND_CAPS): number => {
+    const v = root[key];
+    if (typeof v !== "number" || !Number.isSafeInteger(v) || v <= 0) {
+      throw new ConfigError(file, `${key} must be a positive integer number of seconds`);
+    }
+    if (v > REQUEST_PROVENANCE_BOUND_CAPS[key]) {
+      throw new ConfigError(
+        file,
+        `${key} exceeds its cap of ${REQUEST_PROVENANCE_BOUND_CAPS[key]}`,
+      );
+    }
+    return v;
+  };
+  const nonEmptyStrings = (o: Record<string, unknown>, key: string, ctx: string): string[] => {
+    const v = reqStringArray(file, o, key, ctx);
+    if (v.length === 0) throw new ConfigError(file, `${ctx}.${key} must be non-empty`);
+    if (v.some((s) => s.length === 0)) {
+      throw new ConfigError(file, `${ctx}.${key} must hold non-empty strings`);
+    }
+    return [...v];
+  };
+  const coordinate = (jwk: Record<string, unknown>, member: "x" | "y", ctx: string): string => {
+    const v = jwk[member];
+    if (
+      typeof v !== "string" ||
+      !/^[A-Za-z0-9_-]+$/.test(v) ||
+      Buffer.from(v, "base64url").length !== 32 ||
+      Buffer.from(v, "base64url").toString("base64url") !== v
+    ) {
+      throw new ConfigError(file, `${ctx}.${member} must be the base64url of a 32-byte coordinate`);
+    }
+    return v;
+  };
+  const publicJwk = (
+    value: unknown,
+    kid: string,
+    ctx: string,
+  ): RequestProvenanceKeyConfig["public_jwk"] => {
+    const jwk = asObject(file, value, ctx);
+    for (const member of RP_PRIVATE_JWK_MEMBERS) {
+      if (Object.hasOwn(jwk, member)) {
+        throw new ConfigError(file, `${ctx} carries the private member ${member}`);
+      }
+    }
+    onlyMembers(file, jwk, RP_JWK_MEMBERS, ctx);
+    if (jwk.kty !== "EC" || jwk.crv !== "P-256") {
+      throw new ConfigError(file, `${ctx} must be an EC P-256 key, the key ES256 takes`);
+    }
+    if (Object.hasOwn(jwk, "alg") && jwk.alg !== "ES256") {
+      throw new ConfigError(file, `${ctx}.alg must be ES256`);
+    }
+    if (Object.hasOwn(jwk, "kid") && jwk.kid !== kid) {
+      throw new ConfigError(file, `${ctx}.kid must equal the key's kid`);
+    }
+    const key = {
+      kty: "EC" as const,
+      crv: "P-256" as const,
+      x: coordinate(jwk, "x", ctx),
+      y: coordinate(jwk, "y", ctx),
+    };
+    try {
+      createPublicKey({ key, format: "jwk" });
+    } catch {
+      throw new ConfigError(file, `${ctx} is not a P-256 public key`);
+    }
+    return key;
+  };
+
+  const issuers = new Set<string>();
+  const signers = asArray(file, root.signers, "signers").map((rawSigner, i) => {
+    const ctx = `signers[${i}]`;
+    const s = asObject(file, rawSigner, ctx);
+    onlyMembers(file, s, RP_SIGNER_MEMBERS, ctx);
+    const iss = reqString(file, s, "iss", ctx);
+    if (issuers.has(iss)) throw new ConfigError(file, `${ctx}.iss ${iss} names a signer twice`);
+    issuers.add(iss);
+    const kids = new Set<string>();
+    const keys = asArray(file, s.keys, `${ctx}.keys`).map(
+      (rawKey, j): RequestProvenanceKeyConfig => {
+        const kctx = `${ctx}.keys[${j}]`;
+        const k = asObject(file, rawKey, kctx);
+        onlyMembers(file, k, RP_KEY_MEMBERS, kctx);
+        const kid = reqString(file, k, "kid", kctx);
+        if (kids.has(kid)) {
+          throw new ConfigError(file, `${kctx}.kid ${kid} names a key of this signer twice`);
+        }
+        kids.add(kid);
+        const algs = nonEmptyStrings(k, "algs", kctx);
+        for (const alg of algs) {
+          if (!(REQUEST_PROVENANCE_ALGS as readonly string[]).includes(alg)) {
+            throw new ConfigError(file, `${kctx}.algs permits ${alg}; only ES256 is supported`);
+          }
+        }
+        return {
+          kid,
+          public_jwk: publicJwk(k.public_jwk, kid, `${kctx}.public_jwk`),
+          evidence_types: nonEmptyStrings(k, "evidence_types", kctx),
+          algs: algs as RequestProvenanceKeyConfig["algs"],
+        };
+      },
+    );
+    if (keys.length === 0) throw new ConfigError(file, `${ctx}.keys must be non-empty`);
+    const originators = asArray(file, s.originators, `${ctx}.originators`).map(
+      (rawOriginator, j): RequestProvenanceOriginatorConfig => {
+        const octx = `${ctx}.originators[${j}]`;
+        const o = asObject(file, rawOriginator, octx);
+        onlyMembers(file, o, RP_ORIGINATOR_MEMBERS, octx);
+        const originatorIss = reqString(file, o, "iss", octx);
+        return Object.hasOwn(o, "sub")
+          ? { iss: originatorIss, sub: reqString(file, o, "sub", octx) }
+          : { iss: originatorIss };
+      },
+    );
+    if (originators.length === 0) {
+      throw new ConfigError(file, `${ctx}.originators must be non-empty`);
+    }
+    if (originators.length > 1 && originators.some((o) => o.sub !== undefined)) {
+      throw new ConfigError(
+        file,
+        `${ctx}.originators: an originator with sub binds a user-device signer to that one originator`,
+      );
+    }
+    return { iss, keys, originators, channel_types: nonEmptyStrings(s, "channel_types", ctx) };
+  });
+
+  return {
+    enabled,
+    clock_skew_seconds: bound("clock_skew_seconds"),
+    max_assertion_lifetime_seconds: bound("max_assertion_lifetime_seconds"),
+    max_capture_age_seconds: bound("max_capture_age_seconds"),
+    signers,
+  };
+}
+
+/**
+ * Load + validate config/request-provenance.json: parsed strictly (a
+ * duplicated member refuses), then {@link parseRequestProvenanceConfig}.
+ */
+export function loadRequestProvenanceConfig(
+  text: string = readText("request-provenance.json"),
+): RequestProvenanceConfig {
+  const file = "request-provenance.json";
+  let raw: unknown;
+  try {
+    raw = parseStrictJson(text);
+  } catch (e) {
+    if (e instanceof DuplicateMemberError) {
+      throw new ConfigError(file, `ambiguous configuration: ${e.message}`);
+    }
+    throw new ConfigError(file, `invalid JSON: ${(e as Error).message}`);
+  }
+  return parseRequestProvenanceConfig(raw, file);
+}
+
+/**
+ * The validated shipped request-provenance configuration (@see
+ * loadRequestProvenanceConfig). Validated at load like every file here; no
+ * service reads it, and the shipped file does not enable the type.
+ */
+export const REQUEST_PROVENANCE_CONFIG: RequestProvenanceConfig = loadRequestProvenanceConfig();

@@ -381,6 +381,59 @@ as unclassified.
   needs a new `version`: a Mission commits the consented snapshot's digest,
   so a snapshot edited under the same version authorizes nothing.
 
+## `request-provenance.json`
+
+The AS's trust configuration for the `mission-request-provenance` Intent
+Submission Evidence type (`@spec request-provenance#trust-configuration`,
+`request-provenance#verification`, #939), read by
+`loadRequestProvenanceConfig` in `@mission/demo-data`. The verifier is
+`services/authorization-server/src/kernel/request-provenance.ts`.
+
+`enabled` says whether the AS accepts the type. The shipped file sets it to
+`false` and authorizes no signer, and no service reads the file.
+
+The deployment's declared bounds, each a positive whole number of seconds
+no larger than its cap:
+
+| Member | Shipped | Cap |
+|---|---|---|
+| `clock_skew_seconds` | 30 | 300 |
+| `max_assertion_lifetime_seconds` | 600 | 3600 |
+| `max_capture_age_seconds` | 600 | 3600 |
+
+The clock-skew allowance applies where the AS's clock meets the signer's:
+`iat` in the future and `exp` passed. The assertion lifetime (`exp` minus
+`iat`), the capture age (`iat` minus `captured_at`) and `captured_at`
+against `iat` compare the signer's own claims and take no allowance.
+
+`signers` lists each authorized signer: its `iss` (the assertion's `iss`);
+its `keys`, each with a `kid`, a `public_jwk`, the `evidence_types` the
+configuration maps the key to, and the `algs` it permits; the `originators`
+it may attest for, each an `iss` with an optional `sub`; and the
+`channel_types` it may attest. A key verifies this type only where its
+`evidence_types` names `mission-request-provenance`. The JWK's `use` and
+`key_ops` are accepted and ignored: they never establish that mapping, and
+the verifier imports the key from its curve and coordinates alone. An
+originator carrying `sub` makes the signer a user-device signer, and that
+entry, its only one, is the AS's own binding of the signer's keys to that
+originator. Trust comes only from this file: the verifier looks up the
+signer by the assertion's `iss` and `kid`, and never takes a key from the
+assertion.
+
+- **Owner.** The AS's security owner, with each intake's operator for that
+  intake's keys and scope.
+- **Integrity.** Repository review and the strict loader, which refuses
+  duplicate member names; unknown members at any level; a signer `iss`
+  named twice, or a `kid` named twice within one signer; a JWK carrying a
+  private member, whose `kty` or `crv` is not the EC P-256 that ES256
+  takes, or whose coordinates are not a P-256 point; any alg other than
+  ES256; an empty key, originator, channel-type or evidence-type list; an
+  originator with `sub` beside another originator; and a bound that is not
+  a positive integer or exceeds its cap.
+- **Updating.** Edit, review, and restart the AS. Removing a signer or a key
+  takes effect at the next verification; submissions already accepted keep
+  their recorded facts.
+
 ## `scope-projection.json`
 
 The trusted scope-projection mapping (`@spec mission#scope-projection`, step
