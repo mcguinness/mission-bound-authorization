@@ -3289,9 +3289,10 @@ of its base-profile level:
   ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
   rule; otherwise the harness does, and the scope statement says
   which.
-- **External communication.** The external-communication and
-  external-commitment classes are mediated: no unmediated path, the
-  scope statement's egress-channel enumeration covers them
+- **External communication.** Every action that satisfies the
+  external-communication or External commitment predicate
+  ({{classification}}), whatever its class, is mediated: no unmediated
+  path, the scope statement's egress-channel enumeration covers it
   ({{I-D.draft-mcguinness-mission-harness}}), and the
   sender-constraint keys are held by the mediating PEP ({{custody}}).
 
