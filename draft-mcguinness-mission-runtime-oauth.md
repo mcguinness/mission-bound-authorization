@@ -551,13 +551,23 @@ long a credential stays usable with no state check at action time:
 |---|---|---|---|
 | Token-lifetime expiry | maximum token lifetime | local clock check | suspend, complete, or any revocation inside the lifetime |
 | Refresh gated on `active` | the token lifetime | none at action time | anything between refreshes |
+| Token-lifetime expiry, minted from an earlier observation | the observation's age plus the token lifetime | local clock check | anything since that observation |
 
-Where derivation and refresh of a Mission-bound token are gated on
-`active` ({{I-D.draft-mcguinness-oauth-mission}}), token-lifetime
-expiry conforms to the runtime core's Credential-lifetime freshness
-rule, and the refresh cycle to its rule for a refresh cycle gated on
-live Mission state, each at the token lifetime as its revocation
-latency floor.
+Where every issuance, refresh, and exchange path for a Mission-bound
+token checks Mission state when it mints
+({{I-D.draft-mcguinness-oauth-mission}}), token-lifetime expiry and
+the refresh cycle gated on live Mission state conform to the runtime
+core's Credential-lifetime freshness rule as its two forms, each at
+the token lifetime as its revocation latency floor. Where a path
+mints from an earlier observation without a fresh check, such as an
+issuance grant redeemed at a consuming AS without a Mission-state
+integration ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}),
+the observation's age adds to the token lifetime. Either form
+conforms only while, on every issuance, refresh, and exchange path,
+the age of the observation a token is minted from plus the token
+lifetime stays within the published staleness bound
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Mission State and
+Freshness").
 
 Mission freshness bounds how stale an observation of Mission state can
 be. The sources are token introspection {{RFC7662}} at the Mission
@@ -722,6 +732,13 @@ The Mission-bound token claims this document maps are registered by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission State Sources follows the runtime core's Credential-lifetime
+  freshness rule: token-lifetime expiry and state-gated refresh
+  conform where every issuance, refresh, and exchange path checks
+  Mission state when it mints, and a token minted from an earlier
+  observation adds that observation's age to its lifetime, within the
+  published staleness bound (#1128).
 
 - The sender-constraint, audience and `exp` cap citations name the
   OAuth binding's Mission-Bound Token Issuance chapter, the retitled
