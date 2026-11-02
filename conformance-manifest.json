@@ -239,6 +239,7 @@
    "core.introspected-consumption",
    "status.lifecycle",
    "status.lifecycle-revoke",
+   "status.lifecycle-revocation-means",
    "status.discharge",
    "status.mission-status",
    "status.introspection-projection",
@@ -26390,6 +26391,42 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#972 (D1088): no row quoted this clause before. The reference does not claim the access-token path, which the draft permits, and publishes no Protected Resource Metadata for the Status or Lifecycle endpoint (see `status.auth.challenge-resource-metadata`); todo with #1946. The quote's MUST belongs to the token-audience rule, which `status.lifecycle.token-audience` covers; this row's obligation is the present-tense publication, so its strength is stated. #1948 (#1864 item 6) defines the same row."
+  },
+  {
+   "id": "status.lifecycle.revocation-means-client-auth",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "the AS MUST accept `revoke` through client authentication, without requiring an access token or any token issued under the Mission. Client authentication grants no revocation authority by itself: the AS still authorizes the caller for `revoke` on that Mission ({{lifecycle-authorization}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle-revocation-means"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the Lifecycle endpoint is the deployment's token-independent revocation means, a caller that authenticates only by client authentication, presenting no access token and holding no token issued under the Mission, revokes a Mission it is authorized to revoke; a caller so authenticated without lifecycle authorization for that Mission is refused with the not-found response and the Mission stays active",
+    "local": "the reference's revoke-only Lifecycle deployment is the binding's revocation means (`core.revocation.revoke-by-mission-id`) and accepts `private_key_jwt` alone; the witnesses use clients registered with no grant types, under a fresh assertion and no Authorization header"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the binding's token-independent revocation means (@spec status#mission-lifecycle-endpoint, mission#revocation, #1895) > revokes for an authorized client that presents a fresh private_key_jwt assertion and no access token, and has no grant under which it could hold a token issued under the Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the binding's token-independent revocation means (@spec status#mission-lifecycle-endpoint, mission#revocation, #1895) > refuses a client authenticated the same way but not authorized for revoke with the not-found response, leaving the Mission active",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1895 (D1114): option A, the Status side of the binding's token-independent revocation requirement. Both witnesses are mutation-proved: refusing a revoke that carries no Authorization header fails the first, and granting the lifecycle scope on client authentication alone fails the second."
   },
   {
    "id": "status.auth.invalid-client",

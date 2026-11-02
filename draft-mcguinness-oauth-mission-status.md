@@ -1184,6 +1184,20 @@ mirrors that endpoint: the accepted methods in
 ({{as-metadata}}). Its authentication failures follow
 {{mission-status-auth-failures}}.
 
+Where this endpoint is the deployment's means of revoking a Mission
+by `mission_id` independent of possession of any token, which the
+issuance profile requires ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Revocation"), the AS MUST accept `revoke` through client
+authentication, without requiring an access token or any token issued
+under the Mission. Client authentication grants no revocation
+authority by itself: the AS still authorizes the caller for `revoke`
+on that Mission ({{lifecycle-authorization}}). A freshly signed
+`private_key_jwt` client assertion is authentication proof, not a
+token the caller holds. Where another authenticated surface provides
+that means, this endpoint can accept only access tokens. The
+requirement covers `revoke` only; the endpoint's other operations keep
+whichever paths the AS supports.
+
 For the sender-constrained access-token path, this
 endpoint is an OAuth protected resource exactly as the Mission Status
 endpoint is: the AS publishes, in its Protected Resource Metadata for
