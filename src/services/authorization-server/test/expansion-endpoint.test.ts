@@ -33,7 +33,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 
 import { type Server } from "node:http";
-import { APPROVAL_FLOOR, CANONICAL_RESOURCE, contractsRequiring } from "@mission/demo-data";
+import { APPROVAL_FLOOR, CANONICAL_RESOURCE, contractsRequiring, currentContractRef } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   compactVerify,
@@ -1607,6 +1607,70 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     } finally {
       requiring.mockRestore();
     }
+  });
+
+  /** Widen `pred` to add remittance, approve the deferral, and complete it: the completion response. */
+  async function carryThroughExpansion(pred: { accessToken: string }) {
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", ["payments:invoice.read", "payments:remittance.send"]);
+    const openedBody = (await opened.json()) as { deferral_code?: string; error?: string };
+    expect(opened.status, JSON.stringify(openedBody)).toBe(400);
+    approveDeferral(openedBody.deferral_code as string);
+    const done = await pollExpansion(openedBody.deferral_code as string);
+    const body = (await done.json()) as {
+      mission_id?: string;
+      carryover_evidence?: string;
+      carryover_replacements?: Array<{ mission_id: string; related_to?: string }>;
+    };
+    expect(done.status, JSON.stringify(body)).toBe(200);
+    return body;
+  }
+  const referencesOf = (id: string) =>
+    (as.kernel.get(id)?.authority_set ?? []).filter((e) => e.resource === RESOURCE).map((e) => e.resource_contract);
+
+  // @spec resource-access#resource-contract (#249, D1104): carryover is
+  // preservation-only (D875): a carried child's replacement carries the old
+  // child's reference exactly.
+  it("carries a child pinned to the contract into a replacement that carries the old child's reference exactly", async () => {
+    const pred = await predecessorWithChild();
+    const old = referencesOf(pred.childId);
+    expect(old).toEqual([currentContractRef({ resource: RESOURCE, actions: ["payments:invoice.read"] })]);
+    const body = await carryThroughExpansion(pred);
+    expect(body.carryover_replacements).toEqual([expect.objectContaining({ related_to: pred.childId })]);
+    expect(referencesOf(body.carryover_replacements?.[0]?.mission_id as string)).toEqual(old);
+  });
+
+  // @spec resource-access#resource-contract, child-delegation#carryover-manifest
+  // (#249, D875, D1104): a child approved before the payments resource required
+  // a reference carries none and never gains one, while the Expansion's
+  // successor, a new approval, carries the current reference. The unpinned
+  // replacement is then not a subset of the successor, so the child is
+  // cascaded, not carried: it is terminated, and no replacement is created.
+  // This witnesses the behavior as it stands under D875's preservation-only
+  // rule; whether such a child should instead be carried is the owner's ruling.
+  it("cascades, never pinning it, a child approved before the cutover when its parent's Expansion is approved against the contract: no replacement, an excluded not_strict_subset row, and the old child terminated", async () => {
+    const before = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+    let pred: Awaited<ReturnType<typeof predecessorWithChild>>;
+    try {
+      pred = await predecessorWithChild();
+    } finally {
+      before.mockRestore();
+    }
+    expect(referencesOf(pred.childId)).toEqual([undefined]);
+    const body = await carryThroughExpansion(pred);
+    const successorRemit = as.kernel.get(body.mission_id as string)?.authority_set.find((e) => e.actions.includes("payments:remittance.send"));
+    expect(successorRemit?.resource_contract).toBeDefined();
+    expect(body.carryover_replacements ?? []).toEqual([]);
+    const verified = await compactVerify(body.carryover_evidence as string, remoteJwks);
+    const decoded = JSON.parse(Buffer.from(verified.payload).toString("utf8")) as {
+      map: Array<{ old_child: { mission_id: string }; outcome: string; reason?: string; replacement_id?: string }>;
+    };
+    const row = decoded.map.find((r) => r.old_child.mission_id === pred.childId);
+    expect(row).toMatchObject({ outcome: "excluded", reason: "not_strict_subset" });
+    expect(row?.replacement_id).toBeUndefined();
+    const oldChild = as.kernel.get(pred.childId);
+    expect(oldChild?.termination?.reason).toBe("parent_terminated");
+    expect(oldChild?.termination?.carried_to).toBeUndefined();
+    expect(referencesOf(pred.childId)).toEqual([undefined]);
   });
 
   // @spec RFC 9449 Section 4.3 (#1173): the retriever's proof is complete and fresh.
