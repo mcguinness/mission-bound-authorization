@@ -2052,15 +2052,6 @@ Mission. Two richer patterns are out of scope:
   is governance state about the delegate, not the standing-consent
   basis that `approval_basis` records ({{mission-record}}).
 
-Where a deployment needs either, the Approval Governance Record
-({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
-and Consent Evidence can carry a partial presentation of that record
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
-
-Approval Governance defines the `adjudication.governance_record`
-member that marks an approval such a record backs
-({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-"Relationship to the Issuance Profile"), and
 {{I-D.draft-mcguinness-mission-architecture}} (Section "Approval Role
 Mapping") shows how the common creation scenarios assign the three
 `approval_basis` roles.
@@ -2252,9 +2243,7 @@ value.
     it). Present when a Mission-creating profile or deployment chooses
     to make the mechanism explicit; where absent, the mechanism is still
     fixed by `type` and the construction rules of this document or a
-    companion profile (below and
-    {{I-D.draft-mcguinness-mission-approval-governance}}, Section
-    "Policy Adjudication"). Members, where present:
+    companion profile (below). Members, where present:
 
     `kind`:
     : REQUIRED. A string: `human` or `policy`, naming a decision
@@ -2271,9 +2260,7 @@ value.
     deciding human is `consent_principal`.
 
     For `kind: policy`: the kind-specific members that the profile
-    defining the standing-consent basis specifies (for example,
-    {{I-D.draft-mcguinness-mission-approval-governance}}, Section
-    "Policy Adjudication").
+    defining the standing-consent basis specifies.
 
   `approved_at`:
   : Absent for `direct`, whose approval event carries its own instant
@@ -2290,10 +2277,7 @@ value.
     instance only under a standing-consent basis
     ({{mission-creating-paths}}).
   - For `direct`, `activation.approval_event_id` MUST identify a human
-    approval event ({{approval-event}}). Approval Governance states how
-    a record backing a `direct` approval keeps that human decision as
-    its accountable assertion
-    ({{I-D.draft-mcguinness-mission-approval-governance}}).
+    approval event ({{approval-event}}).
   - `approval_basis` is provenance: none of the record's integrity
     anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
     covers it ({{integrity-anchors}}); a profile that commits the
@@ -2350,10 +2334,8 @@ invalidate or deactivate the Mission.
 : OPTIONAL. A string. An opaque audit correlator naming the derivation
   policy version in effect at the approval event; the policy itself does
   not travel. It is REQUIRED where a feature or profile the deployment
-  uses depends on versioned derivation-policy identification, such as
-  standing-consent recency
-  ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-  "Standing-Consent Recency"). A deployment using such a feature records
+  uses depends on versioned derivation-policy identification. A
+  deployment using such a feature records
   it from creation and never supplies a replacement value later.
 
 `approval_event_id`:
@@ -4921,14 +4903,11 @@ following remain stable across revisions of this document:
   discipline ({{other-types}}, {{subset}}); and
 - the `act` delegation chain ({{delegated-exchange}}).
 
-{{mission-creating-paths}} states how a profile creates Missions on
-another path, including what a standing-consent basis's defining
-profile and its activating issuer meet, and {{commitment-mechanisms}}
-the contract
-for a commitment another specification defines. Their requirements bind
-a specification or profile that uses them and each party that implements
-it; this document's own commitments also follow
-{{commitment-mechanisms}}.
+Each extension point states what its specification supplies and
+what an AS without the extension does. The
+requirements of {{mission-creating-paths}} and
+{{commitment-mechanisms}} bind a specification that uses them and each
+party that implements it.
 
 ## Extension Points {#extension-points}
 
@@ -4937,7 +4916,9 @@ This document's extension points are:
 - **Authority types.** The Authority Set is open to any AS-supported
   `authorization_details` type ({{other-types}}); the Mission
   apparatus (commitment, gating, delegation) is type-agnostic, subject
-  to the delegation and projection limits in {{other-types}}. A type's
+  to the delegation and projection limits in {{other-types}}, and an
+  entry of a type the AS does not support is refused
+  ({{proposal-validation}}). A type's
   specification supplies what the apparatus relies on for its entries:
   - the definition a proposed entry is validated against, alongside
     any schema advertised for the type or established out of band
@@ -4962,7 +4943,8 @@ This document's extension points are:
   verified output facts
   ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}), and
   an AS refuses an entry of a type it does not support rather than
-  ignoring it ({{intent-submission-evidence}}).
+  ignoring it. A verified entry is policy input, never authority
+  ({{intent-submission-evidence}}).
 - **Mission Intent members.** The Mission Intent's top level
   ({{mission-intent}}) is open to members a companion profile
   defines, under a short name it registers in the Mission Intent
@@ -4973,27 +4955,23 @@ This document's extension points are:
   states. Closed-top-level validation ({{submission-envelope}}) refuses
   any top-level member that neither this document nor an implemented
   companion profile defines, and the AS ignores none it recognizes.
-  Registration settles which specification owns a short name; it does
-  not make an AS implement, recognize, or trust any member.
+  Registration settles which specification owns a short name, not
+  whether an AS implements, recognizes, or trusts any member.
 - **Integrity anchors.** Additional committed objects use the same
   domain-separated, issuer-bound envelope with a new `typ`
-  ({{integrity-anchors}}, {{commitment-mechanisms}}). A
-  consent-disclosure commitment, an instruction-text attestation, or a
-  delegation receipt can be committed this way without changing this
-  document. A profile that
+  ({{integrity-anchors}}, {{commitment-mechanisms}}). A profile that
   commits an evidence or disclosure object MUST commit it with this
   envelope and a `typ` that meets {{integrity-anchors}} and
   {{commitment-mechanisms}}, not by
   hashing the bare object, so the domain separation and issuer binding
   hold uniformly. A `mission` descriptor embedded in such an object
   uses the `mission` claim shape ({{mission-claim}}), optionally
-  extended with collision-resistantly named members (for example, an
-  `intent_hash` for audit), and is never authority-bearing on its own.
+  extended with collision-resistantly named members, and is never
+  authority-bearing on its own. An AS without such a profile produces
+  and verifies none of its commitments.
 - **The `mission` claim.** It is an open object: additional,
-  collision-resistantly named members can be carried in it (for
-  example, a runtime decision reference, a delegation receipt, or an
-  attestation reference), under the consumer rules of
-  {{mission-claim}}.
+  collision-resistantly named members can be carried in it, under the
+  consumer rules of {{mission-claim}}.
 - **Mission Record members.** The Mission Record is open to
   additional members set at creation, under short names a companion
   profile coordinates with this document or under collision-resistant
@@ -5006,7 +4984,8 @@ This document's extension points are:
   that companion profiles register in the Mission Termination Reasons
   registry ({{iana-termination-reasons}}). Under the
   forward-compatibility rule of {{lifecycle}}, only `active` permits
-  issuance.
+  issuance. A companion interface changing Mission state leaves
+  {{revocation}} in force; a `terminated` Mission stays terminal.
 - **Approval bases.** The `approval_basis.type` value space
   ({{record-principal-members}}) is open to standing-consent bases
   that companion profiles define under {{mission-creating-paths}}.
@@ -5014,21 +4993,27 @@ This document's extension points are:
   order, and the atomicity of record creation with the approval decision
   are fixed by {{direct-approval-steps}}; the coupling of that
   decision to authorization-code issuance belongs to the direct flow.
-  A companion
-  profile MAY relocate the approval event relative to code issuance
-  (for example, deferring the decision beyond the authorization
-  response), provided the steps and their atomicity hold unchanged
-  and no Mission reference exists before the record is `active`; the
-  Mission Deferred Approval companion is such a profile
-  ({{I-D.draft-mcguinness-oauth-mission-approval}}). A back-channel
-  carriage profile ({{submission-other-carriages}}) MAY instead couple
-  the approval decision to establishing the Mission grant binding and
-  activating for redemption a grant the profile defines, such as a
-  device code issued while the request was pending, provided the steps
-  and their atomicity with the approval decision hold unchanged and no
-  Mission reference exists before the record is `active`; the Mission
-  then binds to that profile-defined reusable grant
-  ({{grant-binding-resolution}}).
+  A companion profile MAY relocate the approval event relative to code
+  issuance (for example, deferring the decision beyond the
+  authorization response, as
+  {{I-D.draft-mcguinness-oauth-mission-approval}} does), and a
+  back-channel carriage profile
+  ({{submission-other-carriages}}) MAY instead couple the approval
+  decision to establishing the Mission grant binding and activating for
+  redemption a grant the profile defines, the Mission then binding to
+  that profile-defined reusable grant ({{grant-binding-resolution}}),
+  provided in either case the steps and their atomicity with the
+  approval decision hold unchanged and no Mission reference exists
+  before the record is `active`.
+- **Grants and issuance paths.** A companion profile can define a
+  further grant lineage or a profile-defined grant. Its
+  specification states when the AS establishes the binding and how it
+  resolves the Mission, and every derivation through the grant passes
+  {{issuance-gating}} ({{grant-binding-resolution}}). Neither a
+  returned access token nor a per-request runtime join is a grant
+  lineage ({{grant-binding}}). Without such a profile, the AS
+  resolves a Mission only from the authorization-code lineage and a
+  Mission-bound `subject_token`.
 
 This document defines no capability-negotiation mechanism or
 profile-version field; an extension declares its own identifiers and,
@@ -5117,13 +5102,11 @@ integrity anchors (step 6); and atomic creation, deduplicated as
 An unrecognized `type` or `adjudication.kind` is handled as
 {{record-principal-members}} states for every record consumer.
 
-Mission Approval Governance
-{{I-D.draft-mcguinness-mission-approval-governance}} defines an
-Approval Basis Contract, covering activation policy commitment,
-standing-consent recency, and policy adjudication, which the companion
-profiles that define standing-consent bases for this document adopt. A
-profile defined elsewhere can meet this section's requirements by
-another mechanism.
+The companion profiles that define standing-consent bases for this
+document adopt the Approval Basis Contract of
+{{I-D.draft-mcguinness-mission-approval-governance}}; a profile
+defined elsewhere can meet this section's requirements by another
+mechanism.
 
 ## Commitment Mechanisms {#commitment-mechanisms}
 
@@ -5134,15 +5117,14 @@ commitment classifies it as one of them:
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
   `authority_hash`, and commitments produced with companion-defined
-  `typ` values, such as an activation policy reference's `digest`).
+  `typ` values).
 - **Canonical-object digest**: `sha-256:` over the JCS serialization
   of a normalized JSON object without the envelope, where protocol
-  context already fixes what is committed (for example, a runtime
-  parameter digest).
+  context already fixes what is committed.
 - **Raw-octet digest**: `sha-256:` over an exact,
   specification-defined octet sequence, with no canonicalization: a
   whole artifact as exchanged, or the UTF-8 encoding of a defined
-  scalar value (for example, a work-product artifact digest).
+  scalar value.
 
 The prefix and agility rules of {{digest-algorithm}} bind all three
 species. Its I-JSON rule binds the two JSON species. The envelope and

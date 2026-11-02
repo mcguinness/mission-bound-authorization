@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "18a785dee0f9ad6250f68002fc745c8f35c054d6",
-    "content_sha256": "306e021a786006ac85fe55f44e6c30a3ff4091abf97cddebfcf02979bcdef602"
+    "revision": "dc4a6c6f91cf4a926f8d94bcb32cfe272a03c52e",
+    "content_sha256": "11f04ab227d2e1aa5bd2b778d39cb3e9c72a9273b453f2a49af1dfab23591478"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -12779,7 +12779,7 @@
    "id": "core.mission-record.policy-version-required-where-used",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-provenance-members",
-   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Standing-Consent Recency\").",
+   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
