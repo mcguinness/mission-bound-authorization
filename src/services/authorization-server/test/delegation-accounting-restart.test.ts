@@ -44,6 +44,7 @@ import {
   initSigningKeyRing,
 } from "../src/index.js";
 import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14876;
 const ISSUER = `http://localhost:${PORT}`;
@@ -180,7 +181,7 @@ async function baseMission(running: Running): Promise<{ missionId: string; acces
       code_challenge: challenge,
       code_challenge_method: "S256",
       login_hint: "alice",
-      mission_intent: JSON.stringify({ intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: "2099-01-01T00:00:00Z" } }),
+      mission_intent: JSON.stringify({ intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXPIRES_AT } }),
       authorization_details: JSON.stringify([
         {
           type: "mission_resource_access",

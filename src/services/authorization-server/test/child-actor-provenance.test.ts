@@ -39,9 +39,10 @@ import {
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FAR_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
-const EXP = "2099-01-01T00:00:00Z";
+const EXP = FAR_EXPIRES_AT;
 const R = "https://r.example/mcp";
 const READ = "res.read";
 const LIST = "res.list";
@@ -299,7 +300,7 @@ describe("a template ceiling that grants children without allowed_child_actors d
         rate_per_min: 50,
         review_cadence_s: 30 * 86400,
         approval_event_id: `tmpl-ev-${events++}`,
-        expires_at: "2098-12-01T00:00:00Z",
+        expires_at: daysAfter(FAR_EXPIRES_AT, -31),
       } as never,
       { ...kernel.authoritySourceOptions(), dispatchPolicies: registry },
     );

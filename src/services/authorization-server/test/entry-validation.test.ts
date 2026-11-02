@@ -32,7 +32,7 @@ import {
 import { aiAgents } from "./actor-profiles.helper.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
-import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14376;
 const ISSUER = `http://localhost:${PORT}`;
@@ -395,7 +395,7 @@ describe("max_depth 0 and an empty allowed_delegates (@spec resource-access#entr
   function approve(kernel: MissionKernel, proposal: AuthorityEntry[]) {
     return kernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Read invoices", target_resources: [ERP], expires_at: "2099-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Read invoices", target_resources: [ERP], expires_at: FAR_EXPIRES_AT }),
       ),
       proposedAuthority: proposal,
       subject: { iss: ISS, sub: "alice" },
@@ -433,7 +433,7 @@ describe("max_depth 0 and an empty allowed_delegates (@spec resource-access#entr
     const { child } = createChildMission(kernel, {
       parentId: parent.id,
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Extract invoices", target_resources: [ERP], expires_at: "2099-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Extract invoices", target_resources: [ERP], expires_at: FAR_EXPIRES_AT }),
       ),
       proposedAuthority: [erpEntry()],
       childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },

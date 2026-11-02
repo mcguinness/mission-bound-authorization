@@ -43,7 +43,7 @@ import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { browserApprovalHeaders, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
-import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14620;
 const RS_PORT = 14621;
@@ -94,7 +94,7 @@ const CONTRACTS = new ResourceContractDeclarations([
       {
         version: "v1",
         state: "superseded",
-        retained_until: "2099-01-01T00:00:00Z",
+        retained_until: FAR_EXPIRES_AT,
         digest: plainContractRef("v1").digest,
         document: plainContractDoc("v1"),
       },

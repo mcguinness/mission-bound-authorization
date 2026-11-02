@@ -49,7 +49,7 @@ import {
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
 import { SCOPE_PROJECTION } from "@mission/demo-data";
-import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
 
 const PORT = 14503;
 const ISSUER = `http://localhost:${PORT}`;
@@ -148,7 +148,7 @@ const declaration = (id: string, versions: unknown[]) => ({
   versions,
 });
 const PAYMENTS_DECLARATION = declaration(CONTRACT, [
-  declaredVersion(CONTRACT, "v1", "superseded", "2099-01-01T00:00:00Z"),
+  declaredVersion(CONTRACT, "v1", "superseded", FAR_EXPIRES_AT),
   declaredVersion(CONTRACT, "v2", "current"),
 ]);
 const ORIGIN_CONTRACTS = new ResourceContractDeclarations([
@@ -159,7 +159,7 @@ const DESTINATION_CONTRACTS = new ResourceContractDeclarations([
   PAYMENTS_DECLARATION,
   declaration(RETIRED, [declaredVersion(RETIRED, "v1", "retired"), declaredVersion(RETIRED, "v2", "current")]),
   declaration(PAST, [declaredVersion(PAST, "v1", "superseded", "2020-01-01T00:00:00Z"), declaredVersion(PAST, "v2", "current")]),
-  declaration(WITHIN, [declaredVersion(WITHIN, "v1", "superseded", "2099-01-01T00:00:00Z"), declaredVersion(WITHIN, "v2", "current")]),
+  declaration(WITHIN, [declaredVersion(WITHIN, "v1", "superseded", FAR_EXPIRES_AT), declaredVersion(WITHIN, "v2", "current")]),
 ]);
 
 async function pub(k: Keys): Promise<JWK> {
@@ -342,7 +342,7 @@ beforeAll(async () => {
           origin: ORIGIN_SUBJECT,
           local_sub: LOCAL_SUB,
           observed_at: "2020-01-01T00:00:00Z",
-          valid_until: "2099-01-01T00:00:00Z",
+          valid_until: FAR_EXPIRES_AT,
         },
       ],
     },
@@ -915,7 +915,7 @@ describe("origin-principal mapping hardening (@spec cross-domain#origin-principa
       id: "xorg-map",
       version: "v1",
       entries: [
-        { origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
+        { origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, observed_at: "2020-01-01T00:00:00Z", valid_until: FAR_EXPIRES_AT },
       ],
     };
   }
@@ -925,8 +925,8 @@ describe("origin-principal mapping hardening (@spec cross-domain#origin-principa
       id: "xorg-map",
       version: "v1",
       entries: [
-        { origin: ORIGIN_SUBJECT, local_sub: "dup-a", observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
-        { origin: ORIGIN_SUBJECT, local_sub: "dup-b", observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
+        { origin: ORIGIN_SUBJECT, local_sub: "dup-a", observed_at: "2020-01-01T00:00:00Z", valid_until: FAR_EXPIRES_AT },
+        { origin: ORIGIN_SUBJECT, local_sub: "dup-b", observed_at: "2020-01-01T00:00:00Z", valid_until: FAR_EXPIRES_AT },
       ],
     };
     try {
@@ -945,7 +945,7 @@ describe("origin-principal mapping hardening (@spec cross-domain#origin-principa
       id: "xorg-map",
       version: "v1",
       entries: [
-        { origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, disabled: true, observed_at: "2020-01-01T00:00:00Z", valid_until: "2099-01-01T00:00:00Z" },
+        { origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, disabled: true, observed_at: "2020-01-01T00:00:00Z", valid_until: FAR_EXPIRES_AT },
       ],
     };
     try {
@@ -978,7 +978,7 @@ describe("origin-principal mapping hardening (@spec cross-domain#origin-principa
     crossOrgOptions.mappingPolicy = {
       id: "xorg-map",
       version: "v1",
-      entries: [{ origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, observed_at: "2099-06-01T00:00:00Z", valid_until: "2099-07-01T00:00:00Z" }],
+      entries: [{ origin: ORIGIN_SUBJECT, local_sub: LOCAL_SUB, observed_at: daysAfter(FAR_EXPIRES_AT, 151), valid_until: daysAfter(FAR_EXPIRES_AT, 181) }],
     };
     try {
       const { chain, leafKeys } = await buildChain();

@@ -22,7 +22,7 @@ import {
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer, SAAS_RESOURCE } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
-import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
@@ -132,7 +132,7 @@ beforeAll(async () => {
           origin: { iss: AS_ISS, sub: "alice" },
           local_sub: "alice-ledgercloud",
           observed_at: "2020-01-01T00:00:00Z",
-          valid_until: "2099-01-01T00:00:00Z",
+          valid_until: FAR_EXPIRES_AT,
         },
       ],
     },
@@ -415,7 +415,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
             origin: { iss: AS_ISS, sub: "alice" },
             local_sub: "alice-ledgercloud",
             observed_at: "2020-01-01T00:00:00Z",
-            valid_until: "2099-01-01T00:00:00Z",
+            valid_until: FAR_EXPIRES_AT,
           },
         ],
       },
