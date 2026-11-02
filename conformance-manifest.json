@@ -92882,9 +92882,28 @@
     "normative": "An intent-bound entry with an absent or invalid intended-AS binding, or a binding to another AS, is refused with invalid_mission_intent_evidence before derivation; the owning evidence type defines the binding and its verification."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#901 review: make the AS-binding check explicit in the optional Submission Evidence companion. No supported evidence type currently exercises this check; verification must include absent, wrong-AS, invalid, and valid bindings when a concrete type is implemented."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry with no intended-AS binding",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry whose intended-AS binding is invalid",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry bound to another authorization server, and accepts the same capture bound to this one",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#901 review; #939 slice 2a-2. mission-request-provenance is the first supported intent-bound type: it binds its intended AS by aud, a string equal to this AS's issuer identifier (request-provenance#verification steps 5 and 6). At the PAR endpoint an assertion with no aud, with an aud of 42, an array or an object, and one bound to another AS are each refused invalid_mission_intent_evidence, and the same capture bound to this AS is accepted. A push is refused before any derivation, which the reference runs only at the rendering and the decision. Mutations: removing the aud type check or the aud comparison fails these tests."
   },
   {
    "id": "submission-evidence.verification-bounds.cost-bounded",
@@ -92912,9 +92931,21 @@
      "name": "the verification-work bound at PAR (@spec submission-evidence#verification-bounds, #1962) > refuses invalid_request a submission whose evidence verification would pass the configured bound, beyond the size and count bounds, before the excess work is done, and accepts one at the bound",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "verification work at PAR (@spec submission-evidence#verification-bounds, request-provenance#verification, #1962, D1151) > verifies one entry within a verification-work bound of 1: the unit the dispatch charges before verify covers the type's one signature verification",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "verification work at PAR (@spec submission-evidence#verification-bounds, request-provenance#verification, #1962, D1151) > refuses invalid_request at a verification-work bound of 0, and no signature verification runs",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work."
+   "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work. #939 slice 2a-2 (D1151): the real mission-request-provenance verifier performs exactly one signature verification, fetches no key and walks no chain, so it charges nothing beyond the dispatch's unit: one entry verifies at PAR at a bound of 1, and at a bound of 0 the push is refused invalid_request with no signature verified (the verifier's calls are counted). A resume at a later step verifies nothing and is charged nothing. Mutation: charging a further unit refuses the entry at a bound of 1."
   },
   {
    "id": "request-provenance.trust.no-header-key",
@@ -92934,7 +92965,7 @@
     "normative": "An assertion carrying jku, x5u, jwk, or x5c is refused with invalid_mission_intent_evidence, and no key is fetched from or taken from those parameters."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -92959,9 +92990,33 @@
      "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-x5c: refused at step 2",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "no key from the assertion at PAR (@spec request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion whose header carries jku, and fetches nothing from it",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "no key from the assertion at PAR (@spec request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion whose header carries x5u, and fetches nothing from it",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "no key from the assertion at PAR (@spec request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion whose header carries jwk, even the configured key under a signature that verifies",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "no key from the assertion at PAR (@spec request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion whose header carries x5c",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. The module refuses at step 2, before any key lookup, an assertion whose protected header carries jku, x5u, jwk or x5c; neg-header-jwk carries the configured public key itself under a signature that verifies, so presence alone refuses. The signer's key comes only from the trust configuration by iss and kid, and the module performs no fetch. Mutation: skipping the presence check fails all four cases (each then accepted). partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. The module refuses at step 2, before any key lookup, an assertion whose protected header carries jku, x5u, jwk or x5c; neg-header-jwk carries the configured public key itself under a signature that verifies, so presence alone refuses. The signer's key comes only from the trust configuration by iss and kid, and the module performs no fetch. Mutation: skipping the presence check fails all four cases (each then accepted). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. The jku and x5u cases name a live key server that would answer with the configured key, and assert it is never asked; the jwk case carries the configured key under a signature that verifies. Mutation: skipping the presence check accepts all four at the endpoint. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.trust.key-purpose-mapping",
@@ -92981,7 +93036,7 @@
     "normative": "An assertion verified under a configured signer's key that the AS configuration does not map to this evidence type is refused with invalid_mission_intent_evidence, even when the key's use is sig and its key_ops include verify."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -92994,9 +93049,15 @@
      "name": "the request-provenance trust configuration loader (@spec request-provenance#trust-configuration, request-provenance#verification, #939) > loads the vector's trust configuration, keeping only each key's curve and coordinates, and accepts use and key_ops without giving them effect",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the key's purpose comes from configuration at PAR (@spec request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion verified under a configured key the configuration maps to another evidence type, though its JWK carries use sig and key_ops verify",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. A configured key whose evidence_types does not name mission-request-provenance is refused at step 3 although its JWK carries use sig and key_ops verify; the loader accepts use and key_ops and keeps only kty, crv, x and y, and the module imports the key from those alone. Mutations: skipping the evidence_types check accepts the case; returning the JWK as configured instead of its curve and coordinates fails the loader test. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. A configured key whose evidence_types does not name mission-request-provenance is refused at step 3 although its JWK carries use sig and key_ops verify; the loader accepts use and key_ops and keeps only kty, crv, x and y, and the module imports the key from those alone. Mutations: skipping the evidence_types check accepts the case; returning the JWK as configured instead of its curve and coordinates fails the loader test. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. An assertion the intake signer signs with its configured key whose evidence_types names another type, and whose JWK carries use sig and key_ops verify, is refused. Mutations: skipping the evidence_types check, or taking the signer's first key whatever the kid, accepts it at the endpoint. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.entry-shape",
@@ -93017,7 +93078,7 @@
     "normative": "An entry with any member other than type and assertion, or a non-string assertion, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93036,9 +93097,21 @@
      "name": "step 1, the entry shape (@spec request-provenance#entry, request-provenance#verification, #939) > refuses an entry whose assertion is an object at step 1",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the evidence entry at PAR (@spec request-provenance#entry, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry carrying a member beside type and assertion",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the evidence entry at PAR (@spec request-provenance#entry, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry whose assertion is not a string",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 1 refuses an entry with any member beside type and assertion, and a non-string assertion; the same describe block also refuses an entry without either member, of another type, an array or null, with an accepted control. Mutations: dropping the closed member check accepts the third-member entry; dropping the string check makes verification throw instead of resolving to a step 1 refusal. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 1 refuses an entry with any member beside type and assertion, and a non-string assertion; the same describe block also refuses an entry without either member, of another type, an array or null, with an accepted control. Mutations: dropping the closed member check accepts the third-member entry; dropping the string check makes verification throw instead of resolving to a step 1 refusal. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. An entry with a third member, and entries whose assertion is a number or an object, are refused at step 1 (PAR defers type dispatch to the evidence step). Mutations: dropping the closed member check, or the string check, fails the endpoint tests; the latter turns the refusal into a verifier error that names no step. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.header",
@@ -93059,7 +93132,7 @@
     "normative": "An assertion whose protected typ is not exactly mission-request-provenance+jwt, whose alg is none, or that lacks kid, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93084,9 +93157,27 @@
      "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-kid-absent: refused at step 2",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the protected header at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a protected typ other than exactly mission-request-provenance+jwt",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the protected header at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence alg none",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the protected header at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a protected header without kid",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 2 compares typ exactly, refuses alg none and an absent kid, and decodes the header and claims strictly (UTF-8, base64url, no duplicated member names). Mutations: skipping the typ comparison accepts both typ cases; skipping the alg none or kid check moves the refusal to step 3, failing the step assertion. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 2 compares typ exactly, refuses alg none and an absent kid, and decodes the header and claims strictly (UTF-8, base64url, no duplicated member names). Mutations: skipping the typ comparison accepts both typ cases; skipping the alg none or kid check moves the refusal to step 3, failing the step assertion. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. A typ of JWT or a case variant, an unsecured alg none JWS, and a header without kid are refused at step 2. Mutations: skipping each check fails its endpoint test (the alg none and kid cases then refuse at step 3 for another reason). tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.signer-and-key-scope",
@@ -93107,7 +93198,7 @@
     "normative": "An assertion from a signer the AS configuration does not authorize, under a kid the configuration does not map to this evidence type, or with an alg the key does not permit, is refused with invalid_mission_intent_evidence; an assertion with an invalid signature is refused likewise."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93144,9 +93235,39 @@
      "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-altered-claim: refused at step 4",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the signer, its key and the signature at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion from a signer the configuration does not authorize",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the signer, its key and the signature at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a kid the configuration does not map to the signer",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the key's purpose comes from configuration at PAR (@spec request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion verified under a configured key the configuration maps to another evidence type, though its JWK carries use sig and key_ops verify",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the signer, its key and the signature at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an alg the key does not permit",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the signer, its key and the signature at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion whose signature does not verify",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 3 looks the signer up by the iss claim and the protected kid in configuration only, refuses a key not mapped to this type, and checks alg against the key's algs before step 4 verifies with jose under that one algorithm. Strictness the draft implies, tested in the same block and not cited here: step 4 confirms the verified payload is the claims set the later steps read, which refuses a b64 false JWS. Mutations: taking the first signer or first key regardless of iss or kid accepts the unknown-iss and unmapped-kid cases; skipping the alg check moves neg-alg-hs256 to step 4; bypassing signature verification accepts neg-altered-claim; skipping the payload comparison accepts the (uncited) b64 false JWS. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 3 looks the signer up by the iss claim and the protected kid in configuration only, refuses a key not mapped to this type, and checks alg against the key's algs before step 4 verifies with jose under that one algorithm. Strictness the draft implies, tested in the same block and not cited here: step 4 confirms the verified payload is the claims set the later steps read, which refuses a b64 false JWS. Mutations: taking the first signer or first key regardless of iss or kid accepts the unknown-iss and unmapped-kid cases; skipping the alg check moves neg-alg-hs256 to step 4; bypassing signature verification accepts neg-altered-claim; skipping the payload comparison accepts the (uncited) b64 false JWS. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. An assertion re-signed with an unconfigured iss, one naming another signer's kid, one under a configured key mapped to another type, one under HS256, and one whose claims were altered after signing are each refused. Mutations: taking the first signer or the first key, skipping the evidence_types or algs check, or skipping signature verification each fails its endpoint test. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.claims-and-audience",
@@ -93167,7 +93288,7 @@
     "normative": "An assertion missing a required claim, carrying a claim of the wrong type, or whose aud is an array or any value other than this AS's issuer identifier, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93306,9 +93427,33 @@
      "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a numeric capture_id",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "required claims and the audience at PAR (@spec request-provenance#assertion, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion missing any required claim",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "required claims and the audience at PAR (@spec request-provenance#assertion, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a required claim of the wrong type",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "required claims and the audience at PAR (@spec request-provenance#assertion, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an aud that is an array",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "required claims and the audience at PAR (@spec request-provenance#assertion, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an aud naming another authorization server",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. Step 5 checks every required claim's presence and defined type (aud a string, NumericDates finite numbers, presenter, originator and channel objects with their typed members, capture_id a string when present) and step 6 compares aud exactly. An absent iss refuses at step 3, where the signer lookup by iss finds no signer (the vector case moved from step 5; see signer-and-key-scope). Strictness the draft implies, tested in the same block and not cited here: non-empty strings, and request_digest as hmac-sha-256: and the canonical unpadded base64url of 32 bytes. Mutations: removing each claim's check accepts its case or moves the refusal to a later step (or makes verification throw), failing the step assertion; removing the aud comparison accepts neg-aud-other-as. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. Step 5 checks every required claim's presence and defined type (aud a string, NumericDates finite numbers, presenter, originator and channel objects with their typed members, capture_id a string when present) and step 6 compares aud exactly. An absent iss refuses at step 3, where the signer lookup by iss finds no signer (the vector case moved from step 5; see signer-and-key-scope). Strictness the draft implies, tested in the same block and not cited here: non-empty strings, and request_digest as hmac-sha-256: and the canonical unpadded base64url of 32 bytes. Mutations: removing each claim's check accepts its case or moves the refusal to a later step (or makes verification throw), failing the step assertion; removing the aud comparison accepts neg-aud-other-as. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. An assertion missing each of aud, iat, exp, jti, intent_hash, presenter, originator, channel, captured_at and request_digest (an absent iss finds no signer, signer-and-key-scope), with a string iat, originator or captured_at, with an aud array, or bound to another AS is refused. Mutations: removing the aud, iat, originator or request_digest check, or the aud comparison, fails the endpoint tests. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.time-window",
@@ -93329,7 +93474,7 @@
     "normative": "Outside the declared clock-skew allowance, an assertion with iat in the future, exp passed, exp minus iat above the declared maximum lifetime, captured_at later than iat, or iat minus captured_at above the declared maximum capture age, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93378,9 +93523,39 @@
      "name": "step 7, the time window (@spec request-provenance#verification, #939) > accepts at each edge of the window: iat at the skew allowance ahead, exp just inside the allowance, lifetime and capture age at their maxima, captured_at at iat",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the time window at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an iat in the future beyond the clock-skew allowance",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the time window at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an assertion whose exp passed beyond the clock-skew allowance",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the time window at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence exp minus iat above the maximum assertion lifetime",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the time window at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a captured_at later than iat",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the time window at PAR (@spec request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence iat minus captured_at above the maximum capture age",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. The clock-skew allowance applies where the AS's clock meets the signer's (iat not in the future, exp not passed); the lifetime, the capture age and captured_at against iat compare the signer's own claims and take none, a reading of the step's opening clause. Strictness the draft implies, tested in the same block and not cited here: exp strictly after iat, or the lifetime check would pass a negative difference. Mutations: removing each check accepts its case; exp > instead of >= at the skew edge, iat >= instead of >, and >= instead of > at the lifetime and capture-age maxima each fail the edge tests; allowing skew on captured_at fails the one-second case; dropping exp after iat accepts both (uncited) ordering cases. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. The clock-skew allowance applies where the AS's clock meets the signer's (iat not in the future, exp not passed); the lifetime, the capture age and captured_at against iat compare the signer's own claims and take none, a reading of the step's opening clause. Strictness the draft implies, tested in the same block and not cited here: exp strictly after iat, or the lifetime check would pass a negative difference. Mutations: removing each check accepts its case; exp > instead of >= at the skew edge, iat >= instead of >, and >= instead of > at the lifetime and capture-age maxima each fail the edge tests; allowing skew on captured_at fails the one-second case; dropping exp after iat accepts both (uncited) ordering cases. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. With a declared skew of 5 s and a maximum lifetime and capture age of 30 s, assertions with iat 7 s ahead, exp 6 s past, a 31 s lifetime and a 31 s capture age, and one re-signed with captured_at after iat, are each refused. Mutations: removing each check fails its endpoint test. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.signer-scope",
@@ -93401,7 +93576,7 @@
     "normative": "An assertion whose originator or channel.type lies outside the signer's configured scope, or from a user-device signer whose key the AS has not bound to that originator, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93426,9 +93601,27 @@
      "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > accepts a user-device signer's assertion for its bound originator and refuses one bound to another at step 8",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the signer's scope at PAR (@spec request-provenance#verification, request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an originator outside the signer's configured scope",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the signer's scope at PAR (@spec request-provenance#verification, request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a channel type outside the signer's configured scope",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the signer's scope at PAR (@spec request-provenance#verification, request-provenance#trust-configuration, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a user-device signer's assertion for an originator the AS did not bind its key to, and accepts the bound one",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. An originator entry matches on iss and, where it carries sub, on sub; a signer whose one originator carries sub is a user-device signer, and that entry is the AS's own binding of its keys to that originator (the loader refuses sub beside another originator). channel.type must be in the signer's channel_types. Mutations: dropping the originator check accepts neg-originator-out-of-scope and the other-sub case; matching on iss alone fails both user-device tests; dropping the channel check accepts neg-channel-out-of-scope. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. An originator entry matches on iss and, where it carries sub, on sub; a signer whose one originator carries sub is a user-device signer, and that entry is the AS's own binding of its keys to that originator (the loader refuses sub beside another originator). channel.type must be in the signer's channel_types. Mutations: dropping the originator check accepts neg-originator-out-of-scope and the other-sub case; matching on iss alone fails both user-device tests; dropping the channel check accepts neg-channel-out-of-scope. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. An originator from another issuer, a channel type outside the signer's channel_types, and a user-device signer's assertion for an originator other than the one its key is bound to are each refused, and the bound originator is accepted. Mutations: dropping the originator check, matching on iss alone, or dropping the channel check fails its endpoint test. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.intent-and-presenter",
@@ -93449,7 +93642,7 @@
     "normative": "An assertion whose intent_hash differs from the submitted Intent's provisional intent_hash, or whose presenter does not match the presenter the containing exchange established, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93498,9 +93691,27 @@
      "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > refuses at step 9 a cnf that carries a member beyond the established key, compared exactly",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an intent_hash that is not the submitted Intent's",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a presenter other than the client the push authenticated",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a presenter carrying cnf, since a push establishes no confirmation key (D1119 Q3)",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. intent_hash must equal the provisional intent_hash of the submitted Intent and presenter.client_id the client the exchange established. D1119 (Q3): a presenter carrying cnf where the exchange established no confirmation key does not agree, and no key is inferred; where it established one, the assertion's cnf is required and compared exactly. Assertions minted live by @mission/request-provenance, with and without cnf, are accepted where they match (controls in the same block). Mutations: removing each comparison accepts its cases; comparing jkt alone accepts the extra-member case; dropping the required-cnf check makes verification throw instead of resolving to a step 9 refusal. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
+   "notes": "#939 slice 2a-1. intent_hash must equal the provisional intent_hash of the submitted Intent and presenter.client_id the client the exchange established. D1119 (Q3): a presenter carrying cnf where the exchange established no confirmation key does not agree, and no key is inferred; where it established one, the assertion's cnf is required and compared exactly. Assertions minted live by @mission/request-provenance, with and without cnf, are accepted where they match (controls in the same block). Mutations: removing each comparison accepts its cases; comparing jkt alone accepts the extra-member case; dropping the required-cnf check makes verification throw instead of resolving to a step 9 refusal. Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader. #939 slice 2a-2 adds the endpoint witness: the type registered on the AS through the requestProvenance build option, assertions minted live by @mission/request-provenance on a controlled clock (altered and re-signed under the same configured key where a conforming intake cannot produce the case), each refused at the PAR endpoint with invalid_mission_intent_evidence. An assertion minted for another Intent, one naming another client, and one carrying cnf (a push establishes no confirmation key, D1119 Q3) are each refused. The presenter at PAR is the authenticated client alone, never a request parameter; no carrier that establishes a confirmation key accepts the type yet. Mutations: removing the intent_hash, client or unestablished-cnf comparison fails its endpoint test. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.verification.declared-bounds",
@@ -93585,9 +93796,16 @@
     "normative": "Of concurrent submissions presenting the same (iss, jti), at most one reserves the pair; every other is refused as replay with invalid_mission_intent_evidence."
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > of two concurrent pushes presenting one assertion, exactly one is accepted and the other is refused as replay",
+     "level": "concurrency",
+     "surface": "par"
+    }
+   ],
+   "notes": "#939 slice 2a-2. Step 10 reserves (iss, jti) with its acceptance record in one synchronous check and insert (InMemoryRequestProvenanceStore). Two pushes of one assertion, held by the test's store until both reach step 10 and then released in one turn, yield exactly one 201; the other is refused invalid_mission_intent_evidence as replay. Mutation: checking, awaiting, then inserting accepts both. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
   },
   {
    "id": "request-provenance.replay.release-on-refusal",
@@ -93607,9 +93825,46 @@
     "normative": "After a submission carrying a valid assertion is refused before acceptance for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119: release applies only to a refusal before acceptance; a refusal after it releases nothing (`request-provenance.replay.no-release-after-acceptance`)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > releases the reservation when another evidence entry fails, so the same assertion is accepted next",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > releases the reservation when a later entry passes the verification-work bound, so the same assertion is accepted next",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > releases the reservation when saving the pushed request fails after verification, so the same assertion is accepted next",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > releases the reservation when an exception escapes after the 201 was set, so the same assertion is accepted next",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > releases the reservation when another entry fails, before the carrier settles the scope",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > releases the reservation when a later entry passes the verification-work bound, before the carrier settles the scope",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-2. A push refused before acceptance for another entry failing, for a later entry passing the verification-work bound, for a failed save of the pushed request, or for an exception after the provider set its 201, releases its reservation, and the same assertion is accepted next. The dispatch releases the scope on any refusal inside the evidence loop (unit tests), and the PAR wrapper releases on every outcome but acceptance, in a finally. Mutations: dropping the dispatch's release fails the unit tests (the endpoint tests still pass, since the wrapper releases too); releasing only on a normal return fails the exception test; committing when verification passes fails the save test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
   },
   {
    "id": "request-provenance.replay.accepted-no-reverification",
@@ -93629,9 +93884,34 @@
     "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts; the AS's authorization, required-evidence and approval checks still apply at each step"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the authorization endpoint, the rendering and the decision succeed after exp and the capture age pass, verify nothing again, and record the push's verification time and facts",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-deferred.test.ts",
+     "name": "deferred activation of an accepted push (@spec request-provenance#replay, deferred-approval#deferred-sequencing, #939 slice 2a-2) > activates after exp and the capture age pass, verifying nothing again and recording the push's verification time and facts",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the required-evidence check still applies: a later step whose submission no longer presents the required type is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > resumes an accepted entry with no verification work, and refuses a record that names another authorization server, or a step presenting a confirmation key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-2. The authorization endpoint, the rendering and the decision of an accepted push, and a deferred activation, verify no signature: the counted verifier runs once, at the push. The committed jti does not refuse them, and the Mission records the push's verified_at, artifact_hash and facts from the acceptance record. A resume is charged no verification work. The required-evidence check still applies at a later step (a submission that no longer presents the required type is refused); the approval checks still apply (an Approver who is not authenticated is refused at the rendering, uncited: no defect in this slice reaches that gate). Mutations: re-verifying instead of resuming, or skipping the required-evidence check on a resume, fails these tests. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
   },
   {
    "id": "request-provenance.replay.acceptance-record-required",
@@ -93651,9 +93931,70 @@
     "normative": "a later step of an accepted submission whose acceptance record is missing, or does not match the submission's intended AS, exact Intent, established presenter or unchanged evidence entry, refuses the submission"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the authorization endpoint refuses invalid_mission_intent_evidence when the acceptance record is missing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the rendering refuses invalid_mission_intent_evidence when the acceptance record is missing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the rendering refuses invalid_mission_intent_evidence when the interaction names another submission than the one accepted",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the rendering refuses invalid_mission_intent_evidence when the Intent differs from the one accepted",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the rendering refuses invalid_mission_intent_evidence when the presenter differs from the one accepted",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the rendering refuses invalid_mission_intent_evidence when the assertion differs from the one accepted under the same iss and jti",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the decision refuses invalid_mission_intent_evidence when the acceptance record is missing, and creates no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-deferred.test.ts",
+     "name": "deferred activation of an accepted push (@spec request-provenance#replay, deferred-approval#deferred-sequencing, #939 slice 2a-2) > refuses the activation when the pending approval names no accepted submission: access_denied, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-deferred.test.ts",
+     "name": "deferred activation of an accepted push (@spec request-provenance#replay, deferred-approval#deferred-sequencing, #939 slice 2a-2) > refuses the activation when the pending approval names another submission than the one accepted: access_denied, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > resumes an accepted entry with no verification work, and refuses a record that names another authorization server, or a step presenting a confirmation key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-2. Each later step (the authorization endpoint's re-validation of the stored pushed request, the rendering, the decision, a deferred activation) finds the committed record by the assertion's (iss, jti) and refuses invalid_mission_intent_evidence when it is missing (as in an in-memory store after a restart), belongs to another submission than the step's par:<jti>, or binds another Intent, presenter or assertion bytes; a deferred activation whose pending approval names no accepted submission, or another, is refused. The intended AS cannot differ alone at an endpoint, since the provisional intent_hash commits the issuer; a unit test of the dispatch proves that comparison alone, and a step presenting a confirmation key the push did not establish. Mutations: removing each comparison, or treating a missing record as accepted, fails its test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
   },
   {
    "id": "request-provenance.replay.expiry-after-acceptance",
@@ -93673,9 +94014,22 @@
     "normative": "an accepted submission whose assertion expires, or whose capture passes the maximum capture age, before its approval completes is not refused for that reason, while its own pending-operation lifetime still applies"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > the authorization endpoint, the rendering and the decision succeed after exp and the capture age pass, verify nothing again, and record the push's verification time and facts",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-deferred.test.ts",
+     "name": "deferred activation of an accepted push (@spec request-provenance#replay, deferred-approval#deferred-sequencing, #939 slice 2a-2) > activates after exp and the capture age pass, verifying nothing again and recording the push's verification time and facts",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#939 slice 2a-2. On a controlled clock the authorization endpoint, the rendering and the decision run 40 s after the push, past exp plus the 5 s allowance and past the capture's 30 s maximum age, and a deferred activation two minutes after; none is refused for it. The pending operations' own lifetimes still apply: past the pushed request's 60 s the authorization endpoint refuses the request_uri though the acceptance record remains (uncited: oidc-provider's lifetime, which no defect in this slice reaches). A committed record is kept until the later of exp plus the allowance and, from acceptance, the longest chain of pending operations an accepted push can begin (requestProvenanceAcceptanceRetention: the pushed request, the interaction with the provider's clock tolerance, a deferred code and its pending approval, and the allowance). Mutation: re-verifying instead of resuming refuses at step 7. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
   },
   {
    "id": "request-provenance.replay.no-release-after-acceptance",
@@ -93695,9 +94049,16 @@
     "normative": "after an accepted submission is refused later, for example by an approval denial, a new submission presenting the same assertion is refused as replay"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > refuses as replay an assertion whose accepted push the Approver then denied",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#939 slice 2a-2. After a push is accepted and the Approver denies it at the decision, a new push of the same assertion is refused invalid_mission_intent_evidence as replay: nothing releases a committed admission scope (SubmissionAdmission), and no later step holds one. Mutation: a committed scope that still releases accepts the new push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
   },
   {
    "id": "request-provenance.replay.committed-refused",
@@ -93717,9 +94078,22 @@
     "normative": "On a surface without a creation idempotency fingerprint, such as PAR, presenting an assertion whose (iss, jti) an accepted submission committed is refused as replay with invalid_mission_intent_evidence until at least exp plus the clock-skew allowance."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "mission-request-provenance at PAR (@spec request-provenance#verification, request-provenance#replay, #939 slice 2a-2) > accepts an assertion minted by @mission/request-provenance for the submitted Intent and the authenticated client, with no cnf, and commits its (iss, jti) to the push",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > refuses as replay an assertion an accepted push committed, until exp plus the clock-skew allowance",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#939 slice 2a-2. The PAR wrapper commits the push's admission scope when the provider answers 201 with the request_uri of the pushed request it saved, under par:<jti>. A second push of the accepted assertion is refused invalid_mission_intent_evidence as replay, and again one second before exp plus the allowance, where step 7 still passes. Mutation: a committed scope that still releases accepts the second push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
   },
   {
    "id": "request-provenance.replay.creation-recovery-original-evidence",
@@ -93783,7 +94157,7 @@
     "normative": "The accepted entry's recorded facts are exactly signer {iss, kid}, originator, channel, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti), and capture_id when present; no fact is recorded from an undefined claim."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
@@ -93814,9 +94188,21 @@
      "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > accepts an assertion without cnf where the exchange established the client alone, as a PAR does, and records its facts",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the recorded facts (@spec request-provenance#recorded-facts, #939 slice 2a-2) > records on the Mission exactly signer, originator, channel, captured_at as RFC 3339, request_digest, assertion_id and capture_id, and nothing from an undefined claim or member",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the recorded facts (@spec request-provenance#recorded-facts, #939 slice 2a-2) > records no capture_id when the assertion carries none",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. On acceptance the module returns facts built afresh from the defined members only: signer {iss, kid}, originator {iss, sub}, channel limited to type, acr, amr and auth_time, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti) and capture_id when present; undefined claims and undefined nested members record nothing. Mutations: adding a member, dropping capture_id, emitting capture_id when absent, recording channel or originator as given, recording undefined claims, recording captured_at as a NumericDate, and dropping the signer kid each fail a cited test. partial: the module returns the facts; the Mission Record element that lands them (submission_evidence, artifact_hash, verified_at) is the dispatch's and is witnessed with the wiring PR at the endpoint."
+   "notes": "#939 slice 2a-1. On acceptance the module returns facts built afresh from the defined members only: signer {iss, kid}, originator {iss, sub}, channel limited to type, acr, amr and auth_time, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti) and capture_id when present; undefined claims and undefined nested members record nothing. Mutations: adding a member, dropping capture_id, emitting capture_id when absent, recording channel or originator as given, recording undefined claims, recording captured_at as a NumericDate, and dropping the signer kid each fail a cited test. #939 slice 2a-2: through the PAR endpoint, the rendering and the decision, the Mission Record's submission_evidence element for an assertion re-signed with an undefined claim and undefined members of originator and channel carries exactly the defined facts, captured_at as an RFC 3339 timestamp and capture_id equal to the intake's; without capture_id none is recorded. The element's verified_at and artifact_hash are the push's (replay.accepted-no-reverification). Mutations: recording every claim, recording originator and channel as given, dropping capture_id, emitting one when absent, recording captured_at as a NumericDate, or dropping the signer kid each fails an endpoint test. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.recorded-facts.no-content",
@@ -93836,16 +94222,22 @@
     "normative": "This evidence type's recorded facts carry neither the instruction nor the capture secret."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
      "name": "recorded facts are exactly the defined members (@spec request-provenance#recorded-facts, request-provenance#assertion, #939) > records no value of the vector's content-committing claim, nor the instruction, its media type or the capture secret",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the recorded facts (@spec request-provenance#recorded-facts, #939 slice 2a-2) > records neither the instruction nor the capture secret, even where an undefined claim carries them",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-1. The module receives neither the instruction nor the capture secret, and records only the defined facts; the cited test runs the vector case whose undefined claim carries an unsalted SHA-256 of the instruction and asserts the facts carry neither that value, the instruction, its media type nor the secret. Mutation: recording undefined claims fails it. A companion live test (records facts that carry neither the instruction nor the capture secret) holds the secret an intake drew; no module mutation can reach it, so it is not cited. partial: unit level; the endpoint witness lands with the wiring PR."
+   "notes": "#939 slice 2a-1. The module receives neither the instruction nor the capture secret, and records only the defined facts; the cited test runs the vector case whose undefined claim carries an unsalted SHA-256 of the instruction and asserts the facts carry neither that value, the instruction, its media type nor the secret. Mutation: recording undefined claims fails it. A companion live test (records facts that carry neither the instruction nor the capture secret) holds the secret an intake drew; no module mutation can reach it, so it is not cited. #939 slice 2a-2: through the PAR endpoint and the approval, an assertion re-signed with undefined claims carrying the instruction and the capture secret records neither, nor the secret in hex, base64url or base64. Mutation: recording undefined claims fails it. tested at the row's surface and role."
   },
   {
    "id": "request-provenance.assertion.header-no-key",
