@@ -34291,12 +34291,43 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an action that satisfies more than one class predicate is decided under the requirements of every class whose predicate it satisfies (PDP gate, parameter binding, freshness, action-bound approval, evidence); none is dropped because the action is assigned one of those classes, and an exception stated for one class or predicate relieves only the requirement it names"
+    "normative": "an action that satisfies more than one class predicate is decided under the requirements of every class whose predicate it satisfies, and none is dropped because the action is assigned one of those classes: a further class's freshness bound, action-bound approval and work-item attribution apply to it, and Decision Evidence records every applied class; an exemption stated for one class (a no-active-freshness posture) relieves only the requirement it names, never another applicable class's bound"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Not implemented: the reference carries one action class per operation (src/config/enforcement-scope.json operation profiles' action_class; the static per-tool label in mcp-payments/src/pep.ts) and looks up posture by that single class (services/pdp/src/runtime-posture.ts postureStalenessBound and executionLeaseMaxSeconds). payments:remittance.send is external_commitment (max_staleness_seconds 60) although a sent remittance also satisfies the irreversible predicate (irreversible_action, 30), so its decision takes the looser bound. Planned surface: an operation profile declares every class whose predicate it satisfies and the PDP applies each class's requirements; witness: a two-predicate operation decided under the tighter staleness bound and every class's approval and evidence requirements, mutation-proved by restoring single-class lookup."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses remittance.send on a 45-second-old observation: the irreversible class's 30-second bound applies, although 60 seconds is the external-commitment bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > caps a fresh remittance permit at the tighter window: valid 30 seconds past the observation, not the external-commitment 60, single use, with every applied class recorded",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > requires the action-bound approval a further class carries, which the assigned class alone would not",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses when a non-comparable duty of a further class is unmet: work-item attribution claimed for irreversible_action",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > an exemption stated for one class relieves only what it names: audit_only's no-freshness posture does not relieve a further write class's bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement; payments:remittance.send declares irreversible_action beside its assigned external_commitment). Mutation proofs: resolving the set to the assigned class alone fails all five witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness."
   },
   {
    "id": "runtime.classification.multi-predicate-bounds",
@@ -34317,9 +34348,34 @@
     "normative": "for an action that satisfies more than one class predicate, comparable bounds (a staleness bound, a permit validity window, an execution lease) resolve to the tighter one; requirements that are not comparable all apply, and the action is refused when it cannot satisfy every one of them"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Depends on the multi-class declaration planned under runtime.classification.multi-predicate-no-waiver: the reference resolves one class per action, so there is no set of applicable requirements to compare or refuse on."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses remittance.send on a 45-second-old observation: the irreversible class's 30-second bound applies, although 60 seconds is the external-commitment bound",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > caps a fresh remittance permit at the tighter window: valid 30 seconds past the observation, not the external-commitment 60, single use, with every applied class recorded",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > takes the tightest published execution lease across the classes that apply",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses when a non-comparable duty of a further class is unmet: work-item attribution claimed for irreversible_action",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 (D1175): the staleness bound and the permit window resolve to the tightest across the set (30 s for remittance.send, not the external-commitment 60 s); the executing PEP takes the tightest published lease through executionLeaseMaxSecondsOver, witnessed at unit level with a statement whose two leases differ; a further class's non-comparable duty (work-item attribution) refuses when unmet. Mutation proofs: the loosest staleness window fails the 45-second and permit-window witnesses; the loosest lease fails the lease witness; attribution read from the assigned class alone fails the work-item witness."
   },
   {
    "id": "runtime.classification.unclassifiable-defaults-to-widest",
@@ -51946,9 +52002,28 @@
     "normative": "a Decision Evidence record on an action to which more than one runtime action class applies carries action_classes: distinct known class names, every class whose requirements the PDP applied, including action_class; a record on an action with one applicable class omits it, and action_class remains the assigned class"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1994 (D1175): the companion member that preserves the applicable class set."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > refuses remittance.send on a 45-second-old observation: the irreversible class's 30-second bound applies, although 60 seconds is the external-commitment bound",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > caps a fresh remittance permit at the tighter window: valid 30 seconds past the observation, not the external-commitment 60, single use, with every applied class recorded",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "an action several class predicates apply to takes every applicable class's requirements (@spec runtime#classification, #1735, #1994) > omits action_classes on a decision only one class applies to",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1994 (D1175): the companion member that preserves the applicable class set. Mutation proofs: dropping it from the signed object fails the denial and permit witnesses; emitting a one-class set (and accepting it) fails the omission witness."
   },
   {
    "id": "evidence.decision.credential-verified-claims-only",
@@ -58220,9 +58295,28 @@
     "normative": "a step whose operation satisfies more than one runtime class predicate carries a reversibility class that meets the minimum each of those runtime classes maps to; among irreversible_action, external_commitment and privileged_administration, any one meets the minimum of another"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference's deriveReversibility and enforceReversibilityFloor (src/packages/orchestration/src/reversibility.ts) floor from a single runtimeActionClass, so a step has no input naming a second satisfied class. The three high classes are ranked there only to break ties, which raises an irreversible_action proposal for an external_commitment operation: stricter than this text requires, not a violation. Planned: accept the set of satisfied runtime classes and floor against each."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > raises a trusted reversible_write proposal to a high class when external_commitment also applies",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > keeps a trusted irreversible_action proposal where external_commitment also applies: any of the three high classes meets another's minimum",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/orchestration/test/reversibility-multi-class.test.ts",
+     "name": "a step several runtime class predicates apply to meets each class's minimum (@spec orchestration#reversibility, #1735, #1994) > adopts no untrusted proposal: the floor over every applicable class governs",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1994 (D1175): deriveReversibility and enforceReversibilityFloor take every applicable runtime class and use tiers (read_only, reversible_write, then the three high classes together), so no order among the high classes is introduced; where several floors share the top tier, the first in the given order is taken, which decides nothing the rule governs. Mutation proofs: ignoring the further classes fails the raise and untrusted witnesses; restoring the old total rank (external_commitment above irreversible_action) replaces the trusted irreversible_action proposal and fails the keep witness."
   },
   {
    "id": "template.dispatch.idempotent-retry-returns-committed",
