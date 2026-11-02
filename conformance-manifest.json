@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "945c21650df7cc04b696e828bf615320f2a0b254",
-    "content_sha256": "197c696f7c2573ce60394392b49dd341941c07408d9d12df2f5ee4ee1dda6699"
+    "revision": "4a3cb822c54f73a3ec92bec0bcc527e8a4422d90",
+    "content_sha256": "c0ff01463a2ea4ab3baba623c2188d793a41824c15fa618b642a068e6fd9bb1b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -90635,7 +90635,7 @@
    "id": "core.other-types.derived-mission-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "transformation-capabilities",
-   "text": "A Mission created from earlier authority, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a standing consent ({{mission-creating-paths}}), does not reassign the original approved audience of an entry it inherits: the entry keeps that of the authority it derives from",
+   "text": "A Mission created from earlier authority, such as one created from an existing Mission's authority ({{grant-binding-related}}) or under a standing consent ({{mission-creating-paths}}), does not reassign the original approved audience of an entry it inherits: the entry keeps that of the authority it derives from",
    "role": "AS",
    "strength": "stated",
    "applicability": {
