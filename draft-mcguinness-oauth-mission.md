@@ -2350,10 +2350,8 @@ invalidate or deactivate the Mission.
 : OPTIONAL. A string. An opaque audit correlator naming the derivation
   policy version in effect at the approval event; the policy itself does
   not travel. It is REQUIRED where a feature or profile the deployment
-  uses depends on versioned derivation-policy identification, such as
-  standing-consent recency
-  ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-  "Standing-Consent Recency"). A deployment using such a feature records
+  uses depends on versioned derivation-policy identification. A
+  deployment using such a feature records
   it from creation and never supplies a replacement value later.
 
 `approval_event_id`:

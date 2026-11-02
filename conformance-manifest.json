@@ -12779,7 +12779,7 @@
    "id": "core.mission-record.policy-version-required-where-used",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-provenance-members",
-   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Standing-Consent Recency\").",
+   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
