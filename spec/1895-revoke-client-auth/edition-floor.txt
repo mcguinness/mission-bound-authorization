@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-02T05:30:16Z
-Source repository commit: 6ed0bdddc0665cf4889c8dd5a64183d04a977b2b
+Generated: 2026-11-02T05:47:24Z
+Source repository commit: ab98855b8f5521fab8bce6e2da7774f9b0f107f3
 Member count: 7
 
 Reading order:
@@ -13031,9 +13031,7 @@ Table of Contents
 
    The wire shape of that revocation is out of scope for this document.
    A deployment-defined surface that authenticates the revoking party
-   independent of possession of any token satisfies this requirement;
-   Mission Status ([I-D.draft-mcguinness-oauth-mission-status]) defines
-   an interoperable revoke operation.
+   independent of possession of any token satisfies this requirement.
 
    When the AS establishes that the principal identified by a Mission's
    recorded subject (Section 6.2.3) has been deprovisioned, it SHOULD
@@ -16662,7 +16660,8 @@ Appendix E.  Document History
 
    *  Revocation: a deployment-defined surface satisfies the token-
       independent revocation requirement when it authenticates the
-      revoking party independent of possession of any token (#1895,
+      revoking party independent of possession of any token, and the
+      section no longer names a companion's operation for it (#1895,
       D1114).
 
    -01

@@ -7157,9 +7157,7 @@ from a party the deployment's policy authorizes (so a Mission can be
 stopped even when no refresh token is held).<a href="#section-10.2-1" class="pilcrow">¶</a></p>
 <p id="section-10.2-2">The wire shape of that revocation is out of scope for this document. A
 deployment-defined surface that authenticates the revoking party
-independent of possession of any token satisfies this requirement;
-Mission Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>)
-defines an interoperable <code>revoke</code> operation.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
+independent of possession of any token satisfies this requirement.<a href="#section-10.2-2" class="pilcrow">¶</a></p>
 <p id="section-10.2-3">When the AS establishes that the principal identified by a Mission's
 recorded <code>subject</code> (<a href="#record-principal-members" class="auto internal xref">Section 6.2.3</a>) has been
 deprovisioned, it <span class="bcp14">SHOULD</span> terminate that Mission with termination
@@ -11262,7 +11260,9 @@ D1035).<a href="#appendix-E-3.64.1" class="pilcrow">¶</a></p>
         <li class="normal" id="appendix-E-3.65">
           <p id="appendix-E-3.65.1">Revocation: a deployment-defined surface satisfies the
 token-independent revocation requirement when it authenticates the
-revoking party independent of possession of any token (#1895, D1114).<a href="#appendix-E-3.65.1" class="pilcrow">¶</a></p>
+revoking party independent of possession of any token, and the
+section no longer names a companion's operation for it (#1895,
+D1114).<a href="#appendix-E-3.65.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-E-4">-01<a href="#appendix-E-4" class="pilcrow">¶</a></p>
