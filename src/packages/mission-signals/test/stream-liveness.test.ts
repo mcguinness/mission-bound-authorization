@@ -337,25 +337,27 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
     // The receiver subscribes at T0. No SET arrives for 70 s.
     const s = stream(clock, { emitterInterval: 10, receiverInterval: 10 });
     try {
-      clock.t = T0 + 60 * S;
-      expect(s.receiver.streamLiveness(iso(clock.t))).toEqual({
-        verifiedLive: false,
-        stale: false,
-      });
-      clock.t = T0 + 61 * S;
-      expect(s.receiver.streamLiveness(iso(clock.t))).toEqual({ verifiedLive: false, stale: true });
-
       // The stream's first SET, a lifecycle event at T0+70: its per-Mission
       // bound is T0+130, but the stream has been silent for 70 s.
       clock.t = T0 + 70 * S;
       await s.commit("msn_late", 1, "active");
+      expect(s.lease("msn_late")).toBeUndefined();
       expect(s.results).toEqual([
         { status: "applied", state: "active", version: 1, rematerialize: false },
       ]);
       expect(s.receiver.viewState("msn_late")).toMatchObject({ state: "active", version: 1 });
       expect(s.receiver.streamLiveness(iso(clock.t))).toEqual({ verifiedLive: false, stale: true });
       onlyStreamLiveness(s, "msn_late", clock.t);
-      expect(s.lease("msn_late")).toBeUndefined();
+      // The silence ran from the subscription: the stream was not stale 60 s
+      // after it, and was stale from 61 s, before its first SET arrived.
+      expect(s.receiver.streamLiveness(iso(T0 + 60 * S))).toEqual({
+        verifiedLive: false,
+        stale: false,
+      });
+      expect(s.receiver.streamLiveness(iso(T0 + 61 * S))).toEqual({
+        verifiedLive: false,
+        stale: true,
+      });
 
       // The heartbeat that ends the silence does not vouch for state that
       // arrived during it.
@@ -398,9 +400,9 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
       // 61 s after the subscription, 31 s after the restart and 21 s after
       // the first SET: stale.
       clock.t = T0 + 61 * S;
+      expect(s.lease("msn_a")).toBeUndefined();
       expect(s.receiver.streamLiveness(iso(clock.t))).toEqual({ verifiedLive: false, stale: true });
       onlyStreamLiveness(s, "msn_a", clock.t);
-      expect(s.lease("msn_a")).toBeUndefined();
       // Another restart moves nothing.
       s.receiver.close();
       s.receiver = s.makeReceiver();
@@ -681,6 +683,7 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
       s.receiver.close();
       clock.t = T0 + 62 * S;
       s.receiver = s.makeReceiver({ heartbeatIntervalSeconds: 120 });
+      expect(s.lease("msn_a")).toBeUndefined();
       expect(s.receiver.heartbeatIntervalSeconds).toBe(120);
       expect(s.receiver.streamLiveness(iso(clock.t))).toEqual({
         verifiedLive: false,
@@ -689,12 +692,11 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
       });
       expect(s.receiver.viewState("msn_a")).toMatchObject({ state: "active", version: 1 });
       onlyStreamLiveness(s, "msn_a", clock.t);
-      expect(s.lease("msn_a")).toBeUndefined();
       // State that arrives before a liveness event arrives on a stale stream.
       clock.t = T0 + 63 * S;
       await s.commit("msn_b", 1, "active");
-      onlyStreamLiveness(s, "msn_b", clock.t);
       expect(s.lease("msn_b")).toBeUndefined();
+      onlyStreamLiveness(s, "msn_b", clock.t);
 
       // The heartbeat ends the stale period, not the latch.
       clock.t = T0 + 64 * S;
@@ -704,8 +706,8 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
         stale: false,
       });
       for (const m of ["msn_a", "msn_b"]) {
-        onlyStreamLiveness(s, m, clock.t);
         expect(s.lease(m)).toBeUndefined();
+        onlyStreamLiveness(s, m, clock.t);
       }
       // The control: state after that heartbeat is relied on.
       clock.t = T0 + 65 * S;
@@ -739,19 +741,19 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
       s.receiver.close();
       clock.t = T0 + 62 * S;
       s.receiver = s.makeReceiver({ maxStaleSeconds: 120 });
+      expect(s.lease("msn_a")).toBeUndefined();
       expect(s.receiver.streamLiveness(iso(clock.t))).toEqual({
         verifiedLive: false,
         stale: true,
         lastLivenessAt: new Date(T0),
       });
       onlyStreamLiveness(s, "msn_a", clock.t);
-      expect(s.lease("msn_a")).toBeUndefined();
       // A heartbeat ends the stale period; the Mission stays latched.
       clock.t = T0 + 63 * S;
       await s.heartbeat();
+      expect(s.lease("msn_a")).toBeUndefined();
       expect(s.receiver.streamLiveness(iso(clock.t)).verifiedLive).toBe(true);
       onlyStreamLiveness(s, "msn_a", clock.t);
-      expect(s.lease("msn_a")).toBeUndefined();
       expect(await s.refresh("msn_a", 1, "active")).toMatchObject({ status: "resynchronized" });
       expect(s.lease("msn_a")).toMatchObject({ state: "active", state_source: "status" });
     } finally {
@@ -790,12 +792,12 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
       live.receiver = live.makeReceiver({ heartbeatIntervalSeconds: 20 });
       clock.t = T0 + 9 * S;
       await live.heartbeat();
+      expect(live.lease("msn_a")).toBeUndefined();
       expect(live.receiver.streamLiveness(iso(clock.t))).toMatchObject({
         verifiedLive: true,
         stale: false,
       });
       onlyStreamLiveness(live, "msn_a", clock.t);
-      expect(live.lease("msn_a")).toBeUndefined();
       expect(await live.refresh("msn_a", 1, "active")).toMatchObject({ status: "resynchronized" });
       expect(live.lease("msn_a")).toMatchObject({ state: "active", state_source: "status" });
 
@@ -806,19 +808,19 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
       down.receiver.close();
       clock.t = T0 + 70 * S;
       down.receiver = down.makeReceiver({ heartbeatIntervalSeconds: 120 });
+      expect(down.lease("msn_d")).toBeUndefined();
       expect(down.receiver.streamLiveness(iso(clock.t))).toMatchObject({
         verifiedLive: false,
         stale: true,
       });
-      expect(down.lease("msn_d")).toBeUndefined();
       clock.t = T0 + 71 * S;
       await down.heartbeat();
+      expect(down.lease("msn_d")).toBeUndefined();
       expect(down.receiver.streamLiveness(iso(clock.t))).toMatchObject({
         verifiedLive: true,
         stale: false,
       });
       onlyStreamLiveness(down, "msn_d", clock.t);
-      expect(down.lease("msn_d")).toBeUndefined();
       expect(await down.refresh("msn_d", 1, "active")).toMatchObject({
         status: "resynchronized",
       });
