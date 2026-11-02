@@ -4677,9 +4677,8 @@ from a party the deployment's policy authorizes (so a Mission can be
 stopped even when no refresh token is held).
 
 The wire shape of that revocation is out of scope for this document. A
-deployment-defined authenticated surface satisfies this requirement;
-Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
-defines an interoperable `revoke` operation.
+deployment-defined surface that authenticates the revoking party
+independent of possession of any token satisfies this requirement.
 
 When the AS establishes that the principal identified by a Mission's
 recorded `subject` ({{record-principal-members}}) has been
@@ -7400,6 +7399,11 @@ resolve before interoperating.
   surface may omit each provenance element's `verified_at`, which the
   AS generates at each verification, and no other member (#1897,
   D1035).
+- Revocation: a deployment-defined surface satisfies the
+  token-independent revocation requirement when it authenticates the
+  revoking party independent of possession of any token, and the
+  section no longer names a companion's operation for it (#1895,
+  D1114).
 
 -01
 

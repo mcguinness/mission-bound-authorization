@@ -38,10 +38,13 @@ import {
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 import {
+  CLIENT_ASSERTION_TYPE,
   decodeStatusResponse,
   type LifecycleTestClient,
+  lifecycleClientAssertion,
   lifecycleRequest,
   newLifecycleClient,
+  postLifecycleForm,
 } from "./lifecycle-endpoint.helper.js";
 
 const PORT = 14797;
@@ -477,6 +480,41 @@ describe("revoke-only Lifecycle deployment: retries and terminal states (@spec s
     expect(unauthorized.json.error).toBe("not_found");
     expect(unknown.status).toBe(404);
     expect(unknown.json).toEqual(unauthorized.json);
+    expect(as.kernel.get(m.missionId)?.state).toBe("active");
+  });
+});
+
+describe("revoke-only Lifecycle deployment: the binding's token-independent revocation means (@spec status#mission-lifecycle-endpoint, mission#revocation, #1895)", () => {
+  /** A revoke from `client` under a fresh private-key JWT assertion, with no Authorization header. */
+  async function revokeByClientAuthenticationAlone(missionId: string, client: LifecycleTestClient) {
+    return postLifecycleForm(
+      ISSUER,
+      {
+        mission_id: missionId,
+        operation: "revoke",
+        nonce: crypto.randomUUID(),
+        client_assertion_type: CLIENT_ASSERTION_TYPE,
+        client_assertion: await lifecycleClientAssertion(ISSUER, client),
+      },
+      {},
+    );
+  }
+
+  it("revokes for an authorized client that presents a fresh private_key_jwt assertion and no access token, and has no grant under which it could hold a token issued under the Mission", async () => {
+    const m = await issue();
+    expect(securityTool.metadata.grant_types).toEqual([]);
+    const res = await revokeByClientAuthenticationAlone(m.missionId, securityTool);
+    expect(res.status, res.text).toBe(200);
+    expect(decodeStatusResponse(res.text).mission).toMatchObject({ state: "terminated", termination: { reason: "revoked" } });
+    expect(as.kernel.get(m.missionId)?.state).toBe("terminated");
+  });
+
+  it("refuses a client authenticated the same way but not authorized for revoke with the not-found response, leaving the Mission active", async () => {
+    const m = await issue();
+    expect(reader.metadata.grant_types).toEqual([]);
+    const res = await revokeByClientAuthenticationAlone(m.missionId, reader);
+    expect(res.status, res.text).toBe(404);
+    expect(res.json?.error).toBe("not_found");
     expect(as.kernel.get(m.missionId)?.state).toBe("active");
   });
 });
