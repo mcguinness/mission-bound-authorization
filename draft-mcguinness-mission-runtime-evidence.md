@@ -476,6 +476,15 @@ canonicalization, and integrity envelope a deployment emits.
   document records is on a consequential action, so the member is
   always present.
 
+`action_classes`:
+: REQUIRED when more than one runtime action class applies to the
+  action ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action
+  Classification"); omitted otherwise. An array of distinct strings
+  from the value space of `action_class`: every class whose
+  requirements the PDP applied, `action_class` among them.
+  `action_class` remains the class assigned to the action, which
+  `class_source` describes.
+
 `class_source`:
 : REQUIRED when `action_class` is present. A string. How the applied
   class was assigned: `default` (the runtime profile's default
