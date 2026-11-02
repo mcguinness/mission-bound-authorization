@@ -27670,6 +27670,24 @@
      "surface": "verification"
     },
     {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > never falls back to the set for a current reliance decision once the jwks_uri no longer carries a listed key; only audit verification reads it",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > continues on the jwks_uri rule alone when no set has ever been fetched and verified: nothing is held, and the current keys decide",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > keeps refusing a listed key through an outage of the set once it has verified one: a stale set can only refuse too much",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
      "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
      "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > refuses a resynchronization response signed under a key the issuer's historical key set lists, though its configured kids and its cached jwks_uri still carry it; the set is what refuses it",
      "level": "unit",
@@ -27680,9 +27698,15 @@
      "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses the AS's replay of its retained request once the Status key that signed it is compromised, before and after its exp",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > accepts nothing when its jwks_uri or metadata fetch fails, even with a valid body, though the same response verifies when the fetch succeeds (#1977)",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness. #1810 (option A, on the owner's go): the Signals receiver's resynchronization took a pinned key set and never read the historical key set; it now takes the Status keys as a key resolver, held through `missionStatusIssuer`, and refuses a listed key. Witnessed with a control: the same issuer advertising no set resynchronizes on the key. Proven by restoring the pinned key set and by dropping the set's refusal; each fails the witness at the refusal. #1977: the reference Lifecycle client's withdrawn-key test (#1724) is cited, proven by a client that caches its first fetched set, which then accepts the withdrawn key at the refusal. Every reference consumer of Status (the PDP's, the Signals receiver's resynchronization, the Lifecycle client) is witnessed. Owner review of #1983: tested, once the Lifecycle client uses a jwks_uri response only on HTTP success (see status.signing-keys.bounded-jwks-cache)."
+   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness. #1810 (option A, on the owner's go): the Signals receiver's resynchronization took a pinned key set and never read the historical key set; it now takes the Status keys as a key resolver, held through `missionStatusIssuer`, and refuses a listed key. Witnessed with a control: the same issuer advertising no set resynchronizes on the key. Proven by restoring the pinned key set and by dropping the set's refusal; each fails the witness at the refusal. #1977: the reference Lifecycle client's withdrawn-key test (#1724) is cited, proven by a client that caches its first fetched set, which then accepts the withdrawn key at the refusal. Every reference consumer of Status (the PDP's, the Signals receiver's resynchronization, the Lifecycle client) is witnessed. Owner review of #1983: tested, once the Lifecycle client uses a jwks_uri response only on HTTP success (see status.signing-keys.bounded-jwks-cache). For the promotion every observation clause cites its witness: the audit clause, the no-set clause and the failed-refetch clause their PDP tests, and the Lifecycle client's HTTP-success clause its failed-fetch test."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
