@@ -111,8 +111,8 @@
     "content_sha256": "deac6430d37a6f3d0bf6b8f565ef12ac7af1df6113c2a0bfa1593fde0a4f43f3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "e59bfd93f4b78fd4f8dadb1e26588fe31a02b6fb",
-    "content_sha256": "fd921722542e8d8dd202039e263a15e4092128a5165fa8c502648d4921062997"
+    "revision": "7cc78dfd1a44275037d6dd380bc6f494021d150f",
+    "content_sha256": "53ea4caebb952caf862671a5cdc3ce94f6c9559d21eb7cb014d8d2ee6bdf2579"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
@@ -82857,6 +82857,27 @@
     }
    ],
    "notes": "The creation fingerprint does not bind the presented token, so without this check a narrower token presenting the same request recovered the broader child (shown before the fix). Mirrors the async-delegation recovery bound (D353). Proved by disabling each check (the kernel bound, the evidence name, the adapter's pass-through, the recovery bound, the unreadable-authority guard): each is killed by the tests cited. #1192 review: recovery applies the token's children controls too, counting the recorded child once."
+  },
+  {
+   "id": "child-delegation.child-client-identity.code-not-child-grant",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-client-identity",
+   "text": "An authorization code MUST NOT be the child's grant",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no authorization code the Mission Issuer issues in child creation is itself the child's grant: a code is redeemable only by the client that obtained it (the parent), and what the child redeems under its own client is the child-bound JWT authorization grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 cold read (D1164): the sentence read \"MUST NOT be used to convey the child's grant\", which interactive completion's code redemption contradicted; its rationale (a code is redeemable by the parent) is kept. It had no row before. No witness: the reference AS has no authorization-code path for child creation (interactive child creation is unimplemented), so nothing issues a code a test could inspect."
   },
   {
    "id": "child-delegation.interactive.handoff-required",
