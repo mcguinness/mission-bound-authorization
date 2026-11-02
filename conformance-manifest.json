@@ -99935,9 +99935,76 @@
     "normative": "Against an AS whose validated metadata does not advertise both members as true, including one that advertises only RFC 8628 device-grant metadata, or that names a different device_authorization_endpoint, the client sends no device authorization request carrying mission_intent."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against RFC 8628 device-grant metadata alone, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against the OAuth binding's member without the profile's, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against the profile's member without the OAuth binding's, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a support member that is the string \"true\", not the boolean, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against both members true but another device_authorization_endpoint than the one the client uses, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against both members true and no device_authorization_endpoint, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against metadata naming another issuer, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a metadata document that is JSON null, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a metadata document that is a JSON array, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against an AS advertising both members and naming the endpoint the client uses, sends one device authorization request carrying mission_intent",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client against the reference AS (@spec device-authorization#discovery, device-authorization#issuance, #1202) > refuses the default assembly, which leaves the profile off, before any device request, and creates no Mission",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference client (demo/src/device-mission-client.ts) reads metadata at the configured issuer, refuses it unless its issuer equals that issuer, and sends a device authorization request only when both support members are the boolean true and the metadata names the device_authorization_endpoint the client is configured to use. Witnessed against stub authorization servers that record every request, since the reference AS never serves the refused metadata: device-grant metadata alone, either support member alone, a non-boolean member, another endpoint, no endpoint, another issuer and a document that is not a JSON object each leave the metadata read as the only request; the control, with both members and the configured endpoint, sends one request carrying mission_intent. The reference AS's default assembly, which leaves the profile off, gets no device request and creates no Mission. Proved by dropping each of the two member checks, the endpoint match and the issuer check: a stub then receives the request. Without the JSON-object check, a null document throws instead of reporting unsupported."
   },
   {
    "id": "device-authorization.discovery.no-ordinary-fallback",
@@ -99957,9 +100024,34 @@
     "normative": "When the AS does not advertise mission_device_authorization_supported, the client sends no device authorization request carrying the Mission's authority as scope or as authorization_details, and reports the inability."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against RFC 8628 device-grant metadata alone, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against the OAuth binding's member without the profile's, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a support member that is the string \"true\", not the boolean, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client against the reference AS (@spec device-authorization#discovery, device-authorization#issuance, #1202) > refuses the default assembly, which leaves the profile off, before any device request, and creates no Mission",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference client has no ordinary device authorization path: against an AS that does not advertise mission_device_authorization_supported it returns the outcome unsupported with the reason, and sends nothing after the metadata read, so no request carries the authority as scope or as authorization_details. Witnessed against stub authorization servers that record every request (device-grant metadata alone, the OAuth binding's member alone, a member that is the string \"true\"), and against the reference AS's default assembly, which leaves the profile off. Proved by dropping the profile member's check: a stub then receives the device request."
   },
   {
    "id": "device-authorization.request.no-request-object",
@@ -100231,9 +100323,16 @@
     "normative": "An approval whose service_owned authority source would rest on a public client's client_id creates no Mission."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built, but this requirement is not: the decision applies no public-client check to a service_owned source, and the shipped catalog's only service_owned source names a confidential client, so no witness can be built without a configurable catalog."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a service_owned source and a public client (@spec device-authorization#session-binding, #1202) > creates no Mission when a service_owned source would rest on a public client's client_id, and the next poll is access_denied",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1202: the device decision reads the client's registration before the approval's writes and refuses a service_owned authority source resolved for a public client (token_endpoint_auth_method none, or a client the AS cannot find). The test configures the shipped catalog's service_owned source ledger-reconciler with a public and a confidential device client. The witness observes no Mission and access_denied at the public client's next poll; the control, a confidential client of the same source, gets its service_owned Mission. Proved by removing the check: the public client's approval then creates a Mission."
   },
   {
    "id": "device-authorization.approval.user-code-not-authentication",
@@ -100622,15 +100721,23 @@
     "capability": "device-authorization.carriage"
    },
    "profiles": [],
-   "surface": "introspection",
+   "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A Mission whose approved session's device_code expired unredeemed is reported terminated by revocation, or active until its expires_at, by the deployment's one documented choice."
+    "normative": "A Mission whose approved session's device_code expired unredeemed is reported terminated by revocation, or active until its expires_at, by the deployment's one documented choice.",
+    "local": "This deployment lets the Mission run to its expires_at and never revokes it because its approved session's device_code expired unredeemed. Mission Status reports it active until its expires_at and terminated with reason expired after it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built. This deployment never revokes the Mission of an approved session whose device_code expired unredeemed, so the Mission runs to its expires_at, but the choice is not yet documented as deployment documentation and has no introspection witness."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1202: this deployment's one choice is to let the Mission run to its expires_at, never revoking it for an unredeemed device_code, as it does for an unredeemed authorization code; docs/provider-integration-port.md, section 3.4, documents it. The surface is Mission Status, since an unredeemed session issued no token to introspect. The witness lapses two approved sessions' device codes: each poll answers expired_token and Mission Status reports both Missions active; with the kernel's clock advanced past the shorter Mission's expires_at, it reports that Mission terminated with reason expired, and the other stays active. The choice is the absence of a revocation, so there is no guard to remove."
   },
   {
    "id": "device-authorization.issuance.mission-id-required",
@@ -100767,9 +100874,40 @@
     "normative": "Given a success response lacking any of the three members, the client presents none of its tokens and reports a failed Mission creation."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > treats a success response lacking mission_id as a failed Mission creation and presents none of its tokens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > treats a success response lacking mission_expires_at as a failed Mission creation and presents none of its tokens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > treats a success response lacking authorization_details as a failed Mission creation and presents none of its tokens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's use of a success response (@spec device-authorization#issuance, #1202) > returns the Mission members and tokens of a response carrying all three",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client against the reference AS (@spec device-authorization#discovery, device-authorization#issuance, #1202) > creates a Mission through the device flow and uses its tokens only with mission_id, mission_expires_at and the granted authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1202: the reference client returns a success response's tokens only when it carries mission_id, mission_expires_at and the granted authorization_details; otherwise it reports the outcome no_mission with mission_members_missing and discards the tokens. Witnessed against stub authorization servers, since the reference AS always sends the three members: for each missing member, the tokens are absent from the client's result and from every request it sends, and the token response is its last request. The control is the same response with all three; one Mission is created end to end against the reference AS. Proved by dropping the member check: each stub case then returns the tokens."
   },
   {
    "id": "device-authorization.issuance.first-redemption-gated",
