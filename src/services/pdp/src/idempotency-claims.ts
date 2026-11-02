@@ -391,6 +391,14 @@ interface ClaimRow {
   outcome_ref: string | null;
   /** The applied settlement record's `error` ({@link settlementError}); `null` where it carries none or nothing is applied. */
   error: string | null;
+  /**
+   * The applied settlement record's measures ({@link settlementMeasures}),
+   * `{}` where it carries none; `null` where nothing is applied, where the
+   * PDP settled the claim on its own observation, or on a claim settled
+   * before the column, and a `null` row acknowledges no redelivery as its
+   * duplicate.
+   */
+  measures: string | null;
   claimed_at_ms: number;
   terminal_at_ms: number | null;
   retain_until_ms: number | null;
@@ -640,6 +648,39 @@ const MIGRATIONS = [
   `ALTER TABLE claims ADD COLUMN audience TEXT;
   UPDATE claims SET audience = json_extract(decision_json, '$.context.decision_evidence.audience')
     WHERE decision_json IS NOT NULL AND json_type(decision_json, '$.context.decision_evidence.audience') = 'text';`,
+  // @spec metering#settlement-contract "Conflicting redelivery" (#816,
+  // D1143): the settlement-relevant content beyond the attempt, outcome and
+  // error, a record's `metering` entries and `measured_duration`
+  // (settlementMeasures). The claim keeps the applied record's, and each
+  // retained conflict is keyed by its own too, so two records of one attempt
+  // that differ only there are each retained. SQLite cannot widen a UNIQUE
+  // constraint, so the conflict table is rebuilt with its rows and their
+  // `seq`. A claim settled before this column keeps NULL, and no redelivery
+  // is acknowledged as its duplicate: its applied record's measures were
+  // never recorded, so none can be shown to match (fail closed, as a NULL
+  // boundary settles nothing). A conflict retained before it takes '', which
+  // no record's measures equal, until the open recomputes it from the
+  // retained record (backfillConflictMeasures).
+  `ALTER TABLE claims ADD COLUMN measures TEXT;
+  CREATE TABLE settlement_conflicts_next (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    evaluation_id TEXT NOT NULL,
+    execution_id TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    error TEXT NOT NULL,
+    measures TEXT NOT NULL,
+    applied_execution_id TEXT NOT NULL,
+    applied_outcome TEXT NOT NULL,
+    record_json TEXT NOT NULL,
+    received_at_ms INTEGER NOT NULL,
+    UNIQUE (evaluation_id, execution_id, outcome, error, measures)
+  ) STRICT;
+  INSERT INTO settlement_conflicts_next (seq, evaluation_id, execution_id, outcome, error, measures, applied_execution_id,
+      applied_outcome, record_json, received_at_ms)
+    SELECT seq, evaluation_id, execution_id, outcome, error, '', applied_execution_id, applied_outcome, record_json, received_at_ms
+    FROM settlement_conflicts;
+  DROP TABLE settlement_conflicts;
+  ALTER TABLE settlement_conflicts_next RENAME TO settlement_conflicts;`,
 ];
 
 /**
@@ -690,8 +731,8 @@ const NO_PERMIT_RELEASES: ReadonlySet<string> = new Set(["not_persisted", "prior
  * settlement record receives. It keeps the reason a second attempt always
  * received (the claim is already settled and the record is not applied to
  * it); what changed is that the record is now retained and alarmed, and that
- * the same attempt with another outcome or error receives it too instead of
- * a duplicate acknowledgement.
+ * the same attempt with another outcome, error or measures receives it too
+ * instead of a duplicate acknowledgement.
  */
 const CONFLICTING_SETTLEMENT = "already_settled";
 
@@ -707,6 +748,48 @@ function settlementError(record: unknown): string | null {
   const error = object(record) ? record.error : undefined;
   if (error === undefined || error === null) return null;
   return typeof error === "string" ? error : JSON.stringify(error);
+}
+
+/** The members {@link settlementMeasures} reads. */
+const SETTLEMENT_MEASURE_MEMBERS = ["metering", "measured_duration"] as const;
+
+/**
+ * @spec metering#settlement-contract "Conflicting redelivery" (#816,
+ * D1143): a record's settlement-relevant content beyond its attempt, outcome
+ * and error, as settlement compares and stores it: its `metering` entries
+ * (each carrying the `consumed` quantity settlement commits) and its
+ * `measured_duration`, as the JCS canonical JSON of an object holding those
+ * two members. Member order within an entry never matters (the envelope
+ * signs these same canonical bytes); entry order does, as array order does
+ * under the family's canonicalization. A member absent or `null` is left
+ * out, as an `error` of `null` counts as none, so a record carrying neither
+ * is `{}`. The applied record's is kept on its claim; a conflicting record's
+ * keys its retention.
+ */
+function settlementMeasures(record: unknown): string {
+  const content = object(record) ? record : {};
+  const measures: Record<string, JsonValue> = {};
+  for (const member of SETTLEMENT_MEASURE_MEMBERS) {
+    const value = content[member];
+    if (value !== undefined && value !== null) measures[member] = value as JsonValue;
+  }
+  return canonicalize(measures);
+}
+
+/**
+ * @spec metering#settlement-contract (#816, D1143): give each conflict
+ * retained before the measures column (stored as '') the measures of the
+ * record it retained, so a redelivery of that record after the upgrade is
+ * still the same retained record. Run at every open; a no-op once none
+ * remains. Two such rows never collide: they were already unique on
+ * attempt, outcome and error.
+ */
+function backfillConflictMeasures(db: Database): void {
+  withTransaction(db, () => {
+    const rows = db.prepare("SELECT seq, record_json FROM settlement_conflicts WHERE measures = ''").all() as Array<{ seq: number; record_json: string }>;
+    const update = db.prepare("UPDATE settlement_conflicts SET measures = ? WHERE seq = ?");
+    for (const r of rows) update.run(settlementMeasures(JSON.parse(r.record_json) as unknown), r.seq);
+  });
 }
 
 /** The `mission.id` of a claim's idempotency scope, or `undefined` where the stored scope does not parse. */
@@ -815,6 +898,12 @@ export function openIdempotencyClaimDomain(options: ClaimDomainOptions): Idempot
   } catch (e) {
     if (e instanceof DurableStoreError) throw new ClaimDomainConfigError(e.message);
     throw e;
+  }
+  try {
+    backfillConflictMeasures(db);
+  } catch (e) {
+    db.close();
+    throw new ClaimDomainConfigError(`cannot recompute retained conflicts: ${(e as Error).message}`);
   }
   const domain = new IdempotencyClaimDomain(db, classes, windowMs, options, budgets);
   domain.sweep();
@@ -1584,21 +1673,27 @@ export class IdempotencyClaimDomain {
     if (!row) return { accepted: false, reason: "unknown_evaluation" };
     if (row.pep_id !== requester.pep_id) return { accepted: false, reason: "not_the_permit_holder" };
     const error = settlementError(record);
+    const measures = settlementMeasures(record);
     if (row.execution_id !== null) {
-      // A redelivery of the applied record (same attempt, same outcome, same
-      // error) is acknowledged and applied nothing.
+      // @spec metering#settlement-contract "Duplicate delivery" (#816, D1143):
+      // a redelivery of the applied record, the same attempt with the same
+      // settlement-relevant content (outcome, error and measures), is
+      // acknowledged and applied nothing. A row whose measures are NULL (no
+      // record applied them) matches no record.
       if (
         row.execution_id === executionId &&
         row.outcome === outcome &&
         row.error === error &&
+        row.measures === measures &&
         (row.state === "completed" || row.state === "failed")
       ) {
         return { accepted: true, state: row.state, duplicate: true };
       }
       // @spec metering#settlement-contract "Conflicting redelivery",
       // metering#settlement-states "Conflicting settlement" (#816, D877): a
-      // second `execution_id`, or the same one with another outcome or
-      // another error (#1771 review), fails closed. The applied settlement
+      // second `execution_id`, or the same one with another outcome, another
+      // error (#1771 review) or other measures, a `metering` entry or
+      // `measured_duration` (D1143), fails closed. The applied settlement
       // is unchanged, the record is retained and the conflict alarmed; it is
       // never acknowledged as a duplicate. A conflicting `completed` proves
       // the money moved, so the claim's reservations commit (a released one
@@ -1619,10 +1714,11 @@ export class IdempotencyClaimDomain {
     if (horizonMs === undefined) return { accepted: false, reason: "undeclared_class" };
     this.db
       .prepare(
-        `UPDATE claims SET state = ?, execution_id = ?, outcome = ?, error = ?, outcome_ref = ?, terminal_at_ms = ?, retain_until_ms = ?
+        `UPDATE claims SET state = ?, execution_id = ?, outcome = ?, error = ?, measures = ?, outcome_ref = ?, terminal_at_ms = ?,
+           retain_until_ms = ?
          WHERE evaluation_id = ?`,
       )
-      .run(next, executionId, outcome, error, outcomeRef, nowMs, nowMs + horizonMs, evaluationId);
+      .run(next, executionId, outcome, error, measures, outcomeRef, nowMs, nowMs + horizonMs, evaluationId);
     this.log(row, row.state, next, cause, nowMs);
     this.settleReservations(evaluationId, next, outcome, nowMs);
     return { accepted: true, state: next, duplicate: false };
@@ -1630,25 +1726,27 @@ export class IdempotencyClaimDomain {
 
   /**
    * @spec metering#settlement-contract "Conflicting redelivery" (#816,
-   * D877): retain a conflicting settlement record, once per distinct record
-   * (evaluation, attempt, outcome and error), and queue
+   * D877, D1143): retain a conflicting settlement record, once per distinct
+   * record (evaluation, attempt, outcome, error and measures), and queue
    * {@link ClaimDomainOptions.onSettlementConflict} for after the enclosing
    * transaction commits. A redelivery of a record already retained alarms
-   * nothing new; two records of one attempt that differ in their error are
-   * each retained and alarmed.
+   * nothing new; two records of one attempt that differ in their error, or
+   * only in their `metering` entries or `measured_duration`, are each
+   * retained and alarmed.
    */
   private retainConflict(row: ClaimRow, executionId: string, outcome: string, record: unknown, nowMs: number): void {
     const inserted = this.db
       .prepare(
-        `INSERT OR IGNORE INTO settlement_conflicts (evaluation_id, execution_id, outcome, error, applied_execution_id,
+        `INSERT OR IGNORE INTO settlement_conflicts (evaluation_id, execution_id, outcome, error, measures, applied_execution_id,
            applied_outcome, record_json, received_at_ms)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.evaluation_id,
         executionId,
         outcome,
         settlementError(record) ?? "",
+        settlementMeasures(record),
         row.execution_id ?? "",
         row.outcome ?? "",
         JSON.stringify(record ?? null),
@@ -1732,7 +1830,8 @@ export class IdempotencyClaimDomain {
    * Evidence settlement would, so it never ages to `unresolved` or
    * `indeterminate`, raises no operator alert, and keeps conflicting with any
    * other operation identity under its key. Its `execution_id` names the PDP,
-   * never a PEP attempt, so no Execution Evidence settles it again.
+   * never a PEP attempt, so no Execution Evidence settles it again; its
+   * `measures` stay NULL (no record was applied), so none is its duplicate.
    */
   private settleObserved(row: ClaimRow, outcome: typeof LEASE_EXTENSION_OUTCOME, nowMs: number): void {
     const horizonMs = this.classes.get(row.action_class)?.horizonMs;
