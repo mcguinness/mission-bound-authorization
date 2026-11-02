@@ -12,6 +12,7 @@
  * predicate is `unavailable`: the decision fails closed. No predicate outcome
  * is ever taken from a request member.
  */
+import { canonicalize, type JsonValue } from "@mission/core";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
@@ -97,16 +98,26 @@ interface VerifiedDecision {
   /** The record's (Mission, emitter) stream: its emitter's role and id. */
   stream: string;
   sequence: number;
+  /** The signed content: the record's canonical form without its envelope. */
+  content: string;
 }
 
 interface VerifiedExecution {
+  execution_id: string;
   evaluation_id: string;
   audience: string | undefined;
   outcome: unknown;
+  content: string;
 }
 
 function objectOf(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+/** A verified record's signed content: the canonical bytes its envelope's payload equals. */
+function signedContent(record: Record<string, unknown>): string {
+  const { evidence_envelope: _envelope, ...content } = record;
+  return canonicalize(content as JsonValue);
 }
 
 function recordedEntry(p: HistoryPredicate, outcome: HistoryOutcome): HistoryPredicateResult {
@@ -126,10 +137,13 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * Read and verify the Mission's retained evidence. Returns `undefined` when
  * the history cannot be established: the read failed, a record is of no
  * known kind, a signer is not trusted for the record's kind, a signature or
- * the payload binding does not verify, a record names another Mission, a
- * Decision Evidence stream has a gap or a reused `sequence` position, or an
- * Execution Evidence record links to no verified Decision Evidence of the
- * same Mission and audience.
+ * the payload binding does not verify, a record names another Mission, two
+ * records conflict (Decision Evidence of one `evaluation_id`, or Execution
+ * Evidence of one `execution_id`, with different content, or one permit with
+ * more than one disposition), a Decision Evidence stream has a gap or a
+ * reused `sequence` position, or an Execution Evidence record links to no
+ * verified Decision Evidence of the same Mission and audience. A record
+ * delivered more than once with the same content counts once.
  */
 async function verifiedHistory(
   binding: HistoryBinding,
@@ -144,8 +158,11 @@ async function verifiedHistory(
   if (!Array.isArray(raw)) return undefined;
   const decisionRoles = binding.decisionEmitterRoles ?? ["pdp"];
   const executionRoles = binding.executionEmitterRoles ?? ["pep", "executor"];
-  const decisions: VerifiedDecision[] = [];
-  const executions: VerifiedExecution[] = [];
+  // Keyed by `evaluation_id` and by `execution_id`: a record redelivered with
+  // the same content counts once, and two records under one key that differ
+  // are a conflict no store order may resolve.
+  const decisions = new Map<string, VerifiedDecision>();
+  const executions = new Map<string, VerifiedExecution>();
   for (const entry of raw) {
     const record = objectOf(entry);
     const emitter = objectOf(record?.emitter);
@@ -161,7 +178,13 @@ async function verifiedHistory(
       if (typeof record.evaluation_id !== "string") return undefined;
       const sequence = record.sequence;
       if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0) return undefined;
-      decisions.push({
+      const content = signedContent(record);
+      const prior = decisions.get(record.evaluation_id);
+      if (prior !== undefined) {
+        if (prior.content !== content) return undefined;
+        continue;
+      }
+      decisions.set(record.evaluation_id, {
         evaluation_id: record.evaluation_id,
         decision: record.decision as string,
         audience: typeof record.audience === "string" ? record.audience : undefined,
@@ -169,15 +192,28 @@ async function verifiedHistory(
         action_classes: record.action_classes,
         stream: JSON.stringify([emitter.role, emitter.id]),
         sequence,
+        content,
       });
     } else {
       if (!executionRoles.includes(emitter.role)) return undefined;
       if ((await verifyEvidenceEnvelope(record, EXECUTION_EVIDENCE_MEDIA_TYPE, binding.resolveKey)).valid !== true) return undefined;
       if (record.mission_id !== mission.id || typeof record.evaluation_id !== "string") return undefined;
-      executions.push({
+      // @spec runtime-evidence#execution-evidence-object `execution_id`:
+      // delivery is at-least-once, "so a consumer MUST deduplicate on
+      // `execution_id`".
+      const executionId = record.execution_id as string;
+      const content = signedContent(record);
+      const prior = executions.get(executionId);
+      if (prior !== undefined) {
+        if (prior.content !== content) return undefined;
+        continue;
+      }
+      executions.set(executionId, {
+        execution_id: executionId,
         evaluation_id: record.evaluation_id,
         audience: typeof record.audience === "string" ? record.audience : undefined,
         outcome: record.outcome,
+        content,
       });
     }
   }
@@ -189,7 +225,7 @@ async function verifiedHistory(
   // the history cannot be established. The start is deployment-defined, so
   // the stream is read from its lowest position present.
   const streams = new Map<string, number[]>();
-  for (const d of decisions) {
+  for (const d of decisions.values()) {
     const positions = streams.get(d.stream) ?? [];
     positions.push(d.sequence);
     streams.set(d.stream, positions);
@@ -202,11 +238,16 @@ async function verifiedHistory(
   }
   // Linkage: every execution names a verified decision of this Mission by its
   // `evaluation_id`, for the same audience, and that decision is a permit.
-  for (const execution of executions) {
-    const linked = decisions.find((d) => d.evaluation_id === execution.evaluation_id);
+  // One permit's executions agree on its disposition: a `completed` record
+  // beside a `failed` one leaves what happened unestablished.
+  const dispositions = new Map<string, unknown>();
+  for (const execution of executions.values()) {
+    const linked = decisions.get(execution.evaluation_id);
     if (!linked || linked.decision !== "permit" || linked.audience !== execution.audience) return undefined;
+    if (dispositions.has(execution.evaluation_id) && dispositions.get(execution.evaluation_id) !== execution.outcome) return undefined;
+    dispositions.set(execution.evaluation_id, execution.outcome);
   }
-  return { decisions, executions };
+  return { decisions: [...decisions.values()], executions: [...executions.values()] };
 }
 
 /**

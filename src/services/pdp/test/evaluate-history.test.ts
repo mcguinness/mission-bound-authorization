@@ -116,17 +116,20 @@ interface ExecutionShape {
   audience?: string;
   /** This record's position in the PEP's (Mission, emitter) stream. */
   sequence?: number;
+  /** Defaults to one id per (evaluation, outcome). */
+  execution_id?: string;
+  outcome_at?: string;
 }
 
 /** A retained Execution Evidence record, signed by the trusted PEP key. */
 async function executionRecord(e: ExecutionShape): Promise<Record<string, unknown>> {
   const unsigned = {
-    execution_id: `exe_${e.evaluation_id}_${e.outcome}`,
+    execution_id: e.execution_id ?? `exe_${e.evaluation_id}_${e.outcome}`,
     evaluation_id: e.evaluation_id,
     mission_id: e.mission ?? MISSION,
     audience: e.audience ?? RESOURCE,
     outcome: e.outcome,
-    outcome_at: NOW.toISOString(),
+    outcome_at: e.outcome_at ?? NOW.toISOString(),
     sequence: e.sequence ?? 0,
     emitter: { id: PEP_ID, role: "pep" },
   };
@@ -272,6 +275,44 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(negative.decision).toBe(false);
     expect(negative.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(negative)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("counts a record delivered twice once, and fails closed when one execution_id carries different content", async () => {
+    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
+    const w1Done = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1" });
+    const redelivered = await evaluate(request(), options(historyBinding([w1, w1Done, w1, w1Done])));
+    expect(redelivered.decision, JSON.stringify(redelivered.context)).toBe(true);
+    expect(historyOf(redelivered)?.[0]?.outcome).toBe("satisfied");
+    // The same execution_id signed again with a different outcome_at: not a redelivery.
+    const reissued = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1", outcome_at: "2026-09-14T11:59:00Z" });
+    const conflicting = await evaluate(request(), options(historyBinding([w1, w1Done, reissued])));
+    expect(conflicting.decision).toBe(false);
+    expect(conflicting.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(conflicting)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("fails closed when one permit has more than one disposition: a completed and a failed execution, in either order", async () => {
+    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
+    const completed = await executionRecord({ evaluation_id: "w1", outcome: "completed", sequence: 0 });
+    const failed = await executionRecord({ evaluation_id: "w1", outcome: "failed", sequence: 1 });
+    for (const records of [[w1, completed, failed], [w1, failed, completed]]) {
+      const decision = await evaluate(request(), options(historyBinding(records)));
+      expect(decision.decision).toBe(false);
+      expect(decision.context.denial_reason).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+    }
+  });
+
+  it("fails closed when Decision Evidence records with different content share an evaluation_id, in either order", async () => {
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: 0 });
+    const deny = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", decision: "deny", sequence: 1 });
+    const completed = await executionRecord({ evaluation_id: "w1", outcome: "completed" });
+    for (const records of [[permit, deny, completed], [deny, permit, completed]]) {
+      const decision = await evaluate(request(), options(historyBinding(records)));
+      expect(decision.decision).toBe(false);
+      expect(decision.context.denial_reason).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+    }
   });
 
   it("fails closed, recording unavailable, when the evidence store cannot be consulted", async () => {
