@@ -170,6 +170,9 @@ describe("the intake computes intent_hash itself (@spec request-provenance#signi
       channel: { type: "https://shaper.example.com/ch/claimed" },
       captured_at: V.capture.captured_at - 3600,
       claims: { originator: { iss: "https://idp.example.com", sub: "someone-else" } },
+      // Shaping Evidence, or a hash committing to it, has no way in either.
+      shaping_evidence: { input_digest: "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+      shaping_hash: "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     };
     for (const [member, value] of Object.entries(injected)) {
       const request = { ...signRequest(receipt.captureId), [member]: value } as SignRequest;
