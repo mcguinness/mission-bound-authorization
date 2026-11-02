@@ -2052,15 +2052,6 @@ Mission. Two richer patterns are out of scope:
   is governance state about the delegate, not the standing-consent
   basis that `approval_basis` records ({{mission-record}}).
 
-Where a deployment needs either, the Approval Governance Record
-({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
-and Consent Evidence can carry a partial presentation of that record
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
-
-Approval Governance defines the `adjudication.governance_record`
-member that marks an approval such a record backs
-({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-"Relationship to the Issuance Profile"), and
 {{I-D.draft-mcguinness-mission-architecture}} (Section "Approval Role
 Mapping") shows how the common creation scenarios assign the three
 `approval_basis` roles.
@@ -2252,9 +2243,7 @@ value.
     it). Present when a Mission-creating profile or deployment chooses
     to make the mechanism explicit; where absent, the mechanism is still
     fixed by `type` and the construction rules of this document or a
-    companion profile (below and
-    {{I-D.draft-mcguinness-mission-approval-governance}}, Section
-    "Policy Adjudication"). Members, where present:
+    companion profile (below). Members, where present:
 
     `kind`:
     : REQUIRED. A string: `human` or `policy`, naming a decision
@@ -2271,9 +2260,7 @@ value.
     deciding human is `consent_principal`.
 
     For `kind: policy`: the kind-specific members that the profile
-    defining the standing-consent basis specifies (for example,
-    {{I-D.draft-mcguinness-mission-approval-governance}}, Section
-    "Policy Adjudication").
+    defining the standing-consent basis specifies.
 
   `approved_at`:
   : Absent for `direct`, whose approval event carries its own instant
@@ -2290,10 +2277,7 @@ value.
     instance only under a standing-consent basis
     ({{mission-creating-paths}}).
   - For `direct`, `activation.approval_event_id` MUST identify a human
-    approval event ({{approval-event}}). Approval Governance states how
-    a record backing a `direct` approval keeps that human decision as
-    its accountable assertion
-    ({{I-D.draft-mcguinness-mission-approval-governance}}).
+    approval event ({{approval-event}}).
   - `approval_basis` is provenance: none of the record's integrity
     anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
     covers it ({{integrity-anchors}}); a profile that commits the
