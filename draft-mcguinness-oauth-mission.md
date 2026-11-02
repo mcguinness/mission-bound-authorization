@@ -391,13 +391,28 @@ equality, not the absence of a human: a workload's durable
 multi-step task is in scope as a service-owned Mission
 ({{authority-sources}}).
 
+Without its optional capabilities ({{optional-capabilities}}), an
+implementation of this document needs nothing beyond its normative
+references and one `authorization_details` type that its AS and
+resource servers support ({{conformance}}). It turns an Approver's
+consent to a task's derived Authority Set into a Mission at approval
+and binds the Mission to the authorization code it issues
+({{grant-binding}}). Every token derived from that grant carries the
+Mission, every issuance is gated on its state and bounded by its
+Authority Set, every credential the Mission Issuer derives expires no
+later than the Mission, and the Mission can be revoked by
+`mission_id`, independent of possession of any token. Resource
+servers enforce the carried entries, or a `scope` projected from them
+({{scope-projection}}); evaluating each action at its point of use is
+out of scope ({{runtime-boundary}}).
+
 The direct realization creates each Mission at an approval
 interaction on the authorization endpoint, and a Mission is intended
 to cover one concrete task, not an agent's whole lifetime.
-{{I-D.draft-mcguinness-mission-architecture}} maps the paths where an
-administrator, or a policy a human consented to, decides without that
-interaction (Section "Mission Creation Paths"), and how a deployment
-sizes its Missions (Section "Mission Granularity").
+Other creation paths are extensions ({{mission-creating-paths}});
+{{I-D.draft-mcguinness-mission-architecture}} describes deployment
+patterns, including Mission sizing (Section "Mission Deployment
+Patterns").
 
 # Overview {#overview}
 
