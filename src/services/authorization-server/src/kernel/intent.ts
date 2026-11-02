@@ -200,6 +200,78 @@ export interface IntentSubmissionPresenter {
 }
 
 /**
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): what a type
+ * holds in a {@link SubmissionAdmission} while the containing submission is
+ * decided: `commit` when the carrier accepts it, under the carrier's
+ * reference for the accepted submission, and `release` otherwise.
+ */
+export interface SubmissionAdmissionHold {
+  commit(ref: string): void;
+  release(): void;
+}
+
+/**
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): the admission
+ * scope of one submission, owned by its carrier. A type that reserves state
+ * while verifying (a replay pair) holds it here. The carrier commits the
+ * scope when it accepts the submission and releases it on every other
+ * outcome, thrown or not; the dispatch also releases it when verification
+ * refuses, another entry's failure and the verification-work bound included.
+ * Release is idempotent, a committed scope releases nothing, and a released
+ * scope commits nothing.
+ */
+export class SubmissionAdmission {
+  #state: "open" | "committed" | "released" = "open";
+  readonly #holds: SubmissionAdmissionHold[] = [];
+
+  /** `open` until the carrier commits or releases it. */
+  get state(): "open" | "committed" | "released" {
+    return this.#state;
+  }
+
+  /** Hold a reservation until the submission is decided. A settled scope releases it at once and refuses. */
+  hold(hold: SubmissionAdmissionHold): void {
+    if (this.#state !== "open") {
+      hold.release();
+      throw new Error(`the submission's admission is already ${this.#state}`);
+    }
+    this.#holds.push(hold);
+  }
+
+  /** The carrier accepted the submission: commit every hold under `ref`. */
+  commit(ref: string): void {
+    if (this.#state === "committed") return;
+    if (this.#state === "released") throw new Error("a released admission commits nothing");
+    this.#state = "committed";
+    let failure: unknown;
+    for (const hold of this.#holds) {
+      try {
+        hold.commit(ref);
+      } catch (e) {
+        failure ??= e;
+      }
+    }
+    if (failure !== undefined) throw failure;
+  }
+
+  /** Any outcome but acceptance: release every hold, once. A committed scope releases nothing. */
+  release(): void {
+    if (this.#state !== "open") return;
+    this.#state = "released";
+    for (const hold of this.#holds) hold.release();
+  }
+}
+
+/**
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): a later step of
+ * a submission the carrier already accepted, named by the carrier's
+ * reference for it (`par:<jti>` for a pushed authorization request).
+ */
+export interface IntentSubmissionAcceptedReference {
+  ref: string;
+}
+
+/**
  * @spec mission#intent-submission-evidence — the stage-2 verification input
  * handed to a type's `verify`: the entry, the PROVISIONAL `intent_hash`
  * (computed over the submitted semantic intent BEFORE verification, per the
@@ -216,6 +288,35 @@ export interface IntentSubmissionEvidenceVerifyInput {
   requestContext?: Record<string, unknown>;
   /** The submission's remaining verification work (#1962). */
   work: IntentSubmissionEvidenceWork;
+  /**
+   * @spec request-provenance#replay (#939 slice 2a-2): the carrier's admission
+   * scope for this submission, where the carrier decides acceptance; absent
+   * on a carrier that holds no reservation.
+   */
+  admission?: SubmissionAdmission;
+  /**
+   * @spec request-provenance#replay (#939 slice 2a-2): set on a later step of
+   * an accepted submission. A type with {@link IntentSubmissionEvidenceType.resume}
+   * is resumed instead of verified; any other type is verified as before.
+   */
+  accepted?: IntentSubmissionAcceptedReference;
+}
+
+/**
+ * @spec request-provenance#replay (#939 slice 2a-2): the input of a
+ * {@link IntentSubmissionEvidenceType.resume}: the verification input with
+ * the accepted reference required and no verification work, since a resume
+ * verifies nothing.
+ */
+export type IntentSubmissionEvidenceResumeInput = Omit<IntentSubmissionEvidenceVerifyInput, "work" | "admission" | "accepted"> & {
+  accepted: IntentSubmissionAcceptedReference;
+};
+
+/** What a resume returns: the facts and the time the original verification recorded. */
+export interface IntentSubmissionEvidenceResumed {
+  facts: Record<string, JsonValue>;
+  /** The original verification's time, as the dispatch stamps it (ISO 8601). */
+  verified_at: string;
 }
 
 /**
@@ -236,9 +337,31 @@ export interface IntentSubmissionEvidenceVerifyInput {
 export interface IntentSubmissionEvidenceType {
   validate(entry: Record<string, JsonValue>): void;
   verify(input: IntentSubmissionEvidenceVerifyInput): Promise<Record<string, JsonValue>>;
+  /**
+   * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): OPTIONAL. A
+   * later step of an accepted submission relies on the type's acceptance
+   * record instead of verifying again: it returns the recorded facts with
+   * the original verification time, and refuses when no record matches.
+   * The dispatch charges no verification work for it.
+   */
+  resume?(input: IntentSubmissionEvidenceResumeInput): Promise<IntentSubmissionEvidenceResumed>;
 }
 
+/**
+ * @spec mission#intent-submission-evidence (#939 slice 2a-2): the evidence
+ * types one authorization server registers beside the process-wide registry
+ * ({@link INTENT_SUBMISSION_EVIDENCE_TYPES}), consulted first. A type whose
+ * verification holds per-AS state (trust, a replay store) is registered
+ * here, so another AS in the same process does not accept it.
+ */
+export type IntentSubmissionEvidenceTypes = ReadonlyMap<string, IntentSubmissionEvidenceType>;
+
 const EVIDENCE_TYPE_REGISTRY = new Map<string, IntentSubmissionEvidenceType>();
+
+/** The registered implementation of `type`: this AS's own first, then the process-wide registry. */
+function evidenceTypeFor(type: string, types: IntentSubmissionEvidenceTypes | undefined): IntentSubmissionEvidenceType | undefined {
+  return types?.get(type) ?? EVIDENCE_TYPE_REGISTRY.get(type);
+}
 
 /**
  * @spec mission#intent-submission-evidence — the registry of Intent Submission
@@ -359,12 +482,15 @@ export function validateMissionIntentSubmission(
   // no client can observe: both refuse with invalid_request.
   const evidence = validateIntentSubmissionEvidence(obj.evidence, bounds, {
     dispatch: opts.deferEvidenceDispatch !== true,
+    ...(opts.evidenceTypes ? { types: opts.evidenceTypes } : {}),
   });
   return { intent, ...(evidence ? { evidence } : {}) };
 }
 
 /** Options of {@link validateMissionIntentSubmission}. */
 export interface SubmissionIntakeOptions extends IntentIntakeOptions {
+  /** This AS's own evidence types, consulted before the process-wide registry (#939 slice 2a-2). */
+  evidenceTypes?: IntentSubmissionEvidenceTypes;
   /**
    * @spec mission#submission-processing (#1411, #1503 finding 12): leave
    * evidence type dispatch ({@link dispatchIntentSubmissionEvidenceEntries})
@@ -394,7 +520,7 @@ export interface SubmissionIntakeOptions extends IntentIntakeOptions {
 export function validateIntentSubmissionEvidence(
   raw: JsonValue | undefined,
   bounds: SubmissionEvidenceBounds = {},
-  opts: { dispatch?: boolean } = {},
+  opts: { dispatch?: boolean; types?: IntentSubmissionEvidenceTypes } = {},
 ): IntentSubmissionEvidenceEntry[] | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw)) {
@@ -411,7 +537,7 @@ export function validateIntentSubmissionEvidence(
     throw new IntentError("invalid_request", `evidence exceeds the entry-count bound (${maxEntries})`);
   }
   checkIntentSubmissionEvidenceStructure(raw, bounds);
-  if (opts.dispatch !== false) dispatchIntentSubmissionEvidenceEntries(raw);
+  if (opts.dispatch !== false) dispatchIntentSubmissionEvidenceEntries(raw, opts.types);
   return raw as IntentSubmissionEvidenceEntry[];
 }
 
@@ -447,14 +573,17 @@ export function checkIntentSubmissionEvidenceStructure(
  * or an entry failing its type's synchronous validation, is refused
  * `invalid_mission_intent_evidence`.
  */
-export function dispatchIntentSubmissionEvidenceEntries(entries: readonly JsonValue[]): void {
+export function dispatchIntentSubmissionEvidenceEntries(
+  entries: readonly JsonValue[],
+  types?: IntentSubmissionEvidenceTypes,
+): void {
   for (const entry of entries) {
     // Stage 1 only: the type's SYNCHRONOUS structural validation (closed
     // member set). Stage-2 verification (signature/freshness/binding) runs
     // later, via verifyIntentSubmissionEvidence, after the idempotency
     // recovery lookup on the exchanges, so an artifact that expired after a
     // completed operation cannot break that operation's recovery.
-    dispatchEvidenceEntry(entry as Record<string, JsonValue>);
+    dispatchEvidenceEntry(entry as Record<string, JsonValue>, types);
   }
 }
 
@@ -466,9 +595,10 @@ export function dispatchIntentSubmissionEvidenceEntries(entries: readonly JsonVa
 export function checkIntentSubmissionEvidenceEntries(
   entries: readonly JsonValue[],
   bounds: SubmissionEvidenceBounds = {},
+  types?: IntentSubmissionEvidenceTypes,
 ): void {
   checkIntentSubmissionEvidenceStructure(entries, bounds);
-  dispatchIntentSubmissionEvidenceEntries(entries);
+  dispatchIntentSubmissionEvidenceEntries(entries, types);
 }
 
 /**
@@ -476,8 +606,11 @@ export function checkIntentSubmissionEvidenceEntries(
  * unknown type, or an entry failing its type's synchronous validation, is
  * refused `invalid_mission_intent_evidence`.
  */
-function dispatchEvidenceEntry(entry: Record<string, JsonValue>): IntentSubmissionEvidenceType {
-  const impl = EVIDENCE_TYPE_REGISTRY.get(String(entry.type));
+function dispatchEvidenceEntry(
+  entry: Record<string, JsonValue>,
+  types: IntentSubmissionEvidenceTypes | undefined,
+): IntentSubmissionEvidenceType {
+  const impl = evidenceTypeFor(String(entry.type), types);
   if (!impl) {
     throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${String(entry.type)}`);
   }
@@ -506,12 +639,19 @@ function dispatchEvidenceEntry(entry: Record<string, JsonValue>): IntentSubmissi
  * On IDEMPOTENT operations the completed-operation recovery lookup PRECEDES
  * this call: recovery of an already-completed request never re-verifies
  * evidence freshness or status.
+ *
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): with
+ * `ctx.accepted`, a type that defines `resume` is resumed from its
+ * acceptance record, uncharged, and every other type is verified as before.
+ * Any refusal here releases `ctx.admission`, so a reservation an earlier
+ * entry made never outlives a refusal of its submission.
  */
 export async function verifyIntentSubmissionEvidence(
   evidence: IntentSubmissionEvidenceEntry[] | undefined,
   ctx: Omit<IntentSubmissionEvidenceVerifyInput, "entry" | "work">,
   required: readonly string[] = [],
   bounds: SubmissionEvidenceBounds = {},
+  types?: IntentSubmissionEvidenceTypes,
 ): Promise<IntentSubmissionEvidenceFact[] | undefined> {
   // A direct caller can pass entries no parse has checked: read a type
   // only where an entry is an object with a string `type`.
@@ -534,7 +674,7 @@ export async function verifyIntentSubmissionEvidence(
   // deferred type dispatch at parse (@spec mission#submission-processing,
   // #1411) runs it here (step 6); the structural rules, and for any other
   // carrier the dispatch too, repeat the parse-time result.
-  checkIntentSubmissionEvidenceEntries(evidence as unknown as JsonValue[], bounds);
+  checkIntentSubmissionEvidenceEntries(evidence as unknown as JsonValue[], bounds, types);
   // @spec submission-evidence#verification-bounds (#1962): the work this
   // submission's verification may do, beyond the size and count bounds. A
   // refused charge is a refusal of the submission even where the type caught
@@ -557,32 +697,63 @@ export async function verifyIntentSubmissionEvidence(
     },
   };
   const facts: IntentSubmissionEvidenceFact[] = [];
-  for (const entry of evidence) {
-    const impl = EVIDENCE_TYPE_REGISTRY.get(entry.type);
-    if (!impl) {
-      throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${entry.type}`);
-    }
-    work.charge(1);
-    let verified: Record<string, JsonValue>;
-    try {
-      verified = await impl.verify({ ...ctx, entry, work });
-    } catch (e) {
-      if (exceeded) throw overBound();
-      if (e instanceof IntentError) throw e;
-      throw new IntentError(
-        "invalid_mission_intent_evidence",
-        `evidence verification failed (${entry.type}): ${e instanceof Error ? e.message : "verifier error"}`,
-      );
-    }
-    if (exceeded) throw overBound();
-    facts.push({
-      type: entry.type,
+  // @spec request-provenance#replay (#939 slice 2a-2): the whole loop, so a
+  // refusal after an earlier entry reserved (a later entry failing, or the
+  // verification-work bound refusing after the catch) releases it.
+  try {
+    for (const entry of evidence) {
+      const impl = evidenceTypeFor(entry.type, types);
+      if (!impl) {
+        throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${entry.type}`);
+      }
       // The artifact digest as the record lands it: the family anchor idiom
       // over the entry AS PRESENTED (typ mission-intent-evidence).
-      artifact_hash: computeAnchor(MISSION_INTENT_EVIDENCE_TYP, ctx.issuer, entry as never),
-      verified_at: ctx.now.toISOString(),
-      ...(Object.keys(verified).length ? { facts: verified } : {}),
-    });
+      const artifactHash = () => computeAnchor(MISSION_INTENT_EVIDENCE_TYP, ctx.issuer, entry as never);
+      if (ctx.accepted !== undefined && impl.resume !== undefined) {
+        // A later step of an accepted submission: no signature is verified,
+        // so no verification work is charged.
+        const { admission: _admission, accepted, ...rest } = ctx;
+        let resumed: IntentSubmissionEvidenceResumed;
+        try {
+          resumed = await impl.resume({ ...rest, entry, accepted });
+        } catch (e) {
+          if (e instanceof IntentError) throw e;
+          throw new IntentError(
+            "invalid_mission_intent_evidence",
+            `evidence acceptance record refused (${entry.type}): ${e instanceof Error ? e.message : "verifier error"}`,
+          );
+        }
+        facts.push({
+          type: entry.type,
+          artifact_hash: artifactHash(),
+          verified_at: resumed.verified_at,
+          ...(Object.keys(resumed.facts).length ? { facts: resumed.facts } : {}),
+        });
+        continue;
+      }
+      work.charge(1);
+      let verified: Record<string, JsonValue>;
+      try {
+        verified = await impl.verify({ ...ctx, entry, work });
+      } catch (e) {
+        if (exceeded) throw overBound();
+        if (e instanceof IntentError) throw e;
+        throw new IntentError(
+          "invalid_mission_intent_evidence",
+          `evidence verification failed (${entry.type}): ${e instanceof Error ? e.message : "verifier error"}`,
+        );
+      }
+      if (exceeded) throw overBound();
+      facts.push({
+        type: entry.type,
+        artifact_hash: artifactHash(),
+        verified_at: ctx.now.toISOString(),
+        ...(Object.keys(verified).length ? { facts: verified } : {}),
+      });
+    }
+  } catch (e) {
+    ctx.admission?.release();
+    throw e;
   }
   return facts;
 }

@@ -690,7 +690,14 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
-import { pushedRequestIntake, requestObjectIntake, takeParIntake, takeRequestObjectIntake } from "./par-intake.js";
+import {
+  pushedRequestAdmission,
+  pushedRequestAdmissionFor,
+  pushedRequestIntake,
+  requestObjectIntake,
+  takeParIntake,
+  takeRequestObjectIntake,
+} from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -2564,13 +2571,34 @@ export function buildProvider(opts: AdapterOptions): Provider {
           // The verified FACTS recorded at approval are re-derived at decide()
           // from the interaction's immutable pushed parameters (the same
           // TOCTOU rule as the proposal re-derivation).
-          const clientId = oidc.client?.clientId ?? String(params.client_id ?? "");
+          const authenticatedClient = oidc.client?.clientId;
+          const clientId = authenticatedClient ?? String(params.client_id ?? "");
+          // @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): the
+          // push itself admits the submission under its admission scope; the
+          // authorization endpoint's re-validation of the stored pushed
+          // request is a later step of that accepted submission, named by
+          // the pushed request's jti. Both establish the presenter from the
+          // client alone, never from a request parameter; the device
+          // authorization endpoint is neither, so a type that reserves
+          // refuses there.
+          const route = (ctx as { oidc: { route?: string } }).oidc.route;
+          const admission =
+            route === "pushed_authorization_request" && authenticatedClient !== undefined
+              ? pushedRequestAdmissionFor((ctx as { req: IncomingMessage }).req)
+              : undefined;
+          const pushedJti =
+            route === "authorization" && authenticatedClient !== undefined
+              ? (oidc as { entities?: { PushedAuthorizationRequest?: { jti?: unknown } } }).entities
+                  ?.PushedAuthorizationRequest?.jti
+              : undefined;
           await kernel.verifySubmissionEvidence({
             intent,
             ...(submission.evidence ? { evidence: submission.evidence } : {}),
             presenter: { clientId },
             required: requiredEvidenceTypesFor(opts, oidc.client),
             requestContext: { carrier: device ? "device-authorization" : "par" },
+            ...(admission ? { admission } : {}),
+            ...(typeof pushedJti === "string" ? { accepted: { ref: `par:${pushedJti}` } } : {}),
           });
         } catch (e) {
           if (e instanceof IntentError) {
@@ -3114,6 +3142,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // intake, before the provider parses the request (Provider#use splices it
   // ahead of the route dispatcher).
   if (enabled("device-authorization")) provider.use(deviceAuthorizationIntake);
+  // @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): the PAR
+  // admission scope, outside the intake: it commits on the provider's 201
+  // with the saved request's request_uri and releases on anything else. The
+  // wrappers outside it change a PAR response only for a witnessed kernel
+  // store, on which the type that reserves under it is refused (Q5).
+  provider.use(pushedRequestAdmission);
   // @spec mission#submission-processing (#1411): the PAR intake, before the
   // provider's own RAR check (par-intake.ts).
   provider.use(pushedRequestIntake);
@@ -4751,6 +4785,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             opts.clients.find((c) => c.client_id === params.client_id),
           ),
           requestContext: { carrier: deviceJti ? "device-authorization" : "par" },
+          // @spec request-provenance#replay (#939 slice 2a-2): a later step
+          // of the pushed submission this interaction began from.
+          ...acceptedPushedSubmission(details),
         });
       } catch (e) {
         if (!(e instanceof IntentError)) throw e;
@@ -7551,6 +7588,22 @@ function decisionRefusal(e: IntentError): { error: string; error_description: st
   return { error: e instanceof ExpiryPassedError ? "access_denied" : e.code, error_description: e.message };
 }
 
+/**
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): the accepted
+ * submission an interaction is a later step of: the pushed authorization
+ * request it began from (oidc-provider keeps its `jti` as `parJti`). A
+ * device interaction names none, so a type that relies on an acceptance
+ * record is verified there, and refuses.
+ */
+export function acceptedPushedSubmission(details: {
+  parJti?: unknown;
+  deviceCode?: unknown;
+}): { accepted?: { ref: string } } {
+  return details.deviceCode === undefined && typeof details.parJti === "string"
+    ? { accepted: { ref: `par:${details.parJti}` } }
+    : {};
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -7716,6 +7769,9 @@ async function decide(
         opts.clients.find((c) => c.client_id === params.client_id),
       ),
       requestContext: { carrier: deviceJti ? "device-authorization" : "par" },
+      // @spec request-provenance#replay (#939 slice 2a-2): a later step of
+      // the pushed submission this interaction began from.
+      ...acceptedPushedSubmission(details),
     });
   } catch (e) {
     if (e instanceof IntentError) {
