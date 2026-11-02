@@ -219,12 +219,13 @@ export function executionLeaseMaxSeconds(posture: RuntimePosture, actionClass: s
 
 /**
  * @spec runtime#classification (#1735, #1994): every runtime action class
- * whose requirements apply to one operation at one phase: the assigned class
- * first, then each further class the statement declares for that operation
- * and phase, once each. A compound action's phases carry their own classes,
- * so one phase's further classes never reach another. No class assigned is no
- * class set: the PDP refuses that request before evaluation
- * (`action_class_missing`).
+ * whose requirements apply to one operation at one phase: the declared
+ * assigned class first, then each further class the statement declares for
+ * that operation and phase, once each. A compound action's phases carry
+ * their own classes, so one phase's further classes never reach another. No
+ * class assigned is no class set: the PDP refuses that request before
+ * evaluation (`action_class_missing`), as it refuses one whose assigned
+ * class differs from the declared one.
  */
 export function applicableActionClasses(
   posture: RuntimePosture,
@@ -236,11 +237,13 @@ export function applicableActionClasses(
 }
 
 /**
- * @spec runtime#classification (#1994, cold read): the class set from a set
- * of operation declarations: the class the PEP assigned, then the matched
- * declaration's own class and each further class it names. The union only
- * adds requirements and tightens bounds, so the PEP's label (trusted, D814)
- * is kept rather than refused where it differs from the declaration.
+ * @spec runtime#classification (#1994, owner review): the class set from a
+ * set of operation declarations. Where a declaration matches the operation
+ * and phase, the set is that declaration's class and each further class it
+ * names; the PDP refuses a request whose assigned class differs from the
+ * declared one before evaluation ({@link assignedClassConflicts}), so every
+ * class-keyed duty, the write-keyed ones included, reads one consistent
+ * assignment. With no matching declaration, the set is the assigned class.
  */
 export function declaredActionClasses(
   declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
@@ -249,10 +252,26 @@ export function declaredActionClasses(
   phase?: string,
 ): readonly string[] {
   if (actionClass === undefined) return [];
-  const declared = declarations
-    .filter((d) => d.operation === action && d.phase === phase)
-    .flatMap((d) => [d.action_class, ...(d.additional_action_classes ?? [])]);
-  return [...new Set([actionClass, ...declared])];
+  const matched = declarations.find((d) => d.operation === action && d.phase === phase);
+  return matched === undefined ? [actionClass] : [matched.action_class, ...(matched.additional_action_classes ?? [])];
+}
+
+/**
+ * @spec runtime#classification, authzen#pdp-consistency-checks (#1994, owner
+ * review): whether the class assigned to a request differs from the class
+ * the PDP's own declaration assigns the same operation and phase. Deciding
+ * under either alone would drop the other's requirements, and a union would
+ * pair a write class with duties resolved from a read label, so no class is
+ * established and the PDP refuses the request (`action_class_missing`).
+ */
+export function assignedClassConflicts(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  actionClass: string,
+  action: string,
+  phase?: string,
+): boolean {
+  const matched = declarations.find((d) => d.operation === action && d.phase === phase);
+  return matched !== undefined && matched.action_class !== actionClass;
 }
 
 /**

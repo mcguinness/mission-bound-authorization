@@ -116,6 +116,7 @@ import {
 } from "./resource-policy.js";
 import {
   allowsNoActiveFreshness,
+  assignedClassConflicts,
   declaredActionClasses,
   phaseOnPhaselessOperation,
   phaseUnmatchedWithFurtherClasses,
@@ -1261,6 +1262,25 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // Checked after the evaluation context and the work item, so an earlier
   // fault keeps its code.
   if ((req as { context?: { action_class?: unknown } } | undefined)?.context?.action_class === undefined) {
+    await recordPdpRefusal(opts.refusals, "action_class_missing", req);
+    throw new DecisionRequestRefused("action_class_missing");
+  }
+  // @spec runtime#classification, authzen#pdp-consistency-checks (#1994,
+  // owner review): a class the PEP assigned that differs from the class this
+  // PDP's own declaration assigns the same operation and phase establishes no
+  // class either: deciding under the label would resolve the write-keyed
+  // duties (the scheduling key, the single-use default) from a class the
+  // declaration contradicts. The same Refusal Record, `action_class_missing`,
+  // recorded with no class.
+  if (
+    typeof actionName === "string" &&
+    assignedClassConflicts(
+      declarationsOf(opts),
+      String((req as { context: { action_class: unknown } }).context.action_class),
+      actionName,
+      isActionPhase(actionPhase) ? actionPhase : undefined,
+    )
+  ) {
     await recordPdpRefusal(opts.refusals, "action_class_missing", req);
     throw new DecisionRequestRefused("action_class_missing");
   }

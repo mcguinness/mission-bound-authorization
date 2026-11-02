@@ -10,7 +10,8 @@
  * class relieves only what it names. The PDP computes the class set from its
  * own operation declarations: `payments:remittance.send` is assigned
  * `external_commitment` (the class the PEP sends) and the shipped statement
- * declares `irreversible_action` beside it.
+ * declares `irreversible_action` beside it. A request whose assigned class
+ * differs from the declared one is refused before evaluation.
  *
  * The clock is fixed at one instant (D1091), and no OpenFGA is needed: the
  * authority check is stubbed to allow, so each assertion is the class rule's.
@@ -22,6 +23,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import {
   applicableActionClasses,
+  assignedClassConflicts,
   channelDeadlineMs,
   createDecisionEvidenceEmitter,
   DecisionRequestRefused,
@@ -33,6 +35,7 @@ import {
   executionLeaseMaxSecondsOver,
   loadRuntimePosture,
   type MissionView,
+  type PdpRefusal,
   relationForAction,
   RUNTIME_POSTURE,
   stalenessBound,
@@ -51,6 +54,8 @@ const NOW = new Date("2026-09-14T12:00:00Z");
 const allowFga = { checkWithContext: async () => true } as unknown as Fga;
 const REMIT = "payments:remittance.send";
 const READ = "payments:invoice.read";
+const PAY = "payments:payment.execute";
+const HIGH = ["irreversible_action", "external_commitment", "privileged_administration"];
 
 const view = (actions: string[]): MissionView => ({
   id: "msn_multi_1",
@@ -70,7 +75,7 @@ const request = (action: string, actionClass: string, ageSeconds: number, extra:
     resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
     // @spec runtime#idempotency (#917): a high-consequence permit is claimed
     // first, under the request's key.
-    action: { name: action, ...(action === REMIT ? { properties: { idempotency_key: freshKey() } } : {}) },
+    action: { name: action, ...(HIGH.includes(actionClass) ? { properties: { idempotency_key: freshKey() } } : {}) },
     context: {
       mission: { id: "msn_multi_1", issuer: ISSUER, authority_hash: "sha-256:testhash" },
       action_class: actionClass,
@@ -201,13 +206,27 @@ describe("an action several class predicates apply to takes every applicable cla
 });
 
 describe("the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read)", () => {
-  it("takes the declaration's own class beside a mislabeled assignment: remittance.send labeled consequential_write still takes external_commitment and irreversible_action, and is refused at 45 seconds", async () => {
-    const decision = await evaluate(request(REMIT, "consequential_write", 45, AMOUNT), options([REMIT], { evidence: emitter() }));
-    expect(decision.decision).toBe(false);
-    expect(decision.context.denial_reason).toBe("stale_state");
-    const record = decision.context.decision_evidence as DecisionEvidenceObject;
-    expect(record.action_class).toBe("consequential_write");
-    expect(record.action_classes).toEqual(["consequential_write", "external_commitment", "irreversible_action"]);
+  /** The outcome of one evaluation, with every Refusal Record the PDP recorded. */
+  const outcomeOf = async (req: EvaluationRequest, over: Partial<EvaluateOptions> = {}, actions = [req.action.name]) => {
+    const refusals: PdpRefusal[] = [];
+    const outcome = await evaluate(req, options(actions, { ...over, refusals: (r: PdpRefusal) => void refusals.push(r) })).then(
+      (decision) => ({ decision }),
+      (error: unknown) => ({ error }),
+    );
+    return { outcome, refusals };
+  };
+  const refusedAs = (o: Awaited<ReturnType<typeof outcomeOf>>, reason: string, label: string) => {
+    expect(o.outcome, label).toEqual({ error: expect.any(DecisionRequestRefused) });
+    expect((o.outcome as { error: DecisionRequestRefused }).error.denial_reason, label).toBe(reason);
+    expect(o.refusals.map((r) => r.denial_reason), label).toEqual([reason]);
+  };
+
+  it("refuses action_class_missing, before evaluation and with no Decision Evidence, a request whose assigned class differs from the class the declaration assigns, a further class of the set included", async () => {
+    for (const label of ["consequential_write", "irreversible_action"]) {
+      const o = await outcomeOf(request(REMIT, label, 0, AMOUNT), { evidence: emitter() });
+      refusedAs(o, "action_class_missing", label);
+    }
+    expect(assignedClassConflicts(RUNTIME_POSTURE.extensions?.execution_capabilities ?? [], "external_commitment", REMIT)).toBe(false);
   });
 
   it("refuses phase_invalid, before evaluation, a phase on remittance.send, which the declarations name without one; an undeclared phase of a compound action still decides", async () => {
@@ -300,5 +319,43 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
     );
     expect(alone.decision).toBe(true);
     expect(Date.parse((alone.context.conditions as { valid_until: string }).valid_until)).toBe(NOW.getTime() + 300_000);
+  });
+});
+
+describe("the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes)", () => {
+  /** The refusal an evaluation ends in, or `undefined` when it decides. */
+  const refusalOf = (req: EvaluationRequest, over: Partial<EvaluateOptions>, actions: string[]) =>
+    evaluate(req, options(actions, over)).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+
+  it("requires the declared scheduling key under the declared write class, and refuses a request labeling the operation a read rather than deciding it without the key", async () => {
+    const action = "payments:payment.schedule";
+    expect(assignedClassConflicts(RUNTIME_POSTURE.extensions?.execution_capabilities ?? [], "consequential_read", action)).toBe(true);
+    const correct = await evaluate(request(action, "consequential_write", 0, AMOUNT), options([action]));
+    expect(correct.context.denial_reason).toBe("parameter_violation");
+    const refusals: PdpRefusal[] = [];
+    const mislabeled = await refusalOf(
+      request(action, "consequential_read", 0, AMOUNT),
+      { evidence: emitter(), refusals: (r: PdpRefusal) => void refusals.push(r) },
+      [action],
+    );
+    expect(mislabeled).toBeInstanceOf(DecisionRequestRefused);
+    expect((mislabeled as DecisionRequestRefused).denial_reason).toBe("action_class_missing");
+    expect(refusals.map((r) => r.denial_reason)).toEqual(["action_class_missing"]);
+  });
+
+  it("keeps the prepare write's single-use control: the declared write permits with use_limit 1 and one class, and a read label is refused rather than permitted without it", async () => {
+    const PREPARE = { ...AMOUNT, action_phase: "prepare" };
+    const mislabeled = await refusalOf(request(PAY, "consequential_read", 0, PREPARE), { evidence: emitter() }, [PAY]);
+    expect(mislabeled).toBeInstanceOf(DecisionRequestRefused);
+    expect((mislabeled as DecisionRequestRefused).denial_reason).toBe("action_class_missing");
+    const decision = await evaluate(request(PAY, "consequential_write", 0, PREPARE), options([PAY], { evidence: emitter() }));
+    expect(decision.decision).toBe(true);
+    const record = decision.context.decision_evidence as DecisionEvidenceObject;
+    expect(record.action_class).toBe("consequential_write");
+    expect(record).not.toHaveProperty("action_classes");
+    expect((decision.context.conditions as { use_limit?: number }).use_limit).toBe(1);
   });
 });
