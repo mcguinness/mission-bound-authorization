@@ -545,7 +545,9 @@ Table of Contents
        "intent_hash":
          "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
        "authority_hash":
-         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+       "consent_rendering_hash":
+         "sha-256:3pgTrle6nKWp7a5UKN4DDiRcVGXYJzWyf8wb9Sbh8lI"
      },
      "approver": {
        "iss": "https://idp.example.com",
@@ -577,7 +579,8 @@ Table of Contents
    }
 
    No Mission exists yet, so the mission descriptor carries the
-   proposal's anchors and no id.
+   proposal's anchors and the reviewed disclosure's
+   consent_rendering_hash, and no id.
 
    The agent pushes a narrowed Mission Intent, dropping the write, to
    PAR with the revision handle:
@@ -839,6 +842,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The narrowed Consent Evidence example's mission descriptor carries
+      the reviewed disclosure's consent_rendering_hash, as Consent
+      Evidence requires for every decision (#1956).
 
    *  The names this document registers in shared OAuth registries carry
       mission: mission_revision_required, mission_revision_handle (token
