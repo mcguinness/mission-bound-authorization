@@ -258,6 +258,9 @@ export type DurableIdempotencyDeclaration =
  * A reference-statement representation of the Operation Profile items, not a
  * Runtime wire member.
  */
+/** @spec runtime#classification: the three highest action classes. */
+const HIGH_CONSEQUENCE_CLASSES: readonly string[] = ["irreversible_action", "external_commitment", "privileged_administration"];
+
 export interface ExecutionCapabilityDeclaration {
   operation: string;
   phase?: (typeof COMPOUND_PHASES)[number];
@@ -866,6 +869,19 @@ export function executionCapabilityFindings(input: unknown): EnforcementScopeFin
         for (const extra of additional) {
           if (extra === actionClass) push(member, `additional_action_classes repeats the assigned class "${extra}"`);
           else if (!classes.includes(extra)) push(member, `additional action class "${extra}" is outside mediated_scope.action_classes`);
+        }
+        // @spec runtime#classification (#1994, cold read): the reference
+        // resolves the write-keyed duties (the single-use default, the
+        // reversible-write key window, the claim domain's class) from the
+        // assigned class, so it admits further classes only where the
+        // assigned class and every further class are high-consequence, whose
+        // duties it resolves over the set. Any other combination is refused
+        // here rather than decided with a duty dropped or never satisfiable.
+        if (
+          !HIGH_CONSEQUENCE_CLASSES.includes(String(actionClass)) ||
+          !additional.every((extra) => HIGH_CONSEQUENCE_CLASSES.includes(extra))
+        ) {
+          push(member, "additional_action_classes is supported only where the assigned class and every further class are high-consequence");
         }
       }
     }

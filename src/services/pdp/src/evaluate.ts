@@ -106,6 +106,7 @@ import {
 import { COVERED_PHASES, committedDestinationHolds, isMissionBudgetBinding } from "./budget-metering.js";
 import { type DurationLeaseDomain, durationLeaseStep, renewalClaimIdentity } from "./duration-lease.js";
 import { permitDeadline } from "./permit-deadline.js";
+import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
 import {
   checkResourcePolicy,
   isResourcePolicy,
@@ -115,7 +116,8 @@ import {
 } from "./resource-policy.js";
 import {
   allowsNoActiveFreshness,
-  applicableActionClasses,
+  declaredActionClasses,
+  phaseOnPhaselessOperation,
   RUNTIME_POSTURE,
   reversibleWritePermitMaxSeconds,
   stalenessBoundOver,
@@ -726,14 +728,14 @@ export interface EvaluateOptions {
    */
   stalenessBound: (actionClass: string | undefined) => StalenessBound;
   /**
-   * @spec runtime#classification (#1735, #1994): every runtime action class
-   * whose requirements apply to an action, given the class the trusted PEP
-   * assigned: that class first, then each further class this PDP's own
-   * operation declaration names. A PDP-side binding, like
-   * `resourceContracts`: an enforcement component that could supply it
+   * @spec runtime#classification (#1735, #1994): this PDP's own operation
+   * declarations, the source of every runtime action class that applies to
+   * an action: the matched declaration's class and each further class it
+   * names, beside the class the trusted PEP assigned. A PDP-side binding,
+   * like `resourceContracts`: an enforcement component that could supply it
    * could drop a class. Defaults to the deployment's statement.
    */
-  actionClassesFor?: (action: string, assignedClass: string, phase?: string) => readonly string[];
+  operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
   /** Map an action name to the FGA relation and object type it needs. */
   relationForAction: (action: string) => { relation: "payer" | "reader"; needsAmount: boolean } | null;
   /** Deployment/Resource policy: does this action require an action-bound approval? */
@@ -1027,9 +1029,9 @@ export type DecisionOptions = Omit<
   | "durationLeases"
   | "phasedActions"
   | "evaluationContextBinding"
-  // @spec runtime#classification (#1994): so is the operation class set,
-  // for the reason the contract declarations are.
-  | "actionClassesFor"
+  // @spec runtime#classification (#1994): so are the operation declarations
+  // the class set comes from, for the reason the contract declarations are.
+  | "operationDeclarations"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -1136,14 +1138,15 @@ function evaluationContextOf(
  */
 function actionClassesOf(
   req: { action: { name: string }; context: { action_class?: string; action_phase?: string } },
-  opts: Pick<EvaluateOptions, "actionClassesFor">,
+  opts: Pick<EvaluateOptions, "operationDeclarations">,
 ): readonly string[] {
-  const assigned = req.context.action_class;
-  if (assigned === undefined) return [];
   const phase = typeof req.context.action_phase === "string" ? req.context.action_phase : undefined;
-  return opts.actionClassesFor
-    ? [...new Set([assigned, ...opts.actionClassesFor(req.action.name, assigned, phase)])]
-    : applicableActionClasses(RUNTIME_POSTURE, assigned, req.action.name, phase);
+  return declaredActionClasses(declarationsOf(opts), req.context.action_class, req.action.name, phase);
+}
+
+/** This PDP's operation declarations: its binding, else the deployment's statement. */
+function declarationsOf(opts: Pick<EvaluateOptions, "operationDeclarations">): ReadonlyArray<ExecutionCapabilityDeclaration> {
+  return opts.operationDeclarations ?? RUNTIME_POSTURE.extensions?.execution_capabilities ?? [];
 }
 
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
@@ -1183,9 +1186,13 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // member.
   const actionPhase = (req as { context?: { action_phase?: unknown } } | undefined)?.context?.action_phase;
   const actionName = (req as { action?: { name?: unknown } } | undefined)?.action?.name;
+  // @spec runtime#classification (#1994, cold read): so is a phase on an
+  // operation this PDP's own declarations name only without one, whose class
+  // set would otherwise match no declaration.
   const phaseUnusable =
     actionPhase !== undefined
-      ? !isActionPhase(actionPhase)
+      ? !isActionPhase(actionPhase) ||
+        (typeof actionName === "string" && phaseOnPhaselessOperation(declarationsOf(opts), actionName, actionPhase))
       : typeof actionName === "string" && opts.phasedActions?.has(actionName) === true;
   if (phaseUnusable) {
     await recordPdpRefusal(opts.refusals, "phase_invalid", req);

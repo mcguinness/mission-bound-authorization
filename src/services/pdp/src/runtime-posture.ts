@@ -232,11 +232,45 @@ export function applicableActionClasses(
   action: string,
   phase?: string,
 ): readonly string[] {
+  return declaredActionClasses(posture.extensions?.execution_capabilities ?? [], actionClass, action, phase);
+}
+
+/**
+ * @spec runtime#classification (#1994, cold read): the class set from a set
+ * of operation declarations: the class the PEP assigned, then the matched
+ * declaration's own class and each further class it names. The union only
+ * adds requirements and tightens bounds, so the PEP's label (trusted, D814)
+ * is kept rather than refused where it differs from the declaration.
+ */
+export function declaredActionClasses(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  actionClass: string | undefined,
+  action: string,
+  phase?: string,
+): readonly string[] {
   if (actionClass === undefined) return [];
-  const further = (posture.extensions?.execution_capabilities ?? [])
+  const declared = declarations
     .filter((d) => d.operation === action && d.phase === phase)
-    .flatMap((d) => d.additional_action_classes ?? []);
-  return [...new Set([actionClass, ...further])];
+    .flatMap((d) => [d.action_class, ...(d.additional_action_classes ?? [])]);
+  return [...new Set([actionClass, ...declared])];
+}
+
+/**
+ * @spec authzen#context-action-phase, runtime#classification (#1994, cold
+ * read): whether a request names a phase for an operation the declarations
+ * name only without one. Its class set would match no declaration and lose
+ * the declared classes, so the PDP refuses it (`phase_invalid`). A phase of a
+ * compound operation that names no execution capabilities (such as a
+ * `preflight` with no effect) has no declaration of its own and is not this.
+ */
+export function phaseOnPhaselessOperation(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  action: string,
+  phase: string | undefined,
+): boolean {
+  if (phase === undefined) return false;
+  const own = declarations.filter((d) => d.operation === action);
+  return own.length > 0 && own.every((d) => d.phase === undefined);
 }
 
 /**
