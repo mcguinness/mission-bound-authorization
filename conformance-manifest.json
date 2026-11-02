@@ -94182,9 +94182,39 @@
      "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > releases the reservation when a later entry passes the verification-work bound, before the carrier settles the scope",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > commits nothing when one of two reservations lapses before the push is accepted, so the still-valid assertion is accepted next (the short assertion first: false)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > commits nothing when one of two reservations lapses before the push is accepted, so the still-valid assertion is accepted next (the short assertion first: true)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > commits nothing when the one reservation lapses before the push is accepted",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > settles all or nothing: when one hold can no longer commit, none commits and every hold is released (the lapsed hold first: false)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > settles all or nothing: when one hold can no longer commit, none commits and every hold is released (the lapsed hold first: true)",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. A push refused before acceptance for another entry failing, for a later entry passing the verification-work bound, for a failed save of the pushed request, or for an exception after the provider set its 201, releases its reservation, and the same assertion is accepted next. The dispatch releases the scope on any refusal inside the evidence loop (unit tests), and the PAR wrapper releases on every outcome but acceptance, in a finally. Mutations: dropping the dispatch's release fails the unit tests (the endpoint tests still pass, since the wrapper releases too); releasing only on a normal return fails the exception test; committing when verification passes fails the save test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. A push refused before acceptance for another entry failing, for a later entry passing the verification-work bound, for a failed save of the pushed request, or for an exception after the provider set its 201, releases its reservation, and the same assertion is accepted next. The dispatch releases the scope on any refusal inside the evidence loop (unit tests), and the PAR wrapper releases on every outcome but acceptance, in a finally. Mutations: dropping the dispatch's release fails the unit tests (the endpoint tests still pass, since the wrapper releases too); releasing only on a normal return fails the exception test; committing when verification passes fails the save test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. Settlement is all or nothing (#2003 review): the scope prepares every hold, each checking with one reading of the clock that its reservation can still commit, before any commits, and when one has lapsed it releases them all and commits none. So a push refused at acceptance (its 500, the saved request_uri unusable since no record exists) leaves every still-valid assertion retryable, in either entry order. Mutations: committing hold by hold, committing each right after its own check, and a check that ignores the lapse each fail a cited test."
   },
   {
    "id": "request-provenance.replay.accepted-no-reverification",
@@ -94229,9 +94259,15 @@
      "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > resumes an accepted entry with no verification work, and refuses a record that names another authorization server, or a step presenting a confirmation key",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > one accepted push opens two interactions, each relying on the one acceptance record without verifying again, and a new push of the assertion is still replay",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#939 slice 2a-2. The authorization endpoint, the rendering and the decision of an accepted push, and a deferred activation, verify no signature: the counted verifier runs once, at the push. The committed jti does not refuse them, and the Mission records the push's verified_at, artifact_hash and facts from the acceptance record. A resume is charged no verification work. The required-evidence check still applies at a later step (a submission that no longer presents the required type is refused); the approval checks still apply (an Approver who is not authenticated is refused at the rendering, uncited: no defect in this slice reaches that gate). Mutations: re-verifying instead of resuming, or skipping the required-evidence check on a resume, fails these tests. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. The authorization endpoint, the rendering and the decision of an accepted push, and a deferred activation, verify no signature: the counted verifier runs once, at the push. The committed jti does not refuse them, and the Mission records the push's verified_at, artifact_hash and facts from the acceptance record. A resume is charged no verification work. The required-evidence check still applies at a later step (a submission that no longer presents the required type is refused); the approval checks still apply (an Approver who is not authenticated is refused at the rendering, uncited: no defect in this slice reaches that gate). Mutations: re-verifying instead of resuming, or skipping the required-evidence check on a resume, fails these tests. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. One accepted push opening two interactions (oidc-provider consumes it only at respond) has each rely on the one record with no further verification, while a new push of the assertion is still replay; each interaction keeps its own authorization, required-evidence, approval, expiry and idempotency checks (owner ruling on #2003's question 1)."
   },
   {
    "id": "request-provenance.replay.acceptance-record-required",
