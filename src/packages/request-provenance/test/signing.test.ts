@@ -83,13 +83,17 @@ describe("signing only from the intake's own capture (@spec request-provenance#s
   it("refuses an unknown capture and yields no assertion", async () => {
     const a = intake();
     const b = intake();
+    // The intake holds a capture of its own for this workflow, so a refusal
+    // below is about the named capture, not an empty store.
+    const own = a.capture(vectorCapture());
     // A capture identifier no capture produced.
     expect(await refusal(a.sign(signRequest("AAAAAAAAAAAAAAAAAAAAAA")))).toBe("unknown_capture");
     // A real capture, made by another intake: a request this intake did not capture.
     const elsewhere = b.capture(vectorCapture());
     expect(await refusal(a.sign(signRequest(elsewhere.captureId)))).toBe("unknown_capture");
-    // The capturing intake signs it.
+    // The capturing intake signs it, and this intake signs its own.
     expect(await refusal(b.sign(signRequest(elsewhere.captureId)))).toBe("signed");
+    expect(await refusal(a.sign(signRequest(own.captureId)))).toBe("signed");
   });
 
   it("refuses another workflow's capture and yields no assertion", async () => {
