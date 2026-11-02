@@ -7146,7 +7146,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (enabled("introspection")) {
         meta.introspection_endpoint = `${opts.issuer}/introspect`;
         // @spec mission#caller-authorization-and-minimization (cleanup, issue
-        // #541) — advertise the introspection endpoint's actual authentication
+        // #541): advertise the introspection endpoint's actual authentication
         // method (registered-principal HTTP Basic, authenticateIntrospection
         // above), matching RFC 8414's *_endpoint_auth_methods_supported idiom.
         meta.introspection_endpoint_auth_methods_supported = ["client_secret_basic"];
