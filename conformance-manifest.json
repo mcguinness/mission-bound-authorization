@@ -92886,24 +92886,24 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
-     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry with no intended-AS binding",
+     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry with no intended-AS binding, before derivation",
      "level": "endpoint",
      "surface": "par"
     },
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
-     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry whose intended-AS binding is invalid",
+     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry whose intended-AS binding is invalid, before derivation",
      "level": "endpoint",
      "surface": "par"
     },
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
-     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry bound to another authorization server, and accepts the same capture bound to this one",
+     "name": "the intended authorization server at PAR (@spec submission-evidence#intent-binding, request-provenance#verification, #939 slice 2a-2) > refuses invalid_mission_intent_evidence an entry bound to another authorization server, before derivation, and accepts the same capture bound to this one",
      "level": "endpoint",
      "surface": "par"
     }
    ],
-   "notes": "#901 review; #939 slice 2a-2. mission-request-provenance is the first supported intent-bound type: it binds its intended AS by aud, a string equal to this AS's issuer identifier (request-provenance#verification steps 5 and 6). At the PAR endpoint an assertion with no aud, with an aud of 42, an array or an object, and one bound to another AS are each refused invalid_mission_intent_evidence, and the same capture bound to this AS is accepted. A push is refused before any derivation, which the reference runs only at the rendering and the decision. Mutations: removing the aud type check or the aud comparison fails these tests."
+   "notes": "#901 review; #939 slice 2a-2. mission-request-provenance is the first supported intent-bound type: it binds its intended AS by aud, a string equal to this AS's issuer identifier (request-provenance#verification steps 5 and 6). At the PAR endpoint an assertion with no aud, with an aud of 42, an array or an object, and one bound to another AS are each refused invalid_mission_intent_evidence, and the same capture bound to this AS is accepted. Each refusal comes before any derivation: the tests assert the kernel derives nothing for the refused push (the reference derives only at the rendering and the decision). Mutations: removing the aud type check or the aud comparison, or deriving at the push before its evidence step, fails these tests."
   },
   {
    "id": "submission-evidence.verification-bounds.cost-bounded",
@@ -92943,9 +92943,15 @@
      "name": "verification work at PAR (@spec submission-evidence#verification-bounds, request-provenance#verification, #1962, D1151) > refuses invalid_request at a verification-work bound of 0, and no signature verification runs",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > resumes an accepted entry with no verification work, and refuses a record that names another authorization server, or a step presenting a confirmation key",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work. #939 slice 2a-2 (D1151): the real mission-request-provenance verifier performs exactly one signature verification, fetches no key and walks no chain, so it charges nothing beyond the dispatch's unit: one entry verifies at PAR at a bound of 1, and at a bound of 0 the push is refused invalid_request with no signature verified (the verifier's calls are counted). A resume at a later step verifies nothing and is charged nothing. Mutation: charging a further unit refuses the entry at a bound of 1."
+   "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work. #939 slice 2a-2 (D1151): the real mission-request-provenance verifier performs exactly one signature verification, fetches no key and walks no chain, so it charges nothing beyond the dispatch's unit: one entry verifies at PAR at a bound of 1, and at a bound of 0 the push is refused invalid_request with no signature verified (the verifier's calls are counted). A resume at a later step verifies nothing and is charged nothing, even at a bound of 0 (unit). Mutations: charging a further unit refuses the entry at a bound of 1; charging a resume fails the unit test."
   },
   {
    "id": "request-provenance.trust.no-header-key",
