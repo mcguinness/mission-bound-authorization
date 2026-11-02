@@ -2471,59 +2471,97 @@ export const DEMO_DISPATCH_POLICIES: Readonly<
 
 /**
  * @spec mission-template#standing-payment-exception, metering#aggregate-bounds
- * (#813, #816, D830, D1122 draft enablement): the shared demo composition's
- * standing-payment configuration, `config/standing-payment.json`. Its
- * Dispatch Policies designate the standing payment; each snapshot's exact
- * bytes are the compact JSON of the file's `content` object. Its
- * `budget_metering` declaration is what the composition adds to its
- * Enforcement Scope Statement; each budget names its committed policies by
- * `id` and `version`, and the composition computes each `digest` as its
- * issuer does. Checked structurally here; the authorization server and the
- * PDP refuse a declaration they cannot run.
+ * (#813, #816, D830, D1122 draft enablement, D1143): the shared demo
+ * composition's standing-payment configuration, `config/standing-payment.json`,
+ * one reviewed configuration producing both declarations. Its Dispatch
+ * Policies designate the standing payment; each snapshot's exact bytes are the
+ * compact JSON of the file's `content` object. Its `budget_metering`
+ * declaration is what the composition adds to its Enforcement Scope
+ * Statement; each budget names its committed policies by `id` and `version`,
+ * and the composition computes each `digest` as its issuer does. A `digest`
+ * the file does carry is an operator pin, which the composition compares with
+ * the digest it computes and never drops.
  */
 export interface StandingPaymentDeployment {
   dispatch_policies: Readonly<
     Record<string, { version: string; content_type: string; content: string }>
   >;
   budget_metering: Record<string, unknown> & {
-    budgets: Array<Record<string, unknown> & { policies: Array<{ id: string; version: string }> }>;
+    budgets: Array<
+      Record<string, unknown> & {
+        policies: Array<{ id: string; version: string; digest?: string }>;
+      }
+    >;
   };
 }
 
-function loadStandingPaymentDeployment(): StandingPaymentDeployment {
+const STANDING_PAYMENT_ROOT_MEMBERS = new Set(["dispatch_policies", "budget_metering"]);
+const STANDING_PAYMENT_POLICY_MEMBERS = new Set(["version", "content_type", "content"]);
+const STANDING_PAYMENT_REF_MEMBERS = new Set(["id", "version", "digest"]);
+
+/**
+ * Load {@link StandingPaymentDeployment} from `config/standing-payment.json`.
+ * Only the composition that enables standing-payment dispatch calls it, when
+ * it is composed (D1143): no other deployment reads or requires the file. A
+ * missing or unparsable file, a missing or unknown member, an empty policy or
+ * budget list, or a policy reference that is not `{id, version}` with an
+ * optional `digest` is a {@link ConfigError}; the authorization server and the
+ * PDP refuse a declaration they cannot run.
+ */
+export function loadStandingPaymentDeployment(): StandingPaymentDeployment {
   const file = "standing-payment.json";
   const raw = asObject(file, readJson(file), "file");
+  onlyMembers(file, raw, STANDING_PAYMENT_ROOT_MEMBERS, "file");
   const policies = asObject(file, raw.dispatch_policies, "dispatch_policies");
+  if (Object.keys(policies).length === 0) {
+    throw new ConfigError(file, "dispatch_policies must name at least one Dispatch Policy");
+  }
   const dispatch_policies: Record<
     string,
     { version: string; content_type: string; content: string }
   > = {};
   for (const [id, entry] of Object.entries(policies)) {
-    const p = asObject(file, entry, `dispatch_policies.${id}`);
+    const at = `dispatch_policies.${id}`;
+    const p = asObject(file, entry, at);
+    onlyMembers(file, p, STANDING_PAYMENT_POLICY_MEMBERS, at);
+    const content_type = reqString(file, p, "content_type", at);
+    if (content_type !== "application/json") {
+      throw new ConfigError(file, `${at}.content_type must be application/json`);
+    }
     dispatch_policies[id] = {
-      version: reqString(file, p, "version", `dispatch_policies.${id}`),
-      content_type: reqString(file, p, "content_type", `dispatch_policies.${id}`),
-      content: JSON.stringify(asObject(file, p.content, `dispatch_policies.${id}.content`)),
+      version: reqString(file, p, "version", at),
+      content_type,
+      content: JSON.stringify(asObject(file, p.content, `${at}.content`)),
     };
   }
   const declared = asObject(file, raw.budget_metering, "budget_metering");
-  const budgets = asArray(file, declared.budgets, "budget_metering.budgets").map((b, i) => {
+  const listed = asArray(file, declared.budgets, "budget_metering.budgets");
+  if (listed.length === 0) {
+    throw new ConfigError(file, "budget_metering.budgets must declare at least one budget");
+  }
+  const budgets = listed.map((b, i) => {
     const budget = asObject(file, b, `budget_metering.budgets[${i}]`);
-    const refs = asArray(file, budget.policies, `budget_metering.budgets[${i}].policies`).map(
-      (r, j) => {
-        const ref = asObject(file, r, `budget_metering.budgets[${i}].policies[${j}]`);
-        const at = `budget_metering.budgets[${i}].policies[${j}]`;
-        return { id: reqString(file, ref, "id", at), version: reqString(file, ref, "version", at) };
-      },
-    );
+    const named = asArray(file, budget.policies, `budget_metering.budgets[${i}].policies`);
+    if (named.length === 0) {
+      throw new ConfigError(
+        file,
+        `budget_metering.budgets[${i}].policies must name at least one Dispatch Policy`,
+      );
+    }
+    const refs = named.map((r, j) => {
+      const at = `budget_metering.budgets[${i}].policies[${j}]`;
+      const ref = asObject(file, r, at);
+      onlyMembers(file, ref, STANDING_PAYMENT_REF_MEMBERS, at);
+      return {
+        id: reqString(file, ref, "id", at),
+        version: reqString(file, ref, "version", at),
+        ...(ref.digest !== undefined ? { digest: reqString(file, ref, "digest", at) } : {}),
+      };
+    });
     return { ...budget, policies: refs };
   });
   return { dispatch_policies, budget_metering: { ...declared, budgets } };
 }
-
-/** The shared demo composition's standing-payment configuration ({@link StandingPaymentDeployment}). */
-export const STANDING_PAYMENT_DEPLOYMENT: StandingPaymentDeployment =
-  loadStandingPaymentDeployment();
 
 export interface SeededClient {
   metadata: Record<string, unknown>;

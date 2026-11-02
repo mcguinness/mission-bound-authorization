@@ -14,6 +14,7 @@ import {
   ALL_PROVIDER_CAPABILITIES,
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
+  assertStandingPaymentExactProfile,
   type AuthorityEntry,
   type BudgetExposurePort,
   buildAuthorizationServer,
@@ -36,7 +37,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, keyedRecordFrom, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, scopeMappingEntries, type SeededTrustedSource, STANDING_PAYMENT_DEPLOYMENT, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, keyedRecordFrom, loadStandingPaymentDeployment, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, scopeMappingEntries, type SeededTrustedSource, type StandingPaymentDeployment, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
 import { type DurableEvidenceKey, evidenceKeyBundle, loadEvidenceKeyFile } from "./evidence-key-files.js";
 import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
@@ -374,19 +375,32 @@ function withJoinAudienceAlias(statement: RuntimePosture, join: { issuer: string
 
 /**
  * @spec mission-template#standing-payment-exception, metering#aggregate-bounds
- * (#813, #816, D830 ruling 5, D1122 draft enablement): `statement` claiming
- * `budget_metering` as `config/standing-payment.json` declares it, each
- * budget's committed Dispatch Policies identified by the `{id, version}` the
- * file names and the `digest` `issuer` computes over the snapshot the file
- * holds. Validated as the PDP loads a statement.
+ * (#813, #816, D830 ruling 5, D1122 draft enablement, D1143): `statement`
+ * claiming `budget_metering` as `config/standing-payment.json` declares it,
+ * each budget's committed Dispatch Policies identified by the `{id, version}`
+ * the file names and the `digest` `issuer` computes over the snapshot the file
+ * holds. One reviewed configuration produces both this declaration and the
+ * Dispatch Policy, so the computed digest is no independent integrity check.
+ * A `digest` the file does name is an operator pin: it must equal the
+ * computed one, or the composition refuses to start; it is never dropped.
+ * Validated as the PDP loads a statement.
  */
-function withStandingPaymentMetering(statement: RuntimePosture, issuer: string): RuntimePosture {
-  const { dispatch_policies, budget_metering } = STANDING_PAYMENT_DEPLOYMENT;
+function withStandingPaymentMetering(
+  statement: RuntimePosture,
+  issuer: string,
+  deployment: StandingPaymentDeployment,
+): RuntimePosture {
+  const { dispatch_policies, budget_metering } = deployment;
   const budgets = budget_metering.budgets.map((budget) => ({
     ...budget,
-    policies: budget.policies.map(({ id, version }) => {
+    policies: budget.policies.map(({ id, version, digest }) => {
       const ref = mintActivationPolicyRef(issuer, dispatch_policies, id, version);
       if (!ref) throw new Error(`config/standing-payment.json declares a budget under Dispatch Policy ${id} version ${version}, which it does not hold`);
+      if (digest !== undefined && digest !== ref.digest) {
+        throw new Error(
+          `config/standing-payment.json pins Dispatch Policy ${id} version ${version} at digest ${digest}, but issuer ${issuer} computes ${ref.digest} over the snapshot the file holds`,
+        );
+      }
       return ref;
     }),
   }));
@@ -535,9 +549,10 @@ export async function composeStack(opts: {
    * `standing-payment-dispatch` capability with the Dispatch Policies of
    * `config/standing-payment.json` (D1122 draft enablement); this fixture
    * registers these Dispatch Policies in their place, so a test can consent
-   * to and dispatch a standing payment under its own terms. The AS refuses
-   * to start unless `statement` declares each designating policy's budget
-   * under the Exact profile. The `as-native` target refuses it.
+   * to and dispatch a standing payment under its own terms; with `statement`
+   * supplied too, the file is not read. The composition refuses to start
+   * unless `statement` declares each designating policy's budget under the
+   * Exact profile. The `as-native` target refuses it.
    */
   testStandingPaymentDispatch?: { dispatchPolicies: DispatchPolicies };
   /**
@@ -567,6 +582,27 @@ export async function composeStack(opts: {
   // #813: the standing-payment fixture is the shared composition's only.
   if (opts.testStandingPaymentDispatch && (asNative || !opts.withAuthServer)) {
     throw new Error("testStandingPaymentDispatch needs withAuthServer, and the as-native target refuses it");
+  }
+  // @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+  // (#813, #816, D830, D1122 draft enablement, D1143): the shared composition
+  // with the AS, and only it, enables standing-payment dispatch. It reads
+  // config/standing-payment.json here, when it is composed, so no other
+  // deployment requires the file, and a missing or invalid file, a pin that
+  // does not match, or a designating policy whose budget the statement does
+  // not meter refuses before anything listens or connects. Its Dispatch
+  // Policies are registered (the test fixture's in their place), and unless a
+  // statement is supplied the published one claims budget_metering as the
+  // file declares it, for this AS's issuer. The as-native target never does
+  // (D830): its capability set and statement stay as published.
+  let baseStatement: RuntimePosture = opts.statement ?? RUNTIME_POSTURE;
+  let standingPaymentPolicies: DispatchPolicies | undefined;
+  if (opts.withAuthServer && !asNative) {
+    const asUrl = `http://localhost:${opts.asPort ?? TOPOLOGY.ports.as}`;
+    const deployment =
+      opts.testStandingPaymentDispatch && opts.statement !== undefined ? undefined : loadStandingPaymentDeployment();
+    standingPaymentPolicies = opts.testStandingPaymentDispatch?.dispatchPolicies ?? deployment?.dispatch_policies;
+    if (opts.statement === undefined && deployment) baseStatement = withStandingPaymentMetering(RUNTIME_POSTURE, asUrl, deployment);
+    if (standingPaymentPolicies) assertStandingPaymentExactProfile(asUrl, standingPaymentPolicies, baseStatement);
   }
   // @spec #831 (D901): durable evidence key files load first, each as its own
   // holder's, so a missing, mismatched or unreadable file refuses before
@@ -678,26 +714,10 @@ export async function composeStack(opts: {
       return state && { reserved: state.reserved, held: state.held, committed: state.committed };
     },
   };
-  // @spec mission-template#standing-payment-exception, metering#aggregate-bounds
-  // (#813, #816, D830, D1122 draft enablement): the statement every consumer
-  // below reads, and the Dispatch Policies of the standing-payment
-  // capability where it is on.
-  let baseStatement: RuntimePosture = opts.statement ?? RUNTIME_POSTURE;
-  let standingPaymentPolicies: DispatchPolicies | undefined;
 
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
     const asUrl = `http://localhost:${asPort}`;
-    // #813, #816 (D1122 draft enablement): the shared composition with the AS
-    // enables standing-payment dispatch with the Dispatch Policies of
-    // config/standing-payment.json (or the test fixture's, in their place),
-    // and, unless a statement is supplied, claims budget_metering as that file
-    // declares it, for this AS's issuer. The as-native target never does
-    // (D830): its capability set and statement stay as published.
-    if (!asNative) {
-      standingPaymentPolicies = opts.testStandingPaymentDispatch?.dispatchPolicies ?? STANDING_PAYMENT_DEPLOYMENT.dispatch_policies;
-      if (opts.statement === undefined) baseStatement = withStandingPaymentMetering(RUNTIME_POSTURE, asUrl);
-    }
     // The RS's txn-challenge signing key (rs-txn); the AS is configured with its
     // public half so POST /transaction validates challenges from this RS, and
     // opens the AROP task on the SAME ars this stack adjudicates against.
