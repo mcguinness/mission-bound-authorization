@@ -92782,9 +92782,34 @@
     "normative": "An assertion carrying jku, x5u, jwk, or x5c is refused with invalid_mission_intent_evidence, and no key is fetched from or taken from those parameters."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-jku: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-x5u: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-jwk: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-x5c: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. The module refuses at step 2, before any key lookup, an assertion whose protected header carries jku, x5u, jwk or x5c; neg-header-jwk carries the configured public key itself under a signature that verifies, so presence alone refuses. The signer's key comes only from the trust configuration by iss and kid, and the module performs no fetch. Mutation: skipping the presence check fails all four cases (each then accepted). partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.trust.key-purpose-mapping",
@@ -92804,9 +92829,22 @@
     "normative": "An assertion verified under a configured signer's key that the AS configuration does not map to this evidence type is refused with invalid_mission_intent_evidence, even when the key's use is sig and its key_ops include verify."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-key-not-mapped-to-type: refused at step 3",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the request-provenance trust configuration loader (@spec request-provenance#trust-configuration, request-provenance#verification, #939) > loads the vector's trust configuration, keeping only each key's curve and coordinates, and accepts use and key_ops without giving them effect",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. A configured key whose evidence_types does not name mission-request-provenance is refused at step 3 although its JWK carries use sig and key_ops verify; the loader accepts use and key_ops and keeps only kty, crv, x and y, and the module imports the key from those alone. Mutations: skipping the evidence_types check accepts the case; returning the JWK as configured instead of its curve and coordinates fails the loader test. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.entry-shape",
@@ -92827,9 +92865,28 @@
     "normative": "An entry with any member other than type and assertion, or a non-string assertion, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 1, the entry shape (@spec request-provenance#entry, request-provenance#verification, #939) > refuses an entry carrying a third member at step 1",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 1, the entry shape (@spec request-provenance#entry, request-provenance#verification, #939) > refuses an entry whose assertion is a number at step 1",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 1, the entry shape (@spec request-provenance#entry, request-provenance#verification, #939) > refuses an entry whose assertion is an object at step 1",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. Step 1 refuses an entry with any member beside type and assertion, and a non-string assertion; the same describe block also refuses an entry without either member, of another type, an array or null, with an accepted control. Mutations: dropping the closed member check accepts the third-member entry; dropping the string check makes verification throw instead of resolving to a step 1 refusal. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.header",
@@ -92850,9 +92907,34 @@
     "normative": "An assertion whose protected typ is not exactly mission-request-provenance+jwt, whose alg is none, or that lacks kid, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-typ-jwt: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-typ-absent: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-alg-none: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-kid-absent: refused at step 2",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. Step 2 compares typ exactly, refuses alg none and an absent kid, and decodes the header and claims strictly (UTF-8, base64url, no duplicated member names). Mutations: skipping the typ comparison accepts both typ cases; skipping the alg none or kid check moves the refusal to step 3, failing the step assertion. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.signer-and-key-scope",
@@ -92873,9 +92955,52 @@
     "normative": "An assertion from a signer the AS configuration does not authorize, under a kid the configuration does not map to this evidence type, or with an alg the key does not permit, is refused with invalid_mission_intent_evidence; an assertion with an invalid signature is refused likewise."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 3, the signer from configuration only (@spec request-provenance#verification, request-provenance#trust-configuration, #939) > refuses at step 3 a validly signed assertion whose iss names no configured signer",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-iss: refused at step 3",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-kid-unmapped: refused at step 3",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-key-not-mapped-to-type: refused at step 3",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-alg-hs256: refused at step 3",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-altered-claim: refused at step 4",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 4, the signature (@spec request-provenance#verification, #939) > refuses at step 4 a JWS whose signed payload is not the claims set the later steps read (b64 false)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. Step 3 looks the signer up by the iss claim and the protected kid in configuration only, refuses a key not mapped to this type, and checks alg against the key's algs before step 4 verifies with jose under that one algorithm and confirms the verified payload is the claims set the later steps read. Mutations: taking the first signer or first key regardless of iss or kid accepts the unknown-iss and unmapped-kid cases; skipping the alg check moves neg-alg-hs256 to step 4; bypassing signature verification accepts neg-altered-claim; skipping the payload comparison accepts the b64 false JWS. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.claims-and-audience",
@@ -92896,9 +93021,148 @@
     "normative": "An assertion missing a required claim, carrying a claim of the wrong type, or whose aud is an array or any value other than this AS's issuer identifier, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-aud: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-iat: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-exp: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-jti: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-intent-hash: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-presenter: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-originator: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-channel: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-captured-at: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-request-digest: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-iat-string: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-no-client-id: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-aud-array: refused at step 5",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-aud-other-as: refused at step 6",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a numeric intent_hash",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a presenter.cnf that is not an object",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 an originator without sub",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a channel without type",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a numeric channel.acr",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a channel.amr that is not an array of strings",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a string channel.auth_time",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a string captured_at",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 5, the required claims and their types (@spec request-provenance#assertion, request-provenance#verification, #939) > refuses at step 5 a numeric capture_id",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. Step 5 checks every required claim's presence and defined type (aud a string, NumericDates finite numbers, presenter, originator and channel objects with their typed members, capture_id a string when present) and step 6 compares aud exactly. An absent iss refuses at step 3, where the signer lookup by iss finds no signer (the vector case moved from step 5; see signer-and-key-scope). Strictness the draft implies, tested in the same block and not cited here: non-empty strings, and request_digest as hmac-sha-256: and the canonical unpadded base64url of 32 bytes. Mutations: removing each claim's check accepts its case or moves the refusal to a later step (or makes verification throw), failing the step assertion; removing the aud comparison accepts neg-aud-other-as. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.time-window",
@@ -92919,9 +93183,70 @@
     "normative": "Outside the declared clock-skew allowance, an assertion with iat in the future, exp passed, exp minus iat above the declared maximum lifetime, captured_at later than iat, or iat minus captured_at above the declared maximum capture age, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-expired: refused at step 7",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-iat-future: refused at step 7",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-lifetime-over-max: refused at step 7",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-captured-after-iat: refused at step 7",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-capture-age-over-max: refused at step 7",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 7, the time window (@spec request-provenance#verification, #939) > refuses at step 7 once now reaches exp plus the skew allowance",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 7, the time window (@spec request-provenance#verification, #939) > refuses at step 7 captured_at one second after iat: the signer's own claims take no clock-skew allowance",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 7, the time window (@spec request-provenance#verification, #939) > refuses at step 7 exp equal to iat, though exp minus iat does not exceed the maximum lifetime and neither iat nor exp is outside the skew allowance (strictness the draft implies)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 7, the time window (@spec request-provenance#verification, #939) > refuses at step 7 exp ten seconds before iat, though exp minus iat does not exceed the maximum lifetime and neither iat nor exp is outside the skew allowance (strictness the draft implies)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 7, the time window (@spec request-provenance#verification, #939) > accepts at each edge of the window: iat at the skew allowance ahead, exp just inside the allowance, lifetime and capture age at their maxima, captured_at at iat",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. The clock-skew allowance applies where the AS's clock meets the signer's (iat not in the future, exp not passed); the lifetime, the capture age and captured_at against iat compare the signer's own claims and take none, a reading of the step's opening clause. exp must be strictly after iat, or the lifetime check would pass a negative difference. Mutations: removing each check accepts its case; exp > instead of >= at the skew edge, iat >= instead of >, and >= instead of > at the lifetime and capture-age maxima each fail the edge tests; allowing skew on captured_at fails the one-second case; dropping exp after iat accepts both ordering cases. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.signer-scope",
@@ -92942,9 +93267,34 @@
     "normative": "An assertion whose originator or channel.type lies outside the signer's configured scope, or from a user-device signer whose key the AS has not bound to that originator, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-originator-out-of-scope: refused at step 8",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-channel-out-of-scope: refused at step 8",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "step 8, a user-device signer (@spec request-provenance#trust-configuration, request-provenance#verification, #939) > accepts the originator the AS bound the signer's key to, and refuses any other at step 8",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > accepts a user-device signer's assertion for its bound originator and refuses one bound to another at step 8",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. An originator entry matches on iss and, where it carries sub, on sub; a signer whose one originator carries sub is a user-device signer, and that entry is the AS's own binding of its keys to that originator (the loader refuses sub beside another originator). channel.type must be in the signer's channel_types. Mutations: dropping the originator check accepts neg-originator-out-of-scope and the other-sub case; matching on iss alone fails both user-device tests; dropping the channel check accepts neg-channel-out-of-scope. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.intent-and-presenter",
@@ -92965,9 +93315,58 @@
     "normative": "An assertion whose intent_hash differs from the submitted Intent's provisional intent_hash, or whose presenter does not match the presenter the containing exchange established, is refused with invalid_mission_intent_evidence."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119 (Q3): a `presenter` carrying `cnf` where the exchange established no confirmation key does not agree; no key is inferred from the assertion."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-intent-mismatch: refused at step 9",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-client-mismatch: refused at step 9",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-cnf-mismatch: refused at step 9",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-cnf-unestablished: refused at step 9",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > refuses at step 9 an assertion presented by another client, or for another Intent",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > refuses at step 9 an assertion carrying cnf where the exchange established no confirmation key: no key is inferred (D1119 Q3)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > refuses at step 9 an assertion without cnf where the exchange established a confirmation key (cnf is REQUIRED under proof of possession)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > refuses at step 9 a cnf that carries a member beyond the established key, compared exactly",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. intent_hash must equal the provisional intent_hash of the submitted Intent and presenter.client_id the client the exchange established. D1119 (Q3): a presenter carrying cnf where the exchange established no confirmation key does not agree, and no key is inferred; where it established one, the assertion's cnf is required and compared exactly. Assertions minted live by @mission/request-provenance, with and without cnf, are accepted where they match (controls in the same block). Mutations: removing each comparison accepts its cases; comparing jkt alone accepts the extra-member case; dropping the required-cnf check makes verification throw instead of resolving to a step 9 refusal. partial: unit tests of the AS verifier module (services/authorization-server/src/kernel/request-provenance.ts) witness the verification logic, not the PAR endpoint; the endpoint witness lands with the wiring PR, which registers the type, maps every refusal to invalid_mission_intent_evidence and reserves (iss, jti). Each case runs under the vector's verifier context after its merge patch, with the trust configuration loaded through @mission/demo-data's loader."
   },
   {
    "id": "request-provenance.verification.declared-bounds",
@@ -92987,9 +93386,52 @@
     "normative": "The deployment's documentation states a finite maximum assertion lifetime, maximum capture age, and clock-skew allowance."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the declared bounds (@spec request-provenance#verification, #939) > declares each bound with its cap in config/README.md, and the shipped file's bounds are finite positive integers within them",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the declared bounds (@spec request-provenance#verification, #939) > refuses clock_skew_seconds of 0: a bound is a positive integer number of seconds",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the declared bounds (@spec request-provenance#verification, #939) > refuses max_assertion_lifetime_seconds of -30: a bound is a positive integer number of seconds",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the declared bounds (@spec request-provenance#verification, #939) > refuses max_capture_age_seconds of 1.5: a bound is a positive integer number of seconds",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the declared bounds (@spec request-provenance#verification, #939) > refuses clock_skew_seconds above its cap of 300, and accepts it at the cap",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the declared bounds (@spec request-provenance#verification, #939) > refuses max_assertion_lifetime_seconds above its cap of 3600, and accepts it at the cap",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-config.test.ts",
+     "name": "the declared bounds (@spec request-provenance#verification, #939) > refuses max_capture_age_seconds above its cap of 3600, and accepts it at the cap",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#939 slice 2a-1. config/request-provenance.json declares the clock-skew allowance (30 s), maximum assertion lifetime (600 s) and maximum capture age (600 s); src/config/README.md states each with its cap (300 s, 3600 s, 3600 s), and loadRequestProvenanceConfig refuses a bound that is not a positive integer or exceeds its cap. The README test asserts each shipped bound is a positive integer within its cap and that the README's table states it with that cap. Mutations: changing a cap in the README table or dropping a row fails the README test; removing the positive-integer check or the cap check fails the refusal tests. The verifier reads the bounds from the loaded configuration."
   },
   {
    "id": "request-provenance.replay.reserve",
@@ -93207,9 +93649,40 @@
     "normative": "The accepted entry's recorded facts are exactly signer {iss, kid}, originator, channel, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti), and capture_id when present; no fact is recorded from an undefined claim."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "the positive vector (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > accepts the sample entry, keying the reservation (iss, jti) to exp plus the skew allowance, and records exactly the vector's facts",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > ign-extra-content-claim: accepted, recording exactly the positive vector's facts",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "recorded facts are exactly the defined members (@spec request-provenance#recorded-facts, request-provenance#assertion, #939) > records nothing from claims the draft does not define, nor from members of originator and channel it does not define",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > records no capture_id when the assertion carries none",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > accepts an assertion without cnf where the exchange established the client alone, as a PAR does, and records its facts",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. On acceptance the module returns facts built afresh from the defined members only: signer {iss, kid}, originator {iss, sub}, channel limited to type, acr, amr and auth_time, captured_at as an RFC 3339 timestamp, request_digest, assertion_id (the jti) and capture_id when present; undefined claims and undefined nested members record nothing. Mutations: adding a member, dropping capture_id, emitting capture_id when absent, recording channel or originator as given, recording undefined claims, recording captured_at as a NumericDate, and dropping the signer kid each fail a cited test. partial: the module returns the facts; the Mission Record element that lands them (submission_evidence, artifact_hash, verified_at) is the dispatch's and is witnessed with the wiring PR at the endpoint."
   },
   {
    "id": "request-provenance.recorded-facts.no-content",
@@ -93229,9 +93702,16 @@
     "normative": "This evidence type's recorded facts carry neither the instruction nor the capture secret."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-verifier.test.ts",
+     "name": "recorded facts are exactly the defined members (@spec request-provenance#recorded-facts, request-provenance#assertion, #939) > records no value of the vector's content-committing claim, nor the instruction, its media type or the capture secret",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#939 slice 2a-1. The module receives neither the instruction nor the capture secret, and records only the defined facts; the cited test runs the vector case whose undefined claim carries an unsalted SHA-256 of the instruction and asserts the facts carry neither that value, the instruction, its media type nor the secret. Mutation: recording undefined claims fails it. A companion live test (records facts that carry neither the instruction nor the capture secret) holds the secret an intake drew; no module mutation can reach it, so it is not cited. partial: unit level; the endpoint witness lands with the wiring PR."
   },
   {
    "id": "request-provenance.assertion.header-no-key",
