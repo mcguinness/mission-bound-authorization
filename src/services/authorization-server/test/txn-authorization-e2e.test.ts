@@ -53,6 +53,7 @@ import {
   type ChallengeIssuers,
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -161,7 +162,7 @@ async function issueMissionToken(): Promise<{ token: string; missionId: string }
         intent: {
           goal: "Pay Acme invoices and send remittance",
           target_resources: [RESOURCE],
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
         },
       }),
       authorization_details: JSON.stringify([

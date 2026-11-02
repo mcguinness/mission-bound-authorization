@@ -77,13 +77,14 @@ import {
   TXN_CHALLENGE_TYP,
 } from "../src/index.js";
 import { type AsSigningKeys, loadSigningKeyRing } from "../src/kernel/signing-key-ring.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14610;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const SUBAGENT = "subagent-invoice-extractor";
-const FAR = "2027-01-01T00:00:00Z";
+const FAR = FIXTURE_EXPIRES_AT;
 const ROLES = {
   asToken: TOPOLOGY.keys.asToken,
   asStatus: TOPOLOGY.keys.asStatus,

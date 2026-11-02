@@ -41,6 +41,7 @@ import { redeemMissionApproval, submitMissionApproval } from "../oauth-client.js
 import type { MasPilotParts } from "./compose.js";
 import { obtainEstateToken } from "./estate-client.js";
 import type { PilotMas } from "./mas-as.js";
+import { defaultMissionExpiry } from "../mission-expiry.js";
 
 type Json = Record<string, unknown>;
 interface Answer {
@@ -135,7 +136,7 @@ export function masConsoleRoutes(
       const delegation = typeof body.delegate === "string" ? { delegation: { max_depth: 1, allowed_delegates: [{ sub: body.delegate }] } } : {};
       const pending = await submitMissionApproval(issuer, operator.agentClientJwk, {
         missionIntent: JSON.stringify({
-          intent: { goal: `MAS pilot: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" },
+          intent: { goal: `MAS pilot: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: defaultMissionExpiry(mas.built.kernel.nowDate(), 212) },
         }),
         authorizationDetails: JSON.stringify([
           { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, constraints: { vendors: ["acme"] }, ...delegation },

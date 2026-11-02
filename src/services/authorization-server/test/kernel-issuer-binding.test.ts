@@ -27,6 +27,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISSUER_A = "https://issuer-a.isolation.test";
 const ISSUER_B = "https://issuer-b.isolation.test";
@@ -62,7 +63,7 @@ function open(issuer: string, store: string, witness?: string): MissionKernel {
 const approve = (kernel: MissionKernel, issuer: string) =>
   kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Pay Acme invoices for Q3", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Pay Acme invoices for Q3", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     subject: { iss: issuer, sub: "alice" },
     approver: { iss: issuer, sub: "bob" },

@@ -29,6 +29,7 @@ import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { decodeJwt, decodeProtectedHeader, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  discoverLifecycleIssuer,
   type LifecycleConsoleCredentials,
   type LifecycleRequestRecord,
   newLifecycleConsole,
@@ -36,6 +37,7 @@ import {
   transmitLifecycle,
   verifyLifecycleResponse,
 } from "../src/lifecycle-client.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 15411;
 const ISSUER = `http://localhost:${PORT}`;
@@ -86,7 +88,7 @@ function approve(): MissionRecord {
   approvals += 1;
   return running().kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
     ),
     proposedAuthority: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }],
     subject: { iss: ISSUER, sub: "alice" },
@@ -256,6 +258,37 @@ describe("the reference Lifecycle client's verification of an expired replay (@s
         nonce: request.nonce,
         outcome: { state: "suspended", version: m.version + 1 },
       });
+    }
+  });
+
+  // @spec status#signing-key-retention (#1977): the client keeps no copy of
+  // the key set, so a fetch that fails leaves it nothing to verify under.
+  it("accepts nothing when its jwks_uri or metadata fetch fails, even with a valid body, though the same response verifies when the fetch succeeds (#1977)", async () => {
+    const { m, request, jws } = await suspended();
+    // The control: the key set is published, and the response verifies.
+    expect(await verifyLifecycleResponse(jws, verifying(request))).toMatchObject({
+      kind: "observation",
+      mission: { id: m.id, state: "suspended" },
+    });
+    const { jwksUri } = await discoverLifecycleIssuer(ISSUER);
+    const metadataUri = `${ISSUER}/.well-known/openid-configuration`;
+    // The bodies a successful fetch would carry, served under a failure status.
+    const publishedKeys = await (await fetch(jwksUri)).text();
+    const publishedMetadata = await (await fetch(metadataUri)).text();
+    const realFetch = globalThis.fetch;
+    const failures: [string, string, () => Promise<Response>][] = [
+      ["the network fails", jwksUri, () => Promise.reject(new TypeError("fetch failed"))],
+      ["the AS answers 503", jwksUri, () => Promise.resolve(new Response("unavailable", { status: 503 }))],
+      ["a 503 carrying a valid key set", jwksUri, () => Promise.resolve(new Response(publishedKeys, { status: 503 }))],
+      ["a 503 carrying valid metadata", metadataUri, () => Promise.resolve(new Response(publishedMetadata, { status: 503 }))],
+    ];
+    for (const [label, url, failure] of failures) {
+      const spy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation((input, init) => (String(input) === url ? failure() : realFetch(input, init)));
+      await expect(verifyLifecycleResponse(jws, verifying(request)), label).rejects.toThrow();
+      expect(spy.mock.calls.some(([input]) => String(input) === url), label).toBe(true);
+      spy.mockRestore();
     }
   });
 

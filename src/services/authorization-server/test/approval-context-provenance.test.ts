@@ -16,12 +16,13 @@ import { approvalContext, changedParts } from "../src/adapters/approval-render-r
 import type { AuthoritySourceResolution } from "../src/kernel/authority-source.js";
 import { type AuthorityEntry, type IntentSubmissionEvidenceFact, MissionKernel, validateMissionIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = "https://api.test/invoices";
 const ENTRY: AuthorityEntry = { type: "mission_resource_access", resource: RESOURCE, actions: ["invoice.read"] };
 const INTENT = validateMissionIntent(
-  JSON.stringify({ goal: "Reconcile invoices", target_resources: [RESOURCE], expires_at: "2099-01-01T00:00:00Z" }),
+  JSON.stringify({ goal: "Reconcile invoices", target_resources: [RESOURCE], expires_at: FAR_EXPIRES_AT }),
 );
 /** The source a rendering established; fixed, so only the evidence varies. */
 const RESOLVED = { rootId: "root", catalogRevision: "rev-1", provenance: { type: "user_delegated" } } as unknown as AuthoritySourceResolution;
@@ -58,7 +59,7 @@ const context = (evidence?: IntentSubmissionEvidenceFact[]) =>
     subject: "alice",
     resolved: RESOLVED,
     scopeProjection: undefined,
-    expiresAt: "2099-01-01T00:00:00Z",
+    expiresAt: FAR_EXPIRES_AT,
     ...(evidence ? { submissionEvidence: evidence } : {}),
   });
 

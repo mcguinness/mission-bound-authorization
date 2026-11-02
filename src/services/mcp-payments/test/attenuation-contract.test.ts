@@ -62,6 +62,7 @@ import {
   signAatPop,
   TOOL_ACTIONS,
 } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISSUER = "https://as.test";
 const READ = "payments:invoice.read";
@@ -105,7 +106,7 @@ const declarations = (versions: unknown[], requires: string[] = []) =>
 /** v1 retained (superseded, the invoice-level profile) and v2 current: both resolve. */
 const V1 = ref("v1", RETAINED_PROFILE);
 const RETAINED = declarations([
-  declared("v1", "superseded", RETAINED_PROFILE, { retained_until: "2099-01-01T00:00:00Z" }),
+  declared("v1", "superseded", RETAINED_PROFILE, { retained_until: FAR_EXPIRES_AT }),
   declared("v2", "current"),
 ]);
 const V2_ONLY = declarations([declared("v2", "current")]);
@@ -160,7 +161,7 @@ async function mint(
   });
   const mission = kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2099-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FAR_EXPIRES_AT }),
     ),
     proposedAuthority: entries as never,
     subject: { iss: ISSUER, sub: "alice" },

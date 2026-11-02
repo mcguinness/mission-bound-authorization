@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountFinder } from "../src/adapters/provider.js";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14771;
 const ISSUER = `http://localhost:${PORT}`;
@@ -120,7 +121,7 @@ async function push(client: ClientId, extra: Record<string, string>): Promise<Re
       code_challenge_method: "S256",
       ...extra,
       mission_intent: JSON.stringify({
-        intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
       }),
       authorization_details: JSON.stringify(READ),
       client_assertion: await clientAssertion(client),
@@ -641,7 +642,7 @@ describe("Approver and Subject stay separate identities (@spec mission#approval-
         prompt: "none",
         login_hint: "alice",
         mission_intent: JSON.stringify({
-          intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
         }),
         authorization_details: JSON.stringify(READ),
         client_assertion: await clientAssertion("ap-agent"),

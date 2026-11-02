@@ -24,12 +24,13 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 import { commitAtNextIssue } from "./release-fence.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14787;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "derivation-counting-verifier-0123456789-0123456789-0";
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 

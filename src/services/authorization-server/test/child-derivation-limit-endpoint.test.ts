@@ -20,12 +20,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14983;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const PARENT_EXP = "2027-01-01T00:00:00Z";
+const PARENT_EXP = FIXTURE_EXPIRES_AT;
 const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 /** The committed child creation policy: its snapshot states the per-child figure. */

@@ -36,6 +36,7 @@ import { trustedCapabilityResolver } from "../src/adapters/capability-resolver.j
 import { aiAgents } from "./actor-profiles.helper.js";
 import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -46,7 +47,7 @@ const WRITE_ACTION = "payments:payment.schedule";
 // set can retain the entry while dropping the catalog-sourced action.
 const VENDOR_ACTION = "payments:vendor.read";
 const CHILD_ACTOR = "subagent-capability";
-const EXP = "2027-01-01T00:00:00Z";
+const EXP = FIXTURE_EXPIRES_AT;
 
 const CATALOG = TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments")!;
 
@@ -93,7 +94,7 @@ const approve = (resolutions?: CapabilitySourceResolution[]) =>
       JSON.stringify({
         goal: "Pay Acme invoices",
         target_resources: [RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     subject: { iss: ISS, sub: "alice" },
@@ -232,7 +233,7 @@ describe("derivation: a proposal can never introduce a binding", () => {
         JSON.stringify({
           goal: "Pay Acme invoices",
           target_resources: [RESOURCE],
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
         }),
       ),
       proposal,

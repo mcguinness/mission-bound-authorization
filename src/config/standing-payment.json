@@ -1,0 +1,55 @@
+{
+  "dispatch_policies": {
+    "ap-standing-payment": {
+      "version": "1",
+      "content_type": "application/json",
+      "content": {
+        "id": "ap-standing-payment",
+        "version": "1",
+        "dispatch": "recurring payment of approved Acme invoices for the listed Subject and single Agent",
+        "derivation_limit_ceiling": 3,
+        "standing_payment": {
+          "operation": "payments:payment.execute",
+          "resource": "http://localhost:4403/mcp",
+          "destinations": { "acme": "acct-acme-001" },
+          "max_amount": { "amount": "500.00", "currency": "USD" },
+          "budget": {
+            "owner": "payments-operator",
+            "id": "ap-standing-payments",
+            "currency": "USD",
+            "limit": "1000.00",
+            "per_instance_max": "500.00"
+          },
+          "approval_governance": {
+            "recency": {
+              "ceilings": { "default": 86400 },
+              "clock_skew_s": 60,
+              "exceptions": {
+                "irreversible_action": { "max_age_s": 86400 },
+                "consumption_bound": { "max_age_s": 86400 }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "budget_metering": {
+    "unit": { "currency": "USD", "exponent": 2 },
+    "enforcement_profile": "exact",
+    "topology": "local-single-writer",
+    "reserve_posture": "reserve_then_commit",
+    "settlement_intake": "pdp-claim-settlement:execution-evidence",
+    "metered_actions": [{ "action": "payments:payment.execute", "phase": "commit" }],
+    "budgets": [
+      {
+        "owner": "payments-operator",
+        "budget_id": "ap-standing-payments",
+        "counter_scope": "standing_consent",
+        "currency": "USD",
+        "limit": "1000.00",
+        "policies": [{ "id": "ap-standing-payment", "version": "1" }]
+      }
+    ]
+  }
+}

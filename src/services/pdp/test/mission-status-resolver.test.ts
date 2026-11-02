@@ -22,6 +22,7 @@ import {
   privateKeyJwtClient,
   type ResolveOptions,
 } from "../src/mission-status-resolver.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISSUER = "https://mas.pilot.example";
 const AUDIENCE = "https://payments.example/api";
@@ -119,7 +120,7 @@ function payload(nonce: string | null): Record<string, unknown> {
       authority_hash: "sha-256:double-authority-hash",
       state: "active",
       version: 3,
-      expires_at: "2027-06-01T00:00:00Z",
+      expires_at: LATER_EXPIRES_AT,
       fresh_until: new Date((iat + 60) * 1000).toISOString(),
     },
     authorization_details: [

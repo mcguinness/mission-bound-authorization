@@ -63,11 +63,12 @@ import {
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { verifyStatusResponse } from "./discharge-consumer.helper.js";
+import { FIXTURE_EXPIRES_AT, daysFromNow } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.discharge.test";
 const RES = "https://payments.test/mcp";
 const NOW = new Date("2026-08-20T12:00:00Z");
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 const CLOSE_EVENT = "accounting-period-closed";
 const CLOSE_POLICY = "close-management-2026-q3";
@@ -1521,7 +1522,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         "oversized evidence_ref",
         dischargeBody(record, { evidence_ref: `https://x.example/${"a".repeat(520)}` }),
       ],
-      ["skewed observed_at", dischargeBody(record, { observed_at: "2030-01-01T00:00:00Z" })],
+      ["skewed observed_at", dischargeBody(record, { observed_at: daysFromNow(365) })],
     ];
     for (const [name, body] of cases) {
       const res = await lifecycle(record.id, body);

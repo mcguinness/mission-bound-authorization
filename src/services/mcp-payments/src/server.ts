@@ -76,7 +76,7 @@ import {
   type TxnCredential,
   type WriteReservationScope,
 } from "./pep.js";
-import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
+import { type DpopPresentation, DpopProofError, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
 import { type IntrospectionSettings, TokenInactiveError, TokenIntrospector } from "./introspection.js";
 import { aatKeyThumbprint, readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
 import { type AatPresentation, AatPresentationRefused } from "./aat-presentation.js";
@@ -688,7 +688,8 @@ export interface McpServerDeps {
  */
 export type VerifiedTxnCredential =
   | { ok: true; facts: MissionBoundTokenFacts }
-  | { ok: false; refusal_reason: string };
+  /** `proofFailure`: the presented DPoP proof itself failed (#1970), so the HTTP gate may say so. */
+  | { ok: false; refusal_reason: string; proofFailure?: true };
 
 export interface TransactionToolResult {
   ok: boolean;
@@ -1162,7 +1163,10 @@ export class McpPaymentsServer {
   async validateCredential(accessToken: string, pop?: DpopPresentation): Promise<TokenFacts> {
     if (decodeProtectedHeader(accessToken).typ === MISSION_TXN_TOKEN_TYP) {
       const verified = await this.verifyTransactionCredential(accessToken, pop);
-      if (!verified.ok) throw new Error(`transaction credential refused: ${verified.refusal_reason}`);
+      if (!verified.ok) {
+        const why = `transaction credential refused: ${verified.refusal_reason}`;
+        throw verified.proofFailure ? new DpopProofError(why) : new Error(why);
+      }
       return verified.facts;
     }
     return pop
@@ -1247,7 +1251,7 @@ export class McpPaymentsServer {
       // @spec runtime-evidence#pre-decision-refusal, #1173 (D375): replay state
       // at capacity is a transient refusal, not a proof verdict.
       if (e instanceof DpopReplayUnavailableError) return { ok: false, refusal_reason: "state_unavailable" };
-      return { ok: false, refusal_reason: "txn_cnf_mismatch" };
+      return { ok: false, refusal_reason: "txn_cnf_mismatch", ...(e instanceof DpopProofError ? { proofFailure: true as const } : {}) };
     }
 
     // 3. Against the RETAINED pending operation.

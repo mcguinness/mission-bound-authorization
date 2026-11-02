@@ -45,13 +45,14 @@ import {
 import { actionClassesAt } from "../src/kernel/approval-floor.js";
 import { browserApprovalHeaders, floorApprovalHeaders } from "./approval-fixture.js";
 import { FakeBudgetCounters } from "./budget-exposure.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 15007;
 const ISSUER = `http://localhost:${PORT}`;
 const OFF_PORT = 15009;
 const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 const ON = new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"]);
 const SESSIONS = new ApprovalSessionStore();
 const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
@@ -677,6 +678,13 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
   it("refuses to start with a Dispatch Policy whose budget is in a currency other than USD (#813)", async () => {
     const t = terms("ap-eur");
     const built = startup("sp-eur", { ...t, budget: { ...t.budget, currency: "EUR" } });
+    await expect(built).rejects.toBeInstanceOf(StandingPaymentConfigError);
+    await expect(built).rejects.toThrow("budget currency is not USD");
+  });
+
+  it("refuses to start with a Dispatch Policy whose budget names USD in lower case, the currency compared exactly (#813, D1143)", async () => {
+    const t = terms("ap-usd-lower");
+    const built = startup("sp-usd-lower", { ...t, budget: { ...t.budget, currency: "usd" } });
     await expect(built).rejects.toBeInstanceOf(StandingPaymentConfigError);
     await expect(built).rejects.toThrow("budget currency is not USD");
   });

@@ -43,6 +43,7 @@ import {
   type AuthorityEntry,
   type BuiltAs,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14460;
 const ISSUER = `http://localhost:${PORT}`;
@@ -138,7 +139,7 @@ async function tokenRequest(
 
 /** Full PAR -> approval -> token dance yielding an ACTIVE mission (grant-bound). */
 async function issueBaseMissionToken(
-  expiresAt = "2027-01-01T00:00:00Z",
+  expiresAt = FIXTURE_EXPIRES_AT,
   extraEntries: AuthorityEntry[] = [],
   extraTargets: string[] = [],
 ): Promise<{ token: string; missionId: string }> {

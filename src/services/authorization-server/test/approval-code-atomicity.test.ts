@@ -41,11 +41,12 @@ import {
   TEST_APPROVAL_PRINCIPALS,
   trustedApprovalHeaders,
 } from "./approval-fixture.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const PLAIN = TOPOLOGY.resources.plainRs;
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "approval-code-atomicity-verifier-0123456789-0123456789";
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 const SESSIONS = new ApprovalSessionStore();

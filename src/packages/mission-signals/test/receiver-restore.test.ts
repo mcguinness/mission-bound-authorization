@@ -51,11 +51,12 @@ import {
   SignalReceiverStorageError,
   signLifecycleEvent,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.restore.test";
 const AUD = "https://consumer.restore.test";
 const CLIENT = "consumer-client";
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 let setKey: CryptoKey;
 let statusKey: CryptoKey;
