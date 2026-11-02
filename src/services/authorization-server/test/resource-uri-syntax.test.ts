@@ -33,6 +33,7 @@ import {
   validateMissionIntent,
   validateMissionResourceAccessSchema,
 } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
 
@@ -77,7 +78,7 @@ const intentJson = (targetResources: string[]): string =>
   JSON.stringify({
     goal: "Reconcile invoices",
     target_resources: targetResources,
-    expires_at: "2099-01-01T00:00:00Z",
+    expires_at: FAR_EXPIRES_AT,
   });
 
 function refusal(fn: () => unknown): IntentError {

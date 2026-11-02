@@ -22,6 +22,7 @@ import {
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14559;
 const ISSUER = `http://localhost:${PORT}`;
@@ -59,7 +60,7 @@ function approve(): MissionRecord {
       JSON.stringify({
         goal: "Read Acme invoices",
         target_resources: [CANONICAL_RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     proposedAuthority: [

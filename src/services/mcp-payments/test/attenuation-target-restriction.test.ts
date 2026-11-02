@@ -41,6 +41,7 @@ import {
   TOOL_ACTIONS,
   type TokenFacts,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const AS_ISS = "https://as.test";
@@ -97,7 +98,7 @@ beforeAll(async () => {
   });
   const mission = kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read one invoice", target_resources: [INV1], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read one invoice", target_resources: [INV1], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: CEILING as never,
     subject: { iss: AS_ISS, sub: "alice" },

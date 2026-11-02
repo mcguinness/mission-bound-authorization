@@ -424,11 +424,11 @@ describe("mapping contract cache: a scope value's stated contract (@spec authori
   });
 
   it("refuses at load a value stating a reference the declarations do not support for the action", () => {
-    expect(() => parseMappingContract(withScopes({ "invoices.read.bad": { actions: READ, resource_contract: contractAt("1999-01-01") } }))).toThrow(
+    expect(() => parseMappingContract(withScopes({ "invoices.read.bad": { actions: READ, resource_contract: contractAt("1999-01-01") } }), undefined, now)).toThrow(
       /resource_contract/,
     );
     expect(() =>
-      parseMappingContract(withScopes({ "reverse.bad": { actions: ["payments:payment.reverse"], resource_contract: contractAt(LACKING_REVERSE) } })),
+      parseMappingContract(withScopes({ "reverse.bad": { actions: ["payments:payment.reverse"], resource_contract: contractAt(LACKING_REVERSE) } }), undefined, now),
     ).toThrow(/every action/);
   });
 

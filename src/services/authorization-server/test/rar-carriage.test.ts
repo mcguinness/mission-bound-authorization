@@ -41,6 +41,7 @@ import {
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14502;
 const ISSUER = `http://localhost:${PORT}`;
@@ -82,7 +83,7 @@ describe("proposal_hash anchor (@spec mission#integrity-anchors, test vector 5)"
 const TASK_INTENT = {
   goal: "Pay Acme invoices for Q3",
   target_resources: [RESOURCE],
-  expires_at: "2027-01-01T00:00:00Z",
+  expires_at: FIXTURE_EXPIRES_AT,
 };
 
 const PROPOSAL: AuthorityEntry[] = [

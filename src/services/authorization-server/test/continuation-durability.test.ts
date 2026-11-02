@@ -34,9 +34,10 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const KERNEL_ISSUER = "https://issuer-durability.test";
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 let statusKey: CryptoKey;
 let approvals = 0;

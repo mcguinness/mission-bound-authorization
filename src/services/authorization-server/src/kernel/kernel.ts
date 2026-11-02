@@ -1068,6 +1068,14 @@ export interface KernelOptions {
    */
   tombstoneHorizons?: Partial<TombstoneRetentionInputs>;
   /**
+   * @spec submission-evidence#verification-bounds (#1962) — the verification
+   * work one submission's evidence may impose, beyond the size and count
+   * bounds: a non-negative integer of units, each one signature verification
+   * or a step of like cost. Absent: the dispatch default,
+   * `DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK` (16).
+   */
+  submissionEvidenceVerificationWork?: number;
+  /**
    * @spec control-plane#fanout — bounded retry for durable subscriber
    * deliveries. Tests shorten it; production takes the defaults.
    */
@@ -1291,6 +1299,12 @@ export class MissionKernel {
       );
     }
     validateAuthoritySourceCatalog(opts.authoritySourceCatalog);
+    // @spec submission-evidence#verification-bounds (#1962): a malformed budget
+    // refuses construction, never a submission.
+    const work = opts.submissionEvidenceVerificationWork;
+    if (work !== undefined && !(Number.isSafeInteger(work) && work >= 0)) {
+      throw new Error(`submissionEvidenceVerificationWork must be a non-negative integer, not ${String(work)}`);
+    }
     // @spec mission#authority-sources (#829): bind the catalog to THIS
     // kernel's configured principal namespace (`principalIssuer`, else the
     // kernel's issuer): its subject strings denote principals of that one
@@ -1486,6 +1500,13 @@ export class MissionKernel {
         ...(input.requestContext ? { requestContext: input.requestContext } : {}),
       },
       input.required ?? [],
+      // @spec submission-evidence#verification-bounds (#1962): every carrier's
+      // verification passes here, so one budget bounds them all.
+      {
+        ...(this.opts.submissionEvidenceVerificationWork !== undefined
+          ? { maxVerificationWork: this.opts.submissionEvidenceVerificationWork }
+          : {}),
+      },
     );
   }
 

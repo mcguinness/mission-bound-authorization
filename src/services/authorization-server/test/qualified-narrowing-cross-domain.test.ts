@@ -36,10 +36,11 @@ import {
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { capabilitiesWith, type CapabilityVariant, UNDECLARED_VARIANTS } from "./transformation-capabilities.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RAS = "https://ras.partner.test";
-const EXP = "2099-01-01T00:00:00Z";
+const EXP = FAR_EXPIRES_AT;
 const R_PLAIN = "https://api.partner.test/plain";
 const R_POLICY = "https://api.partner.test/policy";
 const R_PREFIX = "https://api.partner.test/files/";

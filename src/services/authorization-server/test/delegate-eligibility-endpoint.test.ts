@@ -33,12 +33,13 @@ import {
   IDENTITY_CONTINUATION_TOKEN_TYPE,
   validateMissionIntent,
 } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14738;
 const ISSUER = `http://localhost:${PORT}`;
 const CAI = "https://cai.example";
 const RAS_AUD = "https://ras.ledgercloud.test";
-const MISSION_EXP = "2099-01-01T00:00:00Z";
+const MISSION_EXP = FAR_EXPIRES_AT;
 
 /** The ceiling entry here grants delegation and defers eligibility to policy: no `allowed_delegates`. */
 const INHERIT = "https://api.ledgercloud.test/inherit";

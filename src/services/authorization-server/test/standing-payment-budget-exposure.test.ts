@@ -47,11 +47,12 @@ import {
 } from "../src/index.js";
 import { floorApprovalHeaders } from "./approval-fixture.js";
 import { FakeBudgetCounters } from "./budget-exposure.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 15005;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 const ON = new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"]);
 const SESSIONS = new ApprovalSessionStore();
 const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";

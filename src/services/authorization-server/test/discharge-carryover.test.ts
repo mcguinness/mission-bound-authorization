@@ -55,12 +55,13 @@ import {
   verifyDischargeReceipt,
   verifyStatusResponse,
 } from "./discharge-consumer.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14555;
 const ISSUER = `http://localhost:${PORT}`;
 const PAY = CANONICAL_RESOURCE;
 const LEDGER = TOPOLOGY.resources.saas;
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 const CLOSE_EVENT = "accounting-period-closed";
 const CLOSE_AUTHORITY = "close-management-2026-q3";

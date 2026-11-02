@@ -35,6 +35,7 @@ import {
 } from "../src/index.js";
 import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { FakeBudgetCounters } from "./budget-exposure.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14995;
 const OFF_PORT = 14996;
@@ -48,7 +49,7 @@ const ALT_ACTION_APPROVAL = {
   approver: "the payments operations lead",
 };
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 const ON = new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"]);
 /** A designable client (an ai_agent registration). */
 const DESIGNEE = "subagent-invoice-extractor";

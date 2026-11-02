@@ -35,6 +35,7 @@ import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
 import { composeSeparatedMasPilot, type SeparatedMasPilot } from "../src/mas-pilot/separated.js";
 import { call, estateToken, INVOICES_READ, OPENFGA, openfgaReachable, READ_ACTIONS, relocateEstate, type Credential } from "./mas-pilot-support.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const fgaReachable = await openfgaReachable();
 const d = fgaReachable ? describe : describe.skip;
@@ -165,7 +166,7 @@ afterAll(async () => {
 /** A Mission the MAS approves for alice under `ap-agent`; `delegable` lets the extractor act under it. */
 function approveAtMas(label: string, delegable = false): Promise<string> {
   return mas.approve({
-    intent: JSON.stringify({ goal: `Join Assertion pilot: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" }),
+    intent: JSON.stringify({ goal: `Join Assertion pilot: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
     proposedAuthority: [
       {
         type: "mission_resource_access",

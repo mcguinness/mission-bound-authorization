@@ -12,9 +12,10 @@ import { join } from "node:path";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { describe, expect, it } from "vitest";
 import { buildAuthorizationServer, type BuiltAs, createChildMission, validateMissionIntent } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISSUER = "http://localhost:14833";
-const FAR_EXP = "2099-01-01T00:00:00Z";
+const FAR_EXP = FAR_EXPIRES_AT;
 
 const intent = (goal: string) =>
   validateMissionIntent(JSON.stringify({ goal, target_resources: [CANONICAL_RESOURCE], expires_at: FAR_EXP }));

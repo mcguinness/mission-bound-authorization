@@ -21,6 +21,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildAuthorizationServer, type AuthorityEntry, type BuiltAs } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14400;
 const ISSUER = `http://localhost:${PORT}`;
@@ -163,7 +164,7 @@ describe("M1 tracer slice", () => {
       intent: {
         goal: "Pay Acme invoices for Q3",
         target_resources: [CANONICAL_RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       },
     });
     const authorizationDetails = JSON.stringify([
@@ -451,7 +452,7 @@ describe("mission_error wire carriage: derivations_exhausted (@spec mission#erro
       intent: {
         goal: "One-shot invoice read",
         target_resources: [CANONICAL_RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
         requested_derivation_limit: 1,
       },
     });

@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14627;
 const ISSUER = `http://localhost:${PORT}`;
@@ -86,7 +87,7 @@ async function render(selected?: string, loginHint?: string): Promise<Response> 
       code_challenge_method: "S256",
       ...(loginHint ? { login_hint: loginHint } : {}),
       mission_intent: JSON.stringify({
-        intent: { goal: "Read Acme invoices", target_resources: [resource], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Read Acme invoices", target_resources: [resource], expires_at: FIXTURE_EXPIRES_AT },
       }),
       authorization_details: JSON.stringify([
         { type: "mission_resource_access", resource, actions: ["payments:invoice.read"] },

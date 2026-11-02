@@ -26,9 +26,10 @@ import {
 } from "../src/index.js";
 import { CEILING_ARGS, holderKey, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
-const EXP = "2027-01-01T00:00:00Z";
+const EXP = FIXTURE_EXPIRES_AT;
 
 /** A fully-populated delegation GRANT with a child-delegation `children` object. */
 const delegation = (maxDepth: number) => ({

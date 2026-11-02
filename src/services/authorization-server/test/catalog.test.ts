@@ -10,6 +10,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { CANONICAL_RESOURCE, CATALOG_SERVICES, DERIVATION_POLICY } from "@mission/demo-data";
 import { CatalogProvider, MissionKernel, validateMissionIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const ARS_INTAKE = "https://ars.test/access-requests";
@@ -20,7 +21,7 @@ let catalog: CatalogProvider;
 const approveForAlice = (n: number) =>
   kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Pay Acme", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Pay Acme", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },

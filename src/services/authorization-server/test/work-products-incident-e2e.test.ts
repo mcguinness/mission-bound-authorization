@@ -51,6 +51,7 @@ import { aiAgents } from "./actor-profiles.helper.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withMissionContractReference } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it, with the contract
@@ -61,7 +62,7 @@ const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateReques
 const PORT = 14498;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 /** The action the artifact effectively proposes (use the credential at the endpoint). */
 const ARTIFACT_ACTION = "payments:remittance.send";

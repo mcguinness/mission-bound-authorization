@@ -23,6 +23,7 @@ import {
 } from "../src/index.js";
 import { TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ORIGIN_ISS = "https://as.org1.test";
 const ORG3_API = "https://api.org3.test";
@@ -126,7 +127,7 @@ beforeAll(async () => {
       JSON.stringify({
         goal: "Cross-org reconcile",
         target_resources: [RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     proposedAuthority: [
@@ -509,7 +510,7 @@ describe("negative matrix (@spec cross-org-delegation#conformance)", () => {
   it("refuses an expired Mission", async () => {
     const expiring = kernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Cross-org reconcile, expiring", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Cross-org reconcile, expiring", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
       ),
       proposedAuthority: [
         {
@@ -532,7 +533,7 @@ describe("negative matrix (@spec cross-org-delegation#conformance)", () => {
     const expiredState = (id: string) => {
       const clock = vi
         .spyOn(kernel as unknown as { now: () => Date }, "now")
-        .mockImplementation(() => new Date("2027-01-02T00:00:00Z"));
+        .mockImplementation(() => new Date(Date.parse(FIXTURE_EXPIRES_AT) + 86_400_000));
       try {
         const record = kernel.applyExpiry(kernel.get(id) as NonNullable<ReturnType<typeof kernel.get>>);
         return { state: record.state, observedAtS: nowS };

@@ -29,6 +29,7 @@ import { ALL_PROVIDER_CAPABILITIES, buildAuthorizationServer, type BuiltAs, MISS
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14194;
 const ISSUER = `http://localhost:${PORT}`;
@@ -127,7 +128,7 @@ async function submitAndApprove(
         intent: {
           goal: "Reconcile Acme invoices against the ledger",
           target_resources: [RESOURCE],
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
         },
       }),
       authorization_details: JSON.stringify(authorizationDetails),

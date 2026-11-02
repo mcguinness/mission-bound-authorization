@@ -31,6 +31,7 @@ import {
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14314;
 const ISSUER = `http://localhost:${PORT}`;
@@ -183,7 +184,7 @@ async function openDeferral(keys: Keys, evidence: unknown[]): Promise<string> {
       code_challenge: challenge,
       code_challenge_method: "S256",
       mission_intent: JSON.stringify({
-        intent: { goal: "Reconcile Acme invoices against the ledger", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Reconcile Acme invoices against the ledger", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
         evidence,
       }),
       authorization_details: JSON.stringify([readEntry(["payments:invoice.read"])]),
