@@ -17,6 +17,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  canonicalDigest,
   type JsonValue,
   type ResourceContractRef,
   resourceContractDigest,
@@ -280,6 +281,33 @@ describe("the supported-subset fixture freezes the payments contract and the ini
       "reverse_wire_transfer",
       "send_remittance_email",
     ]);
+  });
+
+  // #249 (D1155, D1170): a version published before its document could name
+  // its evaluation-context descriptors carries, beside its unchanged bytes,
+  // the descriptors in force while it was current. That association is
+  // history, not configuration: frozen in its own file, keyed by the contract
+  // reference, and pinned by digest, so it can be replaced by no other
+  // descriptor, however valid and published, and no other version declares
+  // one (a new version names its descriptors in its committed document).
+  it("keeps each historical descriptor association exactly as frozen, keyed by the contract reference, and no other version declares one (#249, D1155, D1170)", () => {
+    const frozen = read<{
+      format: string;
+      associations: Array<{ contract: ResourceContractRef; descriptors: Record<string, unknown> }>;
+    }>(join(SUBSET_DIR, "payments-contract-descriptor-associations.json"));
+    expect(frozen.format).toBe("mission-resource-contract-descriptor-associations/1");
+    expect(canonicalDigest(frozen.associations as unknown as JsonValue)).toBe("sha-256:OcUDBvQ-MgGUYzljz4LCkRxpTj7G-ldULbVb5uV2X-A");
+    const declaration = RESOURCE_CONTRACTS.declarations.find((d) => d.id === frozen.associations[0]?.contract.id);
+    if (!declaration) throw new Error("the payments contract is declared");
+    const associated = declaration.versions
+      .filter((v) => v.evaluation_context_descriptors !== undefined)
+      .map((v) => ({ id: declaration.id, version: v.version, digest: v.digest }));
+    expect(associated).toEqual(frozen.associations.map((a) => a.contract));
+    for (const { contract: ref, descriptors } of frozen.associations) {
+      const declared = RESOURCE_CONTRACTS.versionOf(ref);
+      expect(declared?.version.digest, ref.version).toBe(ref.digest);
+      expect(declared?.version.evaluation_context_descriptors, ref.version).toEqual(descriptors);
+    }
   });
 
   it("lists exactly the actions the contract covers, each an explicit identifier: no action family", () => {

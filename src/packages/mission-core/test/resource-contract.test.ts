@@ -444,7 +444,10 @@ describe("the evaluation-context descriptors a contract version names (@spec run
     v.digest = resourceContractDigest(v.document as never);
   };
 
-  it("the shipped declarations agree: the current version names the claim's descriptor for each covered crossing, each superseded version the one in force while it was current, and 2026-10-20, published before the claim, none", () => {
+  // The historical associations are pinned, independently of the claim, by
+  // the frozen fixture the subset suite checks (D1170); here, only what the
+  // claim governs.
+  it("the shipped declarations agree: the current version names the claim's descriptor for each covered crossing, and 2026-10-20, published before the claim, none", () => {
     const st = shipped();
     const { contracts, binding } = load(st);
     expect(() => assertContractDescriptors(contracts, binding)).not.toThrow();
@@ -455,43 +458,11 @@ describe("the evaluation-context descriptors a contract version names (@spec run
         new EvaluationContextBindingDeclarations({ ...st, claims: [] }),
       ),
     ).not.toThrow();
-    const execute = claimDescriptor(st, "payments:payment.execute");
-    const reverse = claimDescriptor(st, "payments:payment.reverse");
-    for (const version of ["2026-11-02", "2026-10-27", "2026-10-26", "2026-10-24"]) {
-      for (const phase of ["preflight", "prepare", "commit"]) {
-        expect(
-          contractDescriptor(
-            declaredVersion(contracts, version),
-            "payments:payment.execute",
-            phase,
-          ),
-          `${version} ${phase}`,
-        ).toEqual(execute);
-      }
-    }
-    expect(
-      contractDescriptor(
-        declaredVersion(contracts, "2026-11-02"),
-        "payments:payment.reverse",
-        "compensate",
-      ),
-    ).toEqual(reverse);
-    expect(
-      contractDescriptor(
-        declaredVersion(contracts, "2026-10-26"),
-        "payments:payment.reverse",
-        "compensate",
-      ),
-    ).toEqual(reverse);
-    // 2026-10-24's reversal is not performed under its retained v14 profile.
-    expect(
-      contractDescriptor(
-        declaredVersion(contracts, "2026-10-24"),
-        "payments:payment.reverse",
-        "compensate",
-      ),
-    ).toBeUndefined();
+    const current = declaredVersion(contracts, "2026-11-02");
     for (const phase of ["preflight", "prepare", "commit"]) {
+      expect(contractDescriptor(current, "payments:payment.execute", phase), phase).toEqual(
+        claimDescriptor(st, "payments:payment.execute"),
+      );
       expect(
         contractDescriptor(
           declaredVersion(contracts, "2026-10-20"),
@@ -501,8 +472,22 @@ describe("the evaluation-context descriptors a contract version names (@spec run
         phase,
       ).toBeUndefined();
     }
+    expect(contractDescriptor(current, "payments:remittance.send", undefined)).toEqual(
+      claimDescriptor(st, "payments:remittance.send"),
+    );
+    expect(contractDescriptor(current, "payments:payment.reverse", "compensate")).toEqual(
+      claimDescriptor(st, "payments:payment.reverse"),
+    );
+    // 2026-10-24's reversal is not performed under its retained v14 profile.
+    expect(
+      contractDescriptor(
+        declaredVersion(contracts, "2026-10-24"),
+        "payments:payment.reverse",
+        "compensate",
+      ),
+    ).toBeUndefined();
     // The 2026-11-02 descriptors are in its bytes; 2026-10-27's association is beside them.
-    expect(declaredVersion(contracts, "2026-11-02").evaluation_context_descriptors).toBeUndefined();
+    expect(current.evaluation_context_descriptors).toBeUndefined();
     expect(declaredVersion(contracts, "2026-10-27").evaluation_context_descriptors).toBeDefined();
   });
 
