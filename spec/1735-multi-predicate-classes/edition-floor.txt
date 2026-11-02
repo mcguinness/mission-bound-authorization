@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-02T17:48:18Z
-Source repository commit: 48194f0b2dadf51567f5594a95e27963df796223
+Generated: 2026-11-02T21:21:20Z
+Source repository commit: bbf0ce745d9a60b106300ea09f2be5d2ac340292
 Member count: 7
 
 Reading order:
@@ -4806,17 +4806,16 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-attesters-00, 28 September 2026,
+              client-attesters-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-attesters-00>.
+              oauth-client-attesters-01>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-id-continuation-assertion]
               McGuinness, K. and A. Parecki, "Identity Continuation
@@ -10391,15 +10390,6 @@ Table of Contents
       This is governance state about the delegate, not the standing-
       consent basis that approval_basis records (Section 6.2).
 
-   Where a deployment needs either, the Approval Governance Record
-   ([I-D.draft-mcguinness-mission-approval-governance]) records it, and
-   Consent Evidence can carry a partial presentation of that record
-   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
-
-   Approval Governance defines the adjudication.governance_record member
-   that marks an approval such a record backs
-   ([I-D.draft-mcguinness-mission-approval-governance],
-   Section "Relationship to the Issuance Profile"), and
    [I-D.draft-mcguinness-mission-architecture] (Section "Approval Role
    Mapping") shows how the common creation scenarios assign the three
    approval_basis roles.
@@ -10569,8 +10559,7 @@ Table of Contents
          profile or deployment chooses to make the mechanism explicit;
          where absent, the mechanism is still fixed by type and the
          construction rules of this document or a companion profile
-         (below and [I-D.draft-mcguinness-mission-approval-governance],
-         Section "Policy Adjudication").  Members, where present:
+         (below).  Members, where present:
 
          kind:  REQUIRED.  A string: human or policy, naming a decision
             mechanism, not a storage location for supporting evidence; a
@@ -10586,9 +10575,7 @@ Table of Contents
          deciding human is consent_principal.
 
          For kind: policy: the kind-specific members that the profile
-         defining the standing-consent basis specifies (for example,
-         [I-D.draft-mcguinness-mission-approval-governance],
-         Section "Policy Adjudication").
+         defining the standing-consent basis specifies.
 
       approved_at:  Absent for direct, whose approval event carries its
          own instant (Section 6.1).  For a standing-consent basis, the
@@ -10604,10 +10591,7 @@ Table of Contents
          only under a standing-consent basis (Section 14.3).
 
       *  For direct, activation.approval_event_id MUST identify a human
-         approval event (Section 6.1).  Approval Governance states how a
-         record backing a direct approval keeps that human decision as
-         its accountable assertion
-         ([I-D.draft-mcguinness-mission-approval-governance]).
+         approval event (Section 6.1).
 
       *  approval_basis is provenance: none of the record's integrity
          anchors, such as intent_hash, authority_hash or proposal_hash,
@@ -10662,11 +10646,9 @@ Table of Contents
       naming the derivation policy version in effect at the approval
       event; the policy itself does not travel.  It is REQUIRED where a
       feature or profile the deployment uses depends on versioned
-      derivation-policy identification, such as standing-consent recency
-      ([I-D.draft-mcguinness-mission-approval-governance], Section 
-      "Standing-Consent Recency").  A deployment using such a feature
-      records it from creation and never supplies a replacement value
-      later.
+      derivation-policy identification.  A deployment using such a
+      feature records it from creation and never supplies a replacement
+      value later.
 
    approval_event_id:  REQUIRED.  A string.  A unique identifier of the
       approval event, used as the approval idempotency key: one approval
@@ -13500,13 +13482,10 @@ Table of Contents
 
    *  the act delegation chain (Section 8.2).
 
-   Section 14.3 states how a profile creates Missions on another path,
-   including what a standing-consent basis's defining profile and its
-   activating issuer meet, and Section 14.4 the contract for a
-   commitment another specification defines.  Their requirements bind a
-   specification or profile that uses them and each party that
-   implements it; this document's own commitments also follow
-   Section 14.4.
+   Each extension point states what its specification supplies and what
+   an AS without the extension does.  The requirements of Section 14.3
+   and Section 14.4 bind a specification that uses them and each party
+   that implements it.
 
 14.1.  Extension Points
 
@@ -13515,7 +13494,8 @@ Table of Contents
    *  *Authority types.* The Authority Set is open to any AS-supported
       authorization_details type (Section 5.5); the Mission apparatus
       (commitment, gating, delegation) is type-agnostic, subject to the
-      delegation and projection limits in Section 5.5.  A type's
+      delegation and projection limits in Section 5.5, and an entry of a
+      type the AS does not support is refused (Section 4.3.1).  A type's
       specification supplies what the apparatus relies on for its
       entries:
 
@@ -13548,7 +13528,8 @@ Table of Contents
       verified output facts
       ([I-D.draft-mcguinness-oauth-mission-submission-evidence]), and an
       AS refuses an entry of a type it does not support rather than
-      ignoring it (Section 4.4).
+      ignoring it.  A verified entry is policy input, never authority
+      (Section 4.4).
 
    *  *Mission Intent members.* The Mission Intent's top level
       (Section 4) is open to members a companion profile defines, under
@@ -13560,26 +13541,24 @@ Table of Contents
       validation (Section 4.2.1) refuses any top-level member that
       neither this document nor an implemented companion profile
       defines, and the AS ignores none it recognizes.  Registration
-      settles which specification owns a short name; it does not make an
-      AS implement, recognize, or trust any member.
+      settles which specification owns a short name, not whether an AS
+      implements, recognizes, or trusts any member.
 
    *  *Integrity anchors.* Additional committed objects use the same
       domain-separated, issuer-bound envelope with a new typ
-      (Section 6.3.1, Section 14.4).  A consent-disclosure commitment,
-      an instruction-text attestation, or a delegation receipt can be
-      committed this way without changing this document.  A profile that
-      commits an evidence or disclosure object MUST commit it with this
-      envelope and a typ that meets Section 6.3.1 and Section 14.4, not
-      by hashing the bare object, so the domain separation and issuer
-      binding hold uniformly.  A mission descriptor embedded in such an
-      object uses the mission claim shape (Section 7.8), optionally
-      extended with collision-resistantly named members (for example, an
-      intent_hash for audit), and is never authority-bearing on its own.
+      (Section 6.3.1, Section 14.4).  A profile that commits an evidence
+      or disclosure object MUST commit it with this envelope and a typ
+      that meets Section 6.3.1 and Section 14.4, not by hashing the bare
+      object, so the domain separation and issuer binding hold
+      uniformly.  A mission descriptor embedded in such an object uses
+      the mission claim shape (Section 7.8), optionally extended with
+      collision-resistantly named members, and is never authority-
+      bearing on its own.  An AS without such a profile produces and
+      verifies none of its commitments.
 
    *  *The mission claim.* It is an open object: additional, collision-
-      resistantly named members can be carried in it (for example, a
-      runtime decision reference, a delegation receipt, or an
-      attestation reference), under the consumer rules of Section 7.8.
+      resistantly named members can be carried in it, under the consumer
+      rules of Section 7.8.
 
    *  *Mission Record members.* The Mission Record is open to additional
       members set at creation, under short names a companion profile
@@ -13593,7 +13572,9 @@ Table of Contents
       reasons (Section 10.1) are likewise open to reasons that companion
       profiles register in the Mission Termination Reasons registry
       (Section 20.8).  Under the forward-compatibility rule of
-      Section 10, only active permits issuance.
+      Section 10, only active permits issuance.  A companion interface
+      changing Mission state leaves Section 10.2 in force; a terminated
+      Mission stays terminal.
 
    *  *Approval bases.* The approval_basis.type value space
       (Section 6.2.3) is open to standing-consent bases that companion
@@ -13605,18 +13586,25 @@ Table of Contents
       to authorization-code issuance belongs to the direct flow.  A
       companion profile MAY relocate the approval event relative to code
       issuance (for example, deferring the decision beyond the
-      authorization response), provided the steps and their atomicity
-      hold unchanged and no Mission reference exists before the record
-      is active; the Mission Deferred Approval companion is such a
-      profile ([I-D.draft-mcguinness-oauth-mission-approval]).  A back-
+      authorization response, as
+      [I-D.draft-mcguinness-oauth-mission-approval] does), and a back-
       channel carriage profile (Section 4.2.3) MAY instead couple the
       approval decision to establishing the Mission grant binding and
-      activating for redemption a grant the profile defines, such as a
-      device code issued while the request was pending, provided the
-      steps and their atomicity with the approval decision hold
-      unchanged and no Mission reference exists before the record is
-      active; the Mission then binds to that profile-defined reusable
-      grant (Section 6.4.1).
+      activating for redemption a grant the profile defines, the Mission
+      then binding to that profile-defined reusable grant
+      (Section 6.4.1), provided in either case the steps and their
+      atomicity with the approval decision hold unchanged and no Mission
+      reference exists before the record is active.
+
+   *  *Grants and issuance paths.* A companion profile can define a
+      further grant lineage or a profile-defined grant.  Its
+      specification states when the AS establishes the binding and how
+      it resolves the Mission, and every derivation through the grant
+      passes Section 7.1 (Section 6.4.1).  Neither a returned access
+      token nor a per-request runtime join is a grant lineage
+      (Section 6.4).  Without such a profile, the AS resolves a Mission
+      only from the authorization-code lineage and a Mission-bound
+      subject_token.
 
    This document defines no capability-negotiation mechanism or profile-
    version field; an extension declares its own identifiers and, where
@@ -13709,13 +13697,10 @@ Table of Contents
    An unrecognized type or adjudication.kind is handled as Section 6.2.3
    states for every record consumer.
 
-   Mission Approval Governance
-   [I-D.draft-mcguinness-mission-approval-governance] defines an
-   Approval Basis Contract, covering activation policy commitment,
-   standing-consent recency, and policy adjudication, which the
-   companion profiles that define standing-consent bases for this
-   document adopt.  A profile defined elsewhere can meet this section's
-   requirements by another mechanism.
+   The companion profiles that define standing-consent bases for this
+   document adopt the Approval Basis Contract of
+   [I-D.draft-mcguinness-mission-approval-governance]; a profile defined
+   elsewhere can meet this section's requirements by another mechanism.
 
 14.4.  Commitment Mechanisms
 
@@ -13725,18 +13710,15 @@ Table of Contents
 
    *  *Envelope anchor*: the domain-separated, issuer-bound envelope of
       Section 6.3.1 (intent_hash, proposal_hash, authority_hash, and
-      commitments produced with companion-defined typ values, such as an
-      activation policy reference's digest).
+      commitments produced with companion-defined typ values).
 
    *  *Canonical-object digest*: sha-256: over the JCS serialization of
       a normalized JSON object without the envelope, where protocol
-      context already fixes what is committed (for example, a runtime
-      parameter digest).
+      context already fixes what is committed.
 
    *  *Raw-octet digest*: sha-256: over an exact, specification-defined
       octet sequence, with no canonicalization: a whole artifact as
-      exchanged, or the UTF-8 encoding of a defined scalar value (for
-      example, a work-product artifact digest).
+      exchanged, or the UTF-8 encoding of a defined scalar value.
 
    The prefix and agility rules of Section 6.3.3 bind all three species.
    Its I-JSON rule binds the two JSON species.  The envelope and typ
@@ -14937,12 +14919,11 @@ Table of Contents
               oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [OpenID.Core]
               OpenID Foundation, "OpenID Connect Core 1.0 incorporating
@@ -15108,9 +15089,9 @@ Table of Contents
               Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
               Steele, N., and A. Parecki, "AI Identity Management
               System", Work in Progress, Internet-Draft, draft-ietf-
-              wimse-aims-00, 15 September 2026,
+              wimse-aims-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-wimse-
-              aims-00>.
+              aims-01>.
 
    [I-D.draft-ietf-wimse-arch]
               Salowey, J. A., Rosomakho, Y., and H. Tschofenig,
@@ -15185,9 +15166,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-attesters-00, 28 September 2026,
+              client-attesters-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-attesters-00>.
+              oauth-client-attesters-01>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
@@ -16104,589 +16085,75 @@ Appendix E.  Document History
 
    -02
 
-   *  Intentional normative relaxation: Mission Approval Governance
-      becomes an informative reference.  Mission-Creating Paths no
-      longer requires every standing-consent basis to conform to
-      Governance's Approval Basis Contract.  It requires the profile
-      that defines a basis to specify its type value and activation
-      semantics, and the activating issuer to record activation,
-      activation_actor, root_commitment, and approved_at, whose types
-      and meanings the Mission Record states for a standing-consent
-      basis.  A profile defined elsewhere can meet these requirements
-      without the Contract; the companion profiles that define standing-
-      consent bases still adopt it.  This document no longer lists
-      mission-activation-policy among its anchors: Governance defines
-      and classifies it under the typ extension point, with its
-      construction unchanged (#1967, D1134).
-
-   *  Revocation says what a token's consumer does after its Mission
-      terminates: one that enforces from the token alone can honor it
-      until it expires, and one that checks Mission state refuses it
-      when that check reports a non-active state, under the mechanism's
-      freshness rules.  It no longer says an issued access token remains
-      valid until it expires.  No requirement changed (#1937).
-
-   *  Preparing the Approval states the direct approval steps as a
-      concise procedure, and each step's rules sit in the subsection
-      that owns its topic: Approver Authentication Strength (step 1),
-      Subject Establishment (step 2), Authority Sources (step 3) and
-      Consent Rendering, formerly Rendering Safeguards (step 5).  Step
-      numbers and order are unchanged.  No requirement changed (#1938).
-
-   *  Intentional behavior change, with no compatibility window: the
-      legacy Mission-state reading is removed.  A consumer no longer
-      reads revoked, expired, completed, superseded, or cascaded as a
-      Mission's state; such a value is non-active and non-deriving under
-      the forward-compatibility rule of Mission Lifecycle, like any
-      other value it does not recognize.  Reports carry state terminated
-      and the reason in termination.  The rules for a termination
-      recorded before its reason defined a member, and for a reason a
-      consumer does not recognize, are unchanged (#1504, D1006).
-
-   *  Editorial, no requirement change: Signing and Key Rotation cites
-      the Mandate; the undefined "primary" access token is named as a
-      Mission-bound access token that is not a delegated token; the
-      authorization_details_types_supported requirement drops an unclear
-      trailing clause; sentences that opened with a bare identifier name
-      its kind; the AS refuses, and a resource server challenges with
-      the applicable response, wherever an outcome was worded otherwise;
-      Mission State via Token Introspection compares token
-      representation with state freshness; and goal and task_bounds are
-      rendering and review context for a proposal (#1504).
-
-   *  The integrity anchors intent_hash, authority_hash, and
-      proposal_hash are implied members: each is OPTIONAL on the record,
-      an omitted one is its sha-256 construction over the retained
-      record, and a recorded one MUST equal it, a mismatch being
-      refused.  The AS still computes them at the approval event for any
-      artifact bound there that carries one, and an issuer resolves an
-      existing Mission's anchors from its retained record alone.  A
-      specification adding an algorithm preserves existing commitments.
-      Consent Binding states what optional storage gives up, and
-      created_at names the creation commit's instant (#1917).
-
-   *  Mission-Creating Paths replaces Standing-Consent Bases and its
-      three subsections.  It keeps relocating the direct ceremony
-      distinct from activating under standing consent.  A companion
-      profile defining a standing-consent basis makes it conform to
-      Approval Governance's Approval Basis Contract, which states those
-      subsections' requirements unchanged, and an issuer activating
-      under one conforms to it; the normative reference binds no direct-
-      only deployment.  Approval of a standing consent's consented root
-      carries explicit MUSTs: authenticate the consenting principal,
-      establish their authorization over the root's permitted Subjects
-      and authority sources, and obtain their consent to the root's
-      authority, limits and activation policy (#1915).
-
-   *  Approval Idempotency states what every creation path shares: the
-      AS allocates approval_event_id and never derives it from a
-      reusable client value, binds the direct path's identifier to the
-      authorization interaction, refuses a decision delivered after the
-      lifetime of what it decides, and requires a profile with a request
-      key to state its retention contract, under which a reuse after the
-      reservation expires is a new operation (#1915).
-
-   *  Mission Creation states the direct creation path, with the Mission
-      Approval subsections in the order of the steps they serve.
-      Standing-Consent Bases and Commitment Mechanisms move to
-      Extensibility, which lists approval bases as an extension point.
-      Commitment Mechanisms imports the digest rules that stay in Digest
-      Input and Algorithm, and the Authority Set entry commitment is its
-      own subsection.  Approval Comprehension folds into Consent Binding
-      and Rendering Safeguards, Achieved Authentication into Approver
-      Authentication Strength, and the binding index into Implementation
-      Considerations.  Grant Bindings and Related Mechanisms drops what
-      Template and Continuation state, and Approval Governance holds the
-      record-digest, per-action and later-reliance points.  No
-      requirement changed (#1914).
-
-   *  Mission Record names its required members, and every other member
-      is optional or defined by the profile that uses it. activation,
-      activation_actor, and root_commitment are optional for direct,
-      with implied values that a present member must match, and are
-      defined in Standing-Consent Bases. policy_version is optional, and
-      required where a feature such as standing-consent recency depends
-      on it.  Approval procedure moves out of the member definitions to
-      Preparing the Approval and Authority Sources; the policy
-      adjudication rules move to Standing-Consent Bases; the
-      submission_evidence explanation moves to Intent Submission
-      Evidence; and approval idempotency and the audit horizon move to a
-      new Implementation Considerations section.  The unrecognized-value
-      rule for approval_basis.type, adjudication.kind, and
-      authority_source.type is stated once, and a consumer neither
-      interprets nor removes a record member it does not recognize.
-      Approval Governance defines governance_record (#1912, D1047,
-      D1048).
-
-   *  Editorial, no requirement change: citations elsewhere in the
-      document name the subsection that states the cited rule, not its
-      parent section, where #1908's subsections make one precise (#1910,
-      D1045).
-
-   *  Editorial, no requirement change: Submission via PAR is retitled
-      Submitting a Mission Intent, with subsections for the Submission
-      envelope, its carriage through PAR, and other carriages.
-      Authority Proposal, Preparing the Approval, Approver
-      Authentication Strength, and Issuance Gating are restructured into
-      subsections, shorter sentences, and lists; numbered steps, checks,
-      and rules keep their numbers, and Issuance Gating keeps its
-      numbered procedure at its head (#1908, D1042).
-
-   *  Editorial, no requirement change: the Introduction states the
-      problem and the approach and points to the Overview; it no longer
-      restates the flow that Protocol Flow and the Introductory Example
-      show, or details stated in their own sections (consent to the
-      Authority Set, the commitments, grant binding, revocation by
-      identifier, the mission claim and resource-server enforcement).
-      The issuance-only deployment pointer moves to Issuance Scope and
-      Runtime Enforcement.  Protocol Flow gains a legend keyed to its
-      figure that carries the flow's properties, with a pointer to each
-      section that specifies them (#1906, D1039).
-
-   *  Editorial, no requirement change: the back matter that describes
-      the family rather than the protocol moves to the Architecture: the
-      Mapping Assessment of this document against the Mission Substrate
-      contract, Relationship to Adjacent Work, the two future-work
-      items, and the Derivation Policy appendix's policy artifact,
-      properties, fixtures, and ownership guidance.  Claiming
-      Conformance states only that this document makes no substrate
-      conformance claim; the mission claim's distinction from similarly
-      named claims follows its JSON Web Token Claims registration; Scope
-      and Future Work becomes Scope, keeping its boundary statements;
-      and the Derivation Policy appendix keeps its worked example
-      (#1794, D973).
-
-   *  Token Claims: a token whose format a companion profile explicitly
-      defines, with its own typ and verification rules (the Mission
-      Offline Attenuation root), follows that profile; JWT access-token
-      validation stays under Section 4 of RFC 9068, accepting at+jwt or
-      application/at+jwt (#1760).
-
-   *  Configured-mapping mode can key on the requested scope values for
-      a scope-only target, through that target's trusted scope-
-      projection mapping, which also relates a requested value back to
-      authority (Derivation Modes, Scope Projection).
-
-   *  Editorial, no requirement change: Standing-Consent Bases points to
-      the Architecture for the companion-defined bases instead of
-      listing them; Grant Bindings and Related Mechanisms, Composition
-      and the Effective Ceiling, Authority Materialized Before
-      Containment, and the approval_basis definition no longer restate
-      what the companions specify; the sentence on joining one
-      credential to different Missions across requests moves to the
-      Mission Authority Server's Mission Join.
-
-   *  Editorial, no requirement change: Grant Bindings and Related
-      Mechanisms places the Template profile's Dispatch Handoff and the
-      continuation profile's Identity Continuation Transport, the
-      reusable-state case reads as a redeemable grant lineage, the
-      derivation resolution list points to profile-defined grants, and a
-      derived token's Mission is the one its subject_token resolved to,
-      with no binding assumed, and Grant Bindings and Related Mechanisms
-      and Delegated Exchange keep a token's backing grant provenance
-      where its subject_token was issued under a grant lineage (#1589,
-      D726).
-
-   *  Editorial, no requirement change: Grant Bindings and Related
-      Mechanisms names the Token Exchanges its later items cover, and
-      the Namespace Taxonomy lists the approval_basis.type values as
-      specification-defined, which Standing-Consent Bases cites.
-
-   *  Editorial, no requirement change: the approval_event_id definition
-      names the approval event that creates the Mission and states that,
-      under a standing-consent basis, it identifies the instance's
-      creation, not the earlier standing approval.
-
-   *  An access token's mission claim, and its introspection mission
-      member, are reserved for issuance that conforms to a Mission-
-      binding profile; a profile that defines another issuance or
-      derivation path identifies its grant or chain, authority bound,
-      state check, and consumer checks (Claim Reservation).
-      Introspection discloses mission only for a token issued on a
-      conforming path.  A resource server's mission.issuer check accepts
-      the relationship any Mission-binding profile it has adopted
-      establishes, not only a cross-domain profile's (Enforcement
-      Requirements).
-
-   *  A Mission-governed resource, classified by the deployment or by
-      its authenticated mission_bound_authorization_required metadata,
-      gets no token outside a Mission on any grant type; the open-ended
-      policy exception is removed, and the refusal is invalid_target
-      (Authority Proposal).
-
-   *  A token carries only the entries whose original approved audience
-      (the audiences the AS's trusted mapping assigned an entry at
-      approval, retained with the Mission and kept by the entries a
-      derived Mission inherits) includes its audience, unless a declared
-      narrowing capability permits issuing an entry there.  A token
-      naming several audiences is issued only where each is approved for
-      the same entries; otherwise, or where the audience is approved for
-      none of the entries the token would carry, the request is refused
-      with invalid_target (Declared Transformation Capabilities,
-      Audience and Token Response; #1503, D620, D733).
-
-   *  A designation's aud names its redeemer and reassigns no entry's
-      original approved audience: the audience rules test the audiences
-      associated with the entries it carries, a permitted subset of the
-      presented token's that excludes an entry without an original
-      approved audience, and the delegated token issued at its
-      redemption is subject to every audience rule (Audience and Token
-      Response, Declared Transformation Capabilities; #1717, D845,
-      D859).
-
-   *  At a delegated exchange the AS authenticates the requesting client
-      by a method it relies on to identify the client and refuses any
-      other, including every public client, with invalid_client and no
-      token; a claimed client_id, the designation, or an independently
-      chosen key does not authenticate it.  That client authentication
-      alone identifies the delegate: the AS refuses an actor_token from
-      an authenticated client with invalid_request.  An exchange
-      presenting a designation is a delegated exchange, never a no-actor
-      one (Delegated Exchange, Designation, Self-Exchange Down-Scoping,
-      Establishing and Resolving a Binding, Error and Challenge Mapping,
-      Token Theft, OAuth Binding Mapping Assessment; #1718, D845, D859).
-
-   *  The key-publication requirement applies to an AS that issues
-      Mission-bound JWT access tokens for resource servers to consume,
-      not to one issuing only designations; the first capability carrier
-      that declares a member governs, true or false, and a declaration
-      waives no check; the declared narrowing capability also governs
-      Authority Set derivation, where without it a candidate entry is
-      retained unchanged or omitted; an undecidable token-endpoint
-      subset comparison is refused with invalid_authorization_details;
-      and short-lived is related to the termination latency a deployment
-      accepts, with numerical bounds left to deployment profiles (Token
-      Claims, Declared Transformation Capabilities, Authority Proposal,
-      Derivation Modes, Subset Rule, Issuance Gating; #1720, D845).
-
-   *  The AS refuses, with invalid_target, a delegated Mission-bound
-      token for an audience it has not established as a Mission-aware
-      Resource Server that processes the act chain; routing and logging
-      beyond that audience stay the deployment's (Mission-Unaware
-      Resource Servers, Delegated Exchange; #1503, D620).
-
-   *  Each redemption of a designation validates the originating
-      credential and all applicable grant state backing it, which an
-      exchange that establishes no new grant lineage keeps; a
-      designation's expiry bounds its redemption, not the lifetime of
-      the delegated token issued from it (Delegated Exchange,
-      Designation, Authentication Claims and Lifetime; #1503, D620).
-
-   *  Step 1 of the Submission Processing Order applies the size bounds
-      and checks each evidence entry's structure, so a structurally
-      invalid entry is refused with invalid_request before the authority
-      proposal is validated, and Conformance Roles names that code for
-      it (Submission Processing Order, Intent Submission Evidence,
-      Conformance Roles; #1503, #1482, D620).
-
-   *  The deployment's published approval-authentication floor, and the
-      mission member of an active introspection response to a caller
-      authorized for Mission data, are requirements rather than
-      lowercase statements (Approver Authentication Strength, Mission
-      State via Token Introspection; #1503, D620).
-
-   *  A Mission is revoked by a party the deployment's policy
-      authorizes, or by that policy itself; the Subject, the Approver,
-      and an administrator can be authorized, but none is by role alone
-      (Revocation, Mission Lifecycle; #1503, D620).
-
-   *  Editorial, no requirement change: the Derivation definition, in
-      Terminology and Issuance Gating, includes the redemption of a
-      profile-defined grant, such as the Template profile's handoff
-      grant; a grant binding resolves the Mission for the operations
-      using it, and a profile-defined grant can instead resolve it
-      through its authenticated mission reference (#1631, D751).
-
-   *  Editorial, no requirement change: the Mission Status variation's
-      revocation reason describes a revocation, not a completion
-      (#1535).
-
-   *  Editorial, no requirement change: Single Accountable Approver
-      states that authenticating approval evidence does not establish
-      that conditions governing later reliance remain satisfied, and
-      that the effect of later changes to an Approver's role, a
-      delegation, or governing policy on an existing Mission is
-      deployment policy (#830).
-
-   *  When the AS establishes that a Mission's recorded Subject has been
-      deprovisioned, it SHOULD terminate the Mission with reason
-      revoked; temporary disablement, an outage, or another principal's
-      departure does not trigger the rule, and termination does not
-      recall issued tokens (Revocation; #830).
-
-   *  A direct approval whose commit finds the effective expiry passed
-      is refused with access_denied, with no Mission or authorization
-      code (Committing the Mission).  A token request that fails several
-      checks gets any applicable error, subject to the orders this
-      document states.  A state a companion defines takes that
-      companion's mission_error value, never a termination reason
-      (Issuance Gating).  A resource server answers an opaque Mission-
-      bound token resolved as inactive with invalid_token, and a
-      resolution it cannot complete with HTTP 503 and no token error
-      (Introspected Token Consumption).  Enforcement Requirements
-      refuses an entry it cannot enforce only with the codes of the
-      error table, and Mission awareness alone does not imply act
-      processing (Error and Challenge Mapping, Client Identification in
-      Delegated Tokens; #1721, D845).
-
-   *  mission_id and mission_expires_at are required on the response
-      that first delivers a newly created Mission's identifier or
-      credential (on the authorization-code path, the token response,
-      not the code-only authorization response) and on a delegated
-      exchange response, and recommended on every other Mission-bound
-      token response; a client learns them from the response, not from
-      the access token.  A client assumes no authority absent from the
-      granted authorization_details and need not reject a narrower grant
-      (Mission Identifier and Expiry in Responses, Audience and Token
-      Response, Conformance Roles; #1719, D845).
-
-   *  Editorial, no requirement change: the AS answers a request at its
-      final decision to release the result, so a result prepared before
-      an acknowledged revocation and released after it is refused
-      (Issuance Gating); the Mission Record is a logical object with no
-      required storage form; the Authority types extension point lists
-      what a type's specification supplies; resource-server conformance
-      implies no particular type (Conformance Roles, Authorization
-      Details Types); each mission_error value is explained to the
-      client (Issuance Gating); and Scope Projection gains an example
-      (#1722).
-
-   *  Editorial, no requirement change: Adjacent Work distinguishes the
-      mission claim from AAuth's mission_s256 claim and the WIMSE AIMS
-      agent mission; target_resources, like purpose, grants no authority
-      as a configured-mapping key; Terminology defines "Mission-governed
-      client"; and Issuance Gating gives the reason a Token Exchange
-      refusal uses invalid_request (#1532).
-
-   *  The consent rendering attributes client-supplied text to the
-      client, identified from client identity information the AS trusts,
-      and presents goal and task_bounds as recorded, without truncation
-      (Rendering Safeguards; #1532, D859).
-
-   *  Editorial, no requirement change: Terminology defines "applicable
-      entry" by the matching rule Audience and Token Response states,
-      and adds the delegation terms; Mission State via Token
-      Introspection describes a resource server that observes Mission
-      state in plain terms; and the Implementation Map gains a table of
-      deployment choices, naming for each who decides, which party
-      learns it, and the existing signal, if any, it learns from (#1723,
-      #1504, D845).
-
-   *  Editorial, no requirement change: Mission-Bound Access Tokens
-      opens with Issuance Checks, one list of the checks issuance
-      applies, each with its home sections and its applicability and
-      exceptions on code redemption, refresh, designation, delegated
-      exchange, and self-exchange, and each of those paths points to the
-      list; the Implementation Map gains an operation index naming the
-      sections each operation needs (#1723, D845).
-
-   *  Editorial, no requirement change: Policy-Language Types drops its
-      Cedar example; Remediation Grains names its three grains in one
-      paragraph; Grant Bindings and Related Mechanisms leaves the
-      Template and Identity Continuation exchange mechanics to their
-      profiles and merges the Mission Join paragraphs; Single
-      Accountable Approver points to the Approval Governance Record for
-      its mechanics, keeping both limitations; Approval Comprehension
-      condenses its practices; and the Enforcement Responsibilities
-      table is removed, with Rendering Safeguards pointing to
-      Enforcement Requirements and Scope Projection (#1793, D919).
-
-   *  Editorial, no requirement change: Token Claims, Delegated
-      Exchange, Intent Submission Evidence, Revocation, Authority Hash
-      and Mission Identity, and Authority Materialized Before
-      Containment point to the home of a rule they restated, keeping
-      each operation's own condition (#1793, D919).
-
-   *  Editorial, no requirement change: Scope Projection is divided into
-      subsections for the subset condition, the per-audience condition,
-      the projection steps, requested scope values, scope-only targets,
-      refresh-token protection, and its example; Intent Members lists a
-      member's rules, the AS refusals included, under its definition,
-      for each member but task_bounds; Principals and Approval Basis
-      lists the rules that follow its member definitions; and Instance
-      Context in Delegated Tokens lists its rules (#1723, D845).
-
-   *  Editorial, no requirement change: Refresh Tokens, Designation,
-      Direct Approval Steps, Preparing the Approval, Committing the
-      Mission, Submission Processing Order, and Enforcement Requirements
-      point to the rules of their operation that other sections state,
-      which stay in place: the mission_intent exemption and the Mission-
-      governed resource refusal (Authority Proposal), consent reuse
-      (Establishing and Resolving a Binding), the unrecognized authority
-      source and approval idempotency (Principals and Approval Basis,
-      Provenance and Expiry), duplicate member names (Commitment
-      Mechanisms), and the resource-server rules of Mission Lifecycle,
-      Mission Claim, Audience and Token Response, and Designation
-      (#1723, D845).
-
-   *  Editorial, no requirement change: Declared Transformation
-      Capabilities, Mission Lifecycle and Conformance drop restatements
-      of rules their home sections state (#1793, D919).
-
-   *  Four rules already stated as obligations carry BCP 14 keywords,
-      with no new requirement: the current mapping does not stand in for
-      an entry's original approved audience that the AS cannot establish
-      (Declared Transformation Capabilities); the accountable principal
-      is not inferred from the token sub (Authority Sources); on a
-      refresh, the AS decides the Mission-governed resource refusal
-      before it consumes or rotates the refresh token (Authority
-      Proposal); and the issuer does not change a recorded termination
-      (Mission Termination).  Editorial, no requirement change: Declared
-      Transformation Capabilities lists the rules for an entry's
-      original approved audience, the creation-replay rule joins the
-      response list of Mission Identifier and Expiry in Responses, and
-      Self-Exchange Down-Scoping points to its mission_intent exemption
-      in Authority Proposal (#1723, D971).
-
-   *  Two rules already stated as obligations carry BCP 14 keywords,
-      with no new requirement: the AS refuses a token request outside a
-      Mission any of whose audiences is Mission-governed, and issues no
-      token for the others (Authority Proposal); and a Mission in a
-      state from which it can return to active is not reported with a
-      termination reason (Issuance Gating).  Editorial, no requirement
-      change: Instance Context in Delegated Tokens names the grant
-      lineage a delegated exchange establishes when it issues a refresh
-      token (#1871, D1005).
-
-   *  Mission Record: its members MUST NOT be changed after creation,
-      except state and the termination member written once, with no new
-      requirement; a companion's containment overlay or suspension
-      schedule is issuer-held state associated with the Mission, outside
-      the record (#1873, #1879, D1014).
-
-   *  Editorial correction, no requirement change: Authority Sources
-      says the Mission Record's client_id names the Agent and a token's
-      client_id names the client that requested it, as Token Claims
-      states, so it no longer reads as saying a delegated token's
-      client_id names the Agent (#1851, D971).
-
-   *  Editorial, no requirement change: Issuance Gating opens with the
-      issuance procedure, the numbered checks each of the five issuance
-      paths passes; any other derivation passes at least the resolution,
-      state, subset, scope-projection and exp checks the Issuance Gating
-      list it replaces required, and the release-time revocation
-      refusal.  The numbering is presentation order, with no execution
-      order or error precedence, and the orders this document states are
-      unchanged.  The Issuance Checks index is removed: the procedure
-      and the sections it cites state its paths and per-path details
-      (#1892, D1026).
-
-   *  Editorial, no requirement change: text that restates rules stated
-      elsewhere is removed: the Implementation Map's index, its
-      deployment-choices table becoming the Deployment Choices appendix;
-      the End-to-End Example's timeline and companion variations (its
-      Stage 5 is retitled Revocation); the derivation-policy paragraphs
-      that the Architecture's Derivation Boundary carries; the step
-      overview of Direct Approval Steps; the record summary in
-      Committing the Mission; the Projection Example, which the Resource
-      Access Profile gives; the three-sides restatement in Downgrade by
-      Omission; Authority Hash and Mission Identity; and Authority
-      Materialized Before Containment, which the Containment profile
-      states (#1892, D1026).
-
-   *  Editorial, no requirement change: the sections follow processing
-      order.  Mission Creation gathers Mission Approval, Standing-
-      Consent Bases, Mission Record, Integrity and Commitments, and
-      Binding the Mission to the Grant; Mission-Bound Access Tokens is
-      retitled Mission-Bound Token Issuance and gains Mission Identifier
-      and Expiry in Responses and Self-Exchange Down-Scoping; Delegation
-      Within a Mission follows issuance; Token Consumption gathers
-      Resource Server Enforcement and Mission State via Token
-      Introspection; Mission Lifecycle follows as its own chapter; Error
-      and Challenge Mapping, the two metadata sections, Extensibility
-      and Conformance follow, and the Introduction names the chapters in
-      order.  Every moved section keeps its anchor and title, except the
-      issuance chapter's title (#1892, D1026).
-
-   *  Revocation: a Mission Issuer MUST accept, through an authenticated
-      means independent of possession of any token, a revocation by
-      mission_id from a party the deployment's policy authorizes, where
-      a deployment was required to provide that means; Conformance Roles
-      lists it among the Mission Issuer's surfaces; revoking a token
-      does not by itself revoke a Mission (#1892, D1026).
-
-   *  Editorial, no requirement change: Approval Comprehension's
-      practices for reviewing a large or varied Authority Set move to
-      Mission Consent Evidence, which carries them beside its layered
-      rendering, and Submission Processing Order drops its Consent
-      Evidence example, keeping the rule that a committed approval
-      surface covers the normalized provenance facts (#1892, D1026).
-
-   *  Editorial, no requirement change: delegation rules that sat in
-      issuance sections move into Delegation Within a Mission, leaving a
-      pointer in each: a designation's audience, lifetime,
-      mission_intent exemption and introspection rules move to
-      Designation, and the delegated-exchange response members and the
-      rule for a type delegable only unchanged move to Delegated
-      Exchange.  Self-Exchange Down-Scoping, which delegates nothing,
-      moves from that chapter to follow Refresh Tokens (#1892, D1026).
-
-   *  Editorial, no requirement change: Protocol Flow keeps its figure
-      without the prose the Introduction's flow states; Derivation
-      Policy and Open-Ended Tasks becomes Authority Set Example, its
-      open-ended-task guidance being Mission Intent Shaping's and the
-      Architecture's; and Policy-Language Types, whose rules Declared
-      Transformation Capabilities and the Mission Resource Access
-      Profile state, is removed with its Cedar reference (#1892, D1026).
-
-   *  Editorial, no requirement change: Revocation no longer restates
-      the introspection overlay, and its wire-shape sentence follows the
-      requirement it scopes; its duty to offer token introspection or
-      Mission Status where consumers rely on Mission state beyond a
-      token's lifetime is unchanged (#1892, D1026).
-
-   *  Editorial, no requirement change: Prompt Injection and Data
-      Exfiltration, Downgrade by Omission, Authority and Propagated
-      Information, and Composition and the Effective Ceiling keep their
-      rules and residual risks and point to the Mission Security Model,
-      which carries the analysis; Composition and the Effective Ceiling
-      moves under Credentials and Delegation; the uncited Work Products
-      reference is removed (#1892, D1026).
-
-   *  Editorial, no requirement change: the Architecture carries
-      material on the family rather than the protocol: Relationship to
-      Existing OAuth Objects; Missions, Plans, and Execution; the
-      Derivation Policy appendix's worked example; and the guidance on
-      sizing a Mission to one task, which Applicability now points to.
-      The Introduction's two-layer framing becomes a pointer, and
-      Mission-Unaware Resource Servers states that a resource server
-      receiving no delegated token need not be Mission-aware; the
-      Mission Authority Server pointer of Mission-Bound Token Issuance
-      and the End-to-End Example's agent-identity stage, each stated
-      elsewhere, are removed with the uncited SPIFFE client
-      authentication reference (#1892, D1026).
-
-   *  Editorial, no requirement change: the Role Mapping appendix moves
-      to the Architecture as Approval Role Mapping, which Single
-      Accountable Approver cites; the companions that cited it now cite
-      Principals and Approval Basis, which defines the three roles
-      (#1892, D1026).
-
-   *  Self-exchange is an OPTIONAL capability, independent of
-      Delegation: an AS that does not support it refuses a no-actor
-      exchange with unsupported_grant_type when it lacks the Token
-      Exchange grant type, and otherwise with invalid_request;
-      advertising that grant type does not establish every exchange
-      variant.  An acknowledged revocation is the AS's commit of the
-      Mission's termination with reason revoked.  Security
-      Considerations state the consequence of a policy that authorizes
-      no party to request revocation (#1892, D1031).
-
-   *  Declared Transformation Capabilities: a type's specification can
-      define a value other than a boolean for a capability member, and a
-      value the reader cannot validate declares that capability false
-      (#1377, D1025).
-
-   *  Submission Processing Order: a commitment to the rendered approval
-      surface may omit each provenance element's verified_at, which the
-      AS generates at each verification, and no other member (#1897,
-      D1035).
-
-   *  Revocation: a deployment-defined surface satisfies the token-
-      independent revocation requirement when it authenticates the
-      revoking party independent of possession of any token, and the
-      section no longer names a companion's operation for it (#1895,
-      D1114).
+   *Behavior changes*
+
+   *  The legacy Mission-state reading is removed, with no compatibility
+      window: revoked, expired, completed, superseded, and cascaded are
+      no longer read as a state (#1504).
+   *  Intentional normative relaxation: the standing-consent
+      requirements of -01 (approved_at, policy adjudication, Activation
+      Policy Commitment, and Standing-Consent Recency) move to Approval
+      Governance, which stays informative and which the companion
+      profiles defining standing-consent bases adopt.  Mission-Creating
+      Paths requires only that such a profile specify its basis type and
+      activation semantics, and that the activating issuer record the
+      activation members (#1915, #1967).
+   *  The Mission Record names its required members, policy_version and,
+      for direct, the activation members become optional, and the
+      integrity anchors are implied, an omitted one computed from the
+      retained record (#1912, #1917).
+   *  Approval: approval_event_id is allocated by the AS, never from a
+      reusable client value (#1915); a direct approval whose commit
+      finds the effective expiry passed is refused with access_denied
+      (#1721); and the rendering attributes client-supplied text to the
+      client (#1532).
+   *  Issuance: a Mission-governed resource gets no token outside a
+      Mission on any grant type, and a token carries only the entries
+      whose original approved audience includes its audience, each
+      refused with invalid_target (#1503).  Declared Transformation
+      Capabilities gain precedence and validation rules (#1377, #1720),
+      and mission_id and mission_expires_at are required on the response
+      that first delivers a new Mission and on a delegated exchange
+      response (#1719).
+   *  Delegation: a delegated exchange requires client authentication by
+      a method the AS relies on, refusing every other client with
+      invalid_client and an actor_token from an authenticated client
+      with invalid_request (#1718); a delegated token goes only to a
+      Mission-aware resource server that processes act (#1503).  An AS
+      that does not support self-exchange refuses it with
+      unsupported_grant_type or invalid_request (#1892).
+   *  Token consumption: the mission claim is reserved for issuance
+      under a Mission-binding profile; a JWT access token is validated
+      under RFC 9068 unless a companion profile defines its format
+      (#1760); and a resource server refuses an entry it cannot enforce
+      only with insufficient_scope or the RAR remediation challenge
+      (#1721).
+   *  Revocation: the Mission Issuer accepts a revocation by mission_id,
+      from a party the deployment's policy authorizes, through an
+      authenticated means independent of possession of any token, and
+      should terminate a Mission whose recorded Subject it establishes
+      as deprovisioned (#830, #1892, #1895).
+
+   *Moved out.* The Mapping Assessment, Role Mapping, and Derivation
+   Policy appendices and other material on the family rather than the
+   protocol move to the Architecture, the security analysis to the
+   Mission Security Model, and the mechanics a companion profile defines
+   to that profile (#1794, #1892).
+
+   *Editorial and structure.* The sections follow processing order, with
+   Mission Creation, Mission-Bound Token Issuance, Delegation Within a
+   Mission, Token Consumption, and Mission Lifecycle as chapters, and
+   procedures open Issuance Gating and Preparing the Approval.  Text
+   that restated a rule stated elsewhere becomes a pointer, and rules
+   already stated as obligations carry BCP 14 keywords, with no new
+   requirement (#1723, #1793, #1892).
+
+   *References.* RFC 9110 is added as normative, and the AAuth protocol,
+   the Mission Mandate, and Mission Offline Attenuation as informative.
+   FAPI Grant Management, the Cedar RAR draft, SPIFFE client
+   authentication, Transaction Tokens, GNAP, the Attenuating Agent
+   Tokens draft, and the Containment, Progressive, and Work Products
+   companions are no longer cited.
 
    -01
 
@@ -21513,6 +20980,17 @@ Table of Contents
    requirement it names, never one that another applicable predicate
    imposes.
 
+   The classes are ordered only in part: consequential read ranks above
+   non-consequential, consequential write above consequential read, and
+   each of the three highest classes above consequential write, while
+   the three highest classes are not ordered among themselves.  An
+   action is at or above a class when a class that applies to it is that
+   class or ranks above it, and raising, lowering, and a stricter class
+   refer to this order.  A minimum classification is met only by an
+   action at or above it, so a minimum of one of the three highest
+   classes is met only where that class applies.  Audit-only, a
+   freshness posture (Section 2.5), is outside this order.
+
    Classification remains deployment-scoped: each deployment applies the
    predicates to its own actions and systems.  The predicates make the
    resulting classifications comparable across deployments and
@@ -21525,10 +21003,10 @@ Table of Contents
    invocation, from its normalized parameters, by a classifier the
    deployment declares in its Enforcement Scope Statement (Section 5.2).
    An invocation the classifier cannot affirmatively place MUST be
-   treated as the widest class the operation can reach, and the floor
-   below applies to the classifier's assignments as to any other: a
-   class the deployment cannot justify by its predicate is not a basis
-   to leave the invocation ungated.
+   treated under every class the operation can reach, taking the
+   requirements of each, and the floor below applies to the classifier's
+   assignments as to any other: a class the deployment cannot justify by
+   its predicate is not a basis to leave the invocation ungated.
 
    *Classification floor.* Four rules bound classification:
 
@@ -22945,9 +22423,10 @@ Table of Contents
       rule; otherwise the harness does, and the scope statement says
       which.
 
-   *  *External communication.* The external-communication and external-
-      commitment classes are mediated: no unmediated path, the scope
-      statement's egress-channel enumeration covers them
+   *  *External communication.* Every action that satisfies the
+      external-communication or External commitment predicate
+      (Section 5.4), whatever its class, is mediated: no unmediated
+      path, the scope statement's egress-channel enumeration covers it
       ([I-D.draft-mcguinness-mission-harness]), and the sender-
       constraint keys are held by the mediating PEP (Section 5.7).
 
@@ -24246,12 +23725,11 @@ Table of Contents
               oauth-actor-receipts-01>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -24476,6 +23954,15 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Classes are ordered only in part, and the three highest are not
+      ordered among themselves; an invocation the classifier cannot
+      place is treated under every class the operation can reach.
+      Trifecta containment's external-communication leg reaches every
+      action that satisfies the external-communication or External
+      commitment predicate, whatever its class.  A minimum class is met
+      only by an action at or above it, and Audit-only is outside the
+      order (#1994).
 
    *  Changes a requirement (#1735, D1153, D1164): an action that
       satisfies more than one class predicate takes the requirements of
@@ -25208,13 +24695,21 @@ Table of Contents
       The PDP computes and records it directly; no decision-API wire
       echo is required.
 
-   action_class:  REQUIRED.  A string.  The runtime action class the PDP
-      applied to the action: one of consequential_read,
+   action_class:  REQUIRED.  A string.  The runtime action class
+      assigned to the action: one of consequential_read,
       consequential_write, irreversible_action, external_commitment, or
       privileged_administration, naming the classes of
       [I-D.draft-mcguinness-mission-runtime].  Every decision this
       document records is on a consequential action, so the member is
       always present.
+
+   action_classes:  REQUIRED when more than one runtime action class
+      applies to the action ([I-D.draft-mcguinness-mission-runtime],
+      Section "Action Classification"); omitted otherwise.  An array of
+      distinct strings from the value space of action_class: every class
+      whose requirements the PDP applied, action_class among them.
+      action_class remains the class assigned to the action, which
+      class_source describes.
 
    class_source:  REQUIRED when action_class is present.  A string.  How
       the applied class was assigned: default (the runtime profile's
@@ -25468,18 +24963,20 @@ Table of Contents
       requesting PEP is authorized for
       ([I-D.draft-mcguinness-mission-authzen]),
       operation_target_invalid; for a mediated request with no action
-      class established, where the runtime Enforcement Scope Statement
-      declares action classes, action_class_missing, recorded with no
-      class; for one whose action phase is outside the defined set, or
-      is absent where the PDP's trusted operation declaration requires a
-      phase, phase_invalid; for a compensate-phase request with no
-      compensates_evaluation_id, or a request whose
-      compensates_evaluation_id is malformed, compensation_link_invalid;
-      for one whose evaluation-context binding inputs are missing,
-      malformed, or incompatible with the declared binding, for an
-      operation the runtime profile's Evaluation-Context Binding
-      extension covers, evaluation_context_invalid; and for one carrying
-      a work-item context that is not well-formed (the harness profile,
+      class established (none carried or assigned, or a carried class
+      other than the one the PDP's trusted declaration assigns), where
+      the runtime Enforcement Scope Statement declares action classes,
+      action_class_missing, recorded with no class; for one whose action
+      phase is outside the defined set, or is absent where the PDP's
+      trusted operation declaration requires a phase, phase_invalid; for
+      a compensate-phase request with no compensates_evaluation_id, or a
+      request whose compensates_evaluation_id is malformed,
+      compensation_link_invalid; for one whose evaluation-context
+      binding inputs are missing, malformed, or incompatible with the
+      declared binding, for an operation the runtime profile's
+      Evaluation-Context Binding extension covers,
+      evaluation_context_invalid; and for one carrying a work-item
+      context that is not well-formed (the harness profile,
       [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
       last four describe decision inputs the PDP cannot use, not an
       evaluated policy denial; evaluation_context_unresolvable is
@@ -27719,6 +27216,14 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Decision Evidence: action_classes records every class whose
+      requirements the PDP applied, when more than one applies;
+      action_class is defined as the assigned class (#1994).
+
+   *  Refusal Record: action_class_missing also records a mediated
+      request carried with a class other than the one the PDP's trusted
+      declaration assigns (#1994).
+
    *  Refusal Record: action_class_missing records a PDP refusal of a
       mediated request with no action class established, where the
       runtime Enforcement Scope Statement declares classes, with no
@@ -28957,8 +28462,8 @@ Table of Contents
       owned by the harness profile
       ([I-D.draft-mcguinness-mission-harness]), which defines the
       predicate and how the PEP computes it.  REQUIRED for every action
-      in a class for which the deployment declares PDP-enforced taint;
-      OPTIONAL otherwise.
+      to which a class applies for which the deployment declares PDP-
+      enforced taint; OPTIONAL otherwise.
 
 5.13.  Taint Context
 
@@ -28967,10 +28472,11 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-harness]), which defines the member
       shape (tainted, granularity, source_class) and the taint-state
       trust rules.  Where the deployment's Enforcement Scope Statement
-      declares PDP-enforced taint for the action's class, the fail-
-      closed default applies: the PDP MUST deny with
-      taint_context_missing (Section 6.5) when context.taint is absent
-      from an in-scope decision.
+      declares PDP-enforced taint for a class that applies to the action
+      ([I-D.draft-mcguinness-mission-runtime], Section "Action
+      Classification"), the fail-closed default applies: the PDP MUST
+      deny with taint_context_missing (Section 6.5) when context.taint
+      is absent from an in-scope decision.
 
 5.14.  Work-Item Context
 
@@ -28994,11 +28500,11 @@ Table of Contents
    context.work_item is present but not of that shape: an unusable
    input, recorded as the Refusal Record work_item_invalid
    (Section 6.8), never an evaluated denial.  Where the deployment's
-   Enforcement Scope Statement claims work-item attribution for the
-   action's class, the PDP MUST deny with work_item_context_missing
-   (Section 6.5) a decision from which context.work_item is absent.
-   Elsewhere its absence relaxes nothing, and the deployment claims
-   Mission-level attribution only.
+   Enforcement Scope Statement claims work-item attribution for a class
+   that applies to the action, the PDP MUST deny with
+   work_item_context_missing (Section 6.5) a decision from which
+   context.work_item is absent.  Elsewhere its absence relaxes nothing,
+   and the deployment claims Mission-level attribution only.
 
    The member is part of the authorization binding and the cache key
    (Section 5.17), so no cached decision or resumed execution crosses
@@ -29078,12 +28584,15 @@ Table of Contents
    This document defines one predicate type that policy MAY name,
    action_class_completed.  It is satisfied when the PDP's evidence
    store holds, for the established Mission, at least one Decision
-   Evidence record with decision permit and a named action_class, and
-   every such record has a linked Execution Evidence record
+   Evidence record with decision permit to which the named class
+   applied, and every such record has a linked Execution Evidence record
    ([I-D.draft-mcguinness-mission-runtime-evidence]) whose outcome is
-   completed.  The predicate carries an action_class: a runtime action
-   class name, from the same value space as the Decision Evidence
-   action_class member
+   completed.  The named class applied to a record when its
+   action_classes member lists that class or, in a record without
+   action_classes, its action_class is that class, so an execution the
+   class applied to counts whichever class was assigned.  The predicate
+   carries an action_class: a runtime action class name, from the same
+   value space as the Decision Evidence action_class member
    ([I-D.draft-mcguinness-mission-runtime-evidence]).  For a migration
    Mission whose copy steps are consequential writes, policy names the
    delete step's precondition this way:
@@ -29354,11 +28863,12 @@ Table of Contents
    Likewise, where the runtime Enforcement Scope Statement declares
    action classes, a mediated request that reaches the PDP with no
    action class established, neither carried from the PEP's Operation
-   Profile nor assigned by the PDP's own trusted declaration, is
-   malformed: the PDP MUST refuse it before evaluation, MUST NOT
-   evaluate it under a default class or record a class in Decision
-   Evidence, and MUST record the refusal as a Refusal Record with
-   denial_reason action_class_missing
+   Profile nor assigned by the PDP's own trusted declaration, or carried
+   with a class other than the one that declaration assigns its
+   operation and phase, is malformed: the PDP MUST refuse it before
+   evaluation, MUST NOT evaluate it under a default class or record a
+   class in Decision Evidence, and MUST record the refusal as a Refusal
+   Record with denial_reason action_class_missing
    ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
    In addition to evaluating the decision inputs the runtime profile
@@ -30088,14 +29598,15 @@ Table of Contents
       next_action values Section 5.15 lists.
 
    *  taint_context_missing: the deployment declares PDP-enforced taint
-      for the action's class, as the harness profile defines
-      ([I-D.draft-mcguinness-mission-harness]), and the decision request
-      carries no context.taint (Section 5.13).
+      for a class that applies to the action, as the harness profile
+      defines ([I-D.draft-mcguinness-mission-harness]), and the decision
+      request carries no context.taint (Section 5.13).
 
    *  work_item_context_missing: the deployment claims work-item
-      attribution for the action's class and the decision request
-      carries no context.work_item (Section 5.14).  A malformed one is
-      the pre-evaluation refusal work_item_invalid instead.
+      attribution for a class that applies to the action and the
+      decision request carries no context.work_item (Section 5.14).  A
+      malformed one is the pre-evaluation refusal work_item_invalid
+      instead.
 
    *  stale_state: the Mission state the decision relies on is not
       current: the PEP-supplied freshness is outside the deployment's
@@ -30463,7 +29974,10 @@ Table of Contents
    |mediated request where   |           |                                 |
    |the Enforcement Scope    |           |                                 |
    |Statement declares action|           |                                 |
-   |classes, at the PDP      |           |                                 |
+   |classes, or a carried    |           |                                 |
+   |class other than the one |           |                                 |
+   |the PDP's declaration    |           |                                 |
+   |assigns, at the PDP      |           |                                 |
    +-------------------------+-----------+---------------------------------+
    |action_phase outside the |Refusal    |phase_invalid                    |
    |closed set, or absent    |Record     |                                 |
@@ -30560,7 +30074,8 @@ Table of Contents
    |Work-item context absent |PDP denial |work_item_context_missing        |
    |where work-item          |           |                                 |
    |attribution is claimed   |           |                                 |
-   |for the action's class   |           |                                 |
+   |for a class that applies |           |                                 |
+   |to the action            |           |                                 |
    +-------------------------+-----------+---------------------------------+
    |Required act chain       |PDP denial |actor_invalid                    |
    |missing or malformed     |           |                                 |
@@ -30914,9 +30429,9 @@ Table of Contents
    *  denial_reason carries the value returned in context.reason
       (Section 6.5).
 
-   *  action_class, class_source, and mission_state_version are not on
-      this profile's wire: the PDP computes them and records them
-      directly.
+   *  action_class, action_classes, class_source, and
+      mission_state_version are not on this profile's wire: the PDP
+      computes them and records them directly.
 
    The runtime evidence companion's integrity envelope is this profile's
    one signing convention for evidence objects: the default envelope
@@ -31369,12 +30884,11 @@ Table of Contents
               draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -31500,6 +31014,18 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Changes a requirement (#1994): a mediated request carried with an
+      action class other than the one the PDP's trusted declaration
+      assigns its operation and phase has no class established, and the
+      PDP refuses it before evaluation as action_class_missing.
+
+   *  Taint, Work-Item and History Context: PDP-enforced taint, the
+      external_communication member and work-item attribution apply when
+      a class that applies to the action calls for them, and
+      action_class_completed counts a permit when the named class is in
+      its action_classes, or is its action_class where the record
+      carries no action_classes (#1994).
 
    *  Credential Decision Context: requiring a credential's whole
       authority description to be evaluable is this profile's credential
