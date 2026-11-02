@@ -286,6 +286,7 @@ describe("the History Context evaluates policy-selected predicates against verif
     ];
     const second = await evaluate(request(), options(historyBinding(pending)));
     expect(second.decision).toBe(false);
+    expect(second.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(second)?.[0]?.outcome).toBe("not_satisfied");
   });
 
@@ -401,6 +402,7 @@ describe("the History Context evaluates policy-selected predicates against verif
     ];
     const decision = await evaluate(request(), options(historyBinding(forged)));
     expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
     const failedExecution = await executionRecord({ evaluation_id: "w1", outcome: "failed" });
     const altered = [
@@ -409,6 +411,7 @@ describe("the History Context evaluates policy-selected predicates against verif
     ];
     const second = await evaluate(request(), options(historyBinding(altered)));
     expect(second.decision).toBe(false);
+    expect(second.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(second)?.[0]?.outcome).toBe("unavailable");
   });
 
@@ -428,6 +431,7 @@ describe("the History Context evaluates policy-selected predicates against verif
     ];
     const second = await evaluate(request(), options(historyBinding(orphan)));
     expect(second.decision).toBe(false);
+    expect(second.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(second)?.[0]?.outcome).toBe("unavailable");
   });
 
@@ -501,6 +505,7 @@ describe("the History Context evaluates policy-selected predicates against verif
     ];
     const decision = await evaluate(request(), options(historyBinding(records)));
     expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
   });
 
@@ -594,6 +599,8 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(decision.decision).toBe(false);
     expect(decision.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(decision)).toEqual([{ predicate: "action_class_completed", action_class: "consequential_write", outcome: "not_satisfied" }]);
+    // The recorded member is the PDP's own evaluation, not the asserted one.
+    expect(historyOf(decision)).not.toEqual(asserted.mission_history.results);
   });
 
   it("refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied", async () => {

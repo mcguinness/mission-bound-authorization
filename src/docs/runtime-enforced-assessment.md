@@ -272,11 +272,19 @@ Not exercised by this composition:
   `runtime.semantic-evaluator`, `runtime.taint-enforcement` and
   `runtime.break-glass` (1 each). The loader refuses any break-glass value
   other than `absent` (`loadRuntimePosture`).
-- `runtime.history-input`: the PDP implements the History Context (#2015),
-  and its rows are `tested` against a bound history policy and retained
-  evidence (`src/services/pdp/test/evaluate-history.test.ts`). This
-  composition binds no history policy, so it selects no predicate and does
-  not claim the capability; #815's destructive-operation witness binds one.
+- `runtime.history-input` (8 rows: 7 tested, 1 todo): the PDP implements
+  the History Context (#2015). Tested against a bound history policy and
+  retained evidence (`src/services/pdp/test/evaluate-history.test.ts`):
+  `authzen.context-history.no-caller-asserted-outcome`,
+  `authzen.context-history.unrecognized-predicate-refusal`,
+  `authzen.context-history.deny-when-unsatisfied-or-unestablishable`,
+  `authzen.context-history.record-predicates-and-outcomes`,
+  `authzen.context-history.action-class-completed-applied-class`,
+  `authzen.evidence.mission-history-computed` and
+  `runtime.decision-inputs.history-fail-closed`. Todo:
+  `runtime.decision-inputs.history-no-expand-authority`. This composition
+  binds no history policy, so it selects no predicate and does not claim
+  the capability; #815's destructive-operation witness binds one.
 - `mas.join-assertion` (13 rows, all `todo`): the composition has no Join
   Assertion endpoint or consumer, so the capability is unclaimed (#972).
 - `runtime.compromise-resistant` (1 tested, 3 partial, 7 todo) and
