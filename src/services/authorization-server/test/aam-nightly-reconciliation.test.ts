@@ -79,7 +79,7 @@ import {
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withMissionContractReference } from "@mission/pdp/test-support";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, NO_FURTHER_ACTION_CLASSES_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withMissionContractReference } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
 import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
@@ -465,6 +465,9 @@ const evalAction = async (missionId: string, action: string) => {
       // #773: this direct PDP call stands for a deployment that does not claim
       // Evaluation-Context Binding; the claimed path has its own witnesses.
       evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      // #1994: this direct PDP call labels each action for another subject;
+      // the class set the statement adds has its own witnesses.
+      actionClassesFor: NO_FURTHER_ACTION_CLASSES_FIXTURE,
     },
   );
 };

@@ -45,7 +45,7 @@ import {
 } from "@mission/core";
 import { AUTHORITY_DEPENDENCIES, CANONICAL_RESOURCE, parseIdentityState } from "@mission/demo-data";
 import { evaluate as evaluateRequest, type EvaluationRequest, type Fga, type MissionView, relationForAction, stalenessBound } from "@mission/pdp";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, NO_FURTHER_ACTION_CLASSES_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withCredential } from "../../pdp/test/with-credential.js";
 import {
@@ -221,6 +221,9 @@ async function decide(id: string, action = READ, dependency: AuthorityDependency
       // #773: this direct PDP call stands for a deployment that does not claim
       // Evaluation-Context Binding; the claimed path has its own witnesses.
       evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      // #1994: this direct PDP call labels each action for another subject;
+      // the class set the statement adds has its own witnesses.
+      actionClassesFor: NO_FURTHER_ACTION_CLASSES_FIXTURE,
     },
   );
 }

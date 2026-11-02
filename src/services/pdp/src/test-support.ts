@@ -55,6 +55,16 @@ export function resourcePolicyFixture(refuses: (query: ResourcePolicyQuery) => b
 export const EVALUATION_CONTEXT_UNCLAIMED_FIXTURE = new EvaluationContextBindingDeclarations({});
 
 /**
+ * @spec runtime#classification (#1994): operation declarations that name no
+ * further action class. For a test whose subject is another decision input on
+ * an operation the deployment's statement gives further classes (such as
+ * `payments:remittance.send`), bound PDP-side exactly as a deployment's
+ * declarations are; the multi-class path has its own witnesses
+ * (`evaluate-multi-class.test.ts`).
+ */
+export const NO_FURTHER_ACTION_CLASSES_FIXTURE = (): readonly string[] => [];
+
+/**
  * @spec runtime#resource-contract (#249, D865): `request` as a PEP that
  * performs the operation under the intended contract sends it, with
  * `resource.properties.resource_contract` set to the current reference for
