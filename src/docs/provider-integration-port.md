@@ -788,8 +788,8 @@ the store.
     identity replays a lost response (§4.4). The window between the approval
     commit and the code is #1863's, closed with
     `core.approval-event.record-code-atomicity` settled at `partial` (D1016,
-    D1018; §3.4). A fenced derivation keeps its count by design (D771, D954;
-    §4.3). Multi-process issuance waits on #641's deployment trigger.
+    D1018; §3.4). A fenced derivation keeps its count by design: its Mission
+    has ended, and the fence refunds nothing (D772, D954; §4.3). Multi-process issuance waits on #641's deployment trigger.
   - No operation identity: nothing replays a lost token response. A retry
     of the same authorization code, or of a rotated refresh token, is reuse
     and revokes the grant; a retry of a refresh token that has not rotated
@@ -1095,7 +1095,7 @@ after the count stays counted (D772, D874); no operation identity replays a
 lost response (§4.4); the window between the approval commit and the code is
 #1863's, closed with `core.approval-event.record-code-atomicity` settled at
 `partial` (D1016, D1018); a fenced derivation's count stays spent because its
-Mission has ended (D771, D954); and multi-process issuance waits on #641,
+Mission has ended (D772, D954); and multi-process issuance waits on #641,
 where the fence orders a revocation against an issuance only within one
 process.
 
@@ -1233,7 +1233,7 @@ follows:
 | Define the authoritative issuance commit point and durable operation and artifact identity across the provider and kernel path | §4.2, §4.3 | Not defined. No claim is made that every provider count and its artifact commit atomically (D874); multi-process serialization waits on #641's trigger |
 | Revoke versus issue, crash after reservation, an accepted artifact with a lost acknowledgement, and replay without refund or duplicate issuance | §3.5, §4.3, §4.4 | Accepted as scoped completion (D874): an authoritative non-acceptance may refund once, and an ambiguous delivery stays counted; a fenced derivation keeps its count (#935, D954) |
 | Assembly-level restart recovery for outstanding credentials and required indexes and projections, with explicit refusal where recovery is unsupported | §4.5 | Accepted with scope (D874): kernel projections recover, and unsupported provider state is invalidated or refused; no refresh continuity or recovery from lost storage is established |
-| Restore to an older snapshot under a recovery admission or fencing mechanism | §4.5; [control-plane-deployment.md](control-plane-deployment.md) | Met by #1688 and #1691 (D816, D820): an older store is refused at boot and reconciled by restoring the witnessed store; invalidation under a new recovery generation is deferred (D820), and one writer on one host is declared (#641) |
+| Restore to an older snapshot under a recovery admission or fencing mechanism | §4.5; [control-plane-deployment.md](control-plane-deployment.md) | Met by #1688 and #1691 (D816, D820): an older store is refused at boot and reconciled by restoring the witnessed store; invalidation under a new recovery generation is deferred (D820), one writer on one host is declared ([control-plane-deployment.md](control-plane-deployment.md)), and the `rollback` row stays `partial` |
 
 #250's other acceptance items, `expected_version` with 409 (#1302, D490)
 and closure (D885), are met. Its four follow-ups (#1747, #1748, #1749,
