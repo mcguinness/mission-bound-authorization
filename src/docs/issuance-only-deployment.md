@@ -505,7 +505,8 @@ with `pnpm install --frozen-lockfile`.
   `buildAuthorizationServer` assembly restricted to the capability set of §8
   (`ISSUANCE_ONLY_CAPABILITIES`). `src/server.ts` runs the same assembly with
   no capability set: every default-on capability, with the opt-in
-  `device-authorization`, `delegation` and `deferred-approval` off. It is
+  `device-authorization`, `delegation`, `deferred-approval` and
+  `standing-payment-dispatch` off. It is
   the issuer, and its
   JWKS is at `/jwks`.
 - **`plain-rs`**, at `http://localhost:4410`, audience
@@ -613,9 +614,11 @@ profile is always on. Of the optional capabilities, only the lifecycle
 endpoint's `revoke` is enabled. Every other one is off, and a request for it
 gets the standard refusal its path already uses. With no `capabilities` set,
 the assembly is the full reference provider: every capability except the
-opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`,
+opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`: `device-authorization`,
 `delegation`, `deferred-approval` and `standing-payment-dispatch`), which are
-on only where a capability set names them.
+on only where a capability set names them. The shared demo composition with
+the AS names `standing-payment-dispatch`; this launcher's set names none of
+them, and neither does any other deployment's.
 
 How a capability is turned off:
 
