@@ -3,9 +3,15 @@
 
 Regions:
 - body: from "# Introduction" to before "# IANA Considerations";
-- extensibility: the "# Extensibility" chapter, to the next level-1 heading;
+- extensibility: the "# Extensibility" chapter, to the next level-1 heading
+  (Conformance at the frozen baseline);
 - appendices: from "--- back" to before "# Document History", reported
   separately so that moving text out of the body cannot hide reading.
+
+The regions assume the headings Introduction, IANA Considerations,
+Extensibility and Document History keep those exact titles and that no
+level-1 section is inserted after Extensibility; a run after either change
+must re-check its regions before comparing.
 
 Each count is whitespace-separated tokens, excluding fenced code blocks
 (``` or ~~~) and kramdown attribute lines ("{: ...}"). The bibliography is

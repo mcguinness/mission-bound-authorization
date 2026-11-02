@@ -309,7 +309,7 @@ P0's remaining items, the tracking issue and the P5 readers, precede renewed dra
 
 The dependency removal has landed, so normative family independence holds at the references level. The `-02` release gate is not complete (D1195). The owner has selected aggressive scope for `-02`; do not move P1, P2 or P4 to a later revision solely to preserve the current schedule. Present any newly discovered semantic blocker explicitly instead of quietly publishing a partial pass.
 
-Queue reviews one implementation PR at a time. Prepare inventories and fixtures while a PR is reviewed, but avoid four competing rewrites of the same binding sections. This reduces repeated conflict resolution without weakening the `-02` scope.
+Queue reviews one implementation PR at a time. Prepare inventories and fixtures while a PR is reviewed, but avoid competing rewrites of the same binding sections. This reduces repeated conflict resolution without weakening the `-02` scope.
 
 Build from a fresh `origin/main` in an isolated worktree. Do not modify this older checkout's tracked draft. Before beginning a package, re-read the tracking issue, current open PRs and the affected sections. PRs #1939 and #1942 have merged, and their results are part of the baseline.
 
