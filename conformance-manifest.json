@@ -92676,9 +92676,16 @@
     "normative": "An assertion the intake emits carries none of jku, x5u, jwk, or x5c in its protected header."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/assertion.test.ts",
+     "name": "the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The intake library builds the protected header itself, as exactly typ, alg (ES256) and kid; the cited test decodes emitted assertions for two audiences and asserts the header equals those three members and carries none of jku, x5u, jwk or x5c. Mutations: H1 (jku added) and H2 (the public jwk added) each fail it. The AS refusal of such a header is request-provenance.trust.no-header-key, still todo (slice 2)."
   },
   {
    "id": "request-provenance.assertion.no-content-commitment",
@@ -92698,9 +92705,34 @@
     "normative": "An assertion the intake emits carries no claim beyond those the document defines that carries or commits to the instruction, its media type, the capture secret, or Shaping Evidence; in particular no shaping hash."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "the assertion commits to no request content (@spec request-provenance#assertion, request-provenance#privacy-considerations, #939) > the claim set is exactly the defined claims, and no public artifact carries the secret, the instruction, the media type or an unsalted digest of either",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "the assertion commits to no request content (@spec request-provenance#assertion, request-provenance#privacy-considerations, #939) > changing only the instruction, the media type or the secret changes only request_digest",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "a dictionary probe over a low-entropy instruction (@spec request-provenance#privacy-considerations, #939) > without the secret no member other than intent_hash confirms a candidate; with the secret request_digest does",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > refuses a sign request carrying an intent_hash, a digest, an originator or channel facts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The emitted claim set is exactly the draft's claims, and no public artifact (the capture receipt, the signed result, the JWS, its decoded header and claims, the intake object, a refusal) carries the secret, the instruction, the media type, the HMAC input, or an unsalted SHA-256 of any of them. A differential over fixed random values shows that changing only the instruction, only the media type, or only the secret changes request_digest and no other member, so no other claim carries or commits to them, directly or through a hash. Shaping Evidence has no way in: capture and sign inputs are closed, and a sign request carrying Shaping Evidence or a shaping hash is refused with no assertion. The dictionary probe shows that no secretless commitment to a low-entropy candidate appears in any member other than intent_hash, and that request_digest confirms the true candidate only with the secret. intent_hash is outside the claim (privacy-considerations); a separate, uncited test shows it confirms a candidate when shaping copies the wording into the Intent. These tests check this implementation's outputs; they are not a proof of secrecy. Mutations: N1 (an instruction_sha256 claim) fails the first three; N2 (a media_type claim) fails the first two; N3 (jti from an unsalted instruction digest, no new claim) fails the first three; N4 (jti from a truncated hash of the secret) fails the differential; I2 (sign input opened) fails the fourth."
   },
   {
    "id": "request-provenance.assertion.capture-id-random",
@@ -92720,9 +92752,16 @@
     "normative": "Two captures of the same instruction and media type yield distinct capture_id values, neither computable from the request content."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "capture_id (@spec request-provenance#assertion, #939) > two captures of the same instruction and media type yield distinct capture_id values of at least 128 bits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). Four captures of identical bytes, media type, origin facts and workflow, two in each of two intakes, yield four distinct capture_id values, each the base64url of 16 bytes (128 bits) from node:crypto randomBytes and none found in a secretless encoding of the request content; each emitted capture_id claim equals its receipt's. Distinct values for identical content show capture_id is not a function of the content. Mutations: C1 (capture_id from SHA-256 of the instruction, duplicate guard off) and C2 (64 random bits) each fail it."
   },
   {
    "id": "request-provenance.signing.own-capture-only",
@@ -92742,9 +92781,22 @@
     "normative": "A signing request naming a capture record from another workflow, or carrying no capture record of the intake's own, yields no assertion."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses an unknown capture and yields no assertion",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses another workflow's capture and yields no assertion",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The library refuses, with no assertion, a sign request naming a capture this intake does not hold (an unminted identifier, or a real capture another intake made) and one naming another workflow's capture, while it holds a capture of its own for the requesting workflow; each capture signs from its own intake and workflow. Mutations: S1 (workflow comparison removed) and S2 (an unknown capture falling back to the latest capture) each fail the matching test. partial: unit tests in which the test supplies the workflow identifiers an intake would establish. The row's cross-component witness, a shaper's signing request crossing an isolated intake boundary, awaits the demo intake service; per D1119 Q6, isolation and authenticated-origin rows are not promoted on unit tests with trusted-looking inputs."
   },
   {
    "id": "request-provenance.signing.own-intent-hash",
@@ -92764,9 +92816,22 @@
     "normative": "The emitted intent_hash equals the intake's own computation over the candidate Intent for the AS that aud names; an intent_hash, digest, originator, or channel fact supplied by the shaper does not change the emitted claims."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > the emitted intent_hash is the integrity anchor over the candidate Intent for the AS aud names",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > refuses a sign request carrying an intent_hash, a digest, an originator or channel facts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). sign() takes the candidate Intent, never an intent_hash, and computes the OAuth binding's integrity anchor with iss the AS that aud names; the first test compares the emitted value with the generator's independent computation (vectors/mission-request-provenance/assertion.json) and a JCS computation written in the test, for two audiences. A sign request carrying an intent_hash, a request digest, an originator, channel facts, captured_at, claims, Shaping Evidence or a shaping hash is refused with no assertion, and a clean request carries the capture's originator, channel, digest and captured_at: supplied facts cannot change the emitted claims because they are refused. Mutations: I1 (anchor bound to the intake's iss) fails the first; I2 (input opened, a supplied intent_hash used) fails the second. partial: unit level, with test-supplied inputs. The cross-component witness, a shaper's request through an isolated intake, awaits the demo intake service (D1119 Q6)."
   },
   {
    "id": "request-provenance.signing.fresh-per-intent",
@@ -92786,9 +92851,22 @@
     "normative": "After the candidate Intent changes, the intake's next assertion carries the new intent_hash and a jti it has not used before."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "a fresh assertion per Intent (@spec request-provenance#signing, #939) > every call mints a fresh jti, and a changed Intent gets its new intent_hash",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "a fresh assertion per Intent (@spec request-provenance#signing, #939) > refuses to issue a jti the intake has issued before, even from a repeating random source",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). Five signatures from two captures, the Intent revised between them, carry five distinct jti values (each 128 random bits), and each carries intent_hash over its own Intent; the revised Intent's hash differs while the capture's request digest is reused, as signing permits. The intake records every jti it issues and refuses to issue one again, even from a repeating random source. Mutations: J1 (jti cached per capture, guard off) fails the first; J2 (guard off) fails the second."
   },
   {
    "id": "request-provenance.request-digest.construction",
@@ -92808,9 +92886,28 @@
     "normative": "Over the Appendix test vectors, the intake's request_digest reproduces each published value, and differs when the instruction, the media type, or the secret changes."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > reproduces every published and low-entropy vector, HMAC input included",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > the intake's captured request_digest reproduces every vector under its secret",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > changing the instruction, the media type or the secret changes the digest",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The library's digest reproduces the draft appendix's four published values and six low-entropy and edge vectors (vectors/mission-request-provenance/request-digest.json), exact HMAC input included; the intake's capture path reproduces each vector under its secret; and changing the instruction, the media type (case included) or the secret changes the digest. An independent computation in the same file agrees on every vector; per D1119 Q6 that supports the vectors' correctness only, not an interoperability or secrecy claim, and it is not cited. Mutations: R1 (a 4-byte instruction length) and R2 (no zero byte after the label) fail the first two; R3 (media type case-folded) fails the third."
   },
   {
    "id": "expansion.restoration.discharge-disclosed",
