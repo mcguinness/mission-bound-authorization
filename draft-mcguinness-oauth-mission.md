@@ -6921,178 +6921,72 @@ resolve before interoperating.
 **Behavior changes**
 
 - The legacy Mission-state reading is removed, with no compatibility
-  window: a consumer no longer reads `revoked`, `expired`,
-  `completed`, `superseded`, or `cascaded` as a Mission's `state`.
-  Such a value is non-active and non-deriving, like any value the
-  consumer does not recognize, and reports carry `state` `terminated`
-  with the reason in `termination` (#1504).
-- The Mission Record names its required members; every other member is
-  optional or defined by the profile that uses it. `activation`,
-  `activation_actor`, and `root_commitment` are optional for `direct`,
-  with implied values a present member must match, and
-  `policy_version` is required only where a feature depends on it. A
-  consumer neither interprets nor removes a record member it does not
-  recognize (#1912). The record's immutability names its exceptions,
-  `state` and a `termination` written once, and a companion's
-  containment overlay or suspension schedule is issuer-held state
-  outside the record (#1873, #1879). The integrity anchors
-  `intent_hash`, `authority_hash`, and `proposal_hash` are implied
-  members: an omitted anchor is its `sha-256` construction over the
-  retained record, a recorded one must equal it, and an issuer
-  resolves an existing Mission's anchors from its retained record
-  alone (#1917).
-- Intentional normative relaxation: Mission-Creating Paths replaces
-  Standing-Consent Bases, and the standing-consent requirements that
-  -01 stated here (the `approved_at` check, `policy` adjudication with
-  no flattening, Activation Policy Commitment, and Standing-Consent
-  Recency) are no longer this document's. Approval Governance's
-  Approval Basis Contract states them, stays an informative reference,
-  and is adopted by the companion profiles that define standing-consent
-  bases; `mission-activation-policy` leaves this document's anchors for
-  it. This document requires only that such a profile specify its
-  `approval_basis.type` value and activation semantics, and that an
-  issuer activating under it record `activation`, `activation_actor`,
-  `root_commitment`, and `approved_at`; neither requirement binds a
-  deployment that creates Missions only on the direct path. Approving
-  a standing consent's consented root authenticates the consenting
-  principal, establishes their authorization over the root's Subjects
-  and authority sources, and obtains their consent (#1915, #1967).
-- Approval: the AS allocates `approval_event_id`, never from a
-  reusable client value, binds the direct path's identifier to the
-  authorization interaction, and refuses a decision delivered after
-  the lifetime of what it decides; a profile with a request key states
-  its retention contract (Approval Idempotency; #1915). The
-  consent rendering attributes client-supplied text to the client and
-  presents `goal` and `task_bounds` as recorded (#1532). The published
-  approval-authentication floor is a requirement (#1503). A direct
-  approval whose commit finds the effective expiry passed is refused
-  with `access_denied` (#1721).
-- Issuance: a Mission-governed resource, classified by the deployment
-  or by its authenticated `mission_bound_authorization_required`
-  metadata, gets no token outside a Mission on any grant type, refused
-  with `invalid_target`, and the open-ended policy exception is
-  removed. A token carries only the
-  entries whose original approved audience includes its audience,
-  unless a declared `narrowing` capability permits it, and a token
-  naming several audiences only where each is approved for the same
-  entries; otherwise the request is refused with `invalid_target`
-  (#1503). Configured-mapping mode can key on the `scope` values of a
-  `scope`-only target.
-- Declared Transformation Capabilities: the first carrier that
-  declares a member governs, a declaration waives no check,
-  `narrowing` also governs Authority Set derivation, a type's
-  specification can define a value other than a boolean, and a value
-  the reader cannot validate declares the capability `false`. An
-  undecidable subset comparison is refused with
-  `invalid_authorization_details` (#1377, #1720).
-- Responses and errors: `mission_id` and `mission_expires_at` are
-  required on the response that first delivers a new Mission's
-  identifier or credential and on a delegated exchange response, and a
-  client assumes no authority absent from the granted
-  `authorization_details` (#1719). A token request that fails several
-  checks gets any applicable error, subject to the orders this document
-  states, and a companion-defined state takes that companion's
-  `mission_error` value (#1721). Submission Processing Order refuses a
-  structurally invalid evidence entry with `invalid_request` before it
-  validates the proposal (#1482, #1503), and a commitment to the
-  rendered approval surface may omit each provenance element's
-  `verified_at`, and no other member (#1897).
-- Token claims and consumption: an access token's `mission` claim and
-  the introspection `mission` member are reserved for issuance under a
-  Mission-binding profile; a profile that defines another issuance
-  path identifies its grant or chain, authority bound, state check, and
-  consumer checks; and a resource server's `mission.issuer` check
-  accepts the relationship any adopted Mission-binding profile
-  establishes. The `mission` member of an active introspection
-  response to a caller authorized for Mission data is a requirement
-  (#1503). A JWT access token is validated under Section 4 of RFC 9068
-  (`at+jwt` or `application/at+jwt`) unless a companion profile defines
-  its format (#1760), and the key-publication requirement applies only
-  to an AS that issues Mission-bound JWT access tokens for resource
-  servers (#1720). A resource server refuses an entry it cannot
-  enforce only with `insufficient_scope` or the RAR remediation
-  challenge, no longer with the deployment's usual insufficient-authority
-  error, and answers an opaque token resolved as inactive with
-  `invalid_token` and a resolution it cannot complete with HTTP 503
+  window: `revoked`, `expired`, `completed`, `superseded`, and
+  `cascaded` are no longer read as a `state` (#1504).
+- Intentional normative relaxation: the standing-consent requirements
+  of -01 (`approved_at`, `policy` adjudication, Activation Policy
+  Commitment, and Standing-Consent Recency) move to Approval
+  Governance, which stays informative and which the companion profiles
+  defining standing-consent bases adopt. Mission-Creating Paths
+  requires only that such a profile specify its basis type and
+  activation semantics, and that the activating issuer record the
+  activation members (#1915, #1967).
+- The Mission Record names its required members, `policy_version`
+  and, for `direct`, the activation members become optional, and the
+  integrity anchors are implied, an omitted one computed from the
+  retained record (#1912, #1917).
+- Approval: `approval_event_id` is allocated by the AS, never from a
+  reusable client value (#1915); a direct approval whose commit finds
+  the effective expiry passed is refused with `access_denied` (#1721);
+  and the rendering attributes client-supplied text to the client
+  (#1532).
+- Issuance: a Mission-governed resource gets no token outside a
+  Mission on any grant type, and a token carries only the entries whose
+  original approved audience includes its audience, each refused with
+  `invalid_target` (#1503). Declared Transformation Capabilities gain
+  precedence and validation rules (#1377, #1720), and `mission_id` and
+  `mission_expires_at` are required on the response that first
+  delivers a new Mission and on a delegated exchange response (#1719).
+- Delegation: a delegated exchange requires client authentication by a
+  method the AS relies on, refusing every other client with
+  `invalid_client` and an `actor_token` from an authenticated client
+  with `invalid_request` (#1718); a delegated token goes only to a
+  Mission-aware resource server that processes `act` (#1503). An AS
+  that does not support self-exchange refuses it with
+  `unsupported_grant_type` or `invalid_request` (#1892).
+- Token consumption: the `mission` claim is reserved for issuance
+  under a Mission-binding profile; a JWT access token is validated
+  under RFC 9068 unless a companion profile defines its format
+  (#1760); and a resource server refuses an entry it cannot enforce
+  only with `insufficient_scope` or the RAR remediation challenge
   (#1721).
-- Delegation: at a delegated exchange the AS authenticates the
-  requesting client by a method it relies on to identify the client
-  and refuses any other, every public client included, with
-  `invalid_client`. That authentication alone identifies the delegate,
-  so an `actor_token` from an authenticated client is refused with
-  `invalid_request`, and an exchange presenting a designation is
-  always a delegated exchange (#1718). A designation's
-  `aud` names its redeemer and reassigns no entry's original approved
-  audience (#1717). Each redemption validates the originating
-  credential and its grant state, a designation's expiry bounds its
-  redemption and not the delegated token's lifetime, and the AS
-  refuses, with `invalid_target`, a delegated token for an audience it
-  has not established as a Mission-aware resource server that
-  processes `act` (#1503). Self-exchange is an optional capability,
-  independent of Delegation: an AS that does not support it refuses a
-  no-actor exchange with `unsupported_grant_type` where it lacks the
-  Token Exchange grant type and otherwise with `invalid_request`
-  (#1892).
-- Revocation: a Mission is revoked by a party the deployment's policy
-  authorizes, or by that policy itself, and no role is authorized by
-  itself (#1503). The Mission Issuer accepts a revocation by
-  `mission_id` through an authenticated means independent of
-  possession of any token, which a deployment-defined surface meets
-  when it authenticates the revoking party that way; an acknowledged
-  revocation is the commit of the Mission's termination; and revoking a
-  token does not by itself revoke a Mission (#1892, #1895). The AS
+- Revocation: the Mission Issuer accepts a revocation by `mission_id`,
+  from a party the deployment's policy authorizes, through an
+  authenticated means independent of possession of any token, and
   should terminate a Mission whose recorded Subject it establishes as
-  deprovisioned (#830).
+  deprovisioned (#830, #1892, #1895).
 {: spacing="compact"}
 
-**Moved out.** To the Architecture: the OAuth Binding Mapping
-Assessment and Role Mapping appendices (the latter as Approval Role
-Mapping), the Derivation Policy appendix, Relationship to Adjacent Work
-and to Existing OAuth Objects, Missions, Plans, and Execution, the
-future-work items, and the guidance on sizing a Mission to one task
-(#1794, #1892). The security analysis moves to the Mission Security
-Model, Approval Comprehension's review practices to Mission Consent
-Evidence, the record-digest, per-action, and later-reliance points and
-`governance_record` to Approval Governance, the Template, Identity
-Continuation, and Containment mechanics to their profiles, and the
-sentence on joining one credential to different Missions to the
-Mission Authority Server (#1793, #1892, #1912, #1914). Policy-Language Types is
-removed.
+**Moved out.** The Mapping Assessment, Role Mapping, and Derivation
+Policy appendices and other material on the family rather than the
+protocol move to the Architecture, the security analysis to the
+Mission Security Model, and the mechanics a companion profile defines
+to that profile (#1794, #1892).
 
-**Editorial and structure.** The sections follow processing order:
-Mission Intent, Mission Authority, Mission Creation (Mission Approval,
-Mission Record, Integrity and Commitments, and Binding the Mission to
-the Grant), Mission-Bound Token Issuance (formerly Mission-Bound
-Access Tokens), Delegation Within a Mission, Token Consumption, and
-Mission Lifecycle, then Error and Challenge Mapping, the metadata
-sections, Extensibility (with Mission-Creating Paths and Commitment
-Mechanisms), Conformance, and Implementation Considerations; the
-reordering keeps each moved section's anchor and title (#1892).
-Issuance Gating
-opens with the issuance procedure, and Preparing the Approval with the
-direct approval steps, each step's rules in the subsection that owns
-its topic (#1892, #1938). Text that restated a rule stated elsewhere
-becomes a pointer, and a citation names the subsection that states the
-rule. Submitting a Mission Intent, Scope
-Projection, Intent Members, and Principals and Approval Basis gain
-subsections or rule lists; Terminology defines applicable entry, the
-delegation terms, and Mission-governed client; the Introduction states
-the problem and the approach, and Protocol Flow keeps its figure;
-Revocation says what a token's consumer does after its Mission
-terminates; Submission via PAR becomes Submitting a Mission Intent,
-Rendering Safeguards becomes Consent Rendering, and Derivation Policy
-and Open-Ended Tasks becomes Authority Set Example; and the
-Deployment Choices appendix is added (#1532, #1723, #1793, #1892,
-#1906, #1908, #1910, #1937, #1938). Several
-rules already stated as obligations carry BCP 14 keywords, with no new
-requirement (#1723, #1871).
+**Editorial and structure.** The sections follow processing order,
+with Mission Creation, Mission-Bound Token Issuance, Delegation Within
+a Mission, Token Consumption, and Mission Lifecycle as chapters, and
+procedures open Issuance Gating and Preparing the Approval. Text that
+restated a rule stated elsewhere becomes a pointer, and rules already
+stated as obligations carry BCP 14 keywords, with no new requirement
+(#1723, #1793, #1892).
 
-**References.** RFC 9110 is added as a normative reference. The AAuth
-protocol, the Mission Mandate, and Mission Offline Attenuation are
-added as informative references. FAPI Grant Management, the Cedar RAR
-draft, SPIFFE client authentication, Transaction Tokens, GNAP (RFC
-9635), the Attenuating Agent Tokens draft, and the Containment,
-Progressive, and Work Products companions are no longer cited.
+**References.** RFC 9110 is added as normative, and the AAuth
+protocol, the Mission Mandate, and Mission Offline Attenuation as
+informative. FAPI Grant Management, the Cedar RAR draft, SPIFFE client
+authentication, Transaction Tokens, GNAP, the Attenuating Agent Tokens
+draft, and the Containment, Progressive, and Work Products companions
+are no longer cited.
 
 -01
 
