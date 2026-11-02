@@ -53,10 +53,12 @@ import {
 } from "./kernel/signing-key-ring.js";
 import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
+import { cancelDeviceSession, type DeviceCancellation } from "./adapters/device-authorization.js";
 import { AuthorityReconciler } from "./adapters/authority-reconciler.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 import type { BudgetExposurePort } from "./kernel/budget-exposure.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
+export { DEVICE_SESSION_ENDED, type DeviceCancellation } from "./adapters/device-authorization.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
 export { AuthorityReconciler, type ReconcileOutcome } from "./adapters/authority-reconciler.js";
 export {
@@ -1046,6 +1048,13 @@ export interface BuiltAs {
   /** @spec #831: whether this AS signs with a key ring's durable keys or with keys generated at this boot. */
   signingKeyMode: "ring" | "ephemeral";
   agentClientJwk: Record<string, unknown>;
+  /**
+   * @spec device-authorization#outcomes (#1202, D1121): the trusted,
+   * session-specific AS decision to end a pending device session by its
+   * `user_code`, for a trusted integration in this process (a fraud or
+   * operator signal); never an agent-callable API. See `cancelDeviceSession`.
+   */
+  cancelDeviceSession: (userCode: string, description?: string) => Promise<DeviceCancellation>;
   /**
    * @spec child-delegation#child-client-identity — the child-actor client's
    * private JWK, so a test can authenticate the child at /token and redeem the
@@ -2369,6 +2378,7 @@ export async function buildAuthorizationServer(opts: {
     issuer: opts.issuer,
     signingKeyMode: "ring" in keySource ? "ring" : "ephemeral",
     agentClientJwk: agent.privateJwk,
+    cancelDeviceSession: (userCode: string, description?: string) => cancelDeviceSession(provider, userCode, description),
     childClientJwk: child.privateJwk,
     governedClientJwk: governed.privateJwk,
     ledgerReconcilerClientJwk: ledgerReconciler.privateJwk,

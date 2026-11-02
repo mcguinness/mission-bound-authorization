@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ALL_PROVIDER_CAPABILITIES,
   ApprovalSessionStore,
+  DEVICE_SESSION_ENDED,
   buildAuthorizationServer,
   type BuiltAs,
   IntentError,
@@ -28,6 +29,7 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
+import { claimDeviceDecision, releaseDeviceDecision } from "../src/adapters/device-authorization.js";
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
@@ -1376,5 +1378,52 @@ describe("the first device_code redemption is a counted derivation (@spec device
     const repeat = await poll(PUBLIC, s.deviceCode, keys);
     expect(repeat.body.error).toBe("invalid_grant");
     expect(as.kernel.get(id)?.derivation_count).toBe(1);
+  });
+});
+
+describe("the AS ends a pending session on a trusted cancellation decision (@spec device-authorization#outcomes, #1202, D1121)", () => {
+  it("ends a pending session by its displayed or its normalized user_code: the next poll is access_denied with the AS's reason, and the Approver's decision on the still-open interaction creates no Mission", async () => {
+    const s = await pendingSession();
+    expect(await as.cancelDeviceSession(s.userCode)).toBe("ended");
+    // The Approver, still on the approval page, decides after the AS ended the session.
+    await decide(s.uid, s.headers, CONFIRMED);
+    expect(missionOf(s.uid)).toBeUndefined();
+    const res = await poll(PUBLIC, s.deviceCode, await newKeys());
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("access_denied");
+    expect(res.body.error_description).toBe(DEVICE_SESSION_ENDED);
+    expect(res.body.access_token).toBeUndefined();
+
+    const normalized = await pendingSession();
+    expect(await as.cancelDeviceSession(normalized.userCode.replace(/-/g, "").toLowerCase())).toBe("ended");
+    expect((await poll(PUBLIC, normalized.deviceCode, await newKeys())).body.error_description).toBe(DEVICE_SESSION_ENDED);
+  });
+
+  it("leaves a session no longer pending as it is: an approved session still redeems, an ended one stays ended, and an unknown code is unknown", async () => {
+    const approved = await approvedSession();
+    expect(await as.cancelDeviceSession(approved.userCode)).toBe("not_pending");
+    const redeemed = await poll(PUBLIC, approved.deviceCode, await newKeys());
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+    expect(missionOf(approved.uid)?.state).toBe("active");
+
+    const ended = await pendingSession();
+    expect(await as.cancelDeviceSession(ended.userCode)).toBe("ended");
+    expect(await as.cancelDeviceSession(ended.userCode)).toBe("not_pending");
+
+    expect(await as.cancelDeviceSession("XXXX-XXXX")).toBe("unknown");
+  });
+
+  it("does not end a session whose decision is committing: the decision's claim holds it, and the outcome is deciding", async () => {
+    const s = await pendingSession();
+    const code = await as.provider.DeviceCode.findByUserCode(s.userCode.replace(/-/g, ""), { ignoreExpiration: true });
+    if (!code) throw new Error("no device code for the session");
+    expect(claimDeviceDecision(code.jti)).toBe(true);
+    try {
+      expect(await as.cancelDeviceSession(s.userCode)).toBe("deciding");
+      expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("authorization_pending");
+    } finally {
+      releaseDeviceDecision(code.jti);
+    }
+    expect(await as.cancelDeviceSession(s.userCode)).toBe("ended");
   });
 });

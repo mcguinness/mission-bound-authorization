@@ -170,6 +170,50 @@ export function releaseDeviceDecision(jti: string): void {
   committing.delete(jti);
 }
 
+/** A `user_code` in the form the provider stores it: upper case, word characters only (oidc-provider's normalization). */
+export function normalizeUserCode(input: string): string {
+  return input.replace(/[a-z]/g, (c) => c.toUpperCase()).replace(/\W/g, "");
+}
+
+/** The `error_description` the next poll of a session the AS ended carries. */
+export const DEVICE_SESSION_ENDED = "the authorization server ended this device authorization session";
+
+/** What a cancellation decision did: ended the session, or why it did not. */
+export type DeviceCancellation = "ended" | "not_pending" | "unknown" | "deciding";
+
+/**
+ * @spec device-authorization#outcomes (#1202, D1121): a trusted,
+ * session-specific AS decision to end a pending device session for the
+ * deployment's own reason, such as a fraud or operator signal or suspected
+ * `user_code` guessing. It is an in-process operation for a trusted
+ * integration, never an agent-callable API. The session ends `denied`, so the
+ * next poll receives `access_denied`, and a decision reached afterwards
+ * creates no Mission. A session no longer pending (approved, denied, expired
+ * or redeemed) is left as it is; ending a Mission already created is the
+ * Lifecycle endpoint's. A decision already committing holds the session, and
+ * the outcome is `deciding`.
+ */
+export async function cancelDeviceSession(
+  provider: Provider,
+  userCode: string,
+  description: string = DEVICE_SESSION_ENDED,
+): Promise<DeviceCancellation> {
+  const found = await provider.DeviceCode.findByUserCode(normalizeUserCode(userCode), { ignoreExpiration: true });
+  if (!found) return "unknown";
+  const jti = found.jti;
+  if (!claimDeviceDecision(jti)) return "deciding";
+  try {
+    const current = await loadDeviceSession(provider, jti);
+    if (!devicePending(current)) return "not_pending";
+    current.error = "access_denied";
+    current.errorDescription = description;
+    await current.save();
+    return "ended";
+  } finally {
+    releaseDeviceDecision(jti);
+  }
+}
+
 /** The normalized `user_code` in the form the device authorization response returned. */
 export function formatUserCode(normalized: string): string {
   let i = 0;
