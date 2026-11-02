@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "dc4a6c6f91cf4a926f8d94bcb32cfe272a03c52e",
-    "content_sha256": "11f04ab227d2e1aa5bd2b778d39cb3e9c72a9273b453f2a49af1dfab23591478"
+    "revision": "945c21650df7cc04b696e828bf615320f2a0b254",
+    "content_sha256": "197c696f7c2573ce60394392b49dd341941c07408d9d12df2f5ee4ee1dda6699"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -95,8 +95,8 @@
     "content_sha256": "c1e333cb62655bbb0bc965e15be03fe200b7f2b1dd42c14f75fb4a80d0defd93"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "65037204039a9db7a234ed095700bf63461827fd",
-    "content_sha256": "10029c78f26b9fd788d43b3c9dfecbf4377595d41a06f592f42bd68434aca7e6"
+    "revision": "7f88fe0b0e6b6ff12ca8f67392d9beac1f706f52",
+    "content_sha256": "0a3d622ce8e26aab60fe8e0217575106154361a46f0dc5961a20fca0e6411907"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "fa7cee104ad45e3019b8c26c2c8e87e891008f8e",
@@ -7457,6 +7457,50 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.sender-constrained-and-verified",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projected credentials sender-constrained to their presenter ({{token-claims}}), never bearer credentials, each recipient verifying the proof of possession and refusing a credential whose binding is absent or invalid ({{rs-enforcement}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every credential a projection yields, the grant that crosses the trust boundary and each credential issued from it in the other trust domain, carries a key binding to the party that presents it and is never issued as a bearer credential; the authorization server or resource server receiving one verifies the presenter's proof of possession against that binding and refuses a credential whose binding is absent or whose proof fails"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2009 P2 (review of #2014, F1): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. Before #2014 the bar reached this duty only by requiring implementations that interoperate across the hop to implement the companion Mission Cross-Domain Projection profile; this property states it locally, and the companion keeps the mechanism. Companion sources (Issuing the Cross-Domain Grant; Validation at the Resource AS): the grant \"MUST be sender-constrained ({{RFC7800}}) to the presenting client\"; the Resource AS \"MUST verify the grant's sender-constraint\" and \"MUST reject with `invalid_grant` a cross-domain grant that is not sender-constrained or whose proof-of-possession does not verify\"; a local token \"MUST be sender-constrained ({{RFC7800}}), like the grant it derives from\" and \"MUST NOT be issued as a bearer token\". The companion has no row for these MUSTs (a traceability follow-up). Its Resource AS test \"presenter-key mismatch is rejected (sender-constraint)\" (src/services/mcp-saas/test/cross-domain.test.ts) acts at the Resource AS, not the claimant, and is not cited. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.renewal-only-through-issuer",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "renewal only through the Mission `issuer`: a projected grant is redeemable once, and the other trust domain issues no renewal authority on it, so a further credential there needs a new projection",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projected grant presented a second time is refused, and no credential issued from a projection in the other trust domain is a refresh token or other renewal authority, so every further credential there follows a new projection, which the Mission `issuer` gates on the Mission's `active` state"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2009 P2 (review of #2014, F1): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. Before #2014 the bar reached this duty only by requiring implementations that interoperate across the hop to implement the companion Mission Cross-Domain Projection profile; this property states it locally, and the companion keeps the mechanism. Companion sources and their rows: the grant \"MUST carry a `jti` for one-time use\" and the Resource AS \"MUST reject a replayed cross-domain grant\" (cross-domain.resource-as.rejects-replayed-grant, tested); it \"MUST NOT issue a refresh token, or any equivalent renewal authority, on a Mission-bound grant\" (cross-domain.resource-as.no-renewal-authority, partial); \"Carrying `expires_at` extends no credential's lifetime and authorizes no renewal\" (cross-domain.resource-as.expiry-extends-no-lifetime, partial). Those rows sit under cross-domain.projection and are not cited here. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
   },
   {
    "id": "core.derivation.configured-mapping-scope-key",
@@ -20228,41 +20272,6 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers: recording a designation one level deeper fails the depth-2 witness."
-  },
-  {
-   "id": "core.delegation-constraints.cross-domain-carriage",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "delegation-constraints",
-   "text": "it is carried with the entries wherever they go, including across a cross-domain projection where that profile's provenance rule keeps it",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "capability",
-    "capability": "cross-domain.projection"
-   },
-   "profiles": [],
-   "surface": "derivation",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a list-origin entry's delegation policy crosses a cross-domain projection equal to the approved entry's, and a policy-origin entry crosses without it"
-   },
-   "level": "unit",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
-     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > list origin: the conveyed copy keeps `delegation`, equal to the approved entry's and so no wider than its list",
-     "level": "unit",
-     "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
-     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with a list the proposal added: the conveyed copy omits `delegation`, while the approved entry keeps its list",
-     "level": "unit",
-     "surface": "derivation"
-    }
-   ],
-   "notes": "#1374. Proven by disabling the code it covers: conveying the entries unstripped fails the policy-origin witness."
   },
   {
    "id": "core.designation.holder-proves-possession",

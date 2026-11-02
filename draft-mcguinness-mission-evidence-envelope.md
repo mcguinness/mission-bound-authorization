@@ -923,7 +923,8 @@ A VERIFIER conforming to this document MUST:
   {{mission-evidence-envelope-integrity}} where the resolved signing
   key is identified as compromised.
 
-An AS supporting Intent Admission Evidence MUST:
+An AS supporting Intent Admission Evidence conforms to
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}} and MUST:
 
 * perform the ten-step procedure of {{intent-admission-verification}}
   for every `mission-intent-admission-assertion` entry presented,
@@ -1149,6 +1150,9 @@ under this registry's policy until it is published.
 
 - The intent admission cross-check compares `payload.intent_hash`
   with the Mission Record's `intent_hash`, recorded or implied (#1917).
+- An AS supporting Intent Admission Evidence conforms to Mission
+  Intent Submission Evidence, which the OAuth binding no longer
+  imposes on it (#2009).
 
 Initial version. Defines the Mission Evidence Envelope, the Mission
 Evidence Payload Type Registry, and Intent Admission Evidence as the
