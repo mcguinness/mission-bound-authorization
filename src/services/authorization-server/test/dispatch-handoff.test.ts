@@ -27,9 +27,12 @@
 import { type Server } from "node:http";
 import {
   CANONICAL_RESOURCE,
+  contractsRequiring,
+  currentContractRef,
   DERIVATION_POLICY,
   demoReconciliationTemplate,
   DEV_SERVICE_TOKEN,
+  pinnedToCurrentContract,
   TOPOLOGY,
 } from "@mission/demo-data";
 import {
@@ -177,15 +180,26 @@ interface Instance {
  * given, is set on the template's first ceiling entry, so the instance carries
  * a delegation right.
  */
-async function dispatchInstance(agents?: string[], delegation?: AuthorityEntry["delegation"]): Promise<Instance> {
+async function dispatchInstance(
+  agents?: string[],
+  delegation?: AuthorityEntry["delegation"],
+  /** Declarations the template is consented under, where not the shipped ones (#249). */
+  templateContracts?: ReturnType<typeof contractsRequiring>,
+): Promise<Instance> {
   const template = demoReconciliationTemplate(ISSUER);
   if (agents) template.recipients = { ...template.recipients, agents };
   if (delegation) template.ceiling = template.ceiling.map((e, i) => (i === 0 ? { ...e, delegation } : e));
-  const created = await fetch(`${ISSUER}/templates`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-    body: JSON.stringify({ ...template, approval_event_id: `handoff-tmpl-${seq++}` }),
-  });
+  const consented = templateContracts ? vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(templateContracts) : undefined;
+  let created: Response;
+  try {
+    created = await fetch(`${ISSUER}/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify({ ...template, approval_event_id: `handoff-tmpl-${seq++}` }),
+    });
+  } finally {
+    consented?.mockRestore();
+  }
   const { template_id } = (await created.json()) as { template_id: string };
   const res = await tokenRequest("dispatcher", dispatcherDpop, {
     grant_type: MISSION_DISPATCH_GRANT_TYPE,
@@ -1867,5 +1881,67 @@ describe("the Dispatch Handoff settles a known in-process failure before deliver
     expect(drain.thrown()).toBe(true);
     expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
     expect(reservations(instance.missionId, "dispatch-handoff:")).toEqual([{ state: "released", settled_by: null }]);
+  });
+});
+
+/**
+ * @spec resource-access#resource-contract (#249, D1104): a Dispatch and its
+ * handoff carry the template ceiling's reference exactly, from the dispatched
+ * instance through the handoff grant to the Agent's redeemed token; a template
+ * consented before the payments resource required a reference yields entries
+ * that gain none at any hop, though the configuration now requires one, and a
+ * handoff request cannot add it.
+ */
+describe("a Dispatch handoff carries the template ceiling's resource contract reference exactly, and an instance of a template consented without one gains none (@spec resource-access#resource-contract, #249, D1104)", () => {
+  type Entries = { authorization_details?: AuthorityEntry[] };
+  /** The references of the entries on the payments resource, the one that declares a contract. */
+  const paymentsReferences = (entries: readonly AuthorityEntry[] | undefined) =>
+    (entries ?? []).filter((e) => e.resource === RESOURCE).map((e) => e.resource_contract);
+  const tokenReferences = (jwt: string) => paymentsReferences((decodeJwt(jwt) as Entries).authorization_details);
+  const recordReferences = (id: string) => paymentsReferences((as.kernel.get(id) as { authority_set: AuthorityEntry[] }).authority_set);
+
+  async function handoffAndRedeem(instance: Instance) {
+    const hb = await handoff(instance.token);
+    const handed = (await hb.json()) as { access_token?: string };
+    expect(hb.status, JSON.stringify(handed)).toBe(200);
+    const rb = await redeem(handed.access_token as string);
+    const redeemed = (await rb.json()) as { access_token?: string; authorization_details?: AuthorityEntry[] };
+    expect(rb.status, JSON.stringify(redeemed)).toBe(200);
+    return { grant: handed.access_token as string, token: redeemed.access_token as string, details: redeemed.authorization_details };
+  }
+
+  it("the dispatched instance, the handoff grant and the Agent's redeemed token carry the template ceiling's reference unchanged", async () => {
+    const instance = await dispatchInstance();
+    const shipped = paymentsReferences(instance.authority);
+    expect(shipped.length).toBeGreaterThan(0);
+    for (const r of shipped) expect(r).toEqual(currentContractRef({ resource: RESOURCE, actions: ["payments:invoice.read"] }));
+    expect(recordReferences(instance.missionId)).toEqual(shipped);
+    const hop = await handoffAndRedeem(instance);
+    expect(tokenReferences(hop.grant)).toEqual(shipped);
+    expect(tokenReferences(hop.token)).toEqual(shipped);
+    expect(paymentsReferences(hop.details)).toEqual(shipped);
+  });
+
+  it("an instance of a template consented before the cutover carries none at any hop, under the configuration now requiring one", async () => {
+    const instance = await dispatchInstance(undefined, undefined, contractsRequiring([]));
+    const none = paymentsReferences(instance.authority);
+    expect(none.length).toBeGreaterThan(0);
+    expect(none.every((r) => r === undefined)).toBe(true);
+    expect(recordReferences(instance.missionId)).toEqual(none);
+    const hop = await handoffAndRedeem(instance);
+    expect(tokenReferences(hop.grant)).toEqual(none);
+    expect(tokenReferences(hop.token)).toEqual(none);
+    expect(paymentsReferences(hop.details)).toEqual(none);
+  });
+
+  it("refuses invalid_authorization_details, minting no grant, a handoff that restates the current reference on an instance without one: a request never adds it", async () => {
+    const instance = await dispatchInstance(undefined, undefined, contractsRequiring([]));
+    const restated = instance.authority.map((e) => pinnedToCurrentContract(e));
+    expect(paymentsReferences(restated).every((r) => r !== undefined)).toBe(true);
+    const hb = await handoff(instance.token, { authorization_details: JSON.stringify(restated) });
+    const body = (await hb.json()) as { error?: string; access_token?: string };
+    expect(hb.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.access_token).toBeUndefined();
   });
 });
