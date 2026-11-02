@@ -107,12 +107,12 @@
     "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "65037204039a9db7a234ed095700bf63461827fd",
-    "content_sha256": "124bbbf36e519a6c6c796cf5c3dadc855e2ddb402859a67c746451aab9cc058a"
+    "revision": "e7aefc6a6625ca3254f4c2261e836624e4a432d2",
+    "content_sha256": "deac6430d37a6f3d0bf6b8f565ef12ac7af1df6113c2a0bfa1593fde0a4f43f3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "65037204039a9db7a234ed095700bf63461827fd",
-    "content_sha256": "d34986a40286f9993165ef01abb3c3a3db776711ddcca2dcc2aa174b445b49f2"
+    "revision": "7cc78dfd1a44275037d6dd380bc6f494021d150f",
+    "content_sha256": "53ea4caebb952caf862671a5cdc3ce94f6c9559d21eb7cb014d8d2ee6bdf2579"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
@@ -304,6 +304,7 @@
    "child-delegation.subtree-rendering",
    "child-delegation.policy-drawdown",
    "child-delegation.direct-approval",
+   "child-delegation.interactive-completion",
    "core.instance-context",
    "core.delegation",
    "core.self-exchange",
@@ -83579,6 +83580,225 @@
     }
    ],
    "notes": "The creation fingerprint does not bind the presented token, so without this check a narrower token presenting the same request recovered the broader child (shown before the fix). Mirrors the async-delegation recovery bound (D353). Proved by disabling each check (the kernel bound, the evidence name, the adapter's pass-through, the recovery bound, the unreadable-authority guard): each is killed by the tests cited. #1192 review: recovery applies the token's children controls too, counting the recorded child once."
+  },
+  {
+   "id": "child-delegation.child-client-identity.code-not-child-grant",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-client-identity",
+   "text": "An authorization code MUST NOT be the child's grant",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no authorization code the Mission Issuer issues in child creation is itself the child's grant: a code is redeemable only by the client that obtained it (the parent), and what the child redeems under its own client is the child-bound JWT authorization grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 cold read (D1164): the sentence read \"MUST NOT be used to convey the child's grant\", which interactive completion's code redemption contradicted; its rationale (a code is redeemable by the parent) is kept. It had no row before. No witness: the reference AS has no authorization-code path for child creation (interactive child creation is unimplemented), so nothing issues a code a test could inspect."
+  },
+  {
+   "id": "child-delegation.interactive.handoff-required",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "A Mission Issuer that completes child creation interactively MUST do so through that handoff.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child-creation exchange the deployment completes interactively is answered with HTTP 400 mission_interaction_required carrying a mission_continuation and expires_in, never with a token; the client completes it by pushing the continuation through PAR and redeeming the resulting authorization code"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.interactive.continuation-binding",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "The `mission_continuation` names the pending child creation and is bound to the authenticated client and the child-creation operation fingerprint ({{creation-idempotency}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a pushed authorization request carrying the continuation under a different authenticated client is refused with invalid_request and yields no request_uri; a token exchange repeating the creation_request_id with a different child-creation fingerprint is refused with invalid_request and opens no second continuation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.interactive.recorded-inputs-only",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "takes the parent, Intent, proposal, Intent Submission Evidence, `child_actor`, the parent's possession proof (the `subject_token`), and actor context only from the recorded operation, and refuses with `invalid_request` a pushed request that supplies any of them with a different value, accepting an equal `parent` as a cross-check.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a pushed request carrying the continuation and a different parent, Intent, child_actor, possession proof or actor context is refused with invalid_request; one carrying an equal parent is accepted, and the approval ceremony renders only the recorded operation's inputs"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.interactive.redemption-binding-and-deadline",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "Redemption of the authorization code verifies the code's PKCE or DPoP binding, then, in the same atomic step as the creation commit, that the continuation has not expired and the recorded outcome is approval.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a code redeemed without its PKCE verifier or DPoP key, or at or after the continuation's expiry, or for an operation whose recorded outcome is denial, is refused and no Child Mission is created; the expiry and outcome checks are atomic with the creation commit"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.interactive.pre-commit-checks",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "Before that commit, the Mission Issuer MUST re-verify the Parent Mission's state, authority, and fan-out controls as steps 6 to 8 of {{request-processing}} apply them, against the parent as it stands at the commit and with this child counted once, together with the re-verifications of step 10.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a parent that left active, whose applicable entry no longer permits the child or no longer contains its authority, or whose max_children bucket filled between the exchange and the code redemption refuses the redemption, and no Child Mission is created; a redemption with the bucket one short of its limit succeeds and fills it"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.interactive.pre-commit-failure-code",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "A failure refuses the redemption with `invalid_grant` and, where one applies, the corresponding denial reason ({{denial-reasons}}), and creates no child.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "each pre-commit failure at code redemption returns invalid_grant with the mission_denial_reason for that failure (parent_not_active, delegation_not_permitted, child_actor_not_allowed, not_strict_subset or fanout_exceeded), and the kernel holds no new Child Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.interactive.delivers-child-grant",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "A successful redemption returns the success response of {{grant-type}}: the child-bound JWT authorization grant, which only the child actor redeems, under its own client ({{child-client-identity}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the code redemption response is the Grant Type success response (the child-bound JWT grant in access_token, issued_token_type jwt, token_type N_A, mission_id, mission_expires_at, parent); the child actor redeems the grant under its own client authentication, and the parent's redemption of that grant fails"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.interactive.no-supersession",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "interactive-completion",
+   "text": "Completion creates a Child Mission and supersedes nothing",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after interactive completion the Parent Mission remains active with its record unchanged, and no Mission is terminated or superseded by the completion"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
+  },
+  {
+   "id": "child-delegation.creation-idempotency.pending-continuation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "creation-idempotency",
+   "text": "or the same `mission_continuation` ({{interactive-completion}}), while completion is pending, scoped to the authenticated client;",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.interactive-completion"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a revalidated repetition of the same (client, creation_request_id) while an interactive completion is pending returns the same mission_continuation, not a second continuation or ceremony; a different authenticated client cannot recover the first client's operation or obtain its mission_continuation by presenting the same creation_request_id"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1130 (D1153, D1164): interactive child creation through Mission Expansion's interactive handoff, by reference. No implementation: the reference AS implements neither Expansion's interactive handoff (every expansion.interactive.* row is todo) nor deferred or interactive child creation, so no witness exists. Gated on the declared, unclaimed capability."
   },
   {
    "id": "child-delegation.creation.child-actor-with-predecessor-refused",

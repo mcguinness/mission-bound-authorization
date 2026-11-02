@@ -590,7 +590,7 @@ audience is its own token endpoint, which {{Section 3 of RFC7523}}
 permits, rather than a consuming Authorization Server's issuer
 identifier.
 
-An authorization code MUST NOT be used to convey the child's grant: an
+An authorization code MUST NOT be the child's grant: an
 authorization code is redeemable by the client that obtained it, which
 is the parent, not the child. The child-bound assertion is redeemable
 only by the child actor it names, so conveying it through the parent
@@ -673,11 +673,12 @@ Deferred:
 
 Interactive:
 : When a deployment requires an interactive fresh approval, the Mission
-  Issuer runs the deployment's existing front-channel approval event,
-  the issuance profile's own approval ceremony via a Pushed
-  Authorization Request {{RFC9126}}
-  ({{I-D.draft-mcguinness-oauth-mission}}), after which the child grant
-  reference is returned.
+  Issuer answers the exchange with the interactive handoff of
+  {{interactive-completion}}. The client pushes an authorization
+  request {{RFC9126}} carrying the continuation, the user agent
+  completes the issuance profile's own approval ceremony
+  ({{I-D.draft-mcguinness-oauth-mission}}), and the client redeems the
+  resulting authorization code for the child grant reference.
 
 The child grant reference conveyed at completion is the child-bound JWT
 authorization grant of {{child-client-identity}}, never a child token.
@@ -686,6 +687,51 @@ from the child actor's redemption of that grant, not from the parent's
 exchange, and is the child's own, never an extension of the parent's
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Grant Bindings and
 Related Mechanisms").
+
+## Interactive Completion {#interactive-completion}
+
+Interactive child creation uses the expansion profile's interactive
+handoff ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
+"Interactive Handoff"). Its interaction-required response, its pushed
+authorization request, its single recorded outcome per operation, and
+its re-push, deadline, and post-completion rules apply to the
+child-creation operation as this section adapts them. A Mission Issuer
+that completes child creation interactively MUST do so through that
+handoff.
+
+- The `mission_continuation` names the pending child creation and is
+  bound to the authenticated client and the child-creation operation
+  fingerprint ({{creation-idempotency}}).
+- The pushed authorization request carries no `mission_intent`, no
+  `authorization_details`, and no `child_actor`. The Mission Issuer
+  takes the parent, Intent, proposal, Intent Submission Evidence,
+  `child_actor`, the parent's possession proof (the `subject_token`),
+  and actor context only from the recorded operation, and refuses with
+  `invalid_request` a pushed request that supplies any of them with a
+  different value, accepting an equal `parent` as a cross-check.
+- Redemption of the authorization code verifies the code's PKCE or
+  DPoP binding, then, in the same atomic step as the creation commit,
+  that the continuation has not expired and the recorded outcome is
+  approval.
+- Before that commit, the Mission Issuer MUST re-verify the Parent
+  Mission's state, authority, and fan-out controls as steps 6 to 8 of
+  {{request-processing}} apply them, against the parent as it stands
+  at the commit and with this child counted once, together with the
+  re-verifications of step 10. A failure refuses the redemption with
+  `invalid_grant` and, where one applies, the corresponding denial
+  reason ({{denial-reasons}}), and creates no child.
+- A successful redemption returns the success response of
+  {{grant-type}}: the child-bound JWT authorization grant, which only
+  the child actor redeems, under its own client
+  ({{child-client-identity}}). The parent's client obtains and redeems
+  the authorization code; the redemption gives the parent no token of
+  its own.
+
+Completion creates a Child Mission and supersedes nothing: the
+creation commit takes the place of the expansion profile's successor
+activation in the handoff's rules, without its predecessor
+supersession, and the completion leaves the Parent Mission's state and
+authority unchanged.
 
 ## Protocol Flow {#protocol-flow}
 
@@ -870,8 +916,9 @@ both is refused with `invalid_request`.
 Recovery is delivery, never a second child. A revalidated repetition
 of the same `(client, creation_request_id)`:
 
-- returns the same deferral or interactive continuation while
-  completion is pending, scoped to the authenticated client;
+- returns the same deferral, or the same `mission_continuation`
+  ({{interactive-completion}}), while completion is pending, scoped to
+  the authenticated client;
 - returns the original child-bound JWT authorization grant while it
   remains valid;
 - re-mints the child-bound grant for the same Child Mission when the
@@ -1022,8 +1069,11 @@ accompanies `invalid_request` on the child-creation exchange
 ({{Section 2.2.2 of RFC8693}}) and `invalid_grant` on the poll or code
 redemption that completes a deferred or interactive creation;
 `delegation_not_permitted`, `child_actor_not_allowed`,
-`not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`;
-and `policy_denied` accompanies `access_denied`. In an error response
+`not_strict_subset`, and `fanout_exceeded` accompany `invalid_request`
+on the child-creation exchange and `invalid_grant` on the code
+redemption that completes an interactive creation
+({{interactive-completion}}); and `policy_denied` accompanies
+`access_denied`. In an error response
 body the symbolic reason rides, alongside the OAuth `error` member, in
 the `mission_denial_reason` member, the shared adjudication-denial
 carrier defined and registered by the expansion profile
@@ -2468,6 +2518,17 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Interactive Completion: interactive child creation uses Mission
+  Expansion's interactive handoff by reference, with
+  `mission_interaction_required` and a `mission_continuation` bound to
+  the authenticated client and the child-creation fingerprint, pushed
+  through PAR. Code redemption re-verifies the parent's state,
+  authority, and fan-out controls before the creation commit and
+  returns the child-bound grant; nothing is superseded. Creation
+  recovery names the continuation. An authorization code is never the
+  child's grant, and the step 6 to 8 denial reasons accompany
+  `invalid_grant` on that code redemption (#1130).
 
 - Mission Record Requirements no longer list the child's integrity
   anchors, which the OAuth binding makes implied members; the
