@@ -1335,9 +1335,12 @@ confined to harness-enforced deployments. When the deployment's
 Enforcement Scope Statement declares PDP-enforced taint for an action
 class ({{I-D.draft-mcguinness-mission-runtime}}):
 
-- The PDP MUST require `context.taint` on every decision in that
-  class whose `action.properties.external_communication` is `true`
-  or whose `action_class` is `external_commitment`, and MUST deny
+- The PDP MUST require `context.taint` on every decision on an
+  action to which that class applies and whose
+  `action.properties.external_communication` is `true` or to which
+  the External commitment class applies
+  ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action
+  Classification"), and MUST deny
   with the decision-API binding's `taint_context_missing`
   classification ({{I-D.draft-mcguinness-mission-authzen}}) when it
   is absent.
