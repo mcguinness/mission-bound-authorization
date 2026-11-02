@@ -46,6 +46,7 @@ import {
 } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14185;
 const ISSUER = `http://localhost:${PORT}`;
@@ -192,7 +193,7 @@ const submission = (intent: Record<string, unknown> = {}, evidence?: unknown[]) 
     intent: {
       goal: "Reconcile Acme invoices against the ledger",
       target_resources: [RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
       ...intent,
     },
     ...(evidence ? { evidence } : {}),

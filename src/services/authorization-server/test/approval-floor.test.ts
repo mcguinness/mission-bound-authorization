@@ -31,6 +31,7 @@ import { evaluateApprovalFloor } from "../src/kernel/approval-floor.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14791;
 const OVERRIDE_PORT = 14792;
@@ -221,7 +222,7 @@ async function authorize(
         ...(args.scope ? { scope: args.scope } : {}),
         ...(args.extra ?? {}),
         mission_intent: JSON.stringify({
-          intent: { goal: "Pay Acme invoices", target_resources: [PAYMENTS], expires_at: "2027-01-01T00:00:00Z" },
+          intent: { goal: "Pay Acme invoices", target_resources: [PAYMENTS], expires_at: FIXTURE_EXPIRES_AT },
         }),
         authorization_details: JSON.stringify(args.authority ?? READ),
         client_assertion: assertion,

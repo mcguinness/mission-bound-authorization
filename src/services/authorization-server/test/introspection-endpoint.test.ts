@@ -62,6 +62,7 @@ import {
   entryDigest,
   type MissionRecord,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14540;
 const ISSUER = `http://localhost:${PORT}`;
@@ -364,7 +365,7 @@ beforeAll(async () => {
     intent: {
       goal: "Pay Acme invoices for Q3",
       target_resources: [PAYMENTS],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
       requested_derivation_limit: 5,
     },
     proposal: PAYMENTS_PROPOSAL,
@@ -374,7 +375,7 @@ beforeAll(async () => {
     intent: {
       goal: "Reconcile payments against the ledger",
       target_resources: [PAYMENTS, SAAS],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     },
     proposal: [...PAYMENTS_PROPOSAL, ...SAAS_PROPOSAL],
     resource: PAYMENTS,
@@ -383,7 +384,7 @@ beforeAll(async () => {
     intent: {
       goal: "Read ledger vendors",
       target_resources: [SAAS],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     },
     proposal: SAAS_PROPOSAL,
     resource: SAAS,
@@ -392,7 +393,7 @@ beforeAll(async () => {
     intent: {
       goal: "Pay Acme invoices for Q4",
       target_resources: [PAYMENTS],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     },
     proposal: PAYMENTS_PROPOSAL,
     resource: PAYMENTS,
@@ -401,7 +402,7 @@ beforeAll(async () => {
     intent: {
       goal: "Pay Acme invoices and reconcile the ledger until the Q3 close",
       target_resources: [PAYMENTS, SAAS],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     },
     proposal: COMPLETING_PROPOSAL,
     resource: PAYMENTS,
@@ -410,7 +411,7 @@ beforeAll(async () => {
     intent: {
       goal: "Read Acme invoices until the Q3 close",
       target_resources: [PAYMENTS],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     },
     proposal: SIBLINGS_PROPOSAL,
     resource: PAYMENTS,
@@ -419,7 +420,7 @@ beforeAll(async () => {
     intent: {
       goal: "Pay Acme invoices for Q1 (dedicated to P1-1/P1-2 fixtures)",
       target_resources: [PAYMENTS],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     },
     proposal: PAYMENTS_PROPOSAL,
     resource: PAYMENTS,
@@ -536,7 +537,7 @@ describe("the issuer's projection carries fresh_until no later than the response
       intent: {
         goal: "Pay Acme invoices for Q3 (fresh_until fixture)",
         target_resources: [PAYMENTS],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       },
       proposal: PAYMENTS_PROPOSAL,
       resource: PAYMENTS,
@@ -1029,7 +1030,7 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
       intent: {
         goal: "Pay Acme invoices for Q3 (inactive-disclosure fixture)",
         target_resources: [PAYMENTS],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
         requested_derivation_limit: 5,
       },
       proposal: PAYMENTS_PROPOSAL,
@@ -1052,7 +1053,7 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
       intent: {
         goal: "Pay Acme invoices for Q3 (no-issuance-record fixture, suspended)",
         target_resources: [PAYMENTS],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       },
       proposal: PAYMENTS_PROPOSAL,
       resource: PAYMENTS,
@@ -1061,7 +1062,7 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
       intent: {
         goal: "Pay Acme invoices for Q3 (no-issuance-record fixture, terminated)",
         target_resources: [PAYMENTS],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       },
       proposal: PAYMENTS_PROPOSAL,
       resource: PAYMENTS,

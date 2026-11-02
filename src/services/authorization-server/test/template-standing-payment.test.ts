@@ -49,7 +49,12 @@ import {
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
-import { standingPaymentPredicateRefusal } from "../src/kernel/standing-payment.js";
+import {
+  assertStandingPaymentCeiling,
+  type StandingPaymentTerms,
+  standingPaymentPredicateRefusal,
+  standingPaymentTermsOf,
+} from "../src/kernel/standing-payment.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -1313,4 +1318,29 @@ describe("standing-payment budget commitment (@spec mission-template#prohibited-
       );
     });
   }
+});
+
+describe("standing-payment currencies compared exactly (@spec template#standing-payment-exception, #813, D1143)", () => {
+  // Every intake refuses a currency that is not three upper-case letters, so a
+  // case-only difference reaches these comparisons only here, below the intake.
+  it("refuses dispatch_prohibited_class an instance whose max_budget names the budget's currency in lower case, committing no instance (#813)", () => {
+    const t = consentTo();
+    const before = missionCount();
+    const intent = { ...intentWith(), max_budget: { amount: "100.00", currency: "usd" } };
+    const r = refusal(() => dispatch(t.id, { intent: intent as DispatchInput["intent"] }));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe("max_budget is in usd, not the budget's USD");
+    expect(missionCount()).toBe(before);
+  });
+
+  it("refuses a Template Ceiling whose per-payment bound names USD in lower case, and admits the same ceiling in USD (#813)", () => {
+    const terms = standingPaymentTermsOf(REGISTRY["sp-policy"] as never) as StandingPaymentTerms;
+    const bounded = (currency: string) => [
+      paymentEntry({ constraints: { max_amount: { amount: "500.00", currency }, vendors: ["acme"] } }),
+    ];
+    expect(() => assertStandingPaymentCeiling(terms, bounded("usd"), "the Template Ceiling")).toThrow(
+      "the Template Ceiling: entry 0 bounds payments:payment.execute in usd, not USD",
+    );
+    expect(() => assertStandingPaymentCeiling(terms, bounded("USD"), "the Template Ceiling")).not.toThrow();
+  });
 });

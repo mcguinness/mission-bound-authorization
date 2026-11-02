@@ -51,11 +51,12 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14477;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
 /** A client this file authenticates as with private_key_jwt (its `kid` is `<id>-auth`). */

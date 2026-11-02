@@ -14,6 +14,8 @@ import { Fga } from "@mission/pdp";
 import { composeStack, type DemoStack } from "../src/stack.js";
 
 const tempFile = (prefix: string, name: string): string => join(mkdtempSync(join(tmpdir(), prefix)), name);
+/** A controlled instant inside every declared version's retention (#1968, D1133), never the host's date. */
+const INSIDE_RETENTION = new Date("2026-11-02T12:00:00Z");
 
 describe("the composed stack's TAS resolves each declared contract version to its own Operation Profile (@spec txn-authorization#resource-challenge, #249, #1846)", () => {
   let fgaBootstrap: MockInstance;
@@ -60,7 +62,7 @@ describe("the composed stack's TAS resolves each declared contract version to it
         actions: ["payments:remittance.send"],
         resource_contract: { id: declared?.id, version: v.version, digest: v.digest },
       } as JsonValue;
-      expect(registry?.admit(CANONICAL_RESOURCE, entry, new Date()), v.version).toMatchObject({ ok: true, version: v.operation_profile });
+      expect(registry?.admit(CANONICAL_RESOURCE, entry, INSIDE_RETENTION), v.version).toMatchObject({ ok: true, version: v.operation_profile });
     }
   });
 });

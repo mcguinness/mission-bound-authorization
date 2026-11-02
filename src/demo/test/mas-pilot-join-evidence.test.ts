@@ -46,6 +46,7 @@ import { type MasProcess, type MasProcessOptions, startMasProcess } from "../src
 import { initScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { masConsoleRoutes, startOperatorConsole } from "../src/mas-pilot/operator-console.js";
 import { relocateEstate } from "./mas-pilot-support.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 /** A kernel store's recovery witness, created before the MAS first starts on it (#250 step 3). */
 function kernelWitnessFor(storeFile: string, witnessFile: string): string {
@@ -85,7 +86,7 @@ async function clientAssertion(caller: string, key: JWK, issuer: string): Promis
 }
 
 const intentFor = (label: string) =>
-  JSON.stringify({ goal: `Join evidence: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" });
+  JSON.stringify({ goal: `Join evidence: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT });
 const readAuthority = [
   { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
 ];
@@ -366,7 +367,7 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
       mapping_version: "mas-pilot-identity@2",
       iat: claims.iat,
       exp: claims.exp,
-      retain_until: new Date(Date.parse("2027-06-01T00:00:00Z") + AUDIT_RETENTION_MS).toISOString(),
+      retain_until: new Date(Date.parse(LATER_EXPIRES_AT) + AUDIT_RETENTION_MS).toISOString(),
     };
     expect(claims.mapping_version).toBe("mas-pilot-identity@2");
     const path = `/missions/${missionId}/join-evidence`;

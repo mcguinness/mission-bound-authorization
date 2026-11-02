@@ -37,6 +37,7 @@ import {
   withoutGovernedResource,
 } from "../src/index.js";
 import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 15311;
 const ISSUER = `http://localhost:${PORT}`;
@@ -321,7 +322,7 @@ async function approvedMissionCode(goal: string): Promise<{ missionId: string | 
       ["scope", "openid"],
       ["code_challenge", CHALLENGE],
       ["code_challenge_method", "S256"],
-      ["mission_intent", JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" } })],
+      ["mission_intent", JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: FIXTURE_EXPIRES_AT } })],
       ...(await clientAuth("ap-agent")),
     ]).toString(),
   });

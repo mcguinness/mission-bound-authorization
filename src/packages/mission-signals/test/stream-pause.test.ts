@@ -38,6 +38,7 @@ import {
   SSF_STREAM_UPDATED_EVENT_URI,
   SSF_VERIFICATION_EVENT_URI,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const DECLARED_AUD = "https://declared.consumer.test";
@@ -45,7 +46,7 @@ const UNDECLARED_AUD = "https://undeclared.consumer.test";
 const UNDECLARED_STREAM = "stream-undeclared-1";
 const RESOURCE = "https://payments.test/mcp";
 const T0 = Date.parse("2026-08-20T12:00:00Z");
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 /** The issuer's advertised `mission_max_stale_seconds`. */
 const MAX_STALE_SECONDS = 60;
 const MAX_STALE_MS = MAX_STALE_SECONDS * 1000;

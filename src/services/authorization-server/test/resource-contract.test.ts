@@ -55,6 +55,7 @@ import { pinDispatchPolicy, templateContracts } from "../src/kernel/template.js"
 import { aiAgents } from "./actor-profiles.helper.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const CONTRACT = "https://payments.test/contracts/payments";
@@ -88,11 +89,11 @@ const declarations = (versions: unknown[], requires: string[] = []) =>
 const V1 = ref("v1");
 const V2 = ref("v2");
 /** v1 superseded within retention, v2 current. */
-const SUPERSEDED = declarations([declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "current")]);
+const SUPERSEDED = declarations([declared("v1", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v2", "current")]);
 /** v2 current and required for the read. */
-const REQUIRED = declarations([declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "current")], [READ]);
+const REQUIRED = declarations([declared("v1", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v2", "current")], [READ]);
 
-const TASK_INTENT = { goal: "Read Acme's Q3 invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" };
+const TASK_INTENT = { goal: "Read Acme's Q3 invoices", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT };
 const proposal = (r?: ResourceContractRef, actions = [READ]): AuthorityEntry[] => [
   { type: "mission_resource_access", resource: RESOURCE, actions, constraints: { vendors: ["acme"] }, ...(r ? { resource_contract: r } : {}) },
 ];
@@ -308,7 +309,7 @@ describe("template consent assembles the ceiling's references and Dispatch prese
   };
   /** v2 current, required for the read, and a v3 configuration that supersedes v2. */
   const LATER = declarations(
-    [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v3", "current")],
+    [declared("v1", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v2", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v3", "current")],
     [READ],
   );
   const CURRENT_V1 = declarations([declared("v1", "current")]);
@@ -342,7 +343,7 @@ describe("template consent assembles the ceiling's references and Dispatch prese
     max_active: 3,
     rate_per_min: 5,
     review_cadence_s: 86400,
-    expires_at: "2027-01-01T00:00:00Z",
+    expires_at: FIXTURE_EXPIRES_AT,
   });
   const create = (kernel: MissionKernel, store: TemplateStore, ceiling: AuthorityEntry[], resourceContracts?: ResourceContractDeclarations) =>
     createTemplate(store, { ...body(ceiling), approval_event_id: `tmpl-rc-${seq++}` } as never, {
@@ -421,7 +422,7 @@ describe("template consent assembles the ceiling's references and Dispatch prese
     const template = create(kernel, store, proposal(), SUPERSEDED);
     expect(template.ceiling[0]).not.toHaveProperty("resource_contract");
     opts.resourceContracts = declarations(
-      [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "current")],
+      [declared("v1", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v2", "current")],
       ["payments:payment.execute"],
     );
     expect(opts.resourceContracts.forEntry(proposal()[0] as AuthorityEntry).required).toBe(true);
@@ -731,7 +732,7 @@ describe("a child Mission preserves its parent entry's reference (@spec resource
 describe("expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875)", () => {
   /** v2 superseded and v3 current, required for the read. */
   const LATER = declarations(
-    [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v3", "current")],
+    [declared("v1", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v2", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v3", "current")],
     [READ],
   );
   let ekey: CryptoKey;
@@ -798,7 +799,7 @@ describe("expansion approval assembles the successor's references (@spec resourc
         creationRequestId: `crid-rc-${seq++}`,
       });
     const decide = (code: string) =>
-      store.approve(code, { approver: { iss: "https://as.test", sub: "bob" }, approvalEventId: `rc-exp-dec-${seq++}`, approvedUntil: "2027-01-01T00:00:00Z" });
+      store.approve(code, { approver: { iss: "https://as.test", sub: "bob" }, approvalEventId: `rc-exp-dec-${seq++}`, approvedUntil: FIXTURE_EXPIRES_AT });
     // Completed under the configuration it was approved under.
     const first = open(approveIn(kernel).id);
     expect(store.pendingReview(first.deferral_code)?.successor[0]?.resource_contract).toEqual(V2);
@@ -826,7 +827,7 @@ describe("progressive ceiling consent assembles the ceiling's references and a d
   const RETIRED = declarations([declared("v1", "retired"), declared("v2", "current")]);
   /** v2 superseded and v3 current, required for the read. */
   const LATER = declarations(
-    [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v3", "current")],
+    [declared("v1", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v2", "superseded", { retained_until: FIXTURE_EXPIRES_AT }), declared("v3", "current")],
     [READ],
   );
   const POLICY = { version: "1", content_type: "application/json", content: JSON.stringify({ max_added_actions: 1, ceiling_review_cadence_s: 2_592_000 }) };
@@ -947,7 +948,7 @@ describe("progressive ceiling consent assembles the ceiling's references and a d
     store.approve(kept.deferral_code, {
       approver: { iss: "https://as.test", sub: "bob" },
       approvalEventId: `rc-pg-dec-${seq++}`,
-      approvedUntil: "2027-01-01T00:00:00Z",
+      approvedUntil: FIXTURE_EXPIRES_AT,
       ceiling: keptOffer,
     } as never);
     const done = store.redeem(kept.deferral_code);
@@ -957,7 +958,7 @@ describe("progressive ceiling consent assembles the ceiling's references and a d
       store.approve(pending.deferral_code, {
         approver: { iss: "https://as.test", sub: "bob" },
         approvalEventId: `rc-pg-dec-${seq++}`,
-        approvedUntil: "2027-01-01T00:00:00Z",
+        approvedUntil: FIXTURE_EXPIRES_AT,
         ceiling: rendered,
       } as never),
       // The commit's recheck: the rendered v2 is no longer current.

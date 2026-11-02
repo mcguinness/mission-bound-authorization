@@ -127,8 +127,8 @@
     "content_sha256": "304a0b321defc5907bed9769afc8f5a7fb0a8ec1cc70466cabf72a0f9c3c15ee"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
-    "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
-    "content_sha256": "b0fcb6a467d70b0348ba62d7ec2a567cf49101c94e5e39ad4f5c8490258f521e"
+    "revision": "124f20a493e72f0c19e3b39348f1c6370fcede38",
+    "content_sha256": "1d8dc744be1e8c9092a00ec69754626f8baf66dfaf33bf1fb16321c9bc61ddf6"
    },
    "draft-mcguinness-mission-aauth-management.md": {
     "revision": "940972b9823bf482819c18177c7ab8dfd935a391",
@@ -12748,7 +12748,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a decision delivered after the lifetime of the interaction, deferral or activation it decides creates no Mission, and the identifier of a committed decision is still found for as long as that decision could be delivered",
-    "local": "the reference never prunes Mission rows, so the identifier outlives every decision lifetime"
+    "local": "the reference never prunes Mission rows, so a committed decision's identifier outlives every decision lifetime; an approval reservation, which holds no committed identifier, is pruned once older than the interaction lifetime plus the declared clock skew, never less than oidc-provider's clock tolerance (#1922)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -12770,9 +12770,15 @@
      "name": "Expansion (deferred): the horizon runs from initiation (@spec mission#approval-idempotency, #1915) > with the shipped horizon, an identical reuse after it and after the first deferral's lifetime starts a new operation: a new deferral, never the dead handle, completed under a new approval_event_id (@spec mission#approval-idempotency, #1915)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "a decision on an expired interaction (@spec mission#approval-idempotency, #1922) > is refused before any approval reservation is consulted and creates no reservation and no Mission, while an interaction opened after the same clock advance decides",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1915 event identity (D1056). Witnessed: a device decision after the session expired; a deferred Mission approval past its lifetime; an expansion deferral polled past its lifetime. Not witnessed: a direct decision after its interaction expired, and an expansion approval recorded after the deferral's lifetime."
+   "notes": "#1915 event identity (D1056). Witnessed: a device decision after the session expired; a deferred Mission approval past its lifetime; an expansion deferral polled past its lifetime; a direct decision after its interaction expired, refused before any reservation is consulted (#1922). Not witnessed: an expansion approval recorded after the deferral's lifetime."
   },
   {
    "id": "core.mission-record.request-key-retention-contract",
@@ -47219,7 +47225,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance the budget meters. The guard's necessity is witnessed on the instance's expansion successor, which continues the budget's counter (its budget binding equals the instance's) but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
+   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance the budget meters. The guard's necessity is witnessed on the instance's expansion successor, which continues the budget's counter (its budget binding equals the instance's) but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. D961 ruled the instance question: 'instance' excludes the expansion successor, which was not dispatched, so this row stays partial, non-blocking for the restricted reference enablement (D1143 ruling 3 confirms it, without promotion); the broader child-accounting refusal applies to the successor and is witnessed under metering.capacity-across-missions.child-refused-without-accounting (#1828, D963). D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "metering.aggregate-bounds.refusal-names-counter",
@@ -47959,10 +47965,10 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Decision Evidence and Execution Evidence entry for one counter carries the same counter_id, across instances, successors and restarts"
+    "normative": "every Decision Evidence metering entry for one counter, on a permit or a refusal, carries the same counter_id, across instances (under one or several committed Dispatch Policies), successors and restarts"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -47989,7 +47995,30 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): the standing_consent counter_id is the same on two instances' Decision Evidence, under one policy and under two committed policies, and a successor's entries carry its predecessor's counter_ids; removing the reservation (A1), keying the instance counter by the successor's own id (T8f) and keying the shared counter by policy version (T8g) fail them. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): each counter's committed identifier is the same across a restart (qualifying it by the boot, W9, fails it). Through the executing PEP a completed wire's Execution Evidence carries no metering member while its Decision Evidence names both counters, so no Execution Evidence entry can disagree (W19, artificial: the PEP copies a metering member into Execution Evidence, fails it). The Execution Evidence half is the emitting PEP's conduct, witnessed on the composed path. Partial: the Decision Evidence clauses are witnessed at the PDP; the Execution Evidence clause is the emitting PEP's conduct and rests only on the composed PEP path with an artificial mutant (W19), so it is not credited on this PDP row."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): the standing_consent counter_id is the same on two instances' Decision Evidence, under one policy and under two committed policies, and a successor's entries carry its predecessor's counter_ids; removing the reservation (A1), keying the instance counter by the successor's own id (T8f) and keying the shared counter by policy version (T8g) fail them. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): each counter's committed identifier is the same across a restart (qualifying it by the boot, W9, fails it). D1143 ruling 3 (ledger/813-816-enablement-rows): narrowed to the PDP's Decision Evidence; the Execution Evidence clause is the emitting PEP's conduct and moves, with the W19 note, to metering.metering-evidence.counter-id-stable-pep. Re-proven on current main, each mutant alone with the source restored and the witnesses green after: the successor's refusal reporting its mission counter_id qualified by its own Mission id, the counter itself unchanged, fails the refusal's counter_id equality; keying the instance counter by the successor's own id (T8f) permits the successor on a fresh counter; keying the shared counter by policy id and version (T8g) fails the two-policy witness; keying it by instance fails the two-instance witness; qualifying each reserved counter's id by the claim domain's boot (W9) fails the restart witness. Tested: each Decision Evidence clause is asserted and killed."
+  },
+  {
+   "id": "metering.metering-evidence.counter-id-stable-pep",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "metering-evidence",
+   "text": "A stable identifier of the counter, the same value on every record the counter's decisions and settlements produce.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Execution Evidence carries a metering entry for a counter, the entry's counter_id is the counter_id that counter's Decision Evidence entries carry",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment, so the reference PEP's Execution Evidence carries no metering member: no Execution Evidence entry exists, and the clause is not exercised in the reference."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#816, D830, D1143 ruling 3. Split from metering.metering-evidence.counter-id-stable, whose Decision Evidence clauses the PDP witnesses; this row keeps the same quote and applicability for the Execution Evidence clause, the emitting PEP's conduct. Todo: the reference PEP emits no Execution Evidence metering entry (observation.local). The composed-path test at src/services/mcp-payments/test/budget-exhaustion.test.ts, 'exact budget exhaustion through the executing PEP (@spec metering#aggregate-bounds, #816) > a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while the wire's Decision Evidence carries one entry per counter (@spec metering#metering-evidence, #816, D877)' asserts only that a completed wire's Execution Evidence carries no metering member (W19, artificial: the PEP copies a metering member into Execution Evidence, fails it). An absent entry is never evidence that a counter identifier is stable (D1143), so that test is not cited. The row stays todo until an Operation Profile the reference implements conveys a metered quantity in Execution Evidence."
   },
   {
    "id": "metering.metering-evidence.requested-and-remaining",
@@ -48006,10 +48035,10 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each Decision Evidence metering entry for max_budget carries requested and remaining as {amount, currency}, and Execution Evidence entries carry neither"
+    "normative": "each Decision Evidence metering entry for max_budget, on a permit and on a refusal, carries requested and remaining as {amount, currency}"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -48018,7 +48047,30 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): each Decision Evidence entry, on a permit and on a refusal, carries requested and remaining as {amount, currency}; removing the reservation (A1) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): through the executing PEP a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while its Decision Evidence carries one entry per counter; W19 (artificial: the PEP copies a metering member into Execution Evidence) fails it. That clause is the emitting PEP's conduct, witnessed on the composed path. Partial: the Decision Evidence clauses are witnessed at the PDP; the Execution Evidence clause is the emitting PEP's conduct and rests only on the composed PEP path with an artificial mutant (W19), so it is not credited on this PDP row."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): each Decision Evidence entry, on a permit and on a refusal, carries requested and remaining as {amount, currency}; removing the reservation (A1) fails it. D1143 ruling 3 (ledger/813-816-enablement-rows): narrowed to the PDP's Decision Evidence; the Execution Evidence clause ('absent otherwise') is the emitting PEP's conduct and moves, with the W19 note, to metering.metering-evidence.requested-and-remaining-pep. Re-proven on current main, each mutant alone with the source restored and the witness green after: omitting requested (R1) or remaining (R2) from the emitted entries fails the permit's exact entry comparison; carrying a refusal's requested and remaining as bare amount strings (R3) fails the refusal's exact entry comparison. Tested: each Decision Evidence clause is asserted and killed."
+  },
+  {
+   "id": "metering.metering-evidence.requested-and-remaining-pep",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "metering-evidence",
+   "text": "REQUIRED in Decision Evidence, absent otherwise. The quantity the evaluation sought to consume",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Execution Evidence carries a metering entry, the entry carries neither requested nor remaining",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment, so the reference PEP's Execution Evidence carries no metering member: no Execution Evidence entry exists, and the clause is not exercised in the reference."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#816, D830, D1143 ruling 3. Split from metering.metering-evidence.requested-and-remaining, whose Decision Evidence clauses the PDP witnesses; this row keeps the same quote and applicability for the Execution Evidence clause, the emitting PEP's conduct. Todo: the reference PEP emits no Execution Evidence metering entry (observation.local). The composed-path test at src/services/mcp-payments/test/budget-exhaustion.test.ts, 'exact budget exhaustion through the executing PEP (@spec metering#aggregate-bounds, #816) > a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while the wire's Decision Evidence carries one entry per counter (@spec metering#metering-evidence, #816, D877)' asserts that a completed wire's Execution Evidence carries no metering member at all (W19, artificial, fails it). That absence would also fail a conforming PEP whose entry conveys consumed without requested or remaining, so it does not positively witness this clause and is not cited (D1143). The row stays todo until an Operation Profile the reference implements conveys a metered quantity in Execution Evidence."
   },
   {
    "id": "metering.metering-evidence.reserved-on-permit",
@@ -48447,7 +48499,7 @@
     "normative": "a redelivered settlement with the same execution_id and settlement-relevant content is acknowledged and changes no counter: no second commit and no second release"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -48472,9 +48524,15 @@
      "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a redelivery of an applied record that carried no error, now carrying error null, is acknowledged as the duplicate and retains and alarms nothing, for an applied failed record and an applied completed one (@spec metering#settlement-contract, #816, D877)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a redelivery identical to the applied record in its attempt, outcome, error and metering entries is acknowledged as the duplicate and retains and alarms nothing: with entries, with each entry's members in another order under the same signature, and with no metering or measured_duration at all or both sent as null (@spec metering#settlement-contract, #816, D1143)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Design decision e: a duplicate settlement is a no-op. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a redelivered completed settlement (same execution_id and content) is acknowledged as a duplicate and the reservation commits once (committed 250.00, reserved 0.00); re-applying the duplicate's commit (T8d) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a redelivered suppressed settlement is acknowledged as the duplicate and releases nothing a second time (the other evaluation's 200.00 stays reserved); releasing again on a duplicate (W13) fails it alone. #1771 review (D907; impl/816-pdp-slice4 at 7bb6835e and c136037a, mutation at c136037a): the duplicate is the same attempt, outcome and error. An identical redelivery of an applied suppressed or failed record carrying a non-empty error is acknowledged as the duplicate and retains and alarms nothing; storing NULL instead of the applied error (M2), or leaving it out of the settling UPDATE (M3), fails it. A redelivery carrying error null for an applied failed or completed record that carried none is the duplicate too, since an explicit null counts as no error; mapping null to the string \"null\" again (M6) fails it alone, and storing an empty string for an absent error (M4) fails it as well."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Design decision e: a duplicate settlement is a no-op. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a redelivered completed settlement (same execution_id and content) is acknowledged as a duplicate and the reservation commits once (committed 250.00, reserved 0.00); re-applying the duplicate's commit (T8d) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a redelivered suppressed settlement is acknowledged as the duplicate and releases nothing a second time (the other evaluation's 200.00 stays reserved); releasing again on a duplicate (W13) fails it alone. #1771 review (D907; impl/816-pdp-slice4 at 7bb6835e and c136037a, mutation at c136037a): the duplicate is the same attempt, outcome and error. An identical redelivery of an applied suppressed or failed record carrying a non-empty error is acknowledged as the duplicate and retains and alarms nothing; storing NULL instead of the applied error (M2), or leaving it out of the settling UPDATE (M3), fails it. A redelivery carrying error null for an applied failed or completed record that carried none is the duplicate too, since an explicit null counts as no error; mapping null to the string \"null\" again (M6) fails it alone, and storing an empty string for an absent error (M4) fails it as well. D1143 (fix/816-settlement-metering-conflict at 29e73504, mutation at the same commit): the duplicate is also the same measures, the record's metering entries and measured_duration in JCS canonical form. A redelivery identical to an applied completed record carrying metering entries is acknowledged as the duplicate, also with each entry's members in another order under the same signature, and so is a redelivery of a record carrying neither member, also with both sent as null; nothing is retained or alarmed and the committed 500.00 is unchanged. A key-order-sensitive comparison (M4), keeping null members (M5) or storing no measures for the applied record (M8) each fail it. Partial (owner, D1156): a claim settled before the measures column (claim schema v7) acknowledges no redelivery as its duplicate, since its applied record's measures were never recorded; such a redelivery is refused already_settled, retained and alarmed once, and moves no counter. That strict handling is an accepted demo migration limitation and does not satisfy \"MUST be acknowledged\" for those legacy claims; a legacy NULL is never read as no measures. The legacy witness stays."
   },
   {
    "id": "metering.settlement-contract.conflict-fails-closed",
@@ -48491,11 +48549,11 @@
    "surface": "evidence-emission",
    "assertion": "replay",
    "observation": {
-    "normative": "a settlement for an already settled evaluation_id with a different outcome or metering entry, or under a second execution_id, leaves the applied settlement unchanged, is retained as evidence, and raises an audit alarm",
-    "local": "In the reference a verified conflicting completed record from the permit's own PEP and redemption-store epoch commits a released or held reservation under Metering's Exact qualification, raising the overspend alert where the commit passes a counter's limit, and any other conflicting record moves no counter. The refusal stays already_settled. The alarm is raised after the retaining transaction commits, so a crash between them loses the alarm while the retained record survives."
+    "normative": "a settlement for an already settled evaluation_id with a different outcome, measured_duration or metering entry, or under a second execution_id, leaves the applied settlement unchanged, is retained as evidence, and raises an audit alarm",
+    "local": "In the reference a verified conflicting completed record from the permit's own PEP and redemption-store epoch commits a released or held reservation under Metering's Exact qualification, raising the overspend alert where the commit passes a counter's limit, and any other conflicting record moves no counter. The refusal stays already_settled. The alarm is raised after the retaining transaction commits, so a crash between them loses the alarm while the retained record survives. The reference also counts the record's error as settlement-relevant (D907), and a claim settled before the measures column matches no redelivery (D1143)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -48564,13 +48622,37 @@
      "surface": "evidence-emission"
     },
     {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > the applied suppressed record redelivered with a metering entry added, its attempt, outcome and error unchanged and the whole re-signed, is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement, its measures and both counters are unchanged (@spec metering#settlement-contract, #816, D1143)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > records of the applied completed attempt that differ from it only in their metering entries, another consumed amount or no metering at all, are each a conflict retained and alarmed once, a redelivery of any retains and alarms nothing new, and the applied settlement, its measures and both counters are unchanged (@spec metering#settlement-contract, #816, D1143)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > records of the applied failed attempt that differ from it only in their measured_duration, another duration or none, are each a conflict retained and alarmed once, while the record redelivered with its own duration is the duplicate, and the held reservations and both counters are unchanged (@spec metering#settlement-contract, #816, D1143)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > on a claim file from before the measures column, a claim settled there acknowledges no redelivery as its duplicate: its applied record redelivered unchanged is refused already_settled, retained and alarmed once, and again retains and alarms nothing new, with the applied settlement and both counters unchanged; a conflict retained there takes its record's measures at the upgrade, so its redelivery retains and alarms nothing new; and a claim settled after the upgrade acknowledges its redelivery as the duplicate (@spec metering#settlement-contract, #816, D1143)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
      "file": "src/demo/test/standing-payment-e2e.test.ts",
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > surfaces a conflicting settlement on the composed stack's alarm path: a second completed record for a settled wire raises one settlement_conflict operator alert, and the applied settlement and the committed amount are unchanged (@spec metering#settlement-contract, #816, D877)",
      "level": "cross-component",
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the settlement-states 'Conflicting settlement' item. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a record conflicting with the applied settlement (a second execution_id, or the applied attempt with another outcome) is refused already_settled, never acknowledged as the duplicate, leaves the applied claim settlement unchanged (read from the claim file), is retained once per distinct record, and raises one settlement_conflict alarm, also on the composed stack's alert path; a redelivered conflict retains and alarms nothing new. Once a settlement is applied, a non-completed record reaches the conflict check whatever the redemption owner answers and moves no counter; an applied failed record's later same-attempt suppressed record leaves the reservation held; a conflicting completed record commits a held or released reservation only from the permit's own PEP and epoch, and never one released because no permit left the PDP. Not retaining (X2), not alarming (X3), not committing a conflicting completed (X4), overwriting the applied settlement (X5; MD on the stack), re-alarming a redelivery (X6), moving counters for a non-completed conflict (X7, alone), acknowledging the same attempt's other outcome as a duplicate (X1), keeping the redeemer gate on a settled claim (RF1), committing only released reservations (MC), applying a non-completed conflict's own effect (ME), dropping the epoch or no-permit guard (RF5a, RF5b, RF5c), keying retention without the error (RF7) and leaving the stack's alarm unwired (X8) each fail their witness. #1771 review (D907; impl/816-pdp-slice4 at 7bb6835e, with the failed record's replaced-error case at 4c237470 and the null-error normalization at c136037a; mutation rerun at c136037a): the claim keeps the applied record's error, so the applied attempt with the same outcome and another error is a conflict too. An applied suppressed record's changed error, and an applied failed record's error added where it carried none or replaced by another, are each refused already_settled, never acknowledged as the duplicate, retained and alarmed once, with the applied settlement, its stored error and the counters unchanged; an identical redelivery carrying an error is acknowledged as the duplicate and retains and alarms nothing. Dropping the error from the duplicate check (M1) fails the first two, and at 4c237470, with that case run first, fails the replaced-error case on its own; storing NULL instead of the applied error (M2), or leaving the error out of the settling UPDATE (M3, the same stored state), fails all three; storing an empty string for an absent error (M4) fails the second; treating a stored NULL as matching any error (M5) fails the second alone. Partial: a redelivery that differs from the applied record only in a metering entry is still acknowledged as the duplicate, because the reference's settlement reads the attempt, outcome and error and ignores a metering member (its Execution Evidence carries none)."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the settlement-states 'Conflicting settlement' item. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a record conflicting with the applied settlement (a second execution_id, or the applied attempt with another outcome) is refused already_settled, never acknowledged as the duplicate, leaves the applied claim settlement unchanged (read from the claim file), is retained once per distinct record, and raises one settlement_conflict alarm, also on the composed stack's alert path; a redelivered conflict retains and alarms nothing new. Once a settlement is applied, a non-completed record reaches the conflict check whatever the redemption owner answers and moves no counter; an applied failed record's later same-attempt suppressed record leaves the reservation held; a conflicting completed record commits a held or released reservation only from the permit's own PEP and epoch, and never one released because no permit left the PDP. Not retaining (X2), not alarming (X3), not committing a conflicting completed (X4), overwriting the applied settlement (X5; MD on the stack), re-alarming a redelivery (X6), moving counters for a non-completed conflict (X7, alone), acknowledging the same attempt's other outcome as a duplicate (X1), keeping the redeemer gate on a settled claim (RF1), committing only released reservations (MC), applying a non-completed conflict's own effect (ME), dropping the epoch or no-permit guard (RF5a, RF5b, RF5c), keying retention without the error (RF7) and leaving the stack's alarm unwired (X8) each fail their witness. #1771 review (D907; impl/816-pdp-slice4 at 7bb6835e, with the failed record's replaced-error case at 4c237470 and the null-error normalization at c136037a; mutation rerun at c136037a): the claim keeps the applied record's error, so the applied attempt with the same outcome and another error is a conflict too. An applied suppressed record's changed error, and an applied failed record's error added where it carried none or replaced by another, are each refused already_settled, never acknowledged as the duplicate, retained and alarmed once, with the applied settlement, its stored error and the counters unchanged; an identical redelivery carrying an error is acknowledged as the duplicate and retains and alarms nothing. Dropping the error from the duplicate check (M1) fails the first two, and at 4c237470, with that case run first, fails the replaced-error case on its own; storing NULL instead of the applied error (M2), or leaving the error out of the settling UPDATE (M3, the same stored state), fails all three; storing an empty string for an absent error (M4) fails the second; treating a stored NULL as matching any error (M5) fails the second alone. D1143 (owner review of #1972; fix/816-settlement-metering-conflict at 29e73504, mutation at the same commit): the claim keeps the applied record's measures, its metering entries and measured_duration as JCS canonical JSON ({} for none; an absent or null member counts as none), and each retained conflict is keyed by its own measures too (claim schema v7, which rebuilds the conflict table), so the same attempt, outcome and error with another metering entry or duration is a conflict. The owner's probe (the applied suppressed record re-signed with a metering entry added) is refused already_settled, never acknowledged as the duplicate, retained and alarmed once, with the applied settlement, its measures and both counters unchanged. Records of the applied completed attempt that differ only in their metering entries (another consumed amount, or none), and records of the applied failed attempt that differ only in measured_duration (another, or none), are each retained and alarmed once, and a redelivery of any retains nothing new. On a claim file from before the column, a settled claim keeps NULL measures and acknowledges no redelivery as its duplicate (fail closed: refused already_settled, retained and alarmed once per distinct record, no counter moved), and a conflict retained there takes its record's measures at the next open, so its redelivery retains nothing new. Dropping the measures comparison (M1) fails the probe, metering-only, duration-only and legacy witnesses; comparing metering presence only (M2) fails the metering-only and duration-only ones; leaving the measures out of the retention key, in the UNIQUE constraint (M3) or the INSERT (M11), fails the metering-only and duration-only ones; dropping metering (M10) from the measures fails the probe and the metering-only witness, and dropping measured_duration (M9) the duration-only one; reading a legacy NULL as none (M6) or skipping the legacy backfill (M7) fails the legacy witness. Metering entries compare in order, as array order is significant under the family's canonicalization; member order within an entry does not."
   },
   {
    "id": "metering.settlement-contract.reserved-commits-stated",
@@ -61848,11 +61930,48 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Dispatch under the exception is admitted only where the ceiling entry's per-payment max_amount, the Dispatch Policy's budget, and the instance's max_budget name one currency, compared exactly; any mismatch refuses the Dispatch with dispatch_prohibited_class"
+    "normative": "the ceiling entry's per-payment max_amount, the Dispatch Policy's budget, and every max_budget (each dispatched instance's and each successor's) name one currency, compared exactly; a Dispatch Policy, Template Ceiling or max_budget naming another currency admits no instance under the exception and no successor",
+    "local": "The reference refuses each mismatch where it is first observable, in the Template's adjudication order, and promises no one error for all of them. (1) The budget: with the capability on, a Dispatch Policy whose budget currency is not exactly USD (EUR, or usd in lower case) refuses AS startup (StandingPaymentConfigError 'budget currency is not USD'), so a running AS holds no such policy and no Dispatch error is observable for one (the D974 ruling 2 precedent). (2) The per-payment bound at consent: a ceiling bounding the payment in another currency is refused invalid_request at the consent route, creating no template. (3) The earlier intersection refusal: a stored ceiling (rewritten at rest after consent) bounding the payment in another currency than the deployment's derivation policy has no intersection with it (differing max_amount currencies never intersect, D446), so the Dispatch is refused out_of_template_ceiling at the double intersection (Adjudication step 5), before the currency check. (4) The later currency check (step 6) answers dispatch_prohibited_class only for a mismatch that survives the intersection: an instance max_budget in another currency, an Intent member outside the Authority Set that step 5 bounds, and a stored ceiling under a derivation policy bounding the payment in that same other currency (a deployment's derivationPolicy with matching authoritySources). (5) A successor whose max_budget differs from its instance's, in currency or amount, is refused invalid_request at /token, opening no deferral. The ceiling check compares with USD and the max_budget check with the budget's currency; they coincide because startup refuses any other budget currency. Every intake refuses a currency that is not three upper-case letters, so exactness is observable only below the intake: the kernel's max_budget and ceiling comparisons refuse usd, and startup refuses a usd budget."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose budget is in a currency other than USD (#813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose budget names USD in lower case, the currency compared exactly (#813, D1143)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a ceiling whose per-payment bound is in a currency other than USD (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment template defects refused at the consent route, creating no template (@spec template#template-consent, #813, D877) > refuses invalid_request a standing-payment consent whose ceiling bounds the payment in a currency other than the budget's, creating no template (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-currency.test.ts",
+     "name": "standing-payment currencies refused in adjudication order at the token endpoint (@spec template#standing-payment-exception, template#dispatch-adjudication, #813, D1143) > refuses out_of_template_ceiling at /token, before the currency check, a Dispatch from a stored ceiling bounding the payment in EUR under the shipped USD derivation policy, creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses dispatch_prohibited_class at /token an instance whose max_budget is in a currency other than the budget's, creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
      "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses an instance whose max_budget is in a currency other than the budget's (#813)",
@@ -61860,10 +61979,10 @@
      "surface": "token-endpoint"
     },
     {
-     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
-     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a ceiling whose per-payment bound is in a currency other than USD (#813)",
-     "level": "unit",
-     "surface": "approval-ceremony"
+     "file": "src/services/authorization-server/test/template-standing-payment-currency.test.ts",
+     "name": "standing-payment currencies refused in adjudication order at the token endpoint (@spec template#standing-payment-exception, template#dispatch-adjudication, #813, D1143) > refuses dispatch_prohibited_class at /token a Dispatch from a stored ceiling bounding the payment in EUR under a derivation policy bounding it in EUR, where the intersection survives to the currency check, creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
@@ -61873,24 +61992,24 @@
     },
     {
      "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment template defects refused at the consent route, creating no template (@spec template#template-consent, #813, D877) > refuses invalid_request a standing-payment consent whose ceiling bounds the payment in a currency other than the budget's, creating no template (#813)",
-     "level": "endpoint",
-     "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose budget is in a currency other than USD (#813)",
-     "level": "unit",
-     "surface": "deployment-documentation"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses dispatch_prohibited_class at /token an instance whose max_budget is in a currency other than the budget's, creating nothing (#813)",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses invalid_request at /token an expansion of a standing-payment instance whose max_budget is raised, in another currency or absent, opening no deferral and creating nothing (@spec metering#capacity-across-missions, #813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment currencies compared exactly (@spec template#standing-payment-exception, #813, D1143) > refuses dispatch_prohibited_class an instance whose max_budget names the budget's currency in lower case, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment currencies compared exactly (@spec template#standing-payment-exception, #813, D1143) > refuses a Template Ceiling whose per-payment bound names USD in lower case, and admits the same ceiling in USD (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance max_budget in EUR against a USD budget is refused dispatch_prohibited_class; a ceiling bounding the payment in EUR is refused at consent and, from a stored ceiling under an EUR derivation policy, at dispatch, committing no instance. Mutations: not checking the max_budget currency fails the first; not checking the ceiling currency fails the consent and dispatch tests; skipping the stored-ceiling re-check fails the dispatch test. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the consent route a ceiling bounding the payment in EUR is refused and no template is created; a Dispatch Policy whose budget is in EUR refuses startup. Mutations: not checking the ceiling currency (21) creates the template; not checking the budget currency (25) lets startup succeed. D961 level review (impl/813-proof-as at 5bd160e1b): the max_budget leg is reachable at /token, the intake admitting any three upper-case letters, so the new witness submits {amount: '100.00', currency: 'EUR'}; MC-cur (kernel/standing-payment.ts maxBudgetRefusal's `if (maxBudget.currency !== terms.budget.currency) { return ...; }` removed) issues a token. Partial: under the shipped derivation policy a stored ceiling bounding the payment in EUR is refused out_of_template_ceiling at /token before the currency re-check (observed: the policy's USD max_amount and the ceiling's EUR one intersect to nothing), so that leg reaches dispatch_prohibited_class only under a derivation policy bounding in the same other currency, as the kernel witness uses; the budget leg is refused at startup, a running AS holding no non-USD budget; and exactness is not observable at /token, the intake refusing any currency that is not three upper-case letters (MC-exact, a case-insensitive comparison, survives the witness)."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance max_budget in EUR against a USD budget is refused dispatch_prohibited_class; a ceiling bounding the payment in EUR is refused at consent and, from a stored ceiling under an EUR derivation policy, at dispatch, committing no instance. Mutations: not checking the max_budget currency fails the first; not checking the ceiling currency fails the consent and dispatch tests; skipping the stored-ceiling re-check fails the dispatch test. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the consent route a ceiling bounding the payment in EUR is refused and no template is created; a Dispatch Policy whose budget is in EUR refuses startup. Mutations: not checking the ceiling currency (21) creates the template; not checking the budget currency (25) lets startup succeed. D961 level review (impl/813-proof-as at 5bd160e1b): the max_budget leg is reachable at /token, the intake admitting any three upper-case letters, so the new witness submits {amount: '100.00', currency: 'EUR'}; MC-cur (kernel/standing-payment.ts maxBudgetRefusal's `if (maxBudget.currency !== terms.budget.currency) { return ...; }` removed) issues a token. D1143 ruling 4, option B (ledger/813-816-enablement-rows): the observation follows the adjudication order and promises no one error for the startup refusal, the earlier intersection refusal and the later currency check (observation.local). New witnesses, each mutation-proven alone with the source restored and the file green after: at /token under the shipped USD derivation policy a stored ceiling bounding the payment in EUR is refused out_of_template_ceiling and creates nothing; M1 (the stored ceiling's standing-payment check moved before the double intersection) answers dispatch_prohibited_class instead, and M1b (minAmount no longer refusing differing currencies) lets the entry survive to the double-intersection invariant, refused 400 invalid_request with no mission_denial_reason; both fail it. At /token under a deployment whose derivation policy and user-delegated source bound the payment in EUR, the same stored ceiling survives the intersection and is refused dispatch_prohibited_class, creating nothing; M2 (assertStandingPaymentCeiling's currency check removed) issues a token whose max_amount is EUR. Below the intake: M3 (maxBudgetRefusal comparing case-insensitively) admits an instance whose max_budget names usd; M4 (assertStandingPaymentCeiling comparing case-insensitively) accepts a usd ceiling; M5 (the budget currency parsed case-insensitively) still refuses startup, but through the Exact-profile check (the statement counts in USD, not the policy's usd), so the startup witness kills it only through its message, 'budget currency is not USD'. The successor witness, already cited under metering rows, witnesses every max_budget: M6 (assertSuccessorMaxBudget's currency comparison removed) opens a deferral for an EUR successor (authorization_pending). The budget leg is credited by its startup refusal, as D974 ruling 2 credits one. MC-exact still survives the /token max_budget witness; the kernel witness kills it. Tested: every clause of the observation is asserted, and each new witness is killed."
   },
   {
    "id": "template.standing-payment.conveys-policy-view",
@@ -62047,7 +62166,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance holding authority admitted under the Standing Payment Exception. The guard's necessity is witnessed on the instance's expansion successor, which carries the budget forward but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance holding authority admitted under the Standing Payment Exception. The guard's necessity is witnessed on the instance's expansion successor, which carries the budget forward but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. D961 ruled the instance question: 'instance' excludes the expansion successor, which was not dispatched, so this row stays partial, non-blocking for the restricted reference enablement (D1143 ruling 3 confirms it, without promotion); the broader child-accounting refusal applies to the successor and is witnessed under metering.capacity-across-missions.child-refused-without-accounting (#1828, D963). D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "template.instance-composition.cross-boundary-derivation-refused",
@@ -92699,6 +92818,36 @@
    "notes": "#901 review: make the AS-binding check explicit in the optional Submission Evidence companion. No supported evidence type currently exercises this check; verification must include absent, wrong-AS, invalid, and valid bindings when a concrete type is implemented."
   },
   {
+   "id": "submission-evidence.verification-bounds.cost-bounded",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "verification-bounds",
+   "text": "the AS MUST bound the verification cost a submission can impose (for example, the number of signature verifications it performs), refusing a submission that exceeds the bound with the `invalid_request` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission whose evidence verification would exceed the configured verification-work bound, beyond the binding's size and count bounds, is refused invalid_request before the excess work is done",
+    "local": "the evidence dispatch meters verification work in units of one signature verification: one charged before each entry's verify, each further one charged by the type before doing it; the bound is the authorization server's submissionEvidenceVerificationWork, 16 by default, and every carrier's verification passes the same dispatch"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "the verification-work bound at PAR (@spec submission-evidence#verification-bounds, #1962) > refuses invalid_request a submission whose evidence verification would pass the configured bound, beyond the size and count bounds, before the excess work is done, and accepts one at the bound",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work."
+  },
+  {
    "id": "request-provenance.trust.no-header-key",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "trust-configuration",
@@ -92901,7 +93050,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119 (Q3): a `presenter` carrying `cnf` where the exchange established no confirmation key does not agree; no key is inferred from the assertion."
   },
   {
    "id": "request-provenance.verification.declared-bounds",
@@ -92951,7 +93100,7 @@
    "id": "request-provenance.replay.release-on-refusal",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "When the AS refuses the containing submission for any reason, including another evidence entry failing, it releases the reservation.",
+   "text": "When the AS refuses the containing submission before accepting it, for any reason, including another evidence entry failing, it releases the reservation.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -92962,12 +93111,100 @@
    "surface": "par",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "After a submission carrying a valid assertion is refused for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
+    "normative": "After a submission carrying a valid assertion is refused before acceptance for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested. D1119: release applies only to a refusal before acceptance; a refusal after it releases nothing (`request-provenance.replay.no-release-after-acceptance`)."
+  },
+  {
+   "id": "request-provenance.replay.accepted-no-reverification",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "Later steps of an accepted submission, such as rendering it for approval, the approval decision, or a deferred activation, do not verify the assertion again.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts; the AS's authorization, required-evidence and approval checks still apply at each step"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.acceptance-record-required",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A step that finds no acceptance record, or one that does not match, refuses the submission.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a later step of an accepted submission whose acceptance record is missing, or does not match the submission's intended AS, exact Intent, established presenter or unchanged evidence entry, refuses the submission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.expiry-after-acceptance",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "The assertion's `exp`, or the capture passing the maximum capture age, after acceptance does not refuse the accepted submission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an accepted submission whose assertion expires, or whose capture passes the maximum capture age, before its approval completes is not refused for that reason, while its own pending-operation lifetime still applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
+  },
+  {
+   "id": "request-provenance.replay.no-release-after-acceptance",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "A refusal after acceptance, such as an approval denial, releases nothing, so an accepted assertion is never reusable.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "replay",
+   "observation": {
+    "normative": "after an accepted submission is refused later, for example by an approval denial, a new submission presenting the same assertion is refused as replay"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): stated by the scoped draft edits. Todo until the AS verifier (#939 slice 2); replay coverage stays partial while #1963 (durable replay store and acceptance records) is open."
   },
   {
    "id": "request-provenance.replay.committed-refused",
@@ -93017,7 +93254,7 @@
    "id": "request-provenance.replay.creation-recovery-exact-retry",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "replay",
-   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it.",
+   "text": "The AS resolves an exact retry by its fingerprint and returns the recorded outcome or continuation without verifying the assertion again, so the committed `jti` does not refuse it; the surface's other recovery conditions still apply",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -93028,7 +93265,7 @@
    "surface": "token-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
+    "normative": "On an expansion or child-creation exchange, a retry with the same creation_request_id that re-presents the original assertion recovers the recorded outcome or continuation, only where the surface's other recovery conditions hold, and is not refused as replay, even after the assertion's exp; a retry presenting a fresh assertion is refused with invalid_request on the fingerprint mismatch and creates nothing."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -93097,9 +93334,16 @@
     "normative": "An assertion the intake emits carries none of jku, x5u, jwk, or x5c in its protected header."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/assertion.test.ts",
+     "name": "the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The intake library builds the protected header itself, as exactly typ, alg (ES256) and kid; the cited test decodes emitted assertions for two audiences and asserts the header equals those three members and carries none of jku, x5u, jwk or x5c. Mutations: H1 (jku added) and H2 (the public jwk added) each fail it. The AS refusal of such a header is request-provenance.trust.no-header-key, still todo (slice 2)."
   },
   {
    "id": "request-provenance.assertion.no-content-commitment",
@@ -93119,9 +93363,34 @@
     "normative": "An assertion the intake emits carries no claim beyond those the document defines that carries or commits to the instruction, its media type, the capture secret, or Shaping Evidence; in particular no shaping hash."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "the assertion commits to no request content (@spec request-provenance#assertion, request-provenance#privacy-considerations, #939) > the claim set is exactly the defined claims, and no public artifact carries the secret, the instruction, the media type or an unsalted digest of either",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "the assertion commits to no request content (@spec request-provenance#assertion, request-provenance#privacy-considerations, #939) > changing only the instruction, the media type or the secret changes only request_digest",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "a dictionary probe over a low-entropy instruction (@spec request-provenance#privacy-considerations, #939) > without the secret no member other than intent_hash confirms a candidate; with the secret request_digest does",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > refuses a sign request carrying an intent_hash, a digest, an originator or channel facts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The emitted claim set is exactly the draft's claims, and no public artifact (the capture receipt, the signed result, the JWS, its decoded header and claims, the intake object, a refusal) carries the secret, the instruction, the media type, the HMAC input, or an unsalted SHA-256 of any of them. A differential over fixed random values shows that changing only the instruction, only the media type, or only the secret changes request_digest and no other member, so no other claim carries or commits to them, directly or through a hash. Shaping Evidence has no way in: capture and sign inputs are closed, and a sign request carrying Shaping Evidence or a shaping hash is refused with no assertion. The dictionary probe shows that no secretless commitment to a low-entropy candidate appears in any member other than intent_hash, and that request_digest confirms the true candidate only with the secret. intent_hash is outside the claim (privacy-considerations); a separate, uncited test shows it confirms a candidate when shaping copies the wording into the Intent. These tests check this implementation's outputs; they are not a proof of secrecy. Mutations: N1 (an instruction_sha256 claim) fails the first three; N2 (a media_type claim) fails the first two; N3 (jti from an unsalted instruction digest, no new claim) fails the first three; N4 (jti from a truncated hash of the secret) fails the differential; I2 (sign input opened) fails the fourth."
   },
   {
    "id": "request-provenance.assertion.capture-id-random",
@@ -93141,9 +93410,57 @@
     "normative": "Two captures of the same instruction and media type yield distinct capture_id values, neither computable from the request content."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/privacy.test.ts",
+     "name": "capture_id (@spec request-provenance#assertion, #939) > two captures of the same instruction and media type yield distinct capture_id values of at least 128 bits",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). Four captures of identical bytes, media type, origin facts and workflow, two in each of two intakes, yield four distinct capture_id values, each the base64url of 16 bytes (128 bits) from node:crypto randomBytes and none found in a secretless encoding of the request content; each emitted capture_id claim equals its receipt's. Distinct values for identical content show capture_id is not a function of the content. Mutations: C1 (capture_id from SHA-256 of the instruction, duplicate guard off) and C2 (64 random bits) each fail it."
+  },
+  {
+   "id": "request-provenance.assertion.presenter-of-capture",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "assertion",
+   "text": "the presenter of the workflow in which the instruction was captured",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the presenter an assertion carries is the authenticated presenter of the workflow that captured the instruction: one captured with the request, never one a signing request supplies"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > emits the captured presenter whether or not the signing request names it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > refuses a signing request naming %s, after the same capture and workflow signed for the captured presenter",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > refuses at capture a presenter with %s, where the vector's presenter is accepted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1, #1971 review: capture() takes and retains the workflow's authenticated presenter and sign() emits that presenter; a presenter in a signing request is only a checked cross-reference, refused presenter_mismatch where it changes the client, changes the confirmation key, or removes the confirmation binding. At capture, a confirmation object is validated before it is copied and checked as copied: an undefined thumbprint, alone or beside a valid one, an empty object, an empty thumbprint or a non-object is refused. Mutations: skipping the cross-reference fails the three mismatch cases; dropping an undefined member, accepting an empty confirmation object, or accepting an empty thumbprint each fails a capture case. partial: unit tests in which the test supplies the presenter an intake would authenticate. The cross-component witness, a shaper's signing request crossing an isolated intake, awaits the demo intake service (D1119 Q6)."
   },
   {
    "id": "request-provenance.signing.own-capture-only",
@@ -93163,9 +93480,22 @@
     "normative": "A signing request naming a capture record from another workflow, or carrying no capture record of the intake's own, yields no assertion."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses an unknown capture and yields no assertion",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses another workflow's capture and yields no assertion",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The library refuses, with no assertion, a sign request naming a capture this intake does not hold (an unminted identifier, or a real capture another intake made) and one naming another workflow's capture, while it holds a capture of its own for the requesting workflow; each capture signs from its own intake and workflow. Mutations: S1 (workflow comparison removed) and S2 (an unknown capture falling back to the latest capture) each fail the matching test. partial: unit tests in which the test supplies the workflow identifiers an intake would establish. The row's cross-component witness, a shaper's signing request crossing an isolated intake boundary, awaits the demo intake service; per D1119 Q6, isolation and authenticated-origin rows are not promoted on unit tests with trusted-looking inputs."
   },
   {
    "id": "request-provenance.signing.own-intent-hash",
@@ -93185,9 +93515,34 @@
     "normative": "The emitted intent_hash equals the intake's own computation over the candidate Intent for the AS that aud names; an intent_hash, digest, originator, or channel fact supplied by the shaper does not change the emitted claims."
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > the emitted intent_hash is the integrity anchor over the candidate Intent for the AS aud names",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > refuses a sign request carrying an intent_hash, a digest, an originator or channel facts",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939) > refuses an Intent carrying %s and signs nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939) > signs an exact-JSON Intent, nested values and a member named __proto__ included, over which intent_hash is unchanged",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). sign() takes the candidate Intent, never an intent_hash, and computes the OAuth binding's integrity anchor with iss the AS that aud names; the first test compares the emitted value with the generator's independent computation (vectors/mission-request-provenance/assertion.json) and a JCS computation written in the test, for two audiences. A sign request carrying an intent_hash, a request digest, an originator, channel facts, captured_at, claims, Shaping Evidence or a shaping hash is refused with no assertion, and a clean request carries the capture's originator, channel, digest and captured_at: supplied facts cannot change the emitted claims because they are refused. Mutations: I1 (anchor bound to the intake's iss) fails the first; I2 (input opened, a supplied intent_hash used) fails the second. partial: unit level, with test-supplied inputs. The cross-component witness, a shaper's request through an isolated intake, awaits the demo intake service (D1119 Q6). #1971 review: the candidate Intent is validated before it is copied (a non-finite number, NaN, an undefined member, a Date or a sparse array is refused, where a JSON copy had silently changed it), and an accepted Intent is preserved exactly, so intent_hash is computed over the Intent as given. Mutations: keeping a non-finite number, or dropping an undefined member, each fails the refusal witness. Still partial for the cross-component witness."
   },
   {
    "id": "request-provenance.signing.fresh-per-intent",
@@ -93207,9 +93562,44 @@
     "normative": "After the candidate Intent changes, the intake's next assertion carries the new intent_hash and a jti it has not used before."
    },
    "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "a fresh assertion per Intent (@spec request-provenance#signing, #939) > every call mints a fresh jti, and a changed Intent gets its new intent_hash",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "a fresh assertion per Intent (@spec request-provenance#signing, #939) > refuses to issue a jti the intake has issued before, even from a repeating random source",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). Five signatures from two captures, the Intent revised between them, carry five distinct jti values (each 128 random bits), and each carries intent_hash over its own Intent; the revised Intent's hash differs while the capture's request digest is reused, as signing permits. The intake records every jti it issues and refuses to issue one again, even from a repeating random source. Mutations: J1 (jti cached per capture, guard off) fails the first; J2 (guard off) fails the second."
+  },
+  {
+   "id": "request-provenance.signing.revision-new-capture",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "signing",
+   "text": "The intake issues it from the same capture only while the capture is within the deployment's maximum capture age; after that, a new capture is needed",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the intake refuses to issue an assertion for a revised Intent from a capture older than the deployment's maximum capture age"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 (D1119): stated by the scoped draft edits, answering the working-group comment of 2026-10-08. Todo until the intake library (#939 slice 1) witnesses it."
   },
   {
    "id": "request-provenance.request-digest.construction",
@@ -93229,9 +93619,72 @@
     "normative": "Over the Appendix test vectors, the intake's request_digest reproduces each published value, and differs when the instruction, the media type, or the secret changes."
    },
    "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > reproduces every published and low-entropy vector, HMAC input included",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > the intake's captured request_digest reproduces every vector under its secret",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/packages/request-provenance/test/request-digest.test.ts",
+     "name": "request digest construction (@spec request-provenance#request-digest, #939) > changing the instruction, the media type or the secret changes the digest",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#939 slice 1 (D1119). The library's digest reproduces the draft appendix's four published values and six low-entropy and edge vectors (vectors/mission-request-provenance/request-digest.json), exact HMAC input included; the intake's capture path reproduces each vector under its secret; and changing the instruction, the media type (case included) or the secret changes the digest. An independent computation in the same file agrees on every vector; per D1119 Q6 that supports the vectors' correctness only, not an interoperability or secrecy claim, and it is not cited. Mutations: R1 (a 4-byte instruction length) and R2 (no zero byte after the label) fail the first two; R3 (media type case-folded) fails the third."
+  },
+  {
+   "id": "request-provenance.audit.departure-claim-association",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "audit",
+   "text": "Where a deployment records a claim about how far an Intent departs from the captured instruction, it MUST associate that claim with the capture's `request_digest` in access-controlled audit storage, so that an authorized audit holding the capture can test the claim.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a deployment that records a departure claim keeps it with the capture's request_digest in access-controlled audit storage, never in the assertion or the recorded facts"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#939 sketch: no reference implementation yet. The request-digest construction has published test vectors; every other row needs a conforming intake or AS before it can be tested."
+   "notes": "#939 (D1119): the working-group comment of 2026-10-12. The duty binds whichever component records a departure claim: this row for the intake, `request-provenance.audit.departure-claim-association-as` for the AS. No reference component records a departure claim; todo."
+  },
+  {
+   "id": "request-provenance.audit.departure-claim-association-as",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "audit",
+   "text": "Where a deployment records a claim about how far an Intent departs from the captured instruction, it MUST associate that claim with the capture's `request_digest` in access-controlled audit storage, so that an authorized audit holding the capture can test the claim.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a deployment that records a departure claim keeps it with the capture's request_digest in access-controlled audit storage, never in the assertion or the recorded facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#939 (D1119): the AS twin of `request-provenance.audit.departure-claim-association`; the duty binds whichever component records a departure claim. No reference component records one; todo."
   },
   {
    "id": "expansion.restoration.discharge-disclosed",

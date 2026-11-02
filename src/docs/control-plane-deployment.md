@@ -395,6 +395,7 @@ process on one host.
 |---|---|---|
 | Mission records, lifecycle events and deliveries, tombstones, creation idempotency, lifecycle responses | Kernel database | Durable on the file-backed kernel |
 | Continuation anchors and handles, delegation families | Kernel database | Durable on the file-backed kernel; a lineage terminated before the restart stays terminal |
+| Approval reservations, one per interaction decided (#916) | Kernel database | Durable on the file-backed kernel, though the interaction each reserves is not (oidc-provider's memory adapter). Each is pruned once older than the interaction lifetime (3600 seconds) plus the declared clock skew, never less than oidc-provider's 15-second clock tolerance: every lapsed one at open, at most 100 on each reservation (#1922). A committed decision's identifier is its Mission's `approval_event_id`, which is never pruned |
 | Join evidence events, one per Join Assertion minted (#1560) | Kernel database, written before the assertion is returned | Durable on the file-backed kernel; each is kept until the `retain_until` written when it was recorded (its Mission's expiry plus the declared audit retention: `auditRetentionSeconds`, else 7776000 seconds), which a reboot never recomputes, and boot recovery deletes only events past it |
 | Provider Grants, refresh tokens, authorization codes, sessions, interactions | oidc-provider's memory adapter (no adapter is configured) | Lost, and not reconstructible from the kernel: refresh continuity is not established. A recovered family whose grant is gone is refused `invalid_grant` |
 | `missions.grant_id` (the approval binding) | Kernel database | Durable, but names a provider Grant that is gone |
@@ -503,7 +504,7 @@ a check at the next guarded transaction, after that write committed.
 | Table | Module | Writes |
 |---|---|---|
 | `missions` | `kernel.ts` | managed (insert, transitions, containment, discharge latch, schedule, status-list slot, supersession, carryover's version check); statement (`bindGrant`, `bindFirstGrant`, the derivation count and its refund) |
-| `approval_reservations` | `kernel.ts` | statement (`reserveApproval`) |
+| `approval_reservations` | `kernel.ts` | statement (`reserveApproval`, with its bounded prune of lapsed reservations; the full prune at open) |
 | `authority_source_bindings` | `source-binding-store.ts` | managed (with the Mission insert; boot reconciliation) |
 | `continuation_anchors`, `continuation_handles` | `continuation-store.ts` | managed (rooting, termination); statement (a continuation hop's `mint`) |
 | `delegation_families` | `delegation-family-store.ts` | managed (termination); statement (`record`, `invalidate`) |

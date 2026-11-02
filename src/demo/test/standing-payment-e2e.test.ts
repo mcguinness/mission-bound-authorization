@@ -49,11 +49,12 @@ import { APPROVAL_RENDER_REVISION_HEADER, type ApprovalConsole } from "../src/ap
 import { kernelBudgetBinding } from "../src/kernel-mission-view.js";
 import { tokenGrantRequest } from "../src/oauth-client.js";
 import { composeStack, type DemoStack } from "../src/stack.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
 const ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 const POLICY_ID = "sp-e2e";
 const OWNER = "payments-operator";
 const BUDGET_ID = "ap-standing-e2e";

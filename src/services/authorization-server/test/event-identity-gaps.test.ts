@@ -69,6 +69,7 @@ import {
   TEST_APPROVAL_PRINCIPALS,
 } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const TAG = "(@spec mission#approval-idempotency, #1915)";
 
@@ -128,7 +129,7 @@ describe(`direct approval: the missions.approval_event_id uniqueness across two 
       store: { file },
     });
   const approveInput = (approvalEventId: string, goal = "reconcile Acme") => ({
-    intent: validateMissionIntent(JSON.stringify({ goal, target_resources: [KRESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+    intent: validateMissionIntent(JSON.stringify({ goal, target_resources: [KRESOURCE], expires_at: FIXTURE_EXPIRES_AT })),
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "worker",
@@ -257,7 +258,7 @@ describe(`Deferred Mission Approval: approveDirect delivered twice for one pendi
   const openPending = (deferrals: MissionApprovalDeferralStore) =>
     deferrals.open({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Reconcile Acme invoices", target_resources: [KRESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Reconcile Acme invoices", target_resources: [KRESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
       ),
       clientId: "svc-agent",
       jkt: "jkt-svc-agent",
@@ -303,7 +304,7 @@ describe(`Deferred Mission Approval: approveDirect delivered twice for one pendi
 describe(`Child Mission Carryover: a replayed completion and the child approval event ${TAG}`, () => {
   const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
   const LEDGER = TOPOLOGY.resources.saas;
-  const PRED_EXP = "2027-01-01T00:00:00Z";
+  const PRED_EXP = FIXTURE_EXPIRES_AT;
   const ACTORS = aiAgents("child-a", "child-b");
   const clock = new Date("2026-07-01T00:00:00Z");
   const config: CarryoverConfig = {
@@ -537,7 +538,7 @@ async function deviceAuthorize(): Promise<{ deviceCode: string; userCode: string
       client_id: DEVICE_CLIENT,
       resource: DEV_RESOURCE,
       mission_intent: JSON.stringify({
-        intent: { goal: "Reconcile Q3 invoices.", target_resources: [DEV_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Reconcile Q3 invoices.", target_resources: [DEV_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
       }),
       authorization_details: JSON.stringify([
         { type: "mission_resource_access", resource: DEV_RESOURCE, actions: ["payments:invoice.read"] },
@@ -791,7 +792,7 @@ const PORT = 14947;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
 const REDIRECT_URI = "http://localhost:9999/cb";
-const FAR_EXP = "2027-01-01T00:00:00Z";
+const FAR_EXP = FIXTURE_EXPIRES_AT;
 const PUBLISHED = progressiveFromProfile(PROGRESSIVE_PROFILE);
 const READ_ACTIONS = new Set(["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"]);
 const READ = ["payments:invoice.read"];

@@ -41,6 +41,7 @@ import {
   projectThroughEffective,
 } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14634;
 const ISSUER = `http://localhost:${PORT}`;
@@ -51,7 +52,7 @@ const REDIRECT_URI = "http://localhost:9999/cb";
 const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const READ = "payments:invoice.read";
-const INTENT = { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" };
+const INTENT = { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT };
 const PKCE_VERIFIER = "delegation-extension-verifier-0123456789-0123456789";
 
 /** A `delegation` member no specification this reference implements defines. */

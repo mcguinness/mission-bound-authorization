@@ -33,12 +33,13 @@ import {
 import { aiAgents } from "./actor-profiles.helper.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14574;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "due-schedule-fence-verifier-0123456789-0123456789-01234567";
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 const REFUSAL_MEMBERS = ["error", "error_description", "mission_error"];

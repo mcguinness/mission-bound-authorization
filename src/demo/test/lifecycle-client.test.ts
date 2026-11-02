@@ -36,6 +36,7 @@ import {
   transmitLifecycle,
   verifyLifecycleResponse,
 } from "../src/lifecycle-client.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 15411;
 const ISSUER = `http://localhost:${PORT}`;
@@ -86,7 +87,7 @@ function approve(): MissionRecord {
   approvals += 1;
   return running().kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
     ),
     proposedAuthority: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }],
     subject: { iss: ISSUER, sub: "alice" },

@@ -11,6 +11,7 @@ import { MissionKernel, validateMissionIntent } from "@mission/authorization-ser
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import { kernelMissionViewFor } from "../src/kernel-mission-view.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.view-issuer.test";
 const OTHER = "https://as.other-issuer.test";
@@ -38,7 +39,7 @@ function approvedMission() {
   });
   const mission = kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read invoice 1", target_resources: [INV1], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read invoice 1", target_resources: [INV1], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: [{ type: "mission_resource_access", resource: INV1, actions: [READ] }],
     subject: { iss: ISS, sub: "alice" },

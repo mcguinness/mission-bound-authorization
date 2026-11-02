@@ -34,6 +34,7 @@ import {
   validateAuthorityProposal,
   validateMissionResourceAccessSchema,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
 const OTHER_RESOURCE = "https://erp.example.com";
@@ -292,7 +293,7 @@ describe("config loaders refuse a ceiling entry carrying a malformed delegate ma
 const PORT = 14937;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
-const TASK_INTENT = { goal: "Pay Acme invoices for Q3", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" };
+const TASK_INTENT = { goal: "Pay Acme invoices for Q3", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT };
 const PKCE_VERIFIER = "matcher-members-verifier-0123456789-0123456789-0123";
 
 let as: BuiltAs;

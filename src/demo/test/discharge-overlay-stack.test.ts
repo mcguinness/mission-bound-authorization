@@ -27,6 +27,7 @@ import { credentialAuthorityFrom, type TokenFacts } from "@mission/mcp-payments"
 import { Fga, type MissionView } from "@mission/pdp";
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from "vitest";
 import { composeStack, type DemoStack } from "../src/stack.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const PAID_EVENT = "invoice-batch-paid";
@@ -66,7 +67,7 @@ function approve(stack: DemoStack, entries: AuthorityEntry[]): MissionView {
   approvals += 1;
   const record = stack.kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Review Acme invoices until the batch is paid", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Review Acme invoices until the batch is paid", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: entries,
     subject: { iss: stack.issuer, sub: "alice" },

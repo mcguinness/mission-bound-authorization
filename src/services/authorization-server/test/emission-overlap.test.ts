@@ -22,6 +22,7 @@ import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, type 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14812;
 const ISSUER = `http://localhost:${PORT}`;
@@ -102,7 +103,7 @@ async function approve(proposal: AuthorityEntry[]): Promise<string> {
         intent: {
           goal: "Read invoices",
           target_resources: [...new Set(proposal.map((e) => e.resource))],
-          expires_at: "2099-01-01T00:00:00Z",
+          expires_at: FAR_EXPIRES_AT,
         },
       }),
       authorization_details: JSON.stringify(proposal),
