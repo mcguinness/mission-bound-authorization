@@ -758,9 +758,11 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   is absent, malformed, or outside the enforcement scope the requesting
   PEP is authorized for ({{I-D.draft-mcguinness-mission-authzen}}),
   `operation_target_invalid`; for a mediated request with no action
-  class established, where the runtime Enforcement Scope Statement
-  declares action classes, `action_class_missing`, recorded with no
-  class; for one whose action phase is outside
+  class established (none carried or assigned, or a carried class
+  other than the one the PDP's trusted declaration assigns), where the
+  runtime Enforcement Scope Statement declares action classes,
+  `action_class_missing`, recorded with no class; for one whose action
+  phase is outside
   the defined set, or is absent where the PDP's trusted operation
   declaration requires a phase, `phase_invalid`; for a compensate-phase
   request with no `compensates_evaluation_id`, or a request whose
@@ -2718,6 +2720,10 @@ evidence representation their shared envelope carries (using the
 - Decision Evidence: `action_classes` records every class whose
   requirements the PDP applied, when more than one applies;
   `action_class` is defined as the assigned class (#1994).
+
+- Refusal Record: `action_class_missing` also records a mediated
+  request carried with a class other than the one the PDP's trusted
+  declaration assigns (#1994).
 
 - Refusal Record: `action_class_missing` records a PDP refusal of a
   mediated request with no action class established, where the runtime

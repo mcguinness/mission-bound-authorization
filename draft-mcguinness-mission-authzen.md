@@ -1545,11 +1545,12 @@ bypass, not a decision ({{I-D.draft-mcguinness-mission-runtime}}).
 Likewise, where the runtime Enforcement Scope Statement declares
 action classes, a mediated request that reaches the PDP with no
 action class established, neither carried from the PEP's Operation
-Profile nor assigned by the PDP's own trusted declaration, is
-malformed: the PDP MUST refuse it before evaluation, MUST NOT evaluate
-it under a default class or record a class in Decision Evidence, and
-MUST record the refusal as a Refusal Record with `denial_reason`
-`action_class_missing`
+Profile nor assigned by the PDP's own trusted declaration, or carried
+with a class other than the one that declaration assigns its
+operation and phase, is malformed: the PDP MUST refuse it before
+evaluation, MUST NOT evaluate it under a default class or record a
+class in Decision Evidence, and MUST record the refusal as a Refusal
+Record with `denial_reason` `action_class_missing`
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 In addition to evaluating the decision inputs the runtime profile
@@ -2583,7 +2584,7 @@ rule.
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
-| No action class established for a mediated request where the Enforcement Scope Statement declares action classes, at the PDP | Refusal Record | `action_class_missing` |
+| No action class established for a mediated request where the Enforcement Scope Statement declares action classes, or a carried class other than the one the PDP's declaration assigns, at the PDP | Refusal Record | `action_class_missing` |
 | `action_phase` outside the closed set, or absent where the trusted operation declaration requires a phase, at the PDP | Refusal Record | `phase_invalid` |
 | `compensates_evaluation_id` absent where `action_phase` is `compensate`, or malformed, at the PDP | Refusal Record | `compensation_link_invalid` |
 | Evaluation-context binding inputs missing, malformed, or incompatible with the declared operation binding, for a covered operation, at the PDP | Refusal Record | `evaluation_context_invalid` |
@@ -3203,6 +3204,11 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Changes a requirement (#1994): a mediated request carried with an
+  action class other than the one the PDP's trusted declaration assigns
+  its operation and phase has no class established, and the PDP refuses
+  it before evaluation as `action_class_missing`.
 
 - Credential Decision Context: requiring a credential's whole authority
   description to be evaluable is this profile's credential validation
