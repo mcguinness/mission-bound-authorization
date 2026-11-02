@@ -32,6 +32,7 @@ import {
   validateMissionIntentSubmission,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { EARLIER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -467,7 +468,7 @@ describe("approval event and record (@spec mission#integrity-anchors)", () => {
 
 describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
   it("commits an effective expires_at never later than the Intent's requested ceiling", () => {
-    const raw = intent({ expires_at: "2026-12-01T00:00:00Z" });
+    const raw = intent({ expires_at: EARLIER_EXPIRES_AT });
     const requested = validateMissionIntent(raw);
     const record = approve(raw, 200);
     expect(Date.parse(record.expires_at)).toBeLessThanOrEqual(Date.parse(requested.expires_at));
