@@ -28483,7 +28483,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer stops relying on cached Mission state that is older than the issuer's mission_max_stale_seconds without liveness evidence",
-    "local": "the receiver gives no lease for an active push-derived state once its stream has gone longer than maxStaleSeconds (the issuer's advertised mission_max_stale_seconds, default 300) without a verified verification or heartbeat event and is not verified live under the agreed heartbeat interval; until a liveness event arrives the silence runs from the stream's first verified SET. That condition is in addition to the per-Mission bound, the observation point plus maxStaleSeconds, never past expires_at and the same at every read, which no liveness event extends (D1100). Push-derived state a store wrote before the stream-liveness record existed has no liveness evidence, so it gives no lease, whatever liveness arrives, until a Mission Status refresh. A state a Mission Status refresh established is bounded by that response instead, and a state that is not active permits nothing and keeps expires_at as its bound"
+    "local": "the receiver gives no lease for an active push-derived state once its stream has gone longer than maxStaleSeconds (the issuer's advertised mission_max_stale_seconds) without a verified verification or heartbeat event and is not verified live under the agreed heartbeat interval. Until a liveness event arrives, the silence runs from the subscription, the store's first open, which a restart does not move, so a first lifecycle SET that arrives more than maxStaleSeconds after it finds the stream already stale. The store records the stream id and the agreement (the heartbeat interval and maxStaleSeconds) with the stream: a receiver that names another stream id over it does not open, so the recorded stream's liveness record is never read as another stream's, and a receiver reopened with another agreement, including one changed while the receiver was down, does not end a stale period by measuring the silence under it: the stream stays stale until a liveness event arrives. That condition is in addition to the per-Mission bound, the observation point plus maxStaleSeconds (default 300), never past expires_at and the same at every read, which no liveness event extends (D1100). Push-derived state a store wrote before the stream-liveness record existed has no liveness evidence, so it gives no lease, whatever liveness arrives, until a Mission Status refresh. A state a Mission Status refresh established is bounded by that response instead, and a state that is not active permits nothing and keeps expires_at as its bound; neither is withheld while the stream is stale"
    },
    "level": "unit",
    "coverage": "tested",
@@ -28514,7 +28514,13 @@
     },
     {
      "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
-     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > measures the silence from the stream's first SET when no liveness event has arrived",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > counts the silence from the subscription, the store's first open, until a liveness event arrives: a first lifecycle SET more than mission_max_stale_seconds after it finds the stream already stale, with no grace period of its own",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps the subscription start across a restart: before any liveness event, the silence still runs from the store's first open, not from the reopen or the first SET",
      "level": "unit",
      "surface": "signals"
     },
@@ -28526,12 +28532,36 @@
     },
     {
      "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps a stale Mission latched when the receiver reopens its store with a longer heartbeat interval, and keeps the stream stale until a liveness event arrives: re-evaluating the silence under the new interval ends no stale period",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps a stale Mission latched when the receiver reopens its store with a longer mission_max_stale_seconds",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > treats an agreement changed while the receiver was down as a break: a Mission held across it gives no lease after a heartbeat until a Mission Status refresh, whether or not the stream went stale meanwhile",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > refuses to open a store that records another stream id for the same issuer and audience, and leaves that stream's record as it was",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
      "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > gives no lease for push-derived state a store wrote before the stream-liveness record existed, whatever liveness arrives, until a Mission Status refresh",
      "level": "unit",
      "surface": "signals"
     }
    ],
-   "notes": "#1747 (D942); stream liveness #1896 (D1100). The stream-liveness check is witnessed apart from the per-Mission bound: in stream-liveness.test.ts the bound has not passed (a receiver that holds its stream verified live gives the lease, ending at the bound) while the receivers whose stream is stale refuse it, with no gap, rematerialization latch or restore open. Measuring the silence from the stream's first SET is the receiver's reading of 'gone without' for a stream that has carried no liveness event: it cannot observe the stream before then. Proved by mutation: removing the check fails the stream-liveness tests; counting no silence before the first liveness event fails the first-SET test; a liveness event that moves each Mission's observation time and bound fails the bound and distinguishing tests; relying on a row with no liveness record fails the older-store test. Package-only: no shipped service runs a receiver."
+   "notes": "#1747 (D942); stream liveness #1896 (D1100), corrected after the owner's review (D1117). The stream-liveness check is witnessed apart from the per-Mission bound: in stream-liveness.test.ts the bound has not passed (a receiver that holds its stream verified live gives the lease, ending at the bound) while the receivers whose stream is stale refuse it, with no gap, rematerialization latch or restore open. Silence before any liveness event runs from the subscription, persisted on the store's first open (D1117 timing ruling). Proved by mutation: removing the check fails the stream-liveness tests; starting the silence at the first SET fails the subscription and subscription-restart tests at their leases, and restarting it at every open fails the subscription-restart test; counting no silence before the first liveness event fails both, and the consumer-reliance bound case at its stale-stream read; skipping the stream-identity check fails the stream-id test at the refused open; skipping the agreement-change break fails the interval, mission_max_stale_seconds and while-down tests, and measuring a stream that went stale under the recorded agreement under the new one fails each at the lease of a Mission committed after the change; dropping the expires_at cap fails the bound test; subjecting a Status-sourced state to stream liveness fails the subscription test, and a state that is not active the consumer-reliance bound case. From #1958's build, still standing: a liveness event that moves each Mission's observation time and bound fails the bound and distinguishing tests; relying on a row with no liveness record fails the older-store test. Package-only: no shipped service runs a receiver."
   },
   {
    "id": "signals.consumer.reestablish-before-reliance",
@@ -28549,7 +28579,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer whose cached state is stale re-establishes current state before relying on it again",
-    "local": "once an active push-derived state is stale, past its per-Mission bound or under the stream-liveness rule, the receiver gives no lease until a verified Mission Status response re-establishes it (resynchronize), which sets the Status observation point and bound; a later lifecycle event for the Mission, a verification or heartbeat event, or a Stream Updated event does not, and the latch survives a restart"
+    "local": "past its per-Mission bound, an active push-derived observation gives no lease, and a verified Mission Status response re-establishes the state (resynchronize) at the Status observation point and bound. Once an active push-derived state is stale under the stream-liveness rule, or was held across a change of the stream agreement on restart (the heartbeat interval or maxStaleSeconds, including a change made while the receiver was down), the receiver gives no lease until a verified Mission Status response re-establishes it, which it does on a stream that is still stale; a later lifecycle event for the Mission, a verification or heartbeat event, or a Stream Updated event does not, and the latch survives a restart"
    },
    "level": "unit",
    "coverage": "tested",
@@ -28583,9 +28613,33 @@
      "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps the liveness record, the silence and the latch across a restart, and gives a Mission held after a restore no lease, whatever liveness arrives, until it is resynchronized",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > counts the silence from the subscription, the store's first open, until a liveness event arrives: a first lifecycle SET more than mission_max_stale_seconds after it finds the stream already stale, with no grace period of its own",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps a stale Mission latched when the receiver reopens its store with a longer heartbeat interval, and keeps the stream stale until a liveness event arrives: re-evaluating the silence under the new interval ends no stale period",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps a stale Mission latched when the receiver reopens its store with a longer mission_max_stale_seconds",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > treats an agreement changed while the receiver was down as a break: a Mission held across it gives no lease after a heartbeat until a Mission Status refresh, whether or not the stream went stale meanwhile",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "#1747 (D942); stream-liveness latch #1896 (D1100). Proved by mutation: a heartbeat that does not raise the stream's generation after a stale period fails the latch, Stream Updated, restart and distinguishing tests; a later lifecycle event that takes the stream's current generation fails the latch test; a stream record lost on reopen fails the restart test. Package-only: no shipped service runs a receiver."
+   "notes": "#1747 (D942); stream-liveness latch #1896 (D1100), with the agreement-change break of the owner's review (D1117). Proved by mutation: skipping the agreement-change break fails the interval, mission_max_stale_seconds and while-down tests at the lease of the Mission held across the change; raising no generation at the change fails the while-down test, whose stream was not stale; subjecting a Status-sourced state to stream liveness fails the subscription test, where Mission Status re-establishes a Mission on a stale stream. From #1958's build, still standing: a heartbeat that does not raise the stream's generation after a stale period fails the latch, Stream Updated, restart and distinguishing tests; a later lifecycle event that takes the stream's current generation fails the latch test; a stream record lost on reopen fails the restart test. Package-only: no shipped service runs a receiver."
   },
   {
    "id": "signals.consumer.liveness-does-not-reestablish",
@@ -28603,7 +28657,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer whose cached Mission state is stale does not rely on it again after its stream delivers a Stream Updated enabled event or a later verification or heartbeat event; only re-established current state permits reliance again",
-    "local": "the reference receiver verifies Stream Updated and verification SETs on its stream: a Mission whose push-derived state was held while the stream was stale stays latched after a Stream Updated enabled event and after later verification or heartbeat events, though the stream is verified live again and its per-Mission bound has not passed, and gives no lease until a Mission Status refresh re-establishes it"
+    "local": "the reference receiver verifies Stream Updated and verification SETs on its stream: a Mission whose push-derived state was held while the stream was stale stays latched after a Stream Updated enabled event and after later verification or heartbeat events, though the stream is verified live again and its per-Mission bound has not passed, and gives no lease until a Mission Status refresh re-establishes it; so does a Mission held across a change of the stream agreement on restart, including one made while the receiver was down, after the heartbeat that follows the change"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -28631,9 +28685,21 @@
      "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps a stale Mission latched across later heartbeats and lifecycle events until a verified Mission Status refresh re-establishes it; a heartbeat clears no gap or rematerialization restriction",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > keeps a stale Mission latched when the receiver reopens its store with a longer heartbeat interval, and keeps the stream stale until a liveness event arrives: re-evaluating the silence under the new interval ends no stale period",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-liveness.test.ts",
+     "name": "the reference receiver's stream liveness (@spec signals#consumer-behavior, #1896, D1100) > treats an agreement changed while the receiver was down as a break: a Mission held across it gives no lease after a heartbeat until a Mission Status refresh, whether or not the stream went stale meanwhile",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "#1877 review (D1023, ruling 4); receiver witness #1896 (D1100). The latch is also witnessed on the spec-rule model in stream-pause.test.ts, where the reference receiver now reads the same kernel-driven stream. Proved by mutation: a heartbeat that clears the latch fails each of these tests, the cross-component case included."
+   "notes": "#1877 review (D1023, ruling 4); receiver witness #1896 (D1100), with the agreement-change break of the owner's review (D1117). The latch is also witnessed on the spec-rule model in stream-pause.test.ts, where the reference receiver reads the same kernel-driven stream. Proved by mutation: a heartbeat that clears the latch fails the stream-pause, Stream Updated and latch tests (#1958's build); skipping the agreement-change break fails the interval test at the lease after the reopen and the while-down test at the lease after the heartbeat that follows the change, and raising no generation at the change fails the while-down test at that lease."
   },
   {
    "id": "signals.consumer.heartbeat-may-send",
