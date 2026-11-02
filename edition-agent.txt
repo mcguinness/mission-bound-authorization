@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-02T06:06:59Z
-Source repository commit: bc0d3e4e6cf66162afb3c6ef50326ebc311735dd
+Generated: 2026-11-02T15:02:38Z
+Source repository commit: 8ea499ee08fc358275fe7441553b131232b5186e
 Member count: 9
 
 Reading order:
@@ -24272,9 +24272,9 @@ Table of Contents
               Rosomakho, Y., Campbell, B., McGuinness, K., and P.
               Kasselman, "OAuth Transaction Authorization Challenge",
               Work in Progress, Internet-Draft, draft-rosomakho-oauth-
-              txn-challenge-00, 25 June 2026,
+              txn-challenge-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-rosomakho-
-              oauth-txn-challenge-00>.
+              oauth-txn-challenge-01>.
 
    [RFC9470]  Bertocci, V. and B. Campbell, "OAuth 2.0 Step Up
               Authentication Challenge Protocol", RFC 9470,
