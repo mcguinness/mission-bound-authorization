@@ -453,28 +453,44 @@ it never extends a receiver's per-Mission reliance bound.
 
 ## `standing-payment.json`
 
-DRAFT ENABLEMENT (D1122, not for merge): the shared demo composition's
-standing-payment configuration (#813, #816, D830). `dispatch_policies`
-holds each Dispatch Policy designating the standing payment, its snapshot
-the compact JSON of `content`: the committed destinations, the per-payment
-bound, the budget `{owner, id, currency, limit, per_instance_max}` and the
-Approval Governance recency terms. `budget_metering` is the Enforcement
-Scope Statement extension the composition claims beside
-`config/enforcement-scope.json`, each budget naming its committed policies
-by `id` and `version`; the composition computes each `digest` for its own
-issuer.
+DRAFT ENABLEMENT (D1122, D1143; not for merge): the shared demo
+composition's standing-payment configuration (#813, #816, D830). It is one
+reviewed configuration producing both declarations the composition runs
+under. `dispatch_policies` holds each Dispatch Policy designating the
+standing payment, its snapshot the compact JSON of `content`: the committed
+destinations, the per-payment bound, the budget
+`{owner, id, currency, limit, per_instance_max}` and the Approval Governance
+recency terms. `budget_metering` is the Enforcement Scope Statement
+extension the composition claims beside `config/enforcement-scope.json`,
+each budget naming its committed policies by `id` and `version`.
 
-- **Selection.** Only `composeStack` with the AS and no `target` reads it,
-  enabling `standing-payment-dispatch` there. The as-native target, the
-  issuance-only deployment and the MAS pilot do not.
+- **Selection.** Only `composeStack` with the AS and no `target`
+  (`pnpm demo:serve`, `pnpm exhibit`, `pnpm agent`) reads it, when it is
+  composed, and enables `standing-payment-dispatch` there. No other
+  deployment reads or requires it: the issuance-only deployment, the
+  as-native target, the MAS pilot, the standalone AS and the shared
+  composition without the AS start without it.
 - **Owner.** The payments operator, who owns the budget.
-- **Integrity.** Repository review; the AS refuses to start when a
-  designating policy's budget is not declared here under the Exact profile
-  with the policy's currency, limit and committed version, and the PDP's
-  loader refuses a malformed declaration.
-- **Updating.** Edit, review, and restart. A changed policy needs a new
-  `version` in both places: a template commits the consented snapshot's
-  digest, so a snapshot edited under the same version authorizes nothing.
+- **Integrity.** Repository review and the strict loader. A missing or
+  unparsable file, a missing or unknown member, or an empty policy or
+  budget list refuses the composition before anything connects or listens,
+  as does a designating policy whose budget is not declared here under the
+  Exact profile with the policy's currency, limit and committed version.
+  The composition computes each policy's `digest` for its own issuer over
+  the snapshot this file holds. Since one file produces both the Dispatch
+  Policy and the declaration naming its digest, that digest is not an
+  independent integrity check: it shows the two declarations agree, not
+  that the snapshot is the reviewed one. A `digest` in a budget's policy
+  reference is an operator pin. It must equal the digest the composition
+  computes, which binds the issuer, or the composition refuses to start; it
+  is never dropped. A `digest` anywhere else is refused as an unknown
+  member.
+- **Updating.** Edit, review, and restart. A template commits the consented
+  snapshot's digest, and every Dispatch verifies the snapshot the AS holds
+  against it: a snapshot edited under the same version is refused
+  `dispatch_policy_changed` for every template consented before the edit,
+  and only a fresh consent commits the edited snapshot. A changed policy
+  takes a new `version` in both places and a fresh consent.
 
 ## `transformation-capabilities.json`
 
