@@ -19,6 +19,7 @@ import {
   type NarrowingDeclaration,
   proposalHash,
   type ResourceContractDeclarations,
+  submissionEvidenceCommitment,
 } from "@mission/core";
 import { MISSION_MAX_STALE_SECONDS, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import {
@@ -1718,6 +1719,17 @@ export class MissionKernel {
       authority_source: fresh.authority_source as never,
       policy_version: fresh.policy_version,
       approval_event_id: fresh.approval_event_id,
+      // @spec approval-governance#approval-context-manifest (#1927 item B):
+      // present exactly when the record carries `submission_evidence`, the
+      // anchor over that array exactly as recorded.
+      ...(fresh.submission_evidence !== undefined
+        ? {
+            submission_evidence_commitment: submissionEvidenceCommitment(
+              fresh.issuer,
+              fresh.submission_evidence as unknown as JsonValue[],
+            ),
+          }
+        : {}),
     };
   }
 
