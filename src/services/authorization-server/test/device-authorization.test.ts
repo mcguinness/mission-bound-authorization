@@ -14,7 +14,7 @@
  */
 
 import { type Server } from "node:http";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, DERIVATION_POLICY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -23,6 +23,7 @@ import {
   buildAuthorizationServer,
   type BuiltAs,
   IntentError,
+  MISSION_STATUS_SCOPE,
   type ProviderCapability,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
@@ -38,6 +39,13 @@ const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 const INTENT = { goal: "Reconcile Q3 invoices.", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" };
+/** The device authorization parameters of a Mission Intent expiring `ms` from now, not at the fixed INTENT date. */
+const intentExpiringIn = (ms: number): Record<string, string> => ({
+  mission_intent: JSON.stringify({
+    intent: { ...INTENT, expires_at: new Date(Math.ceil(Date.now() / 1000) * 1000 + ms).toISOString().replace(".000Z", "Z") },
+  }),
+});
+const THIRTY_DAYS_MS = 30 * 86_400_000;
 const DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 const JWT_BEARER = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 const PUBLIC = "agent-A1";
@@ -45,11 +53,16 @@ const CONFIDENTIAL = "parent-P";
 const CLIENT_NAME = "<b>Invoice CLI</b>";
 /** A public client registered for no authorization_details type. */
 const NO_RAR = "device-no-rar";
+/** A public and a confidential device client of the shipped `service_owned` source `ledger-reconciler`. */
+const SVC_PUBLIC = "device-svc-cli";
+const SVC_CONFIDENTIAL = "device-svc-agent";
 const SESSIONS = new ApprovalSessionStore();
 const REDIRECT_URI = "http://localhost:9999/cb";
 const FORM = { "content-type": "application/x-www-form-urlencoded" };
 const ALICE_BY_BOB = { sub: "bob", subject: "alice" };
 const CONFIRMED = { decision: "approve", confirm_user_code: true, confirm_started: true };
+/** A Mission Status reader (the development GET route's service-token stand-in). */
+const STATUS_TOKEN = "device-authorization-status-reader";
 
 // A test Intent Submission Evidence type (this file only; the shipped registry
 // is empty): a closed {type, assertion} entry whose verification fails for
@@ -82,6 +95,7 @@ let offServer: Server;
 let confidentialKey: CryptoKey;
 let strangerKey: CryptoKey;
 let agentKey: CryptoKey;
+let svcConfidentialKey: CryptoKey;
 
 beforeAll(async () => {
   const pair = await generateKeyPair("ES256", { extractable: true });
@@ -89,13 +103,19 @@ beforeAll(async () => {
   const confidentialJwk = { ...(await exportJWK(pair.publicKey)), kid: `${CONFIDENTIAL}-auth`, alg: "ES256", use: "sig" };
   strangerKey = (await generateKeyPair("ES256")).privateKey as CryptoKey;
   const publicClient = deviceClient({ client_id: PUBLIC, client_name: CLIENT_NAME, token_endpoint_auth_method: "none" });
+  const svcPair = await generateKeyPair("ES256", { extractable: true });
+  svcConfidentialKey = svcPair.privateKey as CryptoKey;
+  const svcJwk = { ...(await exportJWK(svcPair.publicKey)), kid: `${SVC_CONFIDENTIAL}-auth`, alg: "ES256", use: "sig" };
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     approvalSessions: SESSIONS,
     // A trusted headless approval service exists, so the device page's
     // refusal of it is observable (#1802).
     allowHeadlessAdjudication: true,
-    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    serviceTokenPrincipals: {
+      ...TEST_APPROVAL_PRINCIPALS,
+      [STATUS_TOKEN]: { principal_id: "svc:device-status-reader", scopes: [MISSION_STATUS_SCOPE] },
+    },
     capabilities: new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "device-authorization"]),
     testClients: [
       publicClient,
@@ -118,7 +138,22 @@ beforeAll(async () => {
         redirect_uris: [REDIRECT_URI],
         authorization_details_types: [],
       }),
+      deviceClient({ client_id: SVC_PUBLIC, token_endpoint_auth_method: "none" }),
+      deviceClient({
+        client_id: SVC_CONFIDENTIAL,
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [svcJwk] },
+      }),
     ],
+    // The shipped catalog, with both service clients added to the
+    // `service_owned` source `ledger-reconciler` (#1202).
+    authoritySources: {
+      ...AUTHORITY_SOURCES,
+      entries: AUTHORITY_SOURCES.entries.map((e) =>
+        e.id === "ledger-reconciler" ? { ...e, clients: [...e.clients, SVC_PUBLIC, SVC_CONFIDENTIAL] } : e,
+      ),
+    },
   });
   server = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -161,9 +196,11 @@ const assertion = (client: string, key: CryptoKey, aud = ISSUER) =>
 
 /** The client's own authentication, or its `client_id` alone when public. */
 async function clientAuth(client: string): Promise<Record<string, string>> {
-  return client === CONFIDENTIAL
-    ? { client_assertion: await assertion(CONFIDENTIAL, confidentialKey), client_assertion_type: JWT_BEARER }
-    : { client_id: client };
+  if (client === CONFIDENTIAL) return { client_assertion: await assertion(CONFIDENTIAL, confidentialKey), client_assertion_type: JWT_BEARER };
+  if (client === SVC_CONFIDENTIAL) {
+    return { client_assertion: await assertion(SVC_CONFIDENTIAL, svcConfidentialKey), client_assertion_type: JWT_BEARER };
+  }
+  return { client_id: client };
 }
 
 async function postForm(url: string, pairs: [string, string][]): Promise<{ status: number; body: Record<string, unknown> }> {
@@ -343,6 +380,15 @@ async function approvedSession(
 }
 
 const missionOf = (uid: string) => as.kernel.findByApprovalEvent(`apev_${uid}`);
+
+/** The Mission as Mission Status reports it: the signed response's `mission` member. */
+async function missionStatus(missionId: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${ISSUER}/missions/${missionId}/status?nonce=${crypto.randomUUID()}`, {
+    headers: { "x-service-token": STATUS_TOKEN },
+  });
+  expect(res.status).toBe(200);
+  return decodeJwt(await res.text()).mission as Record<string, unknown>;
+}
 
 /** Lapse a device code's lifetime, as time passing would. */
 async function lapse(deviceCode: string): Promise<void> {
@@ -1087,6 +1133,31 @@ describe("Mission Device Authorization polling (@spec device-authorization#polli
     expect(as.kernel.get(missionOf(s.uid)?.id as string)?.state).toBe("active");
   });
 
+  // @spec device-authorization#outcomes (#1202): this deployment's one choice
+  // for an approved session whose device_code expired unredeemed is to let the
+  // Mission run to its expires_at, never revoking it
+  // (docs/provider-integration-port.md, section 3.4).
+  it("lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked", async () => {
+    const short = await approvedSession(PUBLIC, ALICE_BY_BOB, intentExpiringIn(3_600_000));
+    const expiresAt = Date.parse(missionOf(short.uid)?.expires_at as string);
+    const long = await approvedSession(PUBLIC, ALICE_BY_BOB, intentExpiringIn(THIRTY_DAYS_MS));
+    for (const s of [short, long]) {
+      await lapse(s.deviceCode);
+      expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("expired_token");
+      expect(await missionStatus(missionOf(s.uid)?.id as string)).toMatchObject({ state: "active" });
+    }
+    // The kernel's clock moves one second past the shorter Mission's
+    // expires_at, as time passing would; nothing waits on the real clock.
+    const clock = vi.spyOn(as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(expiresAt + 1000));
+    try {
+      const ended = await missionStatus(missionOf(short.uid)?.id as string);
+      expect(ended).toMatchObject({ state: "terminated", termination: { reason: "expired" } });
+      expect(await missionStatus(missionOf(long.uid)?.id as string)).toMatchObject({ state: "active" });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("refuses redemption with the issuance-gating refusal once the Mission was revoked after approval", async () => {
     const s = await approvedSession();
     as.kernel.transition(missionOf(s.uid)?.id as string, "revoke");
@@ -1106,6 +1177,29 @@ describe("Mission Device Authorization polling (@spec device-authorization#polli
     const res = await poll(PUBLIC, s.deviceCode, await newKeys());
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_grant");
+    expect(res.body.access_token).toBeUndefined();
+  });
+});
+
+describe("a service_owned source and a public client (@spec device-authorization#session-binding, #1202)", () => {
+  const RECONCILER = { sub: "dana", subject: "agt_ledger_reconciler" };
+
+  it("creates no Mission when a service_owned source would rest on a public client's client_id, and the next poll is access_denied", async () => {
+    // The control: a confidential client of the same service_owned source gets its Mission.
+    const control = await approvedSession(SVC_CONFIDENTIAL, RECONCILER, intentExpiringIn(THIRTY_DAYS_MS));
+    const record = missionOf(control.uid);
+    expect(record?.authority_source.type).toBe("service_owned");
+    expect(record?.subject.sub).toBe("agt_ledger_reconciler");
+    expect(record?.client_id).toBe(SVC_CONFIDENTIAL);
+    // The public client of the same source: refused at the decision, before any write.
+    const s = await pendingSession(SVC_PUBLIC, RECONCILER, intentExpiringIn(THIRTY_DAYS_MS));
+    const decided = await decide(s.uid, s.headers, CONFIRMED);
+    expect(decided.status, decided.text).toBe(200);
+    expect(missionOf(s.uid)).toBeUndefined();
+    const res = await poll(SVC_PUBLIC, s.deviceCode, await newKeys());
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("access_denied");
+    expect(res.body.error_description).toMatch(/public client's client_id cannot establish a service_owned authority source/);
     expect(res.body.access_token).toBeUndefined();
   });
 });
