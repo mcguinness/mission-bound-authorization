@@ -445,7 +445,11 @@ it never extends a receiver's per-Mission reliance bound.
 - **Updating.** Edit, review, and restart both ends. A receiver holding a
   longer interval than its issuer stays verified live after the issuer
   assumes it has gone stale, so to lengthen the interval change the issuer
-  first, and to shorten it change the consumers first.
+  first, and to shorten it change the consumers first. A receiver's store
+  records the agreement, so a receiver restarted with another interval or
+  `mission_max_stale_seconds` treats the change as a break (D1117): each
+  Mission it held gives no lease until Mission Status re-establishes it, and
+  a stream already stale stays stale until a liveness event arrives.
 
 ## `transformation-capabilities.json`
 
