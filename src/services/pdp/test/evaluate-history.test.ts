@@ -12,7 +12,8 @@
  *
  * The retained records here are signed directly, a Decision Evidence key for
  * the `pdp` role and an Execution Evidence key for the `pep` role, and the
- * resolver binds each key to its emitter's scope. The clock is fixed at one
+ * resolver binds each key to its emitter's role and id, as
+ * `HistoryBinding.resolveKey` requires. The clock is fixed at one
  * instant (D1091); no OpenFGA is needed.
  */
 
@@ -33,6 +34,7 @@ import {
   type HistoryBinding,
   type HistoryPredicate,
   type MissionView,
+  REFUSAL_RECORD_MEDIA_TYPE,
   relationForAction,
   signEvidenceEnvelope,
   stalenessBound,
@@ -92,6 +94,12 @@ function shaped(base: Record<string, unknown>, overrides: Record<string, unknown
 /** A record signed in the PEP's role with the PEP's own trusted key: a valid signature, the wrong signer for a decision. */
 const AS_PEP = { key: pepKeys.privateKey, kid: "hist-pep", emitter: { id: PEP_ID, role: "pep" } };
 
+/** The PEP's own key and id, the record claiming the `pdp` role: the resolver publishes that key for `pep` only. */
+const PEP_KEY_CLAIMING_PDP = { key: pepKeys.privateKey, kid: "hist-pep", emitter: { id: PEP_ID, role: "pdp" } };
+
+/** The PDP's own key, signing an Execution Evidence record in its `pdp` role: a valid signature, the wrong signer for an execution. */
+const AS_PDP = { key: pdpKeys.privateKey, kid: "hist-pdp", emitter: { id: PDP_ID, role: "pdp" } };
+
 /** A retained Decision Evidence record, signed by the trusted PDP key unless `key` (or `as`) says otherwise. */
 async function decisionRecord(
   d: DecisionShape,
@@ -136,8 +144,11 @@ interface ExecutionShape {
   omit?: string[];
 }
 
-/** A retained Execution Evidence record, signed by the trusted PEP key. */
-async function executionRecord(e: ExecutionShape): Promise<Record<string, unknown>> {
+/** A retained Execution Evidence record, signed by the trusted PEP key unless `as` says otherwise. */
+async function executionRecord(
+  e: ExecutionShape,
+  as?: { key: typeof pepKeys.privateKey; kid: string; emitter: { id: string; role: string } },
+): Promise<Record<string, unknown>> {
   const unsigned = shaped({
     execution_id: e.execution_id ?? `exe_${e.evaluation_id}_${e.outcome}`,
     evaluation_id: e.evaluation_id,
@@ -146,11 +157,11 @@ async function executionRecord(e: ExecutionShape): Promise<Record<string, unknow
     outcome: e.outcome,
     outcome_at: e.outcome_at ?? NOW.toISOString(),
     sequence: e.sequence ?? 0,
-    emitter: { id: PEP_ID, role: "pep" },
+    emitter: as?.emitter ?? { id: PEP_ID, role: "pep" },
   }, e.overrides, e.omit);
   return {
     ...unsigned,
-    evidence_envelope: await signEvidenceEnvelope(unsigned, EXECUTION_EVIDENCE_MEDIA_TYPE, { kid: "hist-pep", key: pepKeys.privateKey }),
+    evidence_envelope: await signEvidenceEnvelope(unsigned, EXECUTION_EVIDENCE_MEDIA_TYPE, { kid: as?.kid ?? "hist-pep", key: as?.key ?? pepKeys.privateKey }),
   };
 }
 
@@ -462,6 +473,62 @@ describe("the History Context evaluates policy-selected predicates against verif
     const records = [
       await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }, undefined, AS_PEP),
       await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
+    ];
+    const decision = await evaluate(request(), options(historyBinding(records)));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("does not take a permit signed with the PEP's key while claiming the pdp role: the resolver binds the key to its role", async () => {
+    const records = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }, undefined, PEP_KEY_CLAIMING_PDP),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
+    ];
+    const decision = await evaluate(request(), options(historyBinding(records)));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("does not take an execution signed in the PDP's role as Execution Evidence, although its key verifies for that role", async () => {
+    const records = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed" }, AS_PDP),
+    ];
+    const decision = await evaluate(request(), options(historyBinding(records)));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("fails closed when an execution links to a deny rather than a permit", async () => {
+    const records = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: 0 }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed", sequence: 0 }),
+      await decisionRecord({ evaluation_id: "d2", action_class: "consequential_write", decision: "deny", sequence: 1 }),
+      await executionRecord({ evaluation_id: "d2", outcome: "completed", sequence: 1 }),
+    ];
+    const decision = await evaluate(request(), options(historyBinding(records)));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("fails closed when the store returns a record of no known kind, such as a Refusal Record", async () => {
+    const refusal = {
+      refusal_id: "ref_history_1",
+      mission: { id: MISSION, issuer: ISSUER },
+      audience: RESOURCE,
+      denial_reason: "operation_target_invalid",
+      refused_at: NOW.toISOString(),
+      sequence: 1,
+      emitter: { id: PDP_ID, role: "pdp" },
+    };
+    const records = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
+      { ...refusal, evidence_envelope: await signEvidenceEnvelope(refusal, REFUSAL_RECORD_MEDIA_TYPE, { kid: "hist-pdp", key: pdpKeys.privateKey }) },
     ];
     const decision = await evaluate(request(), options(historyBinding(records)));
     expect(decision.decision).toBe(false);

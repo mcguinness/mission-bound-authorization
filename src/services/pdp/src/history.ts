@@ -69,7 +69,14 @@ export interface HistoryEvidenceReader {
 export interface HistoryBinding {
   policy: HistoryPolicy;
   reader: HistoryEvidenceReader;
-  /** Resolves each record's key under its emitter's scope and audience. */
+  /**
+   * Resolves each record's key under its emitter's scope and audience. It
+   * MUST bind the key to the emitter's `role` as well as its `id`, returning
+   * no key for a role the key is not published for, as
+   * `buildEvidenceKeyResolver` does: the role checks below read the role the
+   * record claims, so a resolver that matched `kid` and `id` alone would let
+   * a PEP's key sign a record claiming the `pdp` role.
+   */
   resolveKey: EvidenceKeyResolver;
   /** Emitter roles trusted to sign Decision Evidence. Defaults to `pdp`. */
   decisionEmitterRoles?: ReadonlyArray<string>;
