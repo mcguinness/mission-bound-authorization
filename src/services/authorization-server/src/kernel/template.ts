@@ -72,7 +72,6 @@ import { newMissionId } from "./mission-id.js";
 import {
   STANDING_CONSENT_LIMIT_MEMBER,
   standingConsentMaximumOf,
-  withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
 import {
   assertStandingPaymentCeiling,
@@ -1265,10 +1264,8 @@ export function dispatchFromTemplate(
     // D327): established afresh for this instance, never above the maximum
     // the committed Dispatch Policy states, and never absent where it is
     // finite, whatever the deployment's ceiling has since become.
-    derivation_limit: withinStandingConsentMaximum(
-      kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
-      dispatchMaximum,
-    ),
+    // None where this AS does not implement Derivation Limits (#2018).
+    derivation_limit: kernel.standingConsentDerivationLimit(input.intent.requested_derivation_limit, dispatchMaximum),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

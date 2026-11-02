@@ -50,7 +50,6 @@ import {
   STANDING_CONSENT_LIMIT_MEMBER,
   type StandingConsentMaximum,
   strictestMaximum,
-  withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
 import {
   type ApprovalBasis,
@@ -880,8 +879,9 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     // @spec child-delegation#derivation-budget (#1119, D327): never above the
     // strictest finite per-child figure the justifying entries' committed
     // policies state, and never absent where one is finite.
-    derivation_limit: withinStandingConsentMaximum(
-      kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+    // None where this AS does not implement Derivation Limits (#2018).
+    derivation_limit: kernel.standingConsentDerivationLimit(
+      input.intent.requested_derivation_limit,
       strictestMaximum(perChildMaxima),
     ),
     derivation_count: 0,

@@ -1397,6 +1397,25 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (expansionDeferrals && !enabled("token-revocation")) {
     throw new Error("the expansion capability's deferred completion needs token-revocation (the deferred substrate's cancellation)");
   }
+  // @spec mission#optional-capabilities (#2018): an introspecting consumer
+  // needs the `/introspect` route, so a configured introspection principal
+  // with Introspection off is a configuration error, refused at construction.
+  // The reference issues JWT access tokens only, so no opaque-token setting
+  // can need it.
+  if (!enabled("introspection") && (opts.introspectionPrincipals?.length ?? 0) > 0) {
+    throw new Error(
+      "introspection principals are configured, but the introspection capability is off: an introspecting consumer needs the /introspect route",
+    );
+  }
+  // @spec authority-server#discovery (#2018): a Mission Authority Server's
+  // metadata requires `mission_max_stale_seconds`, the one bound join rule 2
+  // fails closed against, and Revocation propagation owns that member. An AS
+  // serving join (enrolled join callers or Join Assertions) needs it on.
+  if (!enabled("revocation-propagation") && (opts.joinEnrollment !== undefined || opts.joinAssertionService !== undefined)) {
+    throw new Error(
+      "this AS serves Mission join (joinEnrollment or joinAssertions), whose metadata requires mission_max_stale_seconds, but the revocation-propagation capability is off",
+    );
+  }
   // @spec mission-template#prohibited-classes (#813, D814, D830): the
   // standing-payment dispatch workflow is a Mission Template workflow, and
   // every Dispatch Policy designating it names an operation the published
@@ -4401,6 +4420,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     return templateConsentDisclosure(proposal, opts.dispatchPolicies, {
       issuer: opts.issuer,
       asyncDelegation: opts.familyStore !== undefined,
+      derivationLimits: enabled("derivation-limits"),
       ...(capabilityResolver ? { capabilityResolver } : {}),
       ...(standingPaymentOn ? { standingPayment: true } : {}),
       ...(opts.actionApprovalPolicy ? { actionApprovalPolicy: opts.actionApprovalPolicy } : {}),
@@ -4908,6 +4928,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // per-child figure cannot be disclosed, and child creation re-verifies
       // the committed policy.
       const derivation = approvalDerivationRendering({
+        derivationLimits: enabled("derivation-limits"),
         limit: kernel.resolveDerivationLimit(intent.requested_derivation_limit),
         deploymentCeiling: kernel.resolveDerivationLimit(undefined),
         authority,
@@ -6041,7 +6062,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // resolution (signature, expected issuer, at+jwt class, time validity,
     // stored-token presence, Mission resolution), caller visibility, and only
     // then the composite-active matrix over the audience-minimized projection.
-    if (ctx.path === "/introspect" && ctx.method === "POST") {
+    // @spec mission#optional-capabilities (#2018): with Introspection off the
+    // route is not served, so the request falls through to the provider's 404.
+    if (ctx.path === "/introspect" && ctx.method === "POST" && enabled("introspection")) {
       const principal = authenticateIntrospection(ctx);
       if (!principal) return;
       const body = await readJsonBody(ctx.req);
@@ -6389,9 +6412,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           disclosure: {
             max_active: template.max_active,
             dispatch_rate: { limit: template.rate_per_min, window_s: 60 },
-            derivation_limit: standingConsentLines(maximum, "dispatched instance", {
-              asyncDelegation: opts.familyStore !== undefined,
-            }),
+            // #2018: rendered only where the deployment implements Derivation Limits.
+            ...(enabled("derivation-limits")
+              ? {
+                  derivation_limit: standingConsentLines(maximum, "dispatched instance", {
+                    asyncDelegation: opts.familyStore !== undefined,
+                  }),
+                }
+              : {}),
           },
         };
       } catch (e) {
@@ -7029,7 +7057,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       meta.mission_bound_authorization_supported = true;
       // @spec status#as-metadata, status#status-operational — issuer ceiling
       // shared with the runtime's published, enforced per-class bounds.
-      meta.mission_max_stale_seconds = MISSION_MAX_STALE_SECONDS;
+      // @spec status#revocation-enforcement-classes, status#conformance
+      // (#2018): the member belongs to the Revocation propagation extension
+      // and is advertised only where that capability is on.
+      if (enabled("revocation-propagation")) meta.mission_max_stale_seconds = MISSION_MAX_STALE_SECONDS;
       // Each capability member below is advertised only where the deployment
       // enables it (adapters/capabilities.ts); the default enables all of them.
       // Not capability members: mission_attenuation_supported and
@@ -7110,12 +7141,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         meta.mission_lifecycle_endpoint_auth_methods_supported = [...LIFECYCLE_ENDPOINT_AUTH_METHODS];
         meta.mission_lifecycle_endpoint_auth_signing_alg_values_supported = [...LIFECYCLE_CLIENT_ASSERTION_ALGS];
       }
-      meta.introspection_endpoint = `${opts.issuer}/introspect`;
-      // @spec mission#caller-authorization-and-minimization (cleanup, issue
-      // #541) — advertise the introspection endpoint's actual authentication
-      // method (registered-principal HTTP Basic, authenticateIntrospection
-      // above), matching RFC 8414's *_endpoint_auth_methods_supported idiom.
-      meta.introspection_endpoint_auth_methods_supported = ["client_secret_basic"];
+      // @spec mission#optional-capabilities (#2018): advertised only where
+      // the Introspection capability serves the route.
+      if (enabled("introspection")) {
+        meta.introspection_endpoint = `${opts.issuer}/introspect`;
+        // @spec mission#caller-authorization-and-minimization (cleanup, issue
+        // #541) — advertise the introspection endpoint's actual authentication
+        // method (registered-principal HTTP Basic, authenticateIntrospection
+        // above), matching RFC 8414's *_endpoint_auth_methods_supported idiom.
+        meta.introspection_endpoint_auth_methods_supported = ["client_secret_basic"];
+      }
       // @spec txn-authorization#challenge-redemption — advertised only where the
       // endpoint is CONFIGURED. An AS without transaction authorization answers
       // 501 there, and advertising it would send clients to a dead endpoint.
@@ -8027,7 +8062,9 @@ async function decide(
   // written, so restoring the policy later enables no child grant the Approver
   // never saw; a fresh approval discloses it. A retry of a committed decision
   // recovers it instead.
-  if (!opts.kernel.findByApprovalEvent(`apev_${details.uid}`)) {
+  // Only where the deployment implements Derivation Limits, which owns the
+  // per-child figure (#2018).
+  if (capabilityEnabled(opts, "derivation-limits") && !opts.kernel.findByApprovalEvent(`apev_${details.uid}`)) {
     const undisclosed = undisclosedChildGrant(authority, (ref) =>
       verifiedActivationPolicy(opts.issuer, opts.kernel.activationPolicies(), ref),
     );
@@ -8536,6 +8573,13 @@ interface ApprovalDerivationRendering {
 }
 
 export function approvalDerivationRendering(input: {
+  /**
+   * #2018: whether the deployment implements Derivation Limits. False: no
+   * derivation-limit line is rendered (the established limit, the per-child
+   * rule and maximum, and the progressive inheritance line); a delegable
+   * entry's Child Delegation lines remain.
+   */
+  derivationLimits?: boolean;
   limit: number | null;
   deploymentCeiling: number | null;
   authority: readonly AuthorityEntry[];
@@ -8551,7 +8595,9 @@ export function approvalDerivationRendering(input: {
     if (!grant) continue;
     const committed = committedPerChildMaximum(grant, input.held);
     const perChild =
-      committed.source === "policy"
+      input.derivationLimits === false
+        ? []
+        : committed.source === "policy"
         ? standingConsentLines(committed.maximum, "child Mission", { asyncDelegation: input.asyncDelegation })
         : committed.source === "deployment"
           ? standingConsentLines(
@@ -8574,6 +8620,7 @@ export function approvalDerivationRendering(input: {
       ],
     });
   }
+  if (input.derivationLimits === false) return { established: [], children };
   return {
     established: establishedLimitLines(input.limit, { asyncDelegation: input.asyncDelegation }),
     children,
@@ -8778,7 +8825,7 @@ function renderApprovalPage(
   // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering,
   // progressive#derivation-limits (#1119): rendered beside the derived set.
   const derivationSection = derivation
-    ? `<h2>Derivation limit</h2>${renderLines(derivation.established, "derivation-limit")}
+    ? `${derivation.established.length ? `<h2>Derivation limit</h2>${renderLines(derivation.established, "derivation-limit")}` : ""}
 ${
   derivation.children.length
     ? `<h2>Child Missions created by policy under this approval (no approval of their own)</h2>
