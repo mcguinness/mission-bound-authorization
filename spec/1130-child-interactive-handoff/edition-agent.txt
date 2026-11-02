@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-02T17:29:05Z
-Source repository commit: 7cd9babf1887cbf4b8f376daa0f2bf9553f55a38
+Generated: 2026-11-02T17:52:22Z
+Source repository commit: aa4cbbb47af3d7d10da48a506f905e42d2f2fe82
 Member count: 9
 
 Reading order:
@@ -4685,9 +4685,9 @@ Table of Contents
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
               Authentication", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-spiffe-client-auth-02, 15 June 2026,
+              ietf-oauth-spiffe-client-auth-03, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              spiffe-client-auth-02>.
+              spiffe-client-auth-03>.
 
    [I-D.draft-ietf-oauth-transaction-tokens]
               Tulshibagwale, A., Fletcher, G., and P. Kasselman,
@@ -24115,9 +24115,9 @@ Table of Contents
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
               Authentication", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-spiffe-client-auth-02, 15 June 2026,
+              ietf-oauth-spiffe-client-auth-03, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              spiffe-client-auth-02>.
+              spiffe-client-auth-03>.
 
    [I-D.draft-jiang-oauth-intent-admission]
               Jiang, Y., Lun, L., Song, Y., and F. Liu, "Intent

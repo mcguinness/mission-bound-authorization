@@ -4685,9 +4685,9 @@ Table of Contents
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
               Authentication", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-spiffe-client-auth-02, 15 June 2026,
+              ietf-oauth-spiffe-client-auth-03, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              spiffe-client-auth-02>.
+              spiffe-client-auth-03>.
 
    [I-D.draft-jiang-oauth-intent-admission]
               Jiang, Y., Lun, L., Song, Y., and F. Liu, "Intent
