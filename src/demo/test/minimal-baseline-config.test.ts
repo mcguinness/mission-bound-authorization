@@ -10,11 +10,11 @@
  * authenticated means independent of possession of any token
  * (mission#revocation), and the reference's only such surface is the
  * Mission Lifecycle endpoint's `revoke` operation. No Delegation,
- * Self-Exchange or Cross-Domain capability, no evidence type, no
- * standing-consent basis, and no other companion surface is enabled. The
- * authorization-details type is `mission_resource_access`, the only type the
- * reference supports. Introspection is not switchable in the reference and
- * stays served; this file does not use it.
+ * Self-Exchange, Introspection or Cross-Domain capability, no evidence type,
+ * no standing-consent basis, and no other companion surface is enabled:
+ * Revocation propagation (`mission_max_stale_seconds`) and Derivation Limits
+ * are off too (#2018). The authorization-details type is
+ * `mission_resource_access`, the only type the reference supports.
  *
  * The Approver authenticates for real: the approval surface logs Bob in as
  * an OpenID Connect relying party of the reference upstream provider, by
@@ -40,7 +40,7 @@ import {
   type ProviderCapability,
 } from "@mission/authorization-server";
 import { IssuerKeys } from "@mission/core";
-import { TOPOLOGY, trustedKids } from "@mission/demo-data";
+import { INTROSPECTION_PRINCIPALS, type IntrospectionPrincipal, TOPOLOGY, trustedKids } from "@mission/demo-data";
 import { plainResourceServer } from "@mission/plain-rs";
 import { decodeJwt, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -130,6 +130,28 @@ async function par(params: Record<string, string>): Promise<{ status: number; bo
   return { status: res.status, body: await readJson(res) };
 }
 
+/**
+ * Resolve the approval as Bob, returning the code and the approval page the
+ * console rendered to him before deciding, read from the wire unchanged.
+ */
+async function approveReadingPage(pending: { uid: string; jar: CookieJar }): Promise<{ code: string; page: string }> {
+  const pageUrl = `${asUrl}/interaction/${pending.uid}`;
+  const pages: string[] = [];
+  const realFetch = globalThis.fetch;
+  const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const res = await realFetch(input, init);
+    if (String(input) === pageUrl && (init?.method ?? "GET") === "GET") pages.push(await res.clone().text());
+    return res;
+  });
+  try {
+    const code = (await resolveMissionApproval(asUrl, bob, pending, "approve", "alice")) as string;
+    expect(pages).toHaveLength(1);
+    return { code, page: pages[0] as string };
+  } finally {
+    spy.mockRestore();
+  }
+}
+
 /** The front channel: redeem the `request_uri` and land on the approval interaction. */
 async function startInteraction(requestUri: string): Promise<{ uid: string; jar: CookieJar }> {
   const jar: CookieJar = new Map();
@@ -215,6 +237,7 @@ describe("the baseline flow on the minimal configuration, optional capabilities 
   let accessToken = "";
   let refreshToken = "";
   let dpopKeys: DpopKeys;
+  let approvalPage = "";
 
   it("PAR accepts a Mission Intent in the Submission envelope with an authority proposal (@spec mission#submission-via-par)", async () => {
     const pushed = await par({ mission_intent: envelope(), authorization_details: JSON.stringify(READ) });
@@ -229,7 +252,9 @@ describe("the baseline flow on the minimal configuration, optional capabilities 
     // Nothing exists before the decision.
     expect(as.kernel.allMissions()).toHaveLength(before);
     const logins = idp.logins.length;
-    code = (await resolveMissionApproval(asUrl, bob, pending, "approve", "alice")) as string;
+    const approved = await approveReadingPage(pending);
+    code = approved.code;
+    approvalPage = approved.page;
     expect(code).toBeTruthy();
     // The approval surface logged Bob in at the provider by password and a one-time code.
     expect(idp.logins.slice(logins)).toEqual([expect.objectContaining({ sub: APPROVER.sub, acr: "mfa", factors: ["pwd", "otp"] })]);
@@ -242,6 +267,15 @@ describe("the baseline flow on the minimal configuration, optional capabilities 
     expect(record.authority_set).toEqual(READ);
     expect(typeof record.intent_hash).toBe("string");
     expect(typeof record.authority_hash).toBe("string");
+  });
+
+  it("without Derivation Limits the approval page renders no derivation limit and the record establishes none (#2018; @spec derivation-limits#approval-rendering, derivation-limits#record-member)", () => {
+    // The page Bob reviewed is the approval page: it shows the derived authority.
+    expect(approvalPage).toContain("reports:report.read");
+    expect(approvalPage).not.toMatch(/derivation limit/i);
+    const record = as.kernel.get(missionId) as unknown as Json;
+    expect(record.derivation_limit).toBeNull();
+    expect(record.intent as Json).not.toHaveProperty("requested_derivation_limit");
   });
 
   it("the code redeems for a Mission-bound access token carrying exactly the approved authority (@spec mission#mission-bound-tokens, mission#mission-response-parameters)", async () => {
@@ -318,6 +352,57 @@ describe("the baseline flow on the minimal configuration, optional capabilities 
 });
 
 describe("what this configuration does not implement is refused as the binding states (#2009 P5 step 4)", () => {
+  it("without Derivation Limits a requested_derivation_limit is refused invalid_request under Closed top levels, while the identical Intent without it is accepted (#2018; @spec mission#submission-via-par, derivation-limits#introduction)", async () => {
+    const refused = await par({
+      mission_intent: envelope({ intent: { requested_derivation_limit: 5 } }),
+      authorization_details: JSON.stringify(READ),
+    });
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_request");
+    expect(refused.body.error_description).toBe("unknown top-level member: requested_derivation_limit");
+    expect(refused.body).not.toHaveProperty("request_uri");
+    const accepted = await par({ mission_intent: envelope(), authorization_details: JSON.stringify(READ) });
+    expect(accepted.status, JSON.stringify(accepted.body)).toBe(201);
+  });
+
+  it("without Introspection /introspect is not served (404) and neither introspection member is advertised (#2018; @spec mission#optional-capabilities, mission#introspection)", async () => {
+    // The shipped plain-rs principal, which an introspecting plain-rs would use.
+    const principal = INTROSPECTION_PRINCIPALS.find((p) => p.principal_id === "rs-plain") as IntrospectionPrincipal;
+    const res = await fetch(`${asUrl}/introspect`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${Buffer.from(`${principal.principal_id}:${principal.secret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({ token: "x.y.z" }).toString(),
+    });
+    const body = await readJson(res);
+    expect(res.status, JSON.stringify(body)).toBe(404);
+    expect(body).not.toHaveProperty("active");
+    const meta = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Json;
+    expect(meta).not.toHaveProperty("introspection_endpoint");
+    expect(meta).not.toHaveProperty("introspection_endpoint_auth_methods_supported");
+  });
+
+  it("without Revocation propagation mission_max_stale_seconds is not advertised, and the only Mission Status metadata is what the Lifecycle revoke surface owns (#2018; @spec status#as-metadata, status#conformance)", async () => {
+    const meta = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Json;
+    expect(meta).not.toHaveProperty("mission_max_stale_seconds");
+    // Mission Lifecycle, revoke only, advertises its endpoint, its
+    // authentication metadata and the response-signing algorithms.
+    expect(meta.mission_lifecycle_endpoint_auth_methods_supported).toEqual(["private_key_jwt"]);
+    expect(meta.mission_lifecycle_endpoint_auth_signing_alg_values_supported).toEqual(["ES256"]);
+    expect(meta.mission_status_signing_alg_values_supported).toEqual(["ES256"]);
+    const owned = new Set([
+      "mission_bound_authorization_supported",
+      "mission_lifecycle_endpoint",
+      "mission_lifecycle_endpoint_auth_methods_supported",
+      "mission_lifecycle_endpoint_auth_signing_alg_values_supported",
+      "mission_status_signing_alg_values_supported",
+    ]);
+    // No other `mission_` member: the binding's own claim and the revoke surface's.
+    expect(Object.keys(meta).filter((k) => k.startsWith("mission_") && !owned.has(k))).toEqual([]);
+  });
+
   it("an evidence entry of a type the AS does not support is refused invalid_mission_intent_evidence, and one without a type invalid_request (@spec mission#intent-submission-evidence, mission#conformance-roles)", async () => {
     const unsupported = await par({
       mission_intent: envelope({ evidence: [{ type: "urn:example:intent-evidence:admission", assertion: "x" }] }),
