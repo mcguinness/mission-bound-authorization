@@ -55,7 +55,7 @@ alongside its other service listeners. The agent tool surface has no such hook.
 
 ## Standing payments
 
-DRAFT ENABLEMENT (D1122, D1143; not for merge). The composition behind
+The composition behind
 `pnpm demo:serve`, `pnpm exhibit` and `pnpm agent` enables standing-payment
 dispatch and budget metering (#813, #816) from `config/standing-payment.json`
 (see `config/README.md`); no other deployment enables either. Its one

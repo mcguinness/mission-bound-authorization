@@ -453,7 +453,7 @@ it never extends a receiver's per-Mission reliance bound.
 
 ## `standing-payment.json`
 
-DRAFT ENABLEMENT (D1122, D1143; not for merge): the shared demo
+The shared demo
 composition's standing-payment configuration (#813, #816, D830). It is one
 reviewed configuration producing both declarations the composition runs
 under. `dispatch_policies` holds each Dispatch Policy designating the
