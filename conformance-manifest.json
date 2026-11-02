@@ -93037,6 +93037,47 @@
    "notes": "#939 slice 1 (D1119). Four captures of identical bytes, media type, origin facts and workflow, two in each of two intakes, yield four distinct capture_id values, each the base64url of 16 bytes (128 bits) from node:crypto randomBytes and none found in a secretless encoding of the request content; each emitted capture_id claim equals its receipt's. Distinct values for identical content show capture_id is not a function of the content. Mutations: C1 (capture_id from SHA-256 of the instruction, duplicate guard off) and C2 (64 random bits) each fail it."
   },
   {
+   "id": "request-provenance.assertion.presenter-of-capture",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "assertion",
+   "text": "the presenter of the workflow in which the instruction was captured",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the presenter an assertion carries is the authenticated presenter of the workflow that captured the instruction: one captured with the request, never one a signing request supplies"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > emits the captured presenter whether or not the signing request names it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > refuses a signing request naming %s, after the same capture and workflow signed for the captured presenter",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > refuses at capture a presenter with %s, where the vector's presenter is accepted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 1, #1971 review: capture() takes and retains the workflow's authenticated presenter and sign() emits that presenter; a presenter in a signing request is only a checked cross-reference, refused presenter_mismatch where it changes the client, changes the confirmation key, or removes the confirmation binding. At capture, a confirmation object is validated before it is copied and checked as copied: an undefined thumbprint, alone or beside a valid one, an empty object, an empty thumbprint or a non-object is refused. Mutations: skipping the cross-reference fails the three mismatch cases; dropping an undefined member, accepting an empty confirmation object, or accepting an empty thumbprint each fails a capture case. partial: unit tests in which the test supplies the presenter an intake would authenticate. The cross-component witness, a shaper's signing request crossing an isolated intake, awaits the demo intake service (D1119 Q6)."
+  },
+  {
    "id": "request-provenance.signing.own-capture-only",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "signing",
@@ -93102,9 +93143,21 @@
      "name": "the intake computes intent_hash itself (@spec request-provenance#signing, #939) > refuses a sign request carrying an intent_hash, a digest, an originator or channel facts",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939) > refuses an Intent carrying %s and signs nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/request-provenance/test/signing.test.ts",
+     "name": "the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939) > signs an exact-JSON Intent, nested values and a member named __proto__ included, over which intent_hash is unchanged",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#939 slice 1 (D1119). sign() takes the candidate Intent, never an intent_hash, and computes the OAuth binding's integrity anchor with iss the AS that aud names; the first test compares the emitted value with the generator's independent computation (vectors/mission-request-provenance/assertion.json) and a JCS computation written in the test, for two audiences. A sign request carrying an intent_hash, a request digest, an originator, channel facts, captured_at, claims, Shaping Evidence or a shaping hash is refused with no assertion, and a clean request carries the capture's originator, channel, digest and captured_at: supplied facts cannot change the emitted claims because they are refused. Mutations: I1 (anchor bound to the intake's iss) fails the first; I2 (input opened, a supplied intent_hash used) fails the second. partial: unit level, with test-supplied inputs. The cross-component witness, a shaper's request through an isolated intake, awaits the demo intake service (D1119 Q6)."
+   "notes": "#939 slice 1 (D1119). sign() takes the candidate Intent, never an intent_hash, and computes the OAuth binding's integrity anchor with iss the AS that aud names; the first test compares the emitted value with the generator's independent computation (vectors/mission-request-provenance/assertion.json) and a JCS computation written in the test, for two audiences. A sign request carrying an intent_hash, a request digest, an originator, channel facts, captured_at, claims, Shaping Evidence or a shaping hash is refused with no assertion, and a clean request carries the capture's originator, channel, digest and captured_at: supplied facts cannot change the emitted claims because they are refused. Mutations: I1 (anchor bound to the intake's iss) fails the first; I2 (input opened, a supplied intent_hash used) fails the second. partial: unit level, with test-supplied inputs. The cross-component witness, a shaper's request through an isolated intake, awaits the demo intake service (D1119 Q6). #1971 review: the candidate Intent is validated before it is copied (a non-finite number, NaN, an undefined member, a Date or a sparse array is refused, where a JSON copy had silently changed it), and an accepted Intent is preserved exactly, so intent_hash is computed over the Intent as given. Mutations: keeping a non-finite number, or dropping an undefined member, each fails the refusal witness. Still partial for the cross-component witness."
   },
   {
    "id": "request-provenance.signing.fresh-per-intent",
