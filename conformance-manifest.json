@@ -95395,7 +95395,7 @@
     "normative": "the presenter an assertion carries is the authenticated presenter of the workflow that captured the instruction: one captured with the request, never one a signing request supplies"
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/packages/request-provenance/test/signing.test.ts",
@@ -95414,9 +95414,127 @@
      "name": "the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939) > refuses at capture a presenter with %s, where the vector's presenter is accepted",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "the demo request intake end to end (@spec request-provenance#capture, request-provenance#signing, request-provenance#assertion, request-provenance#recorded-facts, #939 slice 2b-1) > Alice signs in at the IdP with her password and her device's code, the console captures her instruction, the shaper holding only the instruction and the workflow token obtains an assertion, and the push, authorization, rendering and decision record exactly that login's and capture's facts",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "capture needs the originator's intake session (@spec request-provenance#capture, request-provenance#intake-isolation, #939 slice 2b-1) > refuses a capture whose body names %s, in the originator's own session, and creates no capture record",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > yields no assertion for a signing request naming %s, and the workflow's next assertion carries the captured facts unchanged",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#939 slice 1, #1971 review: capture() takes and retains the workflow's authenticated presenter and sign() emits that presenter; a presenter in a signing request is only a checked cross-reference, refused presenter_mismatch where it changes the client, changes the confirmation key, or removes the confirmation binding. At capture, a confirmation object is validated before it is copied and checked as copied: an undefined thumbprint, alone or beside a valid one, an empty object, an empty thumbprint or a non-object is refused. Mutations: skipping the cross-reference fails the three mismatch cases; dropping an undefined member, accepting an empty confirmation object, or accepting an empty thumbprint each fails a capture case. partial: unit tests in which the test supplies the presenter an intake would authenticate. The cross-component witness, a shaper's signing request crossing an isolated intake, awaits the demo intake service (D1119 Q6)."
+   "notes": "#939 slice 1, #1971 review: capture() takes and retains the workflow's authenticated presenter and sign() emits that presenter; a presenter in a signing request is only a checked cross-reference, refused presenter_mismatch where it changes the client, changes the confirmation key, or removes the confirmation binding. At capture, a confirmation object is validated before it is copied and checked as copied: an undefined thumbprint, alone or beside a valid one, an empty object, an empty thumbprint or a non-object is refused. Mutations: skipping the cross-reference fails the three mismatch cases; dropping an undefined member, accepting an empty confirmation object, or accepting an empty thumbprint each fails a capture case. partial: unit tests in which the test supplies the presenter an intake would authenticate. The cross-component witness, a shaper's signing request crossing an isolated intake, awaits the demo intake service (D1119 Q6). #939 slice 2b-1 (D1119 Q6): witnessed through the demo request intake's endpoints (src/demo/src/request-intake.ts) in one in-process assembly on ephemeral ports and a controlled clock, with the originator authenticated for real at the reference IdP (password and the one-time code the IdP delivers to the enrolled device) and the AS's type enabled only in that assembly. The intake captures, with each request in the originator's session, the one client it is configured to serve (ap-agent, no cnf, as a pushed authorization request establishes it): the positive vector's assertion carries exactly that presenter and the push's step 9 accepts it. A capture body naming presenter creates no record, and a signing request naming presenter, even the captured one, yields no assertion, while the workflow's next assertion carries the captured presenter. Mutations: M5 (capture takes the presenter from its body) fails the capture case; M5b (signing passes a supplied presenter as the library's cross-reference) fails the signing case. tested: both clauses asserted at the service."
+  },
+  {
+   "id": "request-provenance.intake-isolation.shaper-excluded",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "intake-isolation",
+   "text": "the shaper can neither create or alter capture records nor ask the intake to sign for a request the intake did not capture itself",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A shaper holding only the instruction and the workflow token creates no capture record, alters none, and obtains no assertion for a request the intake did not capture: a capture without the originator's session, and a signing request under an unknown or another intake's token, naming a capture, or supplying an intent_hash, digest, originator, channel, presenter or audience, each yield no record or assertion."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > the shaper, holding only the instruction and the workflow token, can create no capture record and alter none",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "capture needs the originator's intake session (@spec request-provenance#capture, request-provenance#intake-isolation, #939 slice 2b-1) > refuses a capture with no intake session, a forged session cookie, or the workflow token as its credential, and creates no capture record",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > yields no assertion for an unknown workflow token, another intake's workflow token or no token, while the workflow's own token signs",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > yields no assertion for a signing request naming a capture_id, forged or another workflow's, beside the Intent",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > yields no assertion for a signing request naming %s, and the workflow's next assertion carries the captured facts unchanged",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 2b-1 (D1119 Q6): witnessed through the demo request intake's endpoints (src/demo/src/request-intake.ts) in one in-process assembly on ephemeral ports and a controlled clock, with the originator authenticated for real at the reference IdP (password and the one-time code the IdP delivers to the enrolled device) and the AS's type enabled only in that assembly. The stand-in shaper holds only the console's handoff, the instruction and the workflow token: a capture it attempts, with that token or none, with the original wording or its own, is refused and the intake's capture and assertion counts are unchanged, and the workflow's next assertion carries the same capture (request_digest, captured_at, capture_id); every substitution of the signing endpoint yields no assertion. The counts are an in-process accessor of the test assembly, not an endpoint. Mutations: M7 (capture without a session) fails the shaper and no-session cases; M3 (the token ignored) fails the token and capture_id cases; M2 (unknown members accepted) fails the capture_id and every supplied-member case. Isolation here is the demo deployment's, in one process; it is not evidence of an independently deployed intake."
+  },
+  {
+   "id": "request-provenance.capture.authenticated-before-shaping",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "capture",
+   "text": "Before any shaping, the intake authenticates the originator through the channel, receives the instruction, and creates a capture record",
+   "role": "PRODUCER",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.intake"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The intake creates a capture record only for an instruction it receives in a session where it authenticated the originator through the channel, before the shaper receives anything: the record's originator and channel facts are that authentication's, its captured_at precedes shaping, and a capture without that session, or naming its own origin facts, creates no record."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "the demo request intake end to end (@spec request-provenance#capture, request-provenance#signing, request-provenance#assertion, request-provenance#recorded-facts, #939 slice 2b-1) > Alice signs in at the IdP with her password and her device's code, the console captures her instruction, the shaper holding only the instruction and the workflow token obtains an assertion, and the push, authorization, rendering and decision record exactly that login's and capture's facts",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "the demo request intake end to end (@spec request-provenance#capture, request-provenance#signing, request-provenance#assertion, request-provenance#recorded-facts, #939 slice 2b-1) > a password-only login yields the channel the IdP asserted for that login: acr pwd, amr pwd and its own auth_time, recorded at the push",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "capture needs the originator's intake session (@spec request-provenance#capture, request-provenance#intake-isolation, #939 slice 2b-1) > refuses a capture with no intake session, a forged session cookie, or the workflow token as its credential, and creates no capture record",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "capture needs the originator's intake session (@spec request-provenance#capture, request-provenance#intake-isolation, #939 slice 2b-1) > refuses a capture whose body names %s, in the originator's own session, and creates no capture record",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 slice 2b-1 (D1119 Q6): witnessed through the demo request intake's endpoints (src/demo/src/request-intake.ts) in one in-process assembly on ephemeral ports and a controlled clock, with the originator authenticated for real at the reference IdP (password and the one-time code the IdP delivers to the enrolled device) and the AS's type enabled only in that assembly. The intake is an OpenID Connect relying party of the IdP, reusing the AS's ApproverLoginRelyingParty under its own client registration, and takes the originator (iss, sub) and the channel facts (acr, amr, auth_time) from the validated ID Token. The positive vector asserts captured_at before the shaper's first step and the login's auth_time before captured_at, and the recorded facts equal the IdP's own record of that login; a password-only login yields acr pwd and amr pwd; a capture with no session, a forged session cookie or the workflow token creates no record; a capture body naming originator, channel, presenter, workflow or captured_at creates no record. Mutations: M1 (a body-supplied originator captured) fails the originator case; M4 (channel facts from configuration) fails the positive vector and the password-only case; M7 (capture without a session) fails the no-session case. The IdP's login is the reference authentication exchange, not evidence of an independently deployed one."
   },
   {
    "id": "request-provenance.signing.own-capture-only",
@@ -95436,7 +95554,7 @@
     "normative": "A signing request naming a capture record from another workflow, or carrying no capture record of the intake's own, yields no assertion."
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/packages/request-provenance/test/signing.test.ts",
@@ -95449,9 +95567,21 @@
      "name": "signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses another workflow's capture and yields no assertion",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > yields no assertion for an unknown workflow token, another intake's workflow token or no token, while the workflow's own token signs",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > yields no assertion for a signing request naming a capture_id, forged or another workflow's, beside the Intent",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#939 slice 1 (D1119). The library refuses, with no assertion, a sign request naming a capture this intake does not hold (an unminted identifier, or a real capture another intake made) and one naming another workflow's capture, while it holds a capture of its own for the requesting workflow; each capture signs from its own intake and workflow. Mutations: S1 (workflow comparison removed) and S2 (an unknown capture falling back to the latest capture) each fail the matching test. partial: unit tests in which the test supplies the workflow identifiers an intake would establish. The row's cross-component witness, a shaper's signing request crossing an isolated intake boundary, awaits the demo intake service; per D1119 Q6, isolation and authenticated-origin rows are not promoted on unit tests with trusted-looking inputs."
+   "notes": "#939 slice 1 (D1119). The library refuses, with no assertion, a sign request naming a capture this intake does not hold (an unminted identifier, or a real capture another intake made) and one naming another workflow's capture, while it holds a capture of its own for the requesting workflow; each capture signs from its own intake and workflow. Mutations: S1 (workflow comparison removed) and S2 (an unknown capture falling back to the latest capture) each fail the matching test. partial: unit tests in which the test supplies the workflow identifiers an intake would establish. The row's cross-component witness, a shaper's signing request crossing an isolated intake boundary, awaits the demo intake service; per D1119 Q6, isolation and authenticated-origin rows are not promoted on unit tests with trusted-looking inputs. #939 slice 2b-1 (D1119 Q6): witnessed through the demo request intake's endpoints (src/demo/src/request-intake.ts) in one in-process assembly on ephemeral ports and a controlled clock, with the originator authenticated for real at the reference IdP (password and the one-time code the IdP delivers to the enrolled device) and the AS's type enabled only in that assembly. The signing endpoint resolves the capture from the workflow token alone and names none: a signing request naming a capture_id (forged, another workflow's, or even the workflow's own) yields no assertion, and so does one under an unknown token, a real workflow token of another intake (a request this intake did not capture), no token, another scheme, or the console's session cookie, while the workflow's own token signs from its own capture. Mutations: M3 (the token ignored, the latest capture signed) fails both; M2 (unknown members accepted) fails the capture_id case. tested: both clauses asserted at the service."
   },
   {
    "id": "request-provenance.signing.own-intent-hash",
@@ -95471,7 +95601,7 @@
     "normative": "The emitted intent_hash equals the intake's own computation over the candidate Intent for the AS that aud names; an intent_hash, digest, originator, or channel fact supplied by the shaper does not change the emitted claims."
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/packages/request-provenance/test/signing.test.ts",
@@ -95496,9 +95626,21 @@
      "name": "the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939) > signs an exact-JSON Intent, nested values and a member named __proto__ included, over which intent_hash is unchanged",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "the demo request intake end to end (@spec request-provenance#capture, request-provenance#signing, request-provenance#assertion, request-provenance#recorded-facts, #939 slice 2b-1) > Alice signs in at the IdP with her password and her device's code, the console captures her instruction, the shaper holding only the instruction and the workflow token obtains an assertion, and the push, authorization, rendering and decision record exactly that login's and capture's facts",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "shaper-supplied capture substitution (@spec request-provenance#signing, request-provenance#intake-isolation, #939 slice 2b-1) > yields no assertion for a signing request naming %s, and the workflow's next assertion carries the captured facts unchanged",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#939 slice 1 (D1119). sign() takes the candidate Intent, never an intent_hash, and computes the OAuth binding's integrity anchor with iss the AS that aud names; the first test compares the emitted value with the generator's independent computation (vectors/mission-request-provenance/assertion.json) and a JCS computation written in the test, for two audiences. A sign request carrying an intent_hash, a request digest, an originator, channel facts, captured_at, claims, Shaping Evidence or a shaping hash is refused with no assertion, and a clean request carries the capture's originator, channel, digest and captured_at: supplied facts cannot change the emitted claims because they are refused. Mutations: I1 (anchor bound to the intake's iss) fails the first; I2 (input opened, a supplied intent_hash used) fails the second. partial: unit level, with test-supplied inputs. The cross-component witness, a shaper's request through an isolated intake, awaits the demo intake service (D1119 Q6). #1971 review: the candidate Intent is validated before it is copied (a non-finite number, NaN, an undefined member, a Date or a sparse array is refused, where a JSON copy had silently changed it), and an accepted Intent is preserved exactly, so intent_hash is computed over the Intent as given. Mutations: keeping a non-finite number, or dropping an undefined member, each fails the refusal witness. Still partial for the cross-component witness."
+   "notes": "#939 slice 1 (D1119). sign() takes the candidate Intent, never an intent_hash, and computes the OAuth binding's integrity anchor with iss the AS that aud names; the first test compares the emitted value with the generator's independent computation (vectors/mission-request-provenance/assertion.json) and a JCS computation written in the test, for two audiences. A sign request carrying an intent_hash, a request digest, an originator, channel facts, captured_at, claims, Shaping Evidence or a shaping hash is refused with no assertion, and a clean request carries the capture's originator, channel, digest and captured_at: supplied facts cannot change the emitted claims because they are refused. Mutations: I1 (anchor bound to the intake's iss) fails the first; I2 (input opened, a supplied intent_hash used) fails the second. partial: unit level, with test-supplied inputs. The cross-component witness, a shaper's request through an isolated intake, awaits the demo intake service (D1119 Q6). #1971 review: the candidate Intent is validated before it is copied (a non-finite number, NaN, an undefined member, a Date or a sparse array is refused, where a JSON copy had silently changed it), and an accepted Intent is preserved exactly, so intent_hash is computed over the Intent as given. Mutations: keeping a non-finite number, or dropping an undefined member, each fails the refusal witness. Still partial for the cross-component witness. #939 slice 2b-1 (D1119 Q6): witnessed through the demo request intake's endpoints (src/demo/src/request-intake.ts) in one in-process assembly on ephemeral ports and a controlled clock, with the originator authenticated for real at the reference IdP (password and the one-time code the IdP delivers to the enrolled device) and the AS's type enabled only in that assembly. The positive vector's intent_hash equals the AS's provisionalIntentHash over the shaped Intent for the issuer the AS instance reports, which is the aud the intake signs for. A signing request supplying an intent_hash, a request_digest, a digest, an originator, channel facts, a presenter or an audience yields no assertion, and the workflow's next assertion carries the intake's own intent_hash and the captured facts. Mutations: M2 (unknown members accepted) fails every supplied-member case; M6 (audience from the signing request) fails the audience case; M9 (an audience other than the configured AS) fails the positive vector. tested: both clauses asserted at the service."
   },
   {
    "id": "request-provenance.signing.fresh-per-intent",
@@ -95552,10 +95694,17 @@
    "observation": {
     "normative": "the intake refuses to issue an assertion for a revised Intent from a capture older than the deployment's maximum capture age"
    },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#939 (D1119): stated by the scoped draft edits, answering the working-group comment of 2026-10-08. Todo until the intake library (#939 slice 1) witnesses it."
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/request-intake-e2e.test.ts",
+     "name": "a revision past the maximum capture age needs a new capture (@spec request-provenance#signing, #939 slice 2b-1) > a revised Intent within the maximum capture age gets a fresh assertion from the same capture, and past it the service yields none until the originator's instruction is captured again",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#939 (D1119): stated by the scoped draft edits, answering the working-group comment of 2026-10-08. Todo until the intake library (#939 slice 1) witnesses it. #939 slice 2b-1 (D1119 Q6): witnessed through the demo request intake's endpoints (src/demo/src/request-intake.ts) in one in-process assembly on ephemeral ports and a controlled clock, with the originator authenticated for real at the reference IdP (password and the one-time code the IdP delivers to the enrolled device) and the AS's type enabled only in that assembly. Within the maximum capture age (60 s in the assembly, the same at the intake and the AS) a revised Intent gets a fresh jti, its own intent_hash, and the same capture_id and request_digest, and the push accepts it; past the age, a further revision yields no assertion (capture_too_old) and the intake issues nothing, until a new capture of the instruction, received from the originator again, signs. Mutation: M8 (the intake signing under a longer age than the configured one) fails it. Level moved to cross-component: the service is the surface the observation names."
   },
   {
    "id": "request-provenance.request-digest.construction",
