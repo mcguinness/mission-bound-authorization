@@ -483,6 +483,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import { INTERACTION_TTL_S, PROVIDER_CLOCK_TOLERANCE_S } from "../kernel/interaction-lifetime.js";
 import {
   HISTORICAL_JWKS_PATH,
   HISTORICAL_KEY_SET_MEDIA_TYPE,
@@ -2817,6 +2818,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         },
       },
     } as never,
+    // oidc-provider's own default, named so the kernel keeps an approval
+    // reservation for at least the time an expired interaction is still
+    // accepted (#1922).
+    clockTolerance: PROVIDER_CLOCK_TOLERANCE_S,
     // @spec mission#mission-bound-tokens — every credential oidc-provider
     // issues under a Mission-bound grant is clamped to the Mission's
     // `expires_at` (clampToMission). Each configured lifetime is oidc-provider's
@@ -2855,6 +2860,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
         const familyBound = fam !== undefined && kernel.get(fam.missionId) !== undefined;
         return clampToMission(familyBound ? Number.POSITIVE_INFINITY : 14 * 24 * 60 * 60, grantId, mintSurface(_ctx));
       },
+      // The interaction's lifetime bounds every decision on it, so the kernel
+      // prunes approval reservations past it (#1922): one value for both.
+      Interaction: INTERACTION_TTL_S,
     },
   };
 
