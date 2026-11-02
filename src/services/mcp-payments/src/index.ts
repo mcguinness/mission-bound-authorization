@@ -145,7 +145,7 @@ export {
   snapshotArguments,
 } from "./invocation-arguments.js";
 export type { InvocationArguments } from "./pep.js";
-export { accessTokenHash } from "./dpop.js";
+export { accessTokenHash, DpopProofError } from "./dpop.js";
 export {
   Connectors,
   type WireCommit,
