@@ -1323,6 +1323,20 @@ describe("the admission scope at the dispatch (@spec request-provenance#replay, 
     admission.release();
     const c = claimsOf(signed.entry.assertion);
     expect(store.accepted(String(c.iss), String(c.jti), Date.now())?.submissionRef).toBe("par:scope-test");
+    // The scope's own guard, apart from the store's: a committed scope calls no hold's release.
+    expect(admission.state).toBe("committed");
+    const recorded = new SubmissionAdmission();
+    let holdReleases = 0;
+    recorded.hold({
+      commit() {},
+      release() {
+        holdReleases += 1;
+      },
+    });
+    recorded.commit("par:recorded");
+    recorded.release();
+    expect(holdReleases).toBe(0);
+    expect(recorded.state).toBe("committed");
     const released = new SubmissionAdmission();
     released.release();
     released.release();
