@@ -11,6 +11,7 @@ import {
   type AuthorityEntry,
   assertContractDescriptors,
   authorityHash,
+  canonicalDigest,
   contractDescriptor,
   credentialEntriesFromAuthority,
   EvaluationContextBindingDeclarations,
@@ -498,14 +499,31 @@ describe("the evaluation-context descriptors a contract version names (@spec run
     expect(declaredVersion(contracts, "2026-10-27").evaluation_context_descriptors).toBeDefined();
   });
 
-  it("refuses at load a current version naming a descriptor other than the one the claim declares for the crossing", () => {
+  it("refuses at load a current version naming a descriptor other than the one the claim declares for the crossing, though the claim publishes it", () => {
     const st = shipped();
-    const current = versionOf(st, "2026-11-02");
-    const op = current.document.operations.execute_wire_transfer as Record<string, unknown>;
-    op.evaluation_context_descriptor = {
-      ...(op.evaluation_context_descriptor as object),
-      version: "2026-10-23",
+    // The claim also publishes an earlier payments:payment.execute descriptor
+    // version, while declaring the shipped one for the operation.
+    const ecb = st.extensions.evaluation_context_binding as unknown as {
+      descriptors: Array<{
+        id: string;
+        version: string;
+        digest: string;
+        document: Record<string, unknown>;
+      }>;
     };
+    const shippedExecute = ecb.descriptors.find((d) => d.id.endsWith("/payment-execute"));
+    if (!shippedExecute) throw new Error("the execute descriptor is published");
+    const earlierDocument = { ...shippedExecute.document, version: "2026-10-23" };
+    const earlier = {
+      id: shippedExecute.id,
+      version: "2026-10-23",
+      digest: canonicalDigest(earlierDocument as never),
+    };
+    ecb.descriptors.push({ ...earlier, document: earlierDocument });
+    const current = versionOf(st, "2026-11-02");
+    (
+      current.document.operations.execute_wire_transfer as Record<string, unknown>
+    ).evaluation_context_descriptor = earlier;
     recommit(current);
     const { contracts, binding } = load(st);
     expect(() => assertContractDescriptors(contracts, binding)).toThrow(
