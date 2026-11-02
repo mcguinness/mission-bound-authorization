@@ -23,7 +23,7 @@ Package status at the frozen baseline:
 
 | Package | Status |
 | --- | --- |
-| P0 | Baseline frozen by this revision. The tracking issue and the P5 readers remain open. |
+| P0 | Baseline frozen by this revision; #1944 carries the gate. The P5 readers remain open. |
 | P3 | Dependency inversion done. Remaining: the local extension contract, A1, the adopter review and the Governance member explanations. |
 | P2 | Not started. Item 5 (Status and revocation) is complete through #1960. |
 | P1, P4 | Not started. |
@@ -93,7 +93,7 @@ No in-family normative reference remains: #1974 made Approval Governance informa
 | #1937 and PR #1939, issued-token validity | Merged. Do not restore an unconditional claim that every issued token remains valid until expiry. |
 | #1504 and PR #1942, editorial residue and legacy states | Merged. Do not reintroduce removed legacy interpretations or duplicate the consumption-mode rewrite. |
 | #1927, record and evidence follow-ups | Keep its ledger, commitment-input and Consent Evidence work separate. Re-anchor its rows if this plan changes their owning sections; do not silently change the proposed `verified_at` behavior. |
-| D1144, the tracking issue | D1144 filed no separate core-independence tracker because #1967 owned the work. #1967 is closed, so P0 files one, as D1195 recommends, on the owner's "file". |
+| D1144, the tracking issue | D1144 filed no separate core-independence tracker because #1967 owned the work. With #1967 closed, the owner ruled (2026-11-02) that #1944, whose release order already puts the binding's independence before `-02`, carries the gate; no new issue is filed. |
 | D1192 and D1195, the gate review | D1192 reviewed the pass against the exit conditions. D1195 confirmed the criteria and corrected the review: exit 5 is not evaluated, exit 3 rests on the mechanism catalogue in Grant Bindings and Related Mechanisms (P2 item 1), and A1 is resolved locally. |
 
 The owner's instruction authorizes developing this plan and the independence direction. It does not turn every implementation choice below into an already-published protocol rule. Any actual requirement change must be identified in its PR. Early-draft status removes the need to invent a legacy compatibility mode, but it does not justify losing an obligation during relocation.
@@ -163,7 +163,7 @@ Re-quote and re-anchor rows in the same commit as the text. Split or retire a ro
 
 1. **Ruling of record.** D1134 is the recorded supersession, and Revision 2's proposed P0 text is withdrawn. D1195 confirms that the eight exit conditions, P5 and this plan's completion record remain the full gate for `-02`.
 2. **Baseline.** Frozen by this revision at `ac00dc76`: body 35,829 words, Extensibility 2,089 and appendices 2,804 ([measure.py](measure.py)); 112 family citations across 29 documents ([inventory.py](inventory.py)).
-3. **Tracking issue.** File a self-contained issue that quotes the exit conditions and lists the remaining packages and their acceptance, in about 1,000 words, linking this plan at its merged commit. Search first, add it to #302 after re-reading its body, and record one D-row. Filing needs the owner's "file".
+3. **Tracking issue.** None is filed (owner ruling, 2026-11-02): #1944 carries the gate, since its release-order ruling already makes the binding's independence step (1) of `-02`. Its body is rewritten to about 1,000 words, quoting the eight exit conditions and listing the remaining packages and their acceptance, with this plan linked at its merged commit. Its #302 row names the next package.
 4. **P5 readers.** Name the two independent readers before P3's remaining work starts, or obtain a ruling on whether a disclosed cold model reader may serve as one. Without them P5 cannot pass and `-02` cannot publish.
 
 Do not rewrite historical D-rows. A builder must not promote its own proposal to a ruling.
@@ -305,7 +305,7 @@ Keep all changed source pins current. Inspect rendered tables, examples, interna
 
 ## Sequencing and concurrent work
 
-P0's remaining items, the tracking issue and the P5 readers, precede renewed draft edits. P3's remaining work lands next, then P2, P1 and P4, one PR each; P5 evaluates the combined result. Package IDs are stable labels, not execution order. A relocation lands destination-first and its source deletion waits. P2 never starts relocating against an unwritten contract.
+P0's remaining items, #1944's rewritten body and the P5 readers, precede renewed draft edits. P3's remaining work lands next, then P2, P1 and P4, one PR each; P5 evaluates the combined result. Package IDs are stable labels, not execution order. A relocation lands destination-first and its source deletion waits. P2 never starts relocating against an unwritten contract.
 
 The dependency removal has landed, so normative family independence holds at the references level. The `-02` release gate is not complete (D1195). The owner has selected aggressive scope for `-02`; do not move P1, P2 or P4 to a later revision solely to preserve the current schedule. Present any newly discovered semantic blocker explicitly instead of quietly publishing a partial pass.
 
