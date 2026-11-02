@@ -17,8 +17,17 @@
 
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { canonicalDigest, EvaluationContextBindingDeclarations, type JsonValue, type ResourceContractRef } from "@mission/core";
-import { pinnedToCurrentContract, RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import {
+  canonicalDigest,
+  contractDescriptor,
+  EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
+  type JsonValue,
+  ResourceContractDeclarations,
+  type ResourceContractRef,
+  resourceContractDigest,
+} from "@mission/core";
+import { contractsRequiring, pinnedToCurrentContract, RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
   type Decision,
@@ -68,6 +77,20 @@ const claimedStatement = (over: (s: Statement) => Statement = (s) => s): Stateme
 const CLAIMED = new EvaluationContextBindingDeclarations(claimedStatement());
 /** The shipped declaration with no claim: it covers nothing. */
 const UNCLAIMED = new EvaluationContextBindingDeclarations({ ...structuredClone(SHIPPED), claims: [] });
+
+/**
+ * The descriptor `declarations` names for `operation`: what a crossing
+ * performed under no contract is captured under, and what the direct
+ * captures below use (#249, D1155).
+ */
+const declaredDescriptor = (
+  declarations: EvaluationContextBindingDeclarations,
+  operation: { action: string; phase?: string },
+): EvaluationContextBindingRef => {
+  const d = declarations.operation(operation.action, operation.phase)?.descriptor;
+  if (!d) throw new Error(`not covered: ${operation.action} ${operation.phase ?? ""}`);
+  return d;
+};
 
 interface DescriptorEntry {
   id: string;
@@ -162,6 +185,10 @@ interface Harness {
   lastDecision: () => Decision | undefined;
   /** Replace the declaration the PEP reads from here on (the PDP's stays). */
   declareAtPep: (d: EvaluationContextBindingDeclarations) => void;
+  /** Replace the contract declarations the PEP reads from here on (the PDP's stay). */
+  declareContractsAtPep: (c: ResourceContractDeclarations) => void;
+  /** The reasons of the PDP's Refusal Records: requests it refused before evaluation. */
+  pdpRefusals: () => string[];
   /** The salt keeper the PEP reads now; `restart` replaces it with a fresh epoch. */
   salts: () => EvaluationContextSalts;
   restart: () => void;
@@ -187,6 +214,9 @@ function harness(
      * default the current one, and "none" for an entry that pins none (#249).
      */
     contract?: ResourceContractRef | "none";
+    /** The contract declarations the PEP and the PDP read: by default the shipped ones (#249, D1155). */
+    pepContracts?: ResourceContractDeclarations;
+    pdpContracts?: ResourceContractDeclarations;
   } = {},
 ): Harness {
   const now = () => new Date(BASE_MS);
@@ -213,6 +243,7 @@ function harness(
       ? { view: view(ref.id, constraints, o.contract), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
   let pepKeys: EvidenceKeyResolver | undefined;
+  const pdpRefusals: string[] = [];
   const claims = openEphemeralClaimDomain({
     owner: RUNTIME_POSTURE.pdps[0] as string,
     statement: RUNTIME_POSTURE,
@@ -225,6 +256,10 @@ function harness(
     audience: CANONICAL_RESOURCE,
     claims,
     evaluationContextBinding: o.pdp ?? CLAIMED,
+    ...(o.pdpContracts ? { resourceContracts: o.pdpContracts } : {}),
+    refusals: (r) => {
+      pdpRefusals.push(r.denial_reason);
+    },
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   pepKeys = keys.resolver;
@@ -233,6 +268,7 @@ function harness(
   const engine = new TransactionEngine("epoch-773", now);
   const requests: EvaluationRequest[] = [];
   let declarations = o.pep ?? CLAIMED;
+  let pepContracts = o.pepContracts ?? RESOURCE_CONTRACTS;
   let salts = new EvaluationContextSalts();
   let rewrite: ((d: Decision) => Decision) | undefined;
   let decided: Decision | undefined;
@@ -256,6 +292,7 @@ function harness(
     now,
     evaluationContextBinding: () => declarations,
     evaluationContextSalts: () => salts,
+    resourceContracts: () => pepContracts,
   });
   const server = new McpPaymentsServer({
     pep,
@@ -279,6 +316,10 @@ function harness(
     declareAtPep: (d) => {
       declarations = d;
     },
+    declareContractsAtPep: (c) => {
+      pepContracts = c;
+    },
+    pdpRefusals: () => [...pdpRefusals],
     salts: () => salts,
     restart: () => {
       salts = new EvaluationContextSalts();
@@ -402,7 +443,7 @@ describe("Evaluation-Context Binding at the PEP (@spec runtime#evaluation-contex
     const salts = new EvaluationContextSalts();
     const mission = { issuer: ISSUER, id: "msn_773" };
     const operation = { action: "payments:payment.execute", phase: "commit" };
-    const captured = captureEvaluationContext({ declarations: CLAIMED, salts, mission, operation, invoiceId: "inv-1", payments });
+    const captured = captureEvaluationContext({ declarations: CLAIMED, salts, mission, operation, descriptor: declaredDescriptor(CLAIMED, operation), invoiceId: "inv-1", payments });
     if (!captured.ok) throw new Error(`capture failed: ${captured.reason}`);
     const version = salts.current() as string;
     const reference = CLAIMED.operation("payments:payment.execute", "commit")?.descriptor;
@@ -429,6 +470,7 @@ describe("Evaluation-Context Binding at the PEP (@spec runtime#evaluation-contex
     // an Operation Profile update cannot reinterpret an outstanding permit.
     const republished = captureEvaluationContext({
       declarations: republishedPaymentDescriptor(),
+      descriptor: declaredDescriptor(republishedPaymentDescriptor(), operation),
       salts,
       mission,
       operation,
@@ -574,9 +616,12 @@ describe("the primary error of a context failure at use, with every available di
     // The declaration names a new descriptor version for the operation; the
     // original stays published. And a declaration that no longer covers the
     // crossing at all.
+    // A crossing performed under no contract, whose descriptor is the one the
+    // live declaration names (#249, D1155); under a contract the check reads
+    // the contract's, witnessed in the describe at the end of this file.
     for (const declaration of [republishedPaymentDescriptor(), UNCLAIMED]) {
-      const h = harness();
-      const refused = await cross(h, COMMIT, () => h.declareAtPep(declaration));
+      const h = harness(UNPINNED_PATH);
+      const refused = await cross(h, COMMIT, () => h.declareAtPep(declaration), "inv-1", UNPINNED_TOKEN);
       expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
       expect(h.connectors.committedEffects()).toHaveLength(0);
       const [record] = executions(h);
@@ -592,11 +637,18 @@ describe("the primary error of a context failure at use, with every available di
   });
 
   it("a fact that moved under a changed descriptor diverges under the retained original and is target_drift", async () => {
-    const h = harness();
-    const refused = await cross(h, COMMIT, () => {
-      h.declareAtPep(republishedPaymentDescriptor());
-      h.payments.bumpInvoiceAmount("inv-1", "130.00");
-    });
+    // Under no contract, as above (#249, D1155).
+    const h = harness(UNPINNED_PATH);
+    const refused = await cross(
+      h,
+      COMMIT,
+      () => {
+        h.declareAtPep(republishedPaymentDescriptor());
+        h.payments.bumpInvoiceAmount("inv-1", "130.00");
+      },
+      "inv-1",
+      UNPINNED_TOKEN,
+    );
     expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
     expect(h.connectors.committedEffects()).toHaveLength(0);
     const [record] = executions(h);
@@ -605,8 +657,8 @@ describe("the primary error of a context failure at use, with every available di
     // descriptor and the binding's salt version, never under the new one.
     const operation = { action: "payments:payment.execute", phase: "commit" };
     const mission = { issuer: ISSUER, id: "msn_773" };
-    const underOriginal = captureEvaluationContext({ declarations: CLAIMED, salts: h.salts(), mission, operation, invoiceId: "inv-1", payments: h.payments });
-    const underLive = captureEvaluationContext({ declarations: republishedPaymentDescriptor(), salts: h.salts(), mission, operation, invoiceId: "inv-1", payments: h.payments });
+    const underOriginal = captureEvaluationContext({ declarations: CLAIMED, salts: h.salts(), mission, operation, descriptor: declaredDescriptor(CLAIMED, operation), invoiceId: "inv-1", payments: h.payments });
+    const underLive = captureEvaluationContext({ declarations: republishedPaymentDescriptor(), salts: h.salts(), mission, operation, descriptor: declaredDescriptor(republishedPaymentDescriptor(), operation), invoiceId: "inv-1", payments: h.payments });
     if (!underOriginal.ok || !underLive.ok) throw new Error("capture failed");
     expect(record?.effective_evaluation_context_digest).toBe(underOriginal.digest);
     expect(record?.effective_evaluation_context_digest).not.toBe(underLive.digest);
@@ -742,6 +794,7 @@ function captureFromWire(h: Harness, decision: DecisionEvidence["content"] | und
   const opKey = operationKey("msn_773", "payments:payment.execute", wire.parameter_digest, "commit");
   return captureEvaluationContext({
     declarations: CLAIMED,
+    descriptor: declaredDescriptor(CLAIMED, reverseOperation),
     salts: h.salts(),
     mission: { issuer: ISSUER, id: "msn_773" },
     operation: reverseOperation,
@@ -960,6 +1013,7 @@ describe("the compensate crossing binds the live resource facts its decision eva
     const capture = (declarations: EvaluationContextBindingDeclarations) =>
       captureEvaluationContext({
         declarations,
+        descriptor: declaredDescriptor(declarations, reverseOperation),
         salts: new EvaluationContextSalts(),
         mission: { issuer: ISSUER, id: "msn_773" },
         operation: reverseOperation,
@@ -1188,6 +1242,7 @@ describe("the compensate crossing checks the current tenant of the vendor the co
     const capture = (vendorId?: string) =>
       captureEvaluationContext({
         declarations: CLAIMED,
+        descriptor: declaredDescriptor(CLAIMED, reverseOperation),
         salts,
         mission: { issuer: ISSUER, id: "msn_773" },
         operation: reverseOperation,
@@ -1248,6 +1303,7 @@ describe("the compensate crossing checks the current tenant of the vendor the co
     const capture = (declarations: EvaluationContextBindingDeclarations) =>
       captureEvaluationContext({
         declarations,
+        descriptor: declaredDescriptor(declarations, reverseOperation),
         salts: new EvaluationContextSalts(),
         mission: { issuer: ISSUER, id: "msn_773" },
         operation: reverseOperation,
@@ -1329,8 +1385,15 @@ function contractRef(version: string): ResourceContractRef {
 const V14_CONTRACT = contractRef("2026-10-24");
 /** Contract version 2026-10-26, naming payments-runtime-profile-v15 (#1693), superseded by v16 (#813). */
 const V15_CONTRACT = contractRef("2026-10-26");
-/** Contract version 2026-10-27, naming payments-runtime-profile-v16 (#813, #816), current. */
+/** Contract version 2026-10-27, naming payments-runtime-profile-v16 (#813, #816), superseded by 2026-11-02. */
 const V16_CONTRACT = contractRef("2026-10-27");
+/** Contract version 2026-10-20, naming payments-runtime-profile-v13, published before the Evaluation-Context Binding claim. */
+const V13_CONTRACT = contractRef("2026-10-20");
+/** Contract version 2026-11-02, naming payments-runtime-profile-v16 and its evaluation-context descriptors (#249, D1155), current. */
+const CURRENT_CONTRACT = contractRef("2026-11-02");
+
+/** A Mission whose entry pins no contract, at a resource that requires none: the live declaration governs (#249, D1155). */
+const UNPINNED_PATH = { contract: "none" as const, pepContracts: contractsRequiring([]), pdpContracts: contractsRequiring([]) };
 
 /** `TOKEN` whose credential's one entry pins no contract, as an unpinned Mission's entry (#249). */
 const UNPINNED_TOKEN: TokenFacts = {
@@ -1356,10 +1419,12 @@ const pinnedToken = (contract: ResourceContractRef): TokenFacts => ({
 const commitArgs = () => ({ invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
 
 describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879)", () => {
-  it("declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)", () => {
+  it("declares 2026-11-02 current under v16, and 2026-10-27 superseded under v16, 2026-10-26 under v15 and 2026-10-24 under v14, each with a retention (#813; #249, D1155)", () => {
     const [declared] = RESOURCE_CONTRACTS.declarations;
     const byVersion = (v: string) => declared?.versions.find((x) => x.version === v);
-    expect(byVersion("2026-10-27")).toMatchObject({ state: "current", operation_profile: "payments-runtime-profile-v16" });
+    expect(byVersion("2026-11-02")).toMatchObject({ state: "current", operation_profile: "payments-runtime-profile-v16" });
+    expect(byVersion("2026-10-27")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v16" });
+    expect(byVersion("2026-10-27")?.retained_until).toBe("2027-11-02T00:00:00Z");
     expect(byVersion("2026-10-26")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v15" });
     expect(byVersion("2026-10-26")?.retained_until).toEqual(expect.any(String));
     expect(byVersion("2026-10-24")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v14" });
@@ -1590,10 +1655,17 @@ describe("the shipped declaration and the Operation Profile agree (@spec runtime
       missionId: "msn_773",
     });
     const compensated = { opKey: "op-wire", evaluationId: "evl-wire" };
+    const [contract] = RESOURCE_CONTRACTS.declarations;
+    const currentVersion = contract?.versions.find((v) => v.state === "current");
+    if (!currentVersion) throw new Error("a current contract version is declared");
     for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
       if (!declared.covers(mapping.action, mapping.phase)) continue;
+      const named = contractDescriptor(currentVersion, mapping.action, mapping.phase);
+      expect(named, tool).toEqual(declared.operation(mapping.action, mapping.phase)?.descriptor);
+      if (!named) continue;
       const base = {
         declarations: declared,
+        descriptor: named,
         salts,
         mission: { issuer: ISSUER, id: "msn_773" },
         operation: { action: mapping.action, ...(mapping.phase !== undefined ? { phase: mapping.phase } : {}) },
@@ -1610,5 +1682,139 @@ describe("the shipped declaration and the Operation Profile agree (@spec runtime
       }
     }
     expect(Object.values(TOOL_ACTIONS).some((m) => m.compensates && declared.covers(m.action, m.phase))).toBe(true);
+  });
+});
+
+// @spec runtime#resource-contract rule 3, runtime#evaluation-context-binding,
+// authzen#context-evaluation-binding (#249, D1155): the evaluation-context
+// descriptor is contract material, so a crossing is captured, decided and
+// released under the descriptor the contract it is performed under names, a
+// retained version keeps its own for its retention, and a version that names
+// none refuses rather than borrowing the live one.
+describe("a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155)", () => {
+  type RawContracts = Array<{
+    id: string;
+    versions: Array<{
+      version: string;
+      state: string;
+      digest: string;
+      retained_until?: string;
+      evaluation_context_descriptors?: Record<string, unknown>;
+      document: { version: string; operations: Record<string, { action: string; evaluation_context_descriptor?: unknown }> };
+    }>;
+  }>;
+  const shippedContracts = (): RawContracts => structuredClone(SHIPPED.extensions.resource_contracts) as RawContracts;
+  const EXECUTE = { action: "payments:payment.execute", phase: "commit" };
+  /** The live declaration naming a new payments:payment.execute descriptor; the shipped one stays published. */
+  const REPUBLISHED = republishedPaymentDescriptor();
+  const NEXT_DESCRIPTOR = declaredDescriptor(REPUBLISHED, EXECUTE);
+  const SHIPPED_DESCRIPTOR = declaredDescriptor(CLAIMED, EXECUTE);
+
+  /**
+   * The shipped declarations with a test-only current version, 2026-12-01,
+   * naming `descriptor` for every crossing of payments:payment.execute, and
+   * 2026-11-02 superseded until `retainedUntil`: the live declaration and a
+   * retained version then name different descriptors.
+   */
+  function contractsWithNext(descriptor: EvaluationContextBindingRef, retainedUntil: string) {
+    const raw = shippedContracts();
+    const [declaration] = raw;
+    const current = declaration?.versions.find((v) => v.state === "current");
+    if (!declaration || !current) throw new Error("a current version is declared");
+    const document = structuredClone(current.document);
+    document.version = "2026-12-01";
+    for (const op of Object.values(document.operations)) {
+      if (op.action === EXECUTE.action) op.evaluation_context_descriptor = descriptor;
+    }
+    const digest = resourceContractDigest(document as unknown as JsonValue);
+    const retained: ResourceContractRef = { id: declaration.id, version: current.version, digest: current.digest };
+    current.state = "superseded";
+    current.retained_until = retainedUntil;
+    declaration.versions.unshift({ version: "2026-12-01", state: "current", digest, document });
+    return { contracts: new ResourceContractDeclarations(raw), next: { id: declaration.id, version: "2026-12-01", digest }, retained };
+  }
+
+  /** The shipped declarations with 2026-10-27's association naming `descriptor` for every crossing of payments:payment.execute. */
+  function contractsAssociating(descriptor: EvaluationContextBindingRef): ResourceContractDeclarations {
+    const raw = shippedContracts();
+    const v16 = raw[0]?.versions.find((v) => v.version === "2026-10-27");
+    if (!v16?.evaluation_context_descriptors) throw new Error("2026-10-27 declares its association");
+    for (const [tool, op] of Object.entries(v16.document.operations)) {
+      if (op.action === EXECUTE.action) v16.evaluation_context_descriptors[tool] = descriptor;
+    }
+    return new ResourceContractDeclarations(raw);
+  }
+
+  it("a new approval, pinned to the version naming the live descriptor, is captured, decided and released under it", async () => {
+    const { contracts, next } = contractsWithNext(NEXT_DESCRIPTOR, "2026-12-01T00:00:00Z");
+    const h = harness({ contract: next, pep: REPUBLISHED, pdp: REPUBLISHED, pepContracts: contracts, pdpContracts: contracts });
+    const done = await cross(h, COMMIT, undefined, "inv-1", pinnedToken(next));
+    expect(done.ok, JSON.stringify(done)).toBe(true);
+    expect(h.lastContext()?.evaluation_context_binding).toEqual(NEXT_DESCRIPTOR);
+    expect(h.connectors.committedEffects()).toHaveLength(1);
+  });
+
+  it("a retained approval, pinned to a superseded version within its retention, is captured, decided and released under the descriptor that version names, never the one the live declaration names now: in its document (2026-11-02) or in the deployment's association beside it (2026-10-27)", async () => {
+    const { contracts, retained } = contractsWithNext(NEXT_DESCRIPTOR, "2026-12-01T00:00:00Z");
+    for (const pinned of [retained, V16_CONTRACT]) {
+      for (const c of [PREFLIGHT, PREPARE, COMMIT]) {
+        const label = `${pinned.version} ${c.tool}`;
+        const h = harness({ contract: pinned, pep: REPUBLISHED, pdp: REPUBLISHED, pepContracts: contracts, pdpContracts: contracts });
+        const done = await cross(h, c, undefined, "inv-1", pinnedToken(pinned));
+        expect(done.ok, `${label}: ${JSON.stringify(done)}`).toBe(true);
+        expect(h.lastContext()?.evaluation_context_binding, label).toEqual(SHIPPED_DESCRIPTOR);
+        expect(h.lastContext()?.evaluation_context_binding, label).not.toEqual(NEXT_DESCRIPTOR);
+        if (c === COMMIT) expect(h.connectors.committedEffects(), label).toHaveLength(1);
+      }
+    }
+  });
+
+  it("a descriptor the PEP and the PDP read differently for the contract is refused before evaluation, evaluation_context_invalid, with no effect", async () => {
+    // The PEP reads 2026-10-27's association as naming the new descriptor;
+    // the PDP reads the shipped association.
+    const h = harness({ contract: V16_CONTRACT, pep: REPUBLISHED, pdp: REPUBLISHED, pepContracts: contractsAssociating(NEXT_DESCRIPTOR) });
+    const refused = await cross(h, COMMIT, undefined, "inv-1", pinnedToken(V16_CONTRACT));
+    expect(refused.ok, JSON.stringify(refused)).toBe(false);
+    expect(h.lastContext()?.evaluation_context_binding).toEqual(NEXT_DESCRIPTOR);
+    // The PDP's own Refusal Record; the co-resident PEP sees the refused
+    // request as an unusable decision.
+    expect(h.pdpRefusals()).toEqual(["evaluation_context_invalid"]);
+    expect(decisions(h)).toEqual([]);
+    expect(h.connectors.committedEffects()).toHaveLength(0);
+  });
+
+  it("past the superseded version's retained_until, a crossing pinned to it is refused before any decision request, resource_contract_unresolvable, with no effect", async () => {
+    const { contracts, retained } = contractsWithNext(NEXT_DESCRIPTOR, new Date(BASE_MS - 1000).toISOString());
+    const h = harness({ contract: retained, pep: REPUBLISHED, pdp: REPUBLISHED, pepContracts: contracts, pdpContracts: contracts });
+    const refused = await cross(h, COMMIT, undefined, "inv-1", pinnedToken(retained));
+    expect(refused).toMatchObject({ ok: false, refusal_reason: "resource_contract_unresolvable" });
+    expect(h.requests).toHaveLength(0);
+    expect(refusals(h)).toEqual([expect.objectContaining({ denial_reason: "resource_contract_unresolvable" })]);
+    expect(h.connectors.committedEffects()).toHaveLength(0);
+  });
+
+  it("2026-10-20, published before the claim, names no descriptor: each covered crossing pinned to it is refused before any decision request, evaluation_context_unresolvable, never captured under another version's, with no effect; a read it covers is still performed", async () => {
+    for (const c of COVERED) {
+      const h = harness({ contract: V13_CONTRACT });
+      const refused = await cross(h, c, undefined, "inv-1", pinnedToken(V13_CONTRACT));
+      expect(refused, c.tool).toMatchObject({ ok: false, refusal_reason: "evaluation_context_unresolvable" });
+      expect(h.requests, c.tool).toHaveLength(0);
+      expect(refusals(h), c.tool).toEqual([expect.objectContaining({ denial_reason: "evaluation_context_unresolvable" })]);
+      expect(h.connectors.committedEffects(), c.tool).toHaveLength(0);
+    }
+    const reads = harness({ contract: V13_CONTRACT });
+    const read = await reads.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, pinnedToken(V13_CONTRACT));
+    expect(read.ok, JSON.stringify(read)).toBe(true);
+  });
+
+  it("a change, between the decision and the release, to the descriptor the permit's contract names is refused at release, target_drift, the effective context digest computed under the committed descriptor and equal to the authorized one", async () => {
+    const h = harness({ contract: V16_CONTRACT, pep: REPUBLISHED, pdp: REPUBLISHED });
+    const refused = await cross(h, COMMIT, () => h.declareContractsAtPep(contractsAssociating(NEXT_DESCRIPTOR)), "inv-1", pinnedToken(V16_CONTRACT));
+    expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.lastContext()?.evaluation_context_binding).toEqual(SHIPPED_DESCRIPTOR);
+    expect(h.connectors.committedEffects()).toHaveLength(0);
+    const [record] = executions(h);
+    expect(record?.error).toBe("target_drift");
+    expect(record?.effective_evaluation_context_digest).toBe(record?.authorized_evaluation_context_digest);
   });
 });

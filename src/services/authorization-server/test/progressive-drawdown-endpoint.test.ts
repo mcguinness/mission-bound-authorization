@@ -55,6 +55,7 @@ import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJ
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import type { RegisteredActivationPolicy } from "../src/kernel/activation-policy.js";
+import { DrawdownPolicyVersionReuseError } from "../src/kernel/drawdown-policy-pins.js";
 import { IntentError } from "../src/kernel/intent.js";
 import {
   assembledCeilingOffer,
@@ -176,6 +177,9 @@ const POLICIES: Record<string, RegisteredActivationPolicy> = {
   "drawdown-short": drawdownPolicy(1),
   // Moved on to a new version by the past-cadence case.
   "drawdown-moved": drawdownPolicy(),
+  // Edited under its pinned version by the version-pin cases (#1017).
+  "drawdown-pinned": drawdownPolicy(),
+  "drawdown-pinned-reconsent": drawdownPolicy(),
   // Narrows the carried ceiling by the undrawn vendor.read and invoice.list (#1468).
   "drawdown-narrow": narrowingPolicy(2_592_000),
   // The same, under a two-second review cadence.
@@ -333,20 +337,23 @@ function consented(entries: AuthorityEntry[]): AuthorityEntry[] {
     .authority_ceiling as unknown as AuthorityEntry[];
 }
 
-async function issueMission(
+type IssueOptions = {
+  client?: Client;
+  issuer?: string;
+  intentExtra?: Record<string, unknown>;
+  proposal?: Record<string, unknown>[];
+  /** Further pushed-request parameters the client sends. */
+  parExtra?: Record<string, string>;
+  /** The ceiling the decision posts, where it differs from the offer: the page's rendering of it. */
+  decided?: CeilingDecision;
+};
+
+/** PAR, the Approver's decision on the page rendered to them, and the redirect to the client: its code, or its error. */
+async function authorize(
   actions: string[],
   ceiling: CeilingDecision | undefined,
-  opts: {
-    client?: Client;
-    issuer?: string;
-    intentExtra?: Record<string, unknown>;
-    proposal?: Record<string, unknown>[];
-    /** Further pushed-request parameters the client sends. */
-    parExtra?: Record<string, string>;
-    /** The ceiling the decision posts, where it differs from the offer: the page's rendering of it. */
-    decided?: CeilingDecision;
-  } = {},
-): Promise<{ missionId: string; accessToken: string }> {
+  opts: IssueOptions = {},
+): Promise<{ redirect: URL; verifier: string; client: Client; issuer: string }> {
   currentOffer = ceiling;
   const client = opts.client ?? ap;
   const issuer = opts.issuer ?? ISSUER;
@@ -398,7 +405,16 @@ async function issueMission(
     storeCookies(res, jar);
     location = res.headers.get("location") as string;
   }
-  const code = new URL(location).searchParams.get("code") as string;
+  return { redirect: new URL(location), verifier, client, issuer };
+}
+
+async function issueMission(
+  actions: string[],
+  ceiling: CeilingDecision | undefined,
+  opts: IssueOptions = {},
+): Promise<{ missionId: string; accessToken: string }> {
+  const { redirect, verifier, client, issuer } = await authorize(actions, ceiling, opts);
+  const code = redirect.searchParams.get("code") as string;
   const tok = await tokenRequest(
     {
       grant_type: "authorization_code",
@@ -1404,6 +1420,40 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     expect(s2.drawdown_count).toBe((rootRecord.drawdown_count ?? 0) + 1);
   });
 
+  it("a re-consent naming a version whose content changed since the ceiling was consented is refused at the decision, which records nothing and leaves the deferral pending (@spec progressive#sec-drawdown-policy, #1017)", async () => {
+    const id = "drawdown-pinned-reconsent";
+    const original = POLICIES[id] as RegisteredActivationPolicy;
+    const root = await issueMission(READ, ceilingOf(id, READ_CEILING));
+    const code = await openFreshApproval(root.missionId, root.accessToken, BEYOND);
+    const reconsentOf = ceilingOf(id, READ_CEILING);
+    POLICIES[id] = { ...original, content: JSON.stringify({ max_added_actions: 2, ceiling_review_cadence_s: 2_592_000 }) };
+    try {
+      currentOffer = reconsentOf;
+      as.expansionDeferrals.disclosure(code);
+      expect(() =>
+        as.expansionDeferrals.approve(code, {
+          approver: ALICE,
+          authentication: FIXTURE_BROWSER_LOGIN,
+          approvalEventId: `apev-${crypto.randomUUID()}`,
+          approvedUntil: FAR_EXP,
+          ceiling: renderedOfferOf(ISSUER, reconsentOf),
+        }),
+      ).toThrow(DrawdownPolicyVersionReuseError);
+      expect(
+        as.kernel.db
+          .prepare("SELECT state, ceiling_reconsent_json, approval_event_id FROM expansion_deferrals WHERE deferral_code = ?")
+          .get(code),
+      ).toEqual({ state: "authorization_pending", ceiling_reconsent_json: null, approval_event_id: null });
+    } finally {
+      POLICIES[id] = original;
+    }
+    // Under the content its version committed, the same re-consent is recorded and completes.
+    const approved = await approveAndPoll(code, ALICE, reconsentOf);
+    const successor = as.kernel.get(approved.mission_id) as MissionRecord;
+    expect(successor.ceiling_consent_principal).toEqual(ALICE);
+    expect(successor.drawdown_policy).toEqual((as.kernel.get(root.missionId) as MissionRecord).drawdown_policy);
+  });
+
   it("an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence", async () => {
     // A one-second review cadence, already lapsed when the Approver re-consents.
     const root = await issueMission(READ, ceilingOf("drawdown-short", READ_CEILING));
@@ -1535,6 +1585,37 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     expect(s1.ceiling_consented_at).toBe(rootRecord.ceiling_consented_at);
     // Eligible on every other guard, the next widening still falls back.
     await openFreshApproval(s1.id, approved.access_token, [...READ_LIST, "payments:payment.schedule"]);
+  });
+});
+
+describe("a drawdown policy version commits one content (@spec progressive#sec-drawdown-policy, #1017)", () => {
+  it("a ceiling consent naming a version whose content changed since an earlier consent is refused and creates no Mission; the changed content under a new version, and the unchanged content, are consented", async () => {
+    const id = "drawdown-pinned";
+    const original = POLICIES[id] as RegisteredActivationPolicy;
+    const first = as.kernel.get((await issueMission(READ, ceilingOf(id))).missionId) as MissionRecord;
+    expect(as.kernel.drawdownPolicyPins.pinned(ISSUER, id, "1")).toBe(first.drawdown_policy?.digest);
+    const edited = { ...original, content: JSON.stringify({ max_added_actions: 2, ceiling_review_cadence_s: 2_592_000 }) };
+    POLICIES[id] = edited;
+    try {
+      const before = as.kernel.allMissions().length;
+      const refused = await authorize(READ, ceilingOf(id));
+      expect(refused.redirect.searchParams.get("code")).toBeNull();
+      expect(refused.redirect.searchParams.get("error")).toBe("access_denied");
+      expect(as.kernel.allMissions().length).toBe(before);
+      expect(as.kernel.drawdownPolicyPins.pinned(ISSUER, id, "1")).toBe(first.drawdown_policy?.digest);
+      // The changed content under a new version is a new policy, consented.
+      POLICIES[id] = { ...edited, version: "2" };
+      const moved = as.kernel.get(
+        (await issueMission(READ, { authority_ceiling: FULL_CEILING, drawdown_policy: { id, version: "2" } })).missionId,
+      ) as MissionRecord;
+      expect(moved.drawdown_policy?.version).toBe("2");
+      expect(moved.drawdown_policy?.digest).not.toBe(first.drawdown_policy?.digest);
+    } finally {
+      POLICIES[id] = original;
+    }
+    // The content its version committed is consented again.
+    const again = as.kernel.get((await issueMission(READ, ceilingOf(id))).missionId) as MissionRecord;
+    expect(again.drawdown_policy).toEqual(first.drawdown_policy);
   });
 });
 

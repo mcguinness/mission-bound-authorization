@@ -291,8 +291,8 @@ unknown top-level member are refused as unsupported input.
 
 ### 5.1 The supported-subset fixture
 
-#249's fixture `payments-exact-explicit/2026-10-27`
-(`vectors/mission-resource-access-subset/supported-subset-2026-10-27.json`)
+#249's fixture `payments-exact-explicit/2026-11-02`
+(`vectors/mission-resource-access-subset/supported-subset-2026-11-02.json`)
 is the initial interoperable subset D414 selects, and #819's second consumer
 (`packages/resource-access-subset-consumer/`) runs it (D676, D712). The
 reference's domain contains it:

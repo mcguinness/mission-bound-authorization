@@ -72,7 +72,6 @@ describe("the assertion vectors are well-formed data for the verifier (#939)", (
       if (c.expected.outcome === "refuse") {
         expect(c.expected.error, c.id).toBe("invalid_mission_intent_evidence");
       }
-      expect(c.verifier.status, c.id).toBe("pending");
     }
     // The brief's minimum set is present.
     for (const id of [
@@ -101,6 +100,27 @@ describe("the assertion vectors are well-formed data for the verifier (#939)", (
       const source = readFileSync(resolve(repoRoot, file as string), "utf8");
       expect(source.includes(JSON.stringify(describeName)), `${c.id}: ${describeName}`).toBe(true);
       expect(source.includes(JSON.stringify(itName)), `${c.id}: ${itName}`).toBe(true);
+    }
+  });
+
+  it("every case is verifier-checked, naming the AS verifier test that runs it by id", () => {
+    for (const c of assertionCases) {
+      expect(c.verifier.status, c.id).toBe("checked");
+      const [file, describeName, itName, ...rest] = c.verifier.test.split(" > ");
+      expect(rest, c.id).toEqual([]);
+      const source = readFileSync(resolve(repoRoot, file as string), "utf8");
+      expect(source.includes(JSON.stringify(describeName)), `${c.id}: ${describeName}`).toBe(true);
+      // The AS test titles each case from one of two templates, by id and step.
+      const template =
+        c.expected.outcome === "refuse"
+          ? "%s: refused at step %s"
+          : "%s: accepted, recording exactly the positive vector's facts";
+      expect(source.includes(JSON.stringify(template)), `${c.id}: ${template}`).toBe(true);
+      expect(itName, c.id).toBe(
+        c.expected.outcome === "refuse"
+          ? `${c.id}: refused at step ${c.step}`
+          : `${c.id}: accepted, recording exactly the positive vector's facts`,
+      );
     }
   });
 });

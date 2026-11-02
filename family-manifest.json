@@ -2502,14 +2502,6 @@
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-submission-evidence",
     "draft-mcguinness-oauth-mission-template"
-   ],
-   "requires_when": [
-    {
-     "when": "a Mission is activated under a standing-consent basis",
-     "requires": [
-      "draft-mcguinness-mission-approval-governance"
-     ]
-    }
    ]
   },
   {

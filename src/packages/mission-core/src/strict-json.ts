@@ -73,7 +73,15 @@ class Parser {
       seen.add(key);
       this.skipWs();
       this.expect(":");
-      out[key] = this.parseValue();
+      // Every member is an own data property, `__proto__` included: an
+      // assignment would invoke the prototype setter, dropping the member
+      // and making its value's members inherited ones.
+      Object.defineProperty(out, key, {
+        value: this.parseValue(),
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
       this.skipWs();
       const c = this.s[this.pos];
       if (c === ",") {
