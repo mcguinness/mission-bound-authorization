@@ -396,11 +396,14 @@ Table of Contents
 
    6.   Confirm aud equals this AS's issuer identifier.
 
-   7.   Within the deployment's clock-skew allowance, confirm iat is not
-        in the future, exp has not passed, exp minus iat does not exceed
-        the deployment's maximum assertion lifetime, captured_at is not
-        later than iat, and iat minus captured_at does not exceed the
-        deployment's maximum capture age.
+   7.   Confirm iat is not in the future, exp has not passed, exp minus
+        iat does not exceed the deployment's maximum assertion lifetime,
+        captured_at is not later than iat, and iat minus captured_at
+        does not exceed the deployment's maximum capture age.  The
+        clock-skew allowance applies only to comparisons of iat and exp
+        with the AS's current time.  No allowance is added to the
+        assertion lifetime, the maximum capture age, or the comparison
+        of captured_at with iat.
 
    8.   Confirm the configuration authorizes this signer for originator
         and for channel.type; for a user-device signer, confirm the AS's
