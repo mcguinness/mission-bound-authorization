@@ -376,11 +376,14 @@ Consequences, in both configurations:
 - Every outstanding refresh token is refused; the client starts a new
   authorization.
 
-No test boots the assembled AS across a restart, so the file-backed outcomes
-come from the code (port §4.5). Recovery this deployment does not support is
-unsupported, not partially durable: cross-store recovery and fencing are
-#250's. A key ring keeps the AS's signing keys across a restart; key
-rotation and resource-side JWKS refresh are #831's next slice.
+No test restarts the assembled AS as a new process. In one process,
+`issuance-only-kernel-store.test.ts` restarts this deployment's composition
+on a key ring and a kernel file and finds the kernel reopened; the other
+file-backed outcomes come from the code (port §4.5). Recovery this
+deployment does not support is unsupported, not partially durable:
+cross-store recovery and fencing are #250's. A key ring keeps the AS's
+signing keys across a restart, and `pnpm keys` rotates, retires and
+withdraws them as compromised (#831; `channel-key-matrix.md`).
 
 ## 5. Deployment Profile instance
 
