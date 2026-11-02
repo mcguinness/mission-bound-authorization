@@ -51,6 +51,15 @@ export class DpopReplayUnavailableError extends Error {
   }
 }
 
+/**
+ * @spec RFC 9449 Section 4.3 (#1970): the presented DPoP proof itself failed
+ * a check: malformed, a key other than the credential's `cnf`, a bad
+ * signature, a wrong `htu`, `htm`, `iat` or `ath`, or a replayed `jti`. Any
+ * other refusal of the credential is not this, so the HTTP gate describes it
+ * neutrally.
+ */
+export class DpopProofError extends Error {}
+
 /** The request-bound proof a presented credential travels with. */
 export interface DpopPresentation {
   proof: string;
@@ -74,30 +83,45 @@ export async function verifyDpopProof(input: {
   replay: DpopProofReplay;
   now?: () => Date;
 }): Promise<string> {
-  const header = decodeProtectedHeader(input.proof);
+  let header: ReturnType<typeof decodeProtectedHeader>;
+  try {
+    header = decodeProtectedHeader(input.proof);
+  } catch {
+    throw new DpopProofError("DPoP proof is not a JWS");
+  }
   const jwk = header.jwk as (JWK & { d?: string }) | undefined;
-  if (!jwk) throw new Error("DPoP proof header carries no jwk");
-  if (jwk.d !== undefined) throw new Error("DPoP proof header jwk carries private key material");
-  const jkt = await calculateJwkThumbprint(jwk as never);
-  if (jkt !== input.expectedJkt) throw new Error("DPoP key does not match token cnf.jkt");
-  const { payload } = await jwtVerify(input.proof, jwk as never, {
-    typ: "dpop+jwt",
-    algorithms: [...DPOP_PROOF_ALGS],
-  });
-  if (payload.htu !== input.htu || payload.htm !== input.htm) throw new Error("DPoP htu/htm mismatch");
-  if (typeof payload.iat !== "number") throw new Error("DPoP proof has no iat");
+  if (!jwk) throw new DpopProofError("DPoP proof header carries no jwk");
+  if (jwk.d !== undefined) throw new DpopProofError("DPoP proof header jwk carries private key material");
+  let jkt: string;
+  try {
+    jkt = await calculateJwkThumbprint(jwk as never);
+  } catch {
+    throw new DpopProofError("DPoP proof header jwk is not a usable key");
+  }
+  if (jkt !== input.expectedJkt) throw new DpopProofError("DPoP key does not match token cnf.jkt");
+  let payload: Awaited<ReturnType<typeof jwtVerify>>["payload"];
+  try {
+    ({ payload } = await jwtVerify(input.proof, jwk as never, {
+      typ: "dpop+jwt",
+      algorithms: [...DPOP_PROOF_ALGS],
+    }));
+  } catch {
+    throw new DpopProofError("DPoP proof does not verify under its jwk");
+  }
+  if (payload.htu !== input.htu || payload.htm !== input.htm) throw new DpopProofError("DPoP htu/htm mismatch");
+  if (typeof payload.iat !== "number") throw new DpopProofError("DPoP proof has no iat");
   if (!dpopProofIatAcceptableAt(payload.iat, (input.now?.() ?? new Date()).getTime())) {
-    throw new Error("DPoP proof iat is outside the acceptance window");
+    throw new DpopProofError("DPoP proof iat is outside the acceptance window");
   }
-  if (typeof payload.ath !== "string") throw new Error("DPoP proof has no ath");
+  if (typeof payload.ath !== "string") throw new DpopProofError("DPoP proof has no ath");
   if (payload.ath !== accessTokenHash(input.accessToken)) {
-    throw new Error("DPoP ath does not hash the presented credential");
+    throw new DpopProofError("DPoP ath does not hash the presented credential");
   }
-  if (typeof payload.jti !== "string") throw new Error("DPoP proof jti is missing or replayed");
+  if (typeof payload.jti !== "string") throw new DpopProofError("DPoP proof jti is missing or replayed");
   const admission = input.replay.admit(payload.jti);
   if (!admission.admitted) {
     if (admission.reason === "full") throw new DpopReplayUnavailableError(admission.retryAfterS);
-    throw new Error("DPoP proof jti is missing or replayed");
+    throw new DpopProofError("DPoP proof jti is missing or replayed");
   }
   return jkt;
 }
