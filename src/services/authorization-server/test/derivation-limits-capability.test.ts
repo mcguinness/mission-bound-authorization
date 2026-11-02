@@ -70,15 +70,22 @@ describe("with Derivation Limits off no Mission establishes a derivation limit (
     await on.close();
   });
 
-  it("the kernel resolves no limit, from a request or a standing consent's finite maximum, and refuses to commit a record carrying either Derivation Limits member", async () => {
+  it("the kernel resolves no limit from a request, never turns a standing consent's finite maximum into no limit, and refuses to commit a record carrying either Derivation Limits member", async () => {
     const off = await startAs(MINIMAL);
     const on = await startAs([...MINIMAL, "derivation-limits"]);
     try {
       expect(on.as.kernel.resolveDerivationLimit(5)).toBe(5);
       expect(on.as.kernel.standingConsentDerivationLimit(undefined, { finite: 3 })).toBe(3);
       expect(off.as.kernel.resolveDerivationLimit(5)).toBeNull();
-      expect(off.as.kernel.standingConsentDerivationLimit(undefined, { finite: 3 })).toBeNull();
-      expect(off.as.kernel.standingConsentDerivationLimit(5, { finite: 3 })).toBeNull();
+      // A consent guaranteeing no finite maximum records none; a finite one
+      // is refused, never recorded as no limit (#2018 review F1).
+      expect(off.as.kernel.standingConsentDerivationLimit(undefined, { finite: null })).toBeNull();
+      expect(off.as.kernel.standingConsentMaximumRefusal({ finite: null })).toBeUndefined();
+      expect(on.as.kernel.standingConsentMaximumRefusal({ finite: 3 })).toBeUndefined();
+      expect(off.as.kernel.standingConsentMaximumRefusal({ finite: 3 })).toMatch(/committed a per-Mission derivation limit of at most 3/);
+      expect(() => off.as.kernel.standingConsentDerivationLimit(undefined, { finite: 3 })).toThrow(
+        "a standing consent committed a finite derivation_limit maximum of 3, which this deployment cannot record: Derivation Limits is off",
+      );
       // Every creator funnels through insertRecord: a record a path built with
       // either member is refused there, and nothing is committed.
       const pushed = await par(off);
