@@ -72,7 +72,6 @@ informative:
   RFC7009:
   RFC8935:
   RFC9493:
-  RFC8628:
   RFC8792:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -275,14 +274,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-device-authorization:
-    title: "Mission Device Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-device-authorization.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-audit:
     title: "Mission Audit Transparency"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html
@@ -294,14 +285,6 @@ informative:
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
     author:
       -
         ins: K. McGuinness
@@ -582,9 +565,7 @@ Mission-aware Resource Server:
 Resource AS:
 : An authorization server in another trust domain that honors a
   Mission it did not issue, minting its own tokens for its resources;
-  it is never the Mission Issuer. The companion Mission Cross-Domain
-  Projection profile specifies cross-domain projection
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+  it is never the Mission Issuer.
 
 Mission Intent:
 : The structured description of the task the client submits
@@ -622,9 +603,8 @@ Authority Set derivation:
 Derivation:
 : One issuance operation the issuer AS performs for a single request
   ({{issuance-gating}}): the initial authorization-code exchange, a
-  refresh, a Token Exchange, a cross-domain grant issuance, or the
-  redemption of a profile-defined grant, such as the Template
-  profile's handoff grant.
+  refresh, a Token Exchange, or the redemption of a profile-defined
+  grant.
   Distinct from Authority Set derivation, which some section titles
   and fixed phrases, such as "derivation policy", also call
   derivation.
@@ -728,10 +708,6 @@ document defines no runtime lookup of it.
 
 The record's (`subject.iss`, `subject.sub`) and the token's (AS
 `iss`, `sub`) identify the same Subject in two issuer namespaces.
-Across trust domains, the cross-domain companion conveys Subject
-identity through its own subject-resolution claims, not a Mission
-lookup, and a token minted in another domain preserves the `mission`
-claim unchanged ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 Issuer roles obey two invariants: a Mission has exactly one Mission
 Issuer, its `issuer`, and a Resource AS never creates or alters a
@@ -955,9 +931,7 @@ The following rules govern a submission:
   total size, the Intent's total size and the lengths of its arrays,
   and the count and per-entry sizes of `evidence` entries, refusing
   a submission that exceeds the deployment-defined limits with
-  `invalid_request`. The verification-cost bound of
-  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}
-  accompanies these.
+  `invalid_request`.
 
 The following is an example of a Submission envelope carrying a
 compact Intent and one evidence entry of an illustrative,
@@ -1046,12 +1020,6 @@ and preserves:
   ({{approval-event}}, {{mission-creating-paths}}, with a direct
   approval relocated only as {{extensibility}} permits); and
 - the grant binding ({{grant-binding}}).
-
-The experimental Mission Device Authorization profile
-({{I-D.draft-mcguinness-oauth-mission-device-authorization}}) defines
-such a carriage for a client that cannot complete the
-authorization-code path, on the device authorization grant
-{{RFC8628}}.
 
 ## Authority Proposal {#authority-proposal}
 
@@ -2103,10 +2071,8 @@ or defined by the profile that uses it.
 
 `issuer`:
 : REQUIRED. A string. The issuer URL of the Mission Issuer that
-  approved the Mission. Equals the `iss` of tokens that AS derives;
-  for cross-domain tokens it remains the issuer AS that approved the
-  Mission even though the issuing `iss` differs
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+  approved the Mission. Equals the `iss` of tokens that AS derives
+  ({{mission-claim}}).
 
 `state`:
 : REQUIRED. A string. The current lifecycle state: `active` or
@@ -2657,8 +2623,8 @@ either:
 - the authorization code issued at approval and, where its
   redemption emits one, the refresh-token family that follows it; or
 - another profile-defined reusable grant, such as a refresh-token
-  family a continuation transport establishes later for the same
-  Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
+  family a Token Exchange establishes later for the same Mission
+  ({{grant-binding-related}}).
 
 ### Establishing and Resolving a Binding {#grant-binding-resolution}
 
@@ -2691,16 +2657,15 @@ grant the client presents:
 - the Mission-bound `subject_token` on Token Exchange (a delegate is
   identified by its client authentication, {{delegated-exchange}}); or
 - a profile-defined grant, through the authenticated `mission`
-  reference it carries, such as the Template profile's handoff grant
-  ({{I-D.draft-mcguinness-oauth-mission-template}}).
+  reference it carries.
 
 It then applies the gating of {{issuance-gating}}.
 
 A Mission MAY carry zero or more grant bindings. Beyond any
 authorization-code lineage established at approval, a refresh-token
-family a continuation transport establishes later (above) is a
-further binding, or the Mission's first where it has none, rooted in
-the Mission its own `subject_token` resolved to.
+family a Token Exchange establishes later (above) is a further
+binding, or the Mission's first where it has none, rooted in the
+Mission its own `subject_token` resolved to.
 
 The AS MUST resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
@@ -2712,10 +2677,7 @@ Where a profile-defined operation lets a client present a Mission
 Identifier alongside a credential, the identifier is a
 non-authoritative cross-check: the AS MUST verify it against the
 Mission the credential resolves to and refuse a mismatch with the
-`invalid_grant` error code. The `predecessor` parameter of
-{{I-D.draft-mcguinness-oauth-mission-expansion}} is an example: it
-selects the Mission a successor is created from and does not reassign
-an existing binding.
+`invalid_grant` error code.
 
 Because the grant, not the identifier, determines the Mission, a
 client does not supply `mission_id` to obtain a derivation, and an AS
@@ -2726,48 +2688,42 @@ MUST NOT derive Mission-bound authority from a client-supplied
 
 The grant binding relates to other mechanisms as follows:
 
-- **Token Exchange.** A Token Exchange derivation ({{RFC8693}}) that
-  returns only an access token establishes no new grant lineage:
-  ordinary in-Mission delegation ({{delegation}}) and self-exchange
-  down-scoping ({{self-exchange}}) both work this way, and the issued
-  token is a derived token ({{mission-claim}}) whose `mission` claim
-  identifies the one Mission its `subject_token` resolved to. Where
-  the `subject_token` was issued under a grant lineage, the issued
-  token retains that grant provenance, and a later redemption of a
-  designation derived from it validates all applicable backing-grant
-  state ({{delegated-exchange}}). A Token
-  Exchange that instead establishes a redeemable grant
-  lineage, such as the continuation profile's
-  delegation-family-creating exchange
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
-  new grant binding, rooted in that same Mission. Three Token
-  Exchanges are covered by the two items below instead: cross-domain
-  projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor.
-- **Cross-domain projection.** A cross-domain projection
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
-  no destination-side grant binding. A Resource AS consumes the
-  cross-domain grant, and the local access token it mints there is a
-  derived token: it identifies the one originating Mission
-  (`mission.id`, `mission.issuer`) but is not backed by a persistent
-  local lineage. A Resource AS holds a destination-side grant binding
-  only where it separately establishes a redeemable grant lineage
-  mapped to the Mission, such as a refresh-token family.
-- **Child Missions and successors.** A Child Mission
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an
-  expansion successor
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are new
-  Missions. Any grant binding or derived token they carry is their
-  own under the same rules, not an extension of the origin Mission's
-  binding. They relate to their origin only by lineage (the
-  child's `parent` member, the successor's `predecessor` member).
-
-A decision-time runtime join, such as the Mission Join of
-{{I-D.draft-mcguinness-mission-authority-server}}, in which a policy
-decision point joins an ordinary OAuth credential to a Mission per
-request, is not a Mission grant binding: it does not make the joined
-OAuth grant Mission-bound, and it rests on its own authenticated inputs
-and evidence, never on a Mission grant binding.
+- **Issuance under an existing binding.** A Token Exchange derivation
+  ({{RFC8693}}) that returns only an access token establishes no new
+  grant lineage: ordinary in-Mission delegation ({{delegation}}) and
+  self-exchange down-scoping ({{self-exchange}}) both work this way,
+  and the issued token is a derived token ({{mission-claim}}) whose
+  `mission` claim identifies the one Mission its `subject_token`
+  resolved to. Where the `subject_token` was issued under a grant
+  lineage, the issued token retains that grant provenance, and a later
+  redemption of a designation derived from it validates all applicable
+  backing-grant state ({{delegated-exchange}}). A Token Exchange that
+  creates another Mission, or that returns a grant for a Resource AS
+  to consume, falls under the third or fourth item instead.
+- **Establishing a new binding.** A Token Exchange that establishes a
+  redeemable grant lineage, such as by issuing a refresh token,
+  creates a new grant binding, rooted in the Mission its
+  `subject_token` resolved to.
+- **Creating another Mission.** Missions created from an existing
+  Mission's authority are new Missions. Any grant binding or derived
+  token they carry is their own under the same rules, not an extension
+  of the origin Mission's binding. They relate to their origin only by
+  lineage, a record member their specification defines
+  ({{mission-record}}).
+- **Transient exchange artifacts.** A grant the Mission `issuer`
+  returns for a Resource AS to consume establishes no
+  destination-side grant binding. The Resource AS consumes it, and
+  the local access token it mints there is a derived token: it
+  identifies the one originating Mission (`mission.id`,
+  `mission.issuer`) but is not backed by a persistent local lineage. A
+  Resource AS holds a destination-side grant binding only where it
+  separately establishes a redeemable grant lineage mapped to the
+  Mission, such as a refresh-token family.
+- **Runtime joins.** A decision-time runtime join, in which a policy
+  decision point joins an ordinary OAuth credential to a Mission per
+  request, is not a Mission grant binding: it does not make the joined
+  OAuth grant Mission-bound, and it rests on its own authenticated
+  inputs and evidence, never on a Mission grant binding.
 
 ### Mission State Across Bindings {#grant-binding-state}
 
@@ -2809,10 +2765,7 @@ scope projection ({{scope-projection}}), and the `mission` claim
 
 A derivation is one issuance operation the issuer AS performs for a
 single request: the initial authorization-code exchange, a refresh, a
-Token Exchange, a cross-domain grant issuance
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or the
-redemption of a profile-defined grant, such as the Template profile's
-handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A
+Token Exchange, or the redemption of a profile-defined grant. A
 companion profile bounds the number of derivations under a Mission
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
@@ -3036,9 +2989,9 @@ servers while retaining
 stolen-token exposure ({{token-theft}}).
 
 A delegated token is sender-constrained to the delegate's own key
-({{delegated-exchange}}); the cross-domain companion requires
-sender-constraint for credentials that cross a trust domain
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+({{delegated-exchange}}), and the Cross-Domain capability
+sender-constrains every credential that crosses a trust domain
+({{optional-capabilities}}).
 
 An AS that issues Mission-bound JWT access tokens for resource servers
 to consume MUST publish its token verification keys (for example, at
@@ -3297,10 +3250,7 @@ carry per-entry `constraints`.
 
 A credential the Mission Issuer derives MUST have an `exp` that does
 not exceed the Mission's `expires_at`, so that no credential outlives
-the approved Mission. The cross-domain companion
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies how
-this bound extends transitively to tokens minted in another trust
-domain.
+the approved Mission.
 
 Within that bound, a derived token's lifetime is the AS's policy,
 which {{derived-token-lifetime}} recommends keeping short. Token
@@ -3446,7 +3396,7 @@ The `mission` claim is a JSON object:
   credential's `iss` names the party that minted it; `mission.issuer`
   names the party that approved and serves the Mission, and the two
   differ for tokens minted in another trust domain
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+  ({{mission-claim-reservation}}).
 
 The `id` and `issuer` members identify the Mission and carry no
 authority of their own; the token's own signature authenticates the
@@ -3865,10 +3815,7 @@ Access Profile defines
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 Because the policy lives in the entry, `authority_hash` commits it
-with the rest of the Authority Set, and it is carried with the entries
-wherever they go, including across a cross-domain projection where
-that profile's provenance rule keeps it
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+with the rest of the Authority Set.
 
 **Delegation depth.** The delegation depth of a token is the number
 of delegations between the approved agent and the token's current
@@ -3876,9 +3823,7 @@ actor: the agent's own non-delegated token is depth 0, the first
 delegate is depth 1, and each further delegate adds 1. The depth
 checked against `max_depth` is that of the token being issued,
 computed after appending the new outermost actor, not the depth of
-the delegating token. A credential projected across a trust domain
-carries no `act` chain and enters the target domain at depth 0
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+the delegating token.
 
 **Depth accounting.** The AS MUST establish delegation depth from
 accounting it maintains for the tokens it issues under the Mission
@@ -3890,10 +3835,9 @@ the source of the count.
 
 Over the exchanges this document defines, the accounting is complete:
 
-- each delegated exchange adds exactly one delegate;
+- each delegated exchange adds exactly one delegate; and
 - a designation ({{designation}}) and a self-exchange
-  ({{self-exchange}}) add none; and
-- a cross-domain projection is the one defined reset.
+  ({{self-exchange}}) add none.
 
 A profile that issues Mission-bound tokens by another path specifies
 how it preserves or reconstructs this accounting and any reset it
@@ -4733,7 +4677,7 @@ exchange rows of the third table.
 
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
-| PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
+| PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent ({{submission-processing}}) | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Token request: the requested audience is approved for none of the entries the token would carry, the request's `authorization_details` names an entry not approved for its audience, or the audiences it names are approved for different entries ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the `act` chain ({{rs-mission-unaware}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
@@ -4783,9 +4727,7 @@ exchange rows of the third table.
 | Protected resource: insufficient carried authority, or an unenforceable constraint ({{rs-denials}}) | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
 {: title="Protected resource challenges"}
 
-In these tables, which evidence types are required follows
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, and
-`invalid_client_attestation` is the error code that
+In these tables, `invalid_client_attestation` is the error code that
 {{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}}
 specifies.
 
@@ -5240,11 +5182,7 @@ Submission Evidence type. Such an AS refuses every presented entry
 under the dispatch and refusal rules ({{intent-submission-evidence}}):
 a structurally invalid entry with the `invalid_request` error code, and
 any other entry, as an unsupported type, with the
-`invalid_mission_intent_evidence` error code. It need not implement the
-evidence framework of
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}} for this
-configuration. The companion defines conformance for ASs supporting an
-evidence type, whether its evidence is optional or required.
+`invalid_mission_intent_evidence` error code.
 
 A **Mission-aware Resource Server** implements resource server
 enforcement ({{rs-enforcement}}). It enforces a JWT from the token's
@@ -5304,15 +5242,22 @@ that supports none of them is still conformant:
   2. authority that only narrows ({{subset}});
   3. projection performed only by, or under the authorization of, the
      Mission `issuer`, gated on the Mission's `active` state
-     ({{lifecycle}}, {{issuance-gating}}); and
+     ({{lifecycle}}, {{issuance-gating}});
   4. projected credential lifetimes capped by the Mission's
-     `expires_at` ({{token-authentication-lifetime}}).
+     `expires_at` ({{token-authentication-lifetime}});
+  5. projected credentials sender-constrained to their presenter
+     ({{token-claims}}), never bearer credentials, each recipient
+     verifying the proof of possession and refusing a credential whose
+     binding is absent or invalid ({{rs-enforcement}}); and
+  6. renewal only through the Mission `issuer`: a projected grant is
+     redeemable once, and the other trust domain issues no renewal
+     authority on it, so a further credential there needs a new
+     projection.
 
   This bar is self-contained in this document. The companion Mission
   Cross-Domain Projection profile
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies the
-  interoperable mechanism that satisfies it, and implementations that
-  interoperate across the hop implement that companion.
+  interoperable mechanism that satisfies it.
 
 Mission Approved-Set Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
@@ -5796,9 +5741,7 @@ exposure by:
 ## Mission Identifier Correlation {#mission-identifier-correlation}
 
 This document carries a single canonical Mission Identifier on every
-derived token, and cross-domain projection
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) carries it across
-trust domains unchanged. Any party that observes credentials for the
+derived token. Any party that observes credentials for the
 same Mission, whether a resource server, a Resource AS, or an auditor
 spanning audiences, can correlate that activity by the Mission
 Identifier, and `mission.issuer` further identifies the issuing AS.
@@ -6953,7 +6896,7 @@ resolve before interoperating.
 Policy appendices and other material on the family rather than the
 protocol move to the Architecture, the security analysis to the
 Mission Security Model, and the mechanics a companion profile defines
-to that profile (#1794, #1892).
+to that profile (#1794, #1892, #2009).
 
 **Editorial and structure.** The sections follow processing order,
 with Mission Creation, Mission-Bound Token Issuance, Delegation Within
@@ -6967,8 +6910,9 @@ stated as obligations carry BCP 14 keywords, with no new requirement
 protocol, the Mission Mandate, and Mission Offline Attenuation as
 informative. FAPI Grant Management, the Cedar RAR draft, SPIFFE client
 authentication, Transaction Tokens, GNAP, the Attenuating Agent Tokens
-draft, and the Containment, Progressive, and Work Products companions
-are no longer cited.
+draft, RFC 8628, and the Containment, Continuation, Device
+Authorization, Progressive, and Work Products companions are no longer
+cited.
 
 -01
 
