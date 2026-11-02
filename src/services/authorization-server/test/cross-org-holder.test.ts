@@ -26,6 +26,7 @@ import {
 } from "../src/index.js";
 import { TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ORIGIN_ISS = "https://as.org1.test";
 const RESOURCE = "https://api.org3.test";
@@ -119,7 +120,7 @@ beforeAll(async () => {
   });
   missionId = kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Cross-org holder", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Cross-org holder", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: ceiling as never,
     subject: { iss: "https://id.org1.test", sub: "p-alice" },

@@ -39,6 +39,7 @@ import {
 import { assertProposedContractsCurrent } from "../src/kernel/resource-contract.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { EXECUTABLE_CHECKS, IMPLEMENTED, knownCapability } from "./resource-access-capabilities.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
 const FORMAT = "mission-resource-access-cases/1";
@@ -349,7 +350,7 @@ function runDelegateEligibility(c: Case): void {
       JSON.stringify({
         goal: "Decide one delegate-eligibility case",
         target_resources: [CASE_RESOURCE],
-        expires_at: "2099-01-01T00:00:00Z",
+        expires_at: FAR_EXPIRES_AT,
       }),
     ),
     proposedAuthority: [entryWith(input.approved_entry_delegation ?? input.ceiling_entry_delegation)],

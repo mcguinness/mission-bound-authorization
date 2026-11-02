@@ -80,12 +80,13 @@ import {
   SourceUnavailableError,
 } from "../src/index.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14583;
 const ISSUER = `http://localhost:${PORT}`;
 const TOKEN_ENDPOINT = `${ISSUER}/token`;
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 const AGENT_ID = "subagent-invoice-extractor";
 /** A test-only client registered for both grants, never the instance's Agent. */
 const INTRUDER_ID = "test-handoff-intruder";

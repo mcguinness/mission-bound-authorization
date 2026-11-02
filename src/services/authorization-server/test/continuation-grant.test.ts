@@ -62,6 +62,7 @@ import {
 } from "../src/index.js";
 import { confirmRing } from "./ring-confirm.helper.js";
 import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14475;
 const ISSUER = `http://localhost:${PORT}`;
@@ -94,7 +95,7 @@ const READ_ENTRY = {
   actions: ["payments:invoice.read"],
   constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
 };
-const MISSION_EXP = "2027-01-01T00:00:00Z";
+const MISSION_EXP = FIXTURE_EXPIRES_AT;
 const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 const RESOURCE_TO_AS = (r: string) => (r === RESOURCE || r === RESOURCE_B || r === RESOURCE_C ? RAS_AUD : ISSUER);
 /**

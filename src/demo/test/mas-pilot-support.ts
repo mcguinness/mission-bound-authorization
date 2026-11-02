@@ -19,6 +19,7 @@ import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
 import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
 import type { ResourcePolicyStore } from "../src/resource-policy-store.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const CA = process.env.OPENFGA_CA_CERT;
 
@@ -106,7 +107,7 @@ export function approve(
 ): string {
   const actions = opts.actions ?? READ_ACTIONS;
   const intent = validateMissionIntent(
-    JSON.stringify({ goal: `MAS pilot: ${opts.label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" }),
+    JSON.stringify({ goal: `MAS pilot: ${opts.label}`, target_resources: [CANONICAL_RESOURCE], expires_at: LATER_EXPIRES_AT }),
   );
   return pilot.kernel.approve({
     intent,

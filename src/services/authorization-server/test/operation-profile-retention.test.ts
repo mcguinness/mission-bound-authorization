@@ -10,9 +10,11 @@ import { CANONICAL_RESOURCE, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { type JsonValue, ResourceContractDeclarations } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import { contractOperationProfiles } from "../src/index.js";
+import { CONTROLLED_CLOCK_MS } from "./controlled-clock.helper.js";
 
 const RESOURCE = CANONICAL_RESOURCE;
-const NOW = new Date();
+/** A controlled instant inside every declared version's retention (#1968, D1133), never the host's date. */
+const NOW = new Date(CONTROLLED_CLOCK_MS);
 const [DECLARED] = RESOURCE_CONTRACTS.declarations;
 const VERSIONS = DECLARED?.versions ?? [];
 const refOf = (version: string) => {

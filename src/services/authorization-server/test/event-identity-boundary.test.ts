@@ -88,6 +88,7 @@ import {
 import { aiAgents } from "./actor-profiles.helper.js";
 import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { EARLIER_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 /** The shipped published retry horizon, in milliseconds. */
 const R = DEFAULT_CREATION_TOMBSTONE_TTL_S * 1000;
@@ -162,13 +163,13 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
       rate_per_min: 5,
       review_cadence_s: 30 * 86400,
       approval_event_id: `tmpl-ev-${tmplSeq++}`,
-      expires_at: "2026-12-01T00:00:00Z",
+      expires_at: EARLIER_EXPIRES_AT,
       ...over,
     },
     { ...kernel.authoritySourceOptions(), dispatchPolicies: REGISTRY },
   );
 
-const kIntent = (expiresAt = "2027-01-01T00:00:00Z") =>
+const kIntent = (expiresAt = FIXTURE_EXPIRES_AT) =>
   kernel.validateIntent(JSON.stringify({ goal: "reconcile Acme", target_resources: [KRESOURCE], expires_at: expiresAt }));
 
 const kProposal = (maxAmount: string): AuthorityEntry[] => [
@@ -422,7 +423,7 @@ describe(`Template Dispatch: a reuse after expiry meets the current checks ${TAG
 describe(`direct approval: one approval_event_id never yields a second Mission ${TAG}`, () => {
   const approveInput = (approvalEventId: string, goal = "reconcile Acme") => ({
     intent: validateMissionIntent(
-      JSON.stringify({ goal, target_resources: [KRESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal, target_resources: [KRESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
       { now: kNow() },
     ),
     subject: { iss: ISS, sub: "alice" },
@@ -520,7 +521,7 @@ describe(`Deferred Mission Approval: the pending approval's event yields one Mis
   const openPending = (deferrals: MissionApprovalDeferralStore) =>
     deferrals.open({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Reconcile Acme invoices", target_resources: [KRESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Reconcile Acme invoices", target_resources: [KRESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
         { now: kNow() },
       ),
       clientId: "svc-agent",
@@ -545,7 +546,7 @@ describe(`Deferred Mission Approval: the pending approval's event yields one Mis
         approvalEventId: event,
         consentId: consent.consent_id,
         intent: validateMissionIntent(
-          JSON.stringify({ goal, target_resources: [KRESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+          JSON.stringify({ goal, target_resources: [KRESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
           { now: kNow() },
         ),
         clientId: "svc-agent",
@@ -575,7 +576,7 @@ const PORT = 14946;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
 const REDIRECT_URI = "http://localhost:9999/cb";
-const FAR_EXP = "2027-01-01T00:00:00Z";
+const FAR_EXP = FIXTURE_EXPIRES_AT;
 /** The Part B kernel clock: real time unless a case pins it. Roots are issued unpinned. */
 let pinned: number | undefined;
 const asNow = () => new Date(pinned ?? Date.now());

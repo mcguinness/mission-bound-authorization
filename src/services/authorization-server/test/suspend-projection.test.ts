@@ -22,10 +22,11 @@ import {
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
-const PARENT_EXP = "2027-01-01T00:00:00Z";
+const PARENT_EXP = FIXTURE_EXPIRES_AT;
 
 // A mutable clock so a child can expire mid-suspension deterministically.
 let clock: Date;

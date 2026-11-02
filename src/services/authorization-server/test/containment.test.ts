@@ -55,12 +55,13 @@ import {
 import { aiAgents } from "./actor-profiles.helper.js";
 import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.containment.test";
 const RES_PAY = "https://payments.test/mcp";
 const RES_FILE = "https://files.test/mcp";
 const NOW = new Date("2026-08-06T12:00:00Z");
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 /** RES_PAY is delegable (child-creation on-switch); RES_FILE is plain. */
 const POLICY = {

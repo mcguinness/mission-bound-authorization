@@ -13,10 +13,11 @@ import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createExpansion, ExpansionDeferralStore, MissionKernel, validateMissionIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
-const EXP = "2027-01-01T00:00:00Z";
+const EXP = FIXTURE_EXPIRES_AT;
 const now = () => new Date("2026-07-01T00:00:00Z");
 
 const proposed = (actions: string[]) => [
@@ -292,7 +293,7 @@ describe("expansion: successor expiry (@spec expansion#successor-expiry)", () =>
     const pred = shortPredecessor();
     // Approved extension beyond BOTH the requested ceiling and approved_until:
     // each still binds, so the earliest of them wins.
-    const beyond = { approvedExtensionUntil: "2030-01-01T00:00:00Z" };
+    const beyond = { approvedExtensionUntil: daysAfter(EXP, 365) };
     expect(expand(pred.id, beyond).successor.expires_at).toBe(EXP);
     expect(
       expand(pred.id, { ...beyond, approvedUntil: "2026-10-01T00:00:00Z" }).successor.expires_at,

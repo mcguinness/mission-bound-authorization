@@ -16,11 +16,12 @@ import { type CryptoKey, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, validateMissionIntent } from "../src/index.js";
 import type { MissionRecord } from "../src/kernel/types.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14496;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 const RULE_ID = "contain-external-comms-on-taint-v1";
 
 let as: BuiltAs;

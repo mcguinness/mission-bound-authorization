@@ -28,6 +28,7 @@ import {
 import { DEFAULT_AUDIT_RETENTION_S } from "../src/kernel/tombstones.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { EARLIER_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 /**
  * @spec approval-governance#activation-policy-commitment, mission#mission-record: activation
@@ -121,7 +122,7 @@ const consent = (kernel: MissionKernel, store: TemplateStore, registry: Dispatch
       rate_per_min: 50,
       review_cadence_s: 30 * 86400,
       approval_event_id: `tmpl-ev-${seq++}`,
-      expires_at: "2026-12-01T00:00:00Z",
+      expires_at: EARLIER_EXPIRES_AT,
     } as never,
     { ...kernel.authoritySourceOptions(), dispatchPolicies: registry },
   );
@@ -138,7 +139,7 @@ const dispatch = (
     dispatchEventId,
     dispatcher: "orchestrator",
     intent: kernel.validateIntent(
-      JSON.stringify({ goal: "reconcile Acme", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "reconcile Acme", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     subject: { iss: ISS, sub: "alice" },
     policyVersion: DERIVATION_POLICY.policy_version,
@@ -323,7 +324,7 @@ describe("activation policy snapshot retention: Template Dispatch (@spec approva
 
     const direct = kernel.approve({
       intent: kernel.validateIntent(
-        JSON.stringify({ goal: "reconcile Acme", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "reconcile Acme", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
       ),
       subject: { iss: ISS, sub: "alice" },
       approver: { iss: ISS, sub: "human-approver" },
@@ -360,7 +361,7 @@ const R1 = "https://basis.example/mcp";
 const R2 = "https://basis-two.example/mcp";
 const CHILD_POLICY_ID = "urn:policy:child-drawdown";
 const SECOND_POLICY_ID = "urn:policy:child-drawdown-two";
-const PARENT_EXP = "2027-01-01T00:00:00Z";
+const PARENT_EXP = FIXTURE_EXPIRES_AT;
 const CHILD_V1 = snapshot("1", "one child per invoice");
 const SECOND_V1 = snapshot("1", "one child per ledger");
 

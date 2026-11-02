@@ -28,6 +28,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
@@ -61,7 +62,7 @@ const approve = (n: number): MissionRecord =>
       JSON.stringify({
         goal: "Post journal entries to LedgerCloud",
         target_resources: [RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     proposedAuthority: [
@@ -251,7 +252,7 @@ describe("issueCrossDomainGrant — continuation ID-JAG (extended path)", () => 
           JSON.stringify({
             goal: "Post journal entries and read reports on LedgerCloud",
             target_resources: [RESOURCE, RESOURCE_2],
-            expires_at: "2027-01-01T00:00:00Z",
+            expires_at: FIXTURE_EXPIRES_AT,
           }),
         ),
         proposedAuthority: [

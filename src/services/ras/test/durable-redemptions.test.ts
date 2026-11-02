@@ -26,6 +26,7 @@ import {
   REDEMPTION_RETENTION_MARGIN_S,
   ResourceAuthorizationServer,
 } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const AS_ISS = "https://as.example.test";
 const RAS_ISS = "https://ras.example.test";
@@ -80,7 +81,7 @@ async function rasConfig(config: Partial<RasConfig> = {}): Promise<RasConfig> {
     origin: { iss, sub },
     local_sub: "local-alice",
     observed_at: "2020-01-01T00:00:00Z",
-    valid_until: "2099-01-01T00:00:00Z",
+    valid_until: FAR_EXPIRES_AT,
   });
   return {
     localCeiling: [ENTRY as never],

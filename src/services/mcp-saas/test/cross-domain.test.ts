@@ -22,6 +22,7 @@ import {
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer, SAAS_RESOURCE } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
@@ -67,7 +68,7 @@ const intent = () =>
     JSON.stringify({
       goal: "Post journal entries to LedgerCloud",
       target_resources: [SAAS_RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     }),
   );
 
@@ -131,7 +132,7 @@ beforeAll(async () => {
           origin: { iss: AS_ISS, sub: "alice" },
           local_sub: "alice-ledgercloud",
           observed_at: "2020-01-01T00:00:00Z",
-          valid_until: "2099-01-01T00:00:00Z",
+          valid_until: FAR_EXPIRES_AT,
         },
       ],
     },
@@ -360,7 +361,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
         JSON.stringify({
           goal: "Read only",
           target_resources: [SAAS_RESOURCE],
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
         }),
       ),
       proposedAuthority: [{ type: "mission_resource_access", resource: SAAS_RESOURCE, actions: ["ledger:vendor.read"] }],
@@ -414,7 +415,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
             origin: { iss: AS_ISS, sub: "alice" },
             local_sub: "alice-ledgercloud",
             observed_at: "2020-01-01T00:00:00Z",
-            valid_until: "2099-01-01T00:00:00Z",
+            valid_until: FAR_EXPIRES_AT,
           },
         ],
       },

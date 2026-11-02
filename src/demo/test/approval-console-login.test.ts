@@ -15,13 +15,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type ApprovalConsole, issueMissionToken, logInAgain, recordApproverLogin } from "../src/approval-console.js";
 import type { IssueOpts } from "../src/oauth-client.js";
 import { assertDemoApprovalFloor, type DemoStack } from "../src/stack.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14962;
 const ISSUER = `http://localhost:${PORT}`;
 const MAX_AGE = APPROVAL_FLOOR.floors[0]?.max_authentication_age_seconds as number;
 const REMIT: IssueOpts = {
   missionIntent: JSON.stringify({
-    intent: { goal: "Send the Acme remittance", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+    intent: { goal: "Send the Acme remittance", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
   }),
   authorizationDetails: JSON.stringify([
     {

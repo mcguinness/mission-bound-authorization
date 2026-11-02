@@ -24,6 +24,10 @@ import {
 } from "../src/index.js";
 import { TXN_TOKEN_PROHIBITED_CLAIMS } from "@mission/core";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
+
+/** The approval runs to one day before the Mission's own expiry (#1968). */
+const APPROVED_UNTIL = daysAfter(FIXTURE_EXPIRES_AT, -1);
 
 /** Stand in for the Challenge-Issuing Resource (the resource owns the signing). */
 async function signChallenge(
@@ -83,7 +87,7 @@ const intent = () =>
     JSON.stringify({
       goal: "Pay invoices",
       target_resources: [RESOURCE],
-      expires_at: "2027-01-01T00:00:00Z",
+      expires_at: FIXTURE_EXPIRES_AT,
     }),
   );
 
@@ -168,7 +172,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     ).not.toBe(pending.deferral_code);
 
     // Bob approves with an approval expiry that bounds the credential.
-    deferrals.approve(pending.deferral_code, "2026-12-31T00:00:00Z");
+    deferrals.approve(pending.deferral_code, APPROVED_UNTIL);
     const issued = deferrals.redeem(pending.deferral_code) as {
       mission: Record<string, unknown>;
       authorization_details: AuthorityEntry[];
@@ -181,7 +185,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     expect(kernel.get(mission.id)?.state).toBe("active");
     // Granted authority is a subset of the active Mission.
     expect(issued.authorization_details[0]?.actions).toEqual(["payments:payment.execute"]);
-    expect(issued.approved_until).toBe("2026-12-31T00:00:00Z");
+    expect(issued.approved_until).toBe(APPROVED_UNTIL);
 
     // Single redemption: a second redeem of an already-redeemed handle is a
     // malformed grant, not a denial -> invalid_grant (draft §5.6).
@@ -264,7 +268,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
         proposedAuthority: proposal(["acme", "globex"]),
         approver: { iss: ISS, sub: "bob" },
         approvalEventId: "apev-x",
-        approvedUntil: "2026-12-31T00:00:00Z",
+        approvedUntil: APPROVED_UNTIL,
       }),
     ).toThrow(/not active/);
   });
@@ -277,13 +281,13 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
       proposedAuthority: proposal(["acme", "globex"]),
       approver: { iss: ISS, sub: "bob" },
       approvalEventId: "apev-exp",
-      approvedUntil: "2026-12-31T00:00:00Z",
+      approvedUntil: APPROVED_UNTIL,
     });
     expect(successor.predecessor).toBe(predecessor.id);
     expect(successor.authority_set[0]?.constraints?.vendors).toContain("globex");
     kernel.supersedeOnRedemption(successor.id);
     expect(kernel.get(predecessor.id)?.termination?.reason).toBe("superseded");
-    expect(Date.parse(successor.expires_at)).toBeLessThanOrEqual(Date.parse("2026-12-31T00:00:00Z"));
+    expect(Date.parse(successor.expires_at)).toBeLessThanOrEqual(Date.parse(APPROVED_UNTIL));
   });
 });
 
@@ -345,7 +349,7 @@ describe("challenge verification and the transaction token (@spec txn-authorizat
     );
     await expect(validateChallenge(forged, issuers, ISS)).rejects.toThrow(/did not verify/);
 
-    const expS = Math.floor(Date.parse("2026-12-31T00:00:00Z") / 1000);
+    const expS = Math.floor(Date.parse(APPROVED_UNTIL) / 1000);
     const token = await mintTransactionToken({
       issuer: ISS,
       audience: RESOURCE,

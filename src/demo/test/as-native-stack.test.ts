@@ -72,6 +72,7 @@ import {
   tokenGrantRequest,
 } from "../src/oauth-client.js";
 import { AS_NATIVE_CAPABILITIES, composeStack, type DemoStack, RAS_ISS } from "../src/stack.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 type Json = Record<string, unknown>;
 
@@ -284,7 +285,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
           intent: {
             goal: "Read approved Acme invoices and send their remittance",
             target_resources: [CANONICAL_RESOURCE],
-            expires_at: "2027-01-01T00:00:00Z",
+            expires_at: FIXTURE_EXPIRES_AT,
           },
         }),
         authorizationDetails: JSON.stringify([
@@ -511,7 +512,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
             intent: {
               goal: "Read approved Acme invoices",
               target_resources: [CANONICAL_RESOURCE],
-              expires_at: "2027-01-01T00:00:00Z",
+              expires_at: FIXTURE_EXPIRES_AT,
             },
           }),
         }),
@@ -619,7 +620,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
   };
   const REMIT_INTENT = {
     missionIntent: JSON.stringify({
-      intent: { goal: "Send the Acme remittance", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+      intent: { goal: "Send the Acme remittance", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
     }),
     authorizationDetails: JSON.stringify([
       {
@@ -742,7 +743,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         authServer().agentClientJwk,
         {
           missionIntent: JSON.stringify({
-            intent: { goal: "Read approved Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+            intent: { goal: "Read approved Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
           }),
           authorizationDetails: JSON.stringify([
             { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
@@ -1582,7 +1583,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
         as.agentClientJwk,
         {
           missionIntent: JSON.stringify({
-            intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+            intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
           }),
           authorizationDetails: JSON.stringify([
             { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
@@ -1741,7 +1742,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
         as.agentClientJwk,
         {
           missionIntent: JSON.stringify({
-            intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+            intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
           }),
           authorizationDetails: JSON.stringify([
             { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
@@ -1799,7 +1800,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
             intent: {
               goal: "Read approved Acme invoices and send their remittance",
               target_resources: [CANONICAL_RESOURCE],
-              expires_at: "2027-01-01T00:00:00Z",
+              expires_at: FIXTURE_EXPIRES_AT,
             },
           }),
           authorizationDetails: JSON.stringify([
@@ -1963,7 +1964,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       as.agentClientJwk,
       {
         missionIntent: JSON.stringify({
-          intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
         }),
         authorizationDetails: JSON.stringify([
           { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
@@ -2587,7 +2588,7 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
       as.agentClientJwk,
       {
         missionIntent: JSON.stringify({
-          intent: { goal: "Read approved Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          intent: { goal: "Read approved Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
         }),
         authorizationDetails: JSON.stringify([
           { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
@@ -2722,7 +2723,7 @@ dLive("the as-native target restarted on the same store files against a live Ope
       as.agentClientJwk,
       {
         missionIntent: JSON.stringify({
-          intent: { goal: "Schedule the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          intent: { goal: "Schedule the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
         }),
         authorizationDetails: JSON.stringify([
           {

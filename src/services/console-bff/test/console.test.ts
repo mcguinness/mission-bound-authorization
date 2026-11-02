@@ -14,6 +14,7 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type Receipt, signStatement, type SignedStatement, TransparencyService } from "@mission/transparency";
 import { AuthzError, ConsoleBff } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 
@@ -33,7 +34,7 @@ const approveMission = (n: number) =>
       JSON.stringify({
         goal: "Pay",
         target_resources: [DERIVATION_POLICY.ceiling[0].resource],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     subject: { iss: ISS, sub: "alice" },

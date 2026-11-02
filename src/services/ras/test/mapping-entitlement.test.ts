@@ -16,6 +16,7 @@ import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jos
 import { beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type LocalMappingPolicy, type LocalPrincipalMapping } from "@mission/core";
 import { ID_JAG_TYP, ResourceAuthorizationServer, type RasConfig } from "../src/index.js";
+import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
 
 const AS_ISS = "https://as.example.test";
 const RAS_ISS = "https://ras.example.test";
@@ -38,7 +39,7 @@ let clientKeys: Keys;
 let clientJkt: string;
 
 const FAR_PAST = "2020-01-01T00:00:00Z";
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 
 function mappingEntry(overrides: Partial<LocalPrincipalMapping> & { origin: LocalPrincipalMapping["origin"] }): LocalPrincipalMapping {
   return {
@@ -486,7 +487,7 @@ describe("RAS co-resolution: base grant (@spec cross-domain#origin-principal-map
   it("denies invalid_grant on a future-dated mapping observed_at", async () => {
     const server = await ras({
       mapping: basePolicy([
-        mappingEntry({ origin: { iss: AS_ISS, sub: GRANT_SUB }, observed_at: "2099-06-01T00:00:00Z" }),
+        mappingEntry({ origin: { iss: AS_ISS, sub: GRANT_SUB }, observed_at: daysAfter(FAR_EXPIRES_AT, 151) }),
         mappingEntry({ origin: { iss: IDP_ISS, sub: IDP_SUB } }),
       ]),
     });
@@ -737,7 +738,7 @@ describe("RAS continuation grant carries the Mission's expiry (@spec continuatio
 
   it("preserves the Mission's expires_at on the local token it mints from a continuation grant", async () => {
     const server = await ras({ mapping: basePolicy([]) });
-    const expiresAt = "2027-01-01T00:00:00Z";
+    const expiresAt = FIXTURE_EXPIRES_AT;
     const grant = await mintGrant({ sub: "acct_keepexpiry", identityContinuationHandle: "handle-exp-3", missionExpiresAt: expiresAt });
     const { access_token } = await server.redeem(grant, clientJkt);
     const claims = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());

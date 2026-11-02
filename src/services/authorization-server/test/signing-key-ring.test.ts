@@ -31,6 +31,7 @@ import {
   kernelStoreFromEnv,
   signingKeysFromEnv,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 void FIXTURE_BROWSER_LOGIN;
 const FLOOR_SESSIONS = new ApprovalSessionStore();
@@ -136,7 +137,7 @@ async function mintAccessToken(as: Awaited<ReturnType<typeof buildAuthorizationS
       code_challenge_method: "S256",
       login_hint: "alice",
       mission_intent: JSON.stringify({
-        intent: { goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT },
       }),
       authorization_details: JSON.stringify([
         { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } },
