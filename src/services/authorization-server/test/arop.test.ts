@@ -24,10 +24,10 @@ import {
 } from "../src/index.js";
 import { TXN_TOKEN_PROHIBITED_CLAIMS } from "@mission/core";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
-import { FIXTURE_EXPIRES_AT, daysFromNow } from "./relative-expiry.helper.js";
+import { FIXTURE_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
 
 /** The approval runs to one day before the Mission's own expiry (#1968). */
-const APPROVED_UNTIL = daysFromNow(60);
+const APPROVED_UNTIL = daysAfter(FIXTURE_EXPIRES_AT, -1);
 
 /** Stand in for the Challenge-Issuing Resource (the resource owns the signing). */
 async function signChallenge(

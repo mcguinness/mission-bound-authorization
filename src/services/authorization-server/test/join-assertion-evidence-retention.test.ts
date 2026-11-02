@@ -37,7 +37,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { CLIENT_ASSERTION_TYPE, type LifecycleTestClient, lifecycleClientAssertion, newLifecycleClient } from "./lifecycle-endpoint.helper.js";
-import { FIXTURE_EXPIRES_AT, daysFromNow } from "./relative-expiry.helper.js";
+import { FIXTURE_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
 
 /** Never listened on: the service is driven directly. */
 const ISSUER = "http://localhost:14915";
@@ -221,7 +221,7 @@ describe("Join evidence retention (@spec authority-server#join-assertion-artifac
     const files = await deploymentFiles();
     const first = await boot(files, now);
     const early = approve(first.kernel, FIXTURE_EXPIRES_AT);
-    const later = approve(first.kernel, daysFromNow(120));
+    const later = approve(first.kernel, daysAfter(FIXTURE_EXPIRES_AT, 59));
     expect(first.kernel.tombstones.horizons().audit_retention_seconds).toBe(DEFAULT_AUDIT_RETENTION_S);
     await minted(first, early.id, actingToken());
     await minted(first, later.id, actingToken());

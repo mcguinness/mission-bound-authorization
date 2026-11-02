@@ -44,7 +44,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { CLIENT_ASSERTION_TYPE, type LifecycleTestClient, lifecycleClientAssertion, newLifecycleClient } from "./lifecycle-endpoint.helper.js";
-import { FIXTURE_EXPIRES_AT, LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
+import { FIXTURE_EXPIRES_AT, LATER_EXPIRES_AT, daysFromNow } from "./relative-expiry.helper.js";
 
 const PORT = 14893;
 const ISSUER = `http://localhost:${PORT}`;
@@ -672,7 +672,8 @@ const eventsFor = (service: JoinAssertionService, missionId: string) => service.
 /** The Mission changes three ways: revoked, suspended, and expired on a kernel whose clock the test moves. */
 let clockOffsetMs = 0;
 let clocked: BuiltAs;
-const FAR_TOKEN_EXP = Math.floor(Date.parse("2030-01-01T00:00:00Z") / 1000);
+/** A token expiry three years ahead, past every move the test makes to the kernel's clock. */
+const FAR_TOKEN_EXP = Math.floor(Date.parse(daysFromNow(3 * 365)) / 1000);
 const changes: Array<[string, () => { kernel: MissionKernel; record: MissionRecord; change: () => void }]> = [
   [
     "revoked",

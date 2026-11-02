@@ -13,6 +13,15 @@ export function daysFromNow(days: number): string {
     .replace(".000Z", "Z");
 }
 
+/**
+ * An instant a fixed number of days after (or, negative, before) another, in
+ * the same form: a bound that must stay beyond, or inside, the value it
+ * constrains derives from that value, never from a fixed date (#1968, D1141).
+ */
+export function daysAfter(instant: string, days: number): string {
+  return new Date(Date.parse(instant) + days * 86_400_000).toISOString().replace(".000Z", "Z");
+}
+
 /** An expiry 30 days ahead: one that falls before the default fixture expiry. */
 export const EARLIER_EXPIRES_AT = daysFromNow(30);
 
@@ -21,3 +30,6 @@ export const FIXTURE_EXPIRES_AT = daysFromNow(61);
 
 /** An expiry 212 days ahead: a ceiling or template that outlives the default fixture expiry. */
 export const LATER_EXPIRES_AT = daysFromNow(212);
+
+/** A far-future expiry, about 72 years ahead: a sentinel no test outlives, at the distance of the fixed one it replaces. */
+export const FAR_EXPIRES_AT = daysFromNow(26_365);
