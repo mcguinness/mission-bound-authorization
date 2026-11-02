@@ -75,7 +75,7 @@ export interface AssertionCase {
   token: string;
   expected: { outcome: "refuse" | "accept"; error?: string };
   producer: { status: "checked"; test: string } | { status: "not-applicable"; reason: string };
-  verifier: { status: string };
+  verifier: { status: string; test: string };
 }
 
 export const digestVectors = readJson<{ cases: DigestCase[] }>("request-digest.json").cases;

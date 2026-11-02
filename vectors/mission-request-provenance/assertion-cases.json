@@ -13,7 +13,7 @@
           "typ": "JWT"
         }
       },
-      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.7cfFEG6cjR8GM9CI43nUHPbbGiJeNpEkBMPcjoCnnf4GbEGX8U_C-nYN2a8mSj6qvTMEa9pHEqYyN9H_HsgHDA",
+      "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.J-CJiIX4VDFzHvL69UwOQL8l8R2SVn2aF_aRHh5L79uih5YjvRAvkAH-2AlrSrWPJ3zMo9MReI8vxmsiirDDIA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -23,8 +23,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-typ-jwt: refused at step 2"
       }
     },
     {
@@ -36,7 +36,7 @@
           "typ"
         ]
       },
-      "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.VByiI3rusltda4VKASN69ordzMaDN0fbW2L3-Gjrcc-ZxwwkA8PzZdSs811sos7gsGda3AdLGR7LK1ohH9FYog",
+      "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.4niwm0mM-8yv0nLUehwpGuBh9YPBB9AdljIWiMsXIF3qdSZnw7VwLQQWJZ2MOb3FFdE7PyopRHLzsv0wmsyd8g",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -46,8 +46,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-typ-absent: refused at step 2"
       }
     },
     {
@@ -70,8 +70,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-alg-none: refused at step 2"
       }
     },
     {
@@ -94,8 +94,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-alg-hs256: refused at step 3"
       }
     },
     {
@@ -107,7 +107,7 @@
           "kid"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.7gWTMo4YNDxujUt-0zv6fHCQlA39i6rpSNpdqk7PMSDnqs8E4dep79rGBP13scbPjYcpFJYk9ZbGBLBDbT64lQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.uctOZCb7Jvui1j6oHiU75EGjSzP7pJ08fslhqdpLtCgR7oB8beiSYnibbEmIVVvI23Mxwmh3BTaCnFWPzVwIOQ",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -117,8 +117,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-kid-absent: refused at step 2"
       }
     },
     {
@@ -130,7 +130,7 @@
           "jku": "https://intake.example.com/jwks.json"
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwiamt1IjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vandrcy5qc29uIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.Wmlk6N6xsNi_JGRejebSRvl1bU_DqDb9EMdTNwVyITYLTIU9CJ8M2g8qFDXmYuEiN1R5QVOl4Gwlts2e6y56qg",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwiamt1IjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vandrcy5qc29uIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.LzZJRI7xwnbRie-k7akGKYoYqZqSMe-X0gFxxnM9UcS4GQwKMiTCgpX8fcJqMpjCnUwdZQ5rREMFOI6aM46uRw",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -140,8 +140,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-jku: refused at step 2"
       }
     },
     {
@@ -153,7 +153,7 @@
           "x5u": "https://intake.example.com/cert.pem"
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwieDV1IjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2VydC5wZW0ifQ.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.3zXlMeytayhuKcE9eUe9u8cH9KjFXgAtnL8cqqmV580yW5fIZbn5I340qP5jT1qxOeYh64wJjvThaYFu8hdXTg",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwieDV1IjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2VydC5wZW0ifQ.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.ZwTZcQQw0w0mEwtlguV7PgXBrLpmK4wXB_HDxIPw_Lte0iykqGjSOsc81FjI8dDe_yhjjnNjkFc_zIJ0T0zmWQ",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -163,8 +163,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-x5u: refused at step 2"
       }
     },
     {
@@ -181,7 +181,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwiandrIjp7Imt0eSI6IkVDIiwieCI6Ik5ZN1VpdHZzMElpaUZWOXZGNlRtaHQ2N2FGenN6aFZPWWFfVGNya3NTcGciLCJ5IjoiSWdzTDNfeTVTeHNTZWhqcWpIcnJSMGtOSWpoUXBZSld4QW1BVlFfNWlOayIsImNydiI6IlAtMjU2In19.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.XRYfx0gbmWIMFU0llm972UEeV73PmVcceluOW_at_kXT8_0klKzWoxDfWpFrdVj6apYUsv26E6emRHuQFwZKCA",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwiandrIjp7Imt0eSI6IkVDIiwieCI6Ik5ZN1VpdHZzMElpaUZWOXZGNlRtaHQ2N2FGenN6aFZPWWFfVGNya3NTcGciLCJ5IjoiSWdzTDNfeTVTeHNTZWhqcWpIcnJSMGtOSWpoUXBZSld4QW1BVlFfNWlOayIsImNydiI6IlAtMjU2In19.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.dkBAUl3LlrUktmMBieI33BA4iSKykw7Bx7r13mfqxnHS3KQt6pxxQnYi2SgKPniI2UnhCF8fBGJOpus0zYTUqw",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -191,8 +191,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-jwk: refused at step 2"
       }
     },
     {
@@ -206,7 +206,7 @@
           ]
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwieDVjIjpbIk1JSUJmYWtlMGNlcnRpZmljYXRlMHBsYWNlaG9sZGVyMGZvcjB0aGUwcHJlc2VuY2UwY2hlY2swb25seTBBQUFBIl19.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.T1Wm1nRr3-zGbMgkGnRuMvaIB6Ej26s6wggGPlk49nHlBO8ujQxAvsUCR-2iJU1l8nrPBeXTde37FgDKejSd-g",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIiwieDVjIjpbIk1JSUJmYWtlMGNlcnRpZmljYXRlMHBsYWNlaG9sZGVyMGZvcjB0aGUwcHJlc2VuY2UwY2hlY2swb25seTBBQUFBIl19.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.5c9NDDTNxVnR08dOYDgdBpnFxU59bCxyvZLvSXszvRBi1G6cTqxr8kyvzTKm8fWhwe0bEAI14-ueutie-_ZWYg",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -216,8 +216,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > the protected header is exactly typ, alg and kid: never jku, x5u, jwk or x5c"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-header-x5c: refused at step 2"
       }
     },
     {
@@ -229,7 +229,7 @@
           "kid": "intake-2026-09"
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTA5In0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.MR152mule_9jaz8-wKDODThQFbFrw6icy7SUca0O5sxYQqyD_XUtUDeiHJR6fbYXyXBCVNZI3Xe5lifqAlefIQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTA5In0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.mOEuGyBqdZnpiY2uRCwu1112pU6r8UEB1MeDXIGalOcarEPIrLr6id4ekDiRR1fo7eUOoAImla_duwhbhDUpGQ",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -239,8 +239,8 @@
         "reason": "the intake signs under its configured kid; the mapping is AS configuration"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-kid-unmapped: refused at step 3"
       }
     },
     {
@@ -287,7 +287,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -297,8 +297,8 @@
         "reason": "AS trust configuration"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-key-not-mapped-to-type: refused at step 3"
       }
     },
     {
@@ -311,7 +311,7 @@
         },
         "signature": "original"
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDIifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDIifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -321,20 +321,20 @@
         "reason": "a property of the token in transit"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-altered-claim: refused at step 4"
       }
     },
     {
       "id": "neg-missing-iss",
-      "description": "required claim iss is absent",
-      "step": 5,
+      "description": "required claim iss is absent: the signer lookup by iss (step 3) finds no signer",
+      "step": 3,
       "construction": {
         "claims_delete": [
           "iss"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJhdWQiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiaWF0IjoxNzkxMDE2MjAwLCJleHAiOjE3OTEwMTY1MDAsImp0aSI6InNMR3lzN1MxdHJlNHVicTd2TDItdnciLCJpbnRlbnRfaGFzaCI6InNoYS0yNTY6WkdXblJBak10dlpWbEM2cmw0VHFLbjVtR19xMnlpeGJSa2lzdnpmbm1lcyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.KEWdQ1PkiMc03ao-WClHdzPlntNoq9L1AixrnV9K00y2ivAUBF2YX1-iJiAQc7DFK4Jeuk7hMh513N3V5e1NBg",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJhdWQiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiaWF0IjoxNzkxMDE2MjAwLCJleHAiOjE3OTEwMTY1MDAsImp0aSI6InNMR3lzN1MxdHJlNHVicTd2TDItdnciLCJpbnRlbnRfaGFzaCI6InNoYS0yNTY6WkdXblJBak10dlpWbEM2cmw0VHFLbjVtR19xMnlpeGJSa2lzdnpmbm1lcyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.cdYpaK1zI0nzxkMMhEbzCZwjd7ud1Y6bLHV4MIbBViUjku82iD4sS7Jb89ohbfz7HMc6Ty-mM3j5Lvi_3ai3XA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -344,8 +344,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-iss: refused at step 3"
       }
     },
     {
@@ -357,7 +357,7 @@
           "aud"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImlhdCI6MTc5MTAxNjIwMCwiZXhwIjoxNzkxMDE2NTAwLCJqdGkiOiJzTEd5czdTMXRyZTR1YnE3dkwyLXZ3IiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.oqzehT4rdoMZ8OR93At5qFniQUVLhRqp6X3sQVlufFC3zcCxU-gOz5RIT9BKc8bCa3yrdGP1afxMyuUxjtr-pw",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImlhdCI6MTc5MTAxNjIwMCwiZXhwIjoxNzkxMDE2NTAwLCJqdGkiOiJzTEd5czdTMXRyZTR1YnE3dkwyLXZ3IiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.MhsoNeMiIuh-AcRS56JvnEluyt9dsVKLI8_RyeVOis8-dFHaKLVGsDTyWfVN68y0Gx7N37AXBMwlC2JM9GlLkA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -367,8 +367,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-aud: refused at step 5"
       }
     },
     {
@@ -380,7 +380,7 @@
           "iat"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJleHAiOjE3OTEwMTY1MDAsImp0aSI6InNMR3lzN1MxdHJlNHVicTd2TDItdnciLCJpbnRlbnRfaGFzaCI6InNoYS0yNTY6WkdXblJBak10dlpWbEM2cmw0VHFLbjVtR19xMnlpeGJSa2lzdnpmbm1lcyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.zK2jFh2RAMtsCkxqsoWvBs3D9F6TWKz9w4OQL6QTyPR48sG3xmmhJuOfFxB6qLfBl7dO-3I6H7G2TyAmQcAcYg",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJleHAiOjE3OTEwMTY1MDAsImp0aSI6InNMR3lzN1MxdHJlNHVicTd2TDItdnciLCJpbnRlbnRfaGFzaCI6InNoYS0yNTY6WkdXblJBak10dlpWbEM2cmw0VHFLbjVtR19xMnlpeGJSa2lzdnpmbm1lcyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.GWryIDWc4yNLTUP-zWKm3qzEK5cjlCjqGmwKkdz-ZcQ28W_21j65gDV8DkHRlgC0DYk468_KagQQrwbOWRrJPg",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -390,8 +390,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-iat: refused at step 5"
       }
     },
     {
@@ -403,7 +403,7 @@
           "exp"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImp0aSI6InNMR3lzN1MxdHJlNHVicTd2TDItdnciLCJpbnRlbnRfaGFzaCI6InNoYS0yNTY6WkdXblJBak10dlpWbEM2cmw0VHFLbjVtR19xMnlpeGJSa2lzdnpmbm1lcyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.cN9ocqSfhmFxwAXRvAfaZQomZpeRcqcP-f-88UbTc0nxryAe74meSZi3N-TjAWA9QNewZ3Bw5waoIuuBsaewxQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImp0aSI6InNMR3lzN1MxdHJlNHVicTd2TDItdnciLCJpbnRlbnRfaGFzaCI6InNoYS0yNTY6WkdXblJBak10dlpWbEM2cmw0VHFLbjVtR19xMnlpeGJSa2lzdnpmbm1lcyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.M-FZ0NF6f_C_KRWdnEvsRGilXjm30fCEsmYodWibS_NhMfwsOv4wJC8tKXqynbD_zG_ALY_qKSJVbyS6JffDiQ",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -413,8 +413,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-exp: refused at step 5"
       }
     },
     {
@@ -426,7 +426,7 @@
           "jti"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.bZwh5kZuVeyTomi6-FOwmdyWNhq78skEcFfjLhKWHi4NfO58VUEwioFzqUBJmkX20xOlOtI2Tvi19DSjLJ6ngA",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.HI0A5UA4ibisOvPSfnRUZzUNAaQr32wGw4VaeXRv8fQFcvmpwtUCkgEpd_asafYx3GXQns0dTD1p5KZLqgRnHA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -436,8 +436,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-jti: refused at step 5"
       }
     },
     {
@@ -449,7 +449,7 @@
           "intent_hash"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.TIjuhX1-rGEtMEIea6_IuyEV-RUYCYPGhQL3QMrAxucwIk2znrjlINuRc9VwqYHoDubgairUWYCnqGNoURYJdQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsInByZXNlbnRlciI6eyJjbGllbnRfaWQiOiJhcC1hZ2VudCIsImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.xjPpkzBDi0U4WCqP9s111tlqDUaH4K5dwYh4SYdhpeGIaD2jMZ0tcRNh0ZZWQYenB_3tqh5hxseCD0rG_JV0pg",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -459,8 +459,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-intent-hash: refused at step 5"
       }
     },
     {
@@ -472,7 +472,7 @@
           "presenter"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.998BKfhrgWtjsXnGvXxGaR6H_EhZCgeR7wGi2_vbQnSvN9I_6bd0POS2cUXQPHmkzAkB6eoMcpYyigwfMYZvCw",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.41FYSslm1dZ_fDBm8vM_Twwes8aX690QtaAZToFajjDxko1YVI0xYOZtS-XYSQBUIoGDKMyL_9jroxu6aBZGsA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -482,8 +482,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-presenter: refused at step 5"
       }
     },
     {
@@ -495,7 +495,7 @@
           "originator"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.QIEYZwAELCjYLA1zvhnTAEoKhRsOhUkOWwY8-5qTt4JvZ2d__XjROd4zaiUeh1Wcw_pP5Cjn0WrgXcRYwYJCRQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.KRZeMV4U_SiI1fcsu0ukrfHDSRWjXouuy2LHfvlXMp_2Lf8qbBKiNWJlOLDfyJDCtvHAimm9JUyw-TCpGc8GSg",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -505,8 +505,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-originator: refused at step 5"
       }
     },
     {
@@ -518,7 +518,7 @@
           "channel"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.gsFf1TN6dhTM6793FWM7EBVlP7fB1nt5P-lvMQvUvkOSKhPFNaGpk69-lQnfr6pNgeGxzVQorzhfRNvXm1FgiA",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.bexawj9DYSBPWl7_TmGl0q47I0Zg_4JSDL_gD4-yEPoqUGeS-in3pKHir-GW-9AVsMowOLMH5MFSeD7EYwRmYw",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -528,8 +528,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-channel: refused at step 5"
       }
     },
     {
@@ -541,7 +541,7 @@
           "captured_at"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.ciiTiq278ppmpvEuPkDopXFapbLC35cWkQU0E0ikCs538gFk0x119pcHl0-srriItwuAo2dyMBsXi3-u8tY0ng",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.XrVQVjPr1zak1sTuazufmO1wE9OBO2TBCgbTJYLOvW60Uz5DvFHYiSl_a9fxmjoNazQQToThJxWv1rK9zl_5qQ",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -551,8 +551,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-captured-at: refused at step 5"
       }
     },
     {
@@ -564,7 +564,7 @@
           "request_digest"
         ]
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.jIibn8BgNJC7eBUZYEPv_RmvhJhFlgRV-48_Cm4tEIh2R5bQAV4swsGhCSSgvE0uEcc5GrHG95ed9-4uO-_PNQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.Zw7npNgFxfDoP9gARBC_hJPJun7OmyGdYweZg419YHKkgFwhLm5Za7rfJ5Uk0qGHvuVHQEsZLcWPBHAO2kVaqQ",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -574,8 +574,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-missing-request-digest: refused at step 5"
       }
     },
     {
@@ -587,7 +587,7 @@
           "iat": "1791016200"
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOiIxNzkxMDE2MjAwIiwiZXhwIjoxNzkxMDE2NTAwLCJqdGkiOiJzTEd5czdTMXRyZTR1YnE3dkwyLXZ3IiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.cvCUEa4naLGpglNjW45GD5dPwD42Kay7oidRj5DVDL0TFLYJPUYpbgWsGDHj-B4vyRqGcQIqvCay_FnKppkqlA",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOiIxNzkxMDE2MjAwIiwiZXhwIjoxNzkxMDE2NTAwLCJqdGkiOiJzTEd5czdTMXRyZTR1YnE3dkwyLXZ3IiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.jFqCekJ2jc0Y30DU8LwcjJFc7wbX_vNQmP9QDIpPIq_5AYdl_8vZ5h8RwhO2ppfSkV36Y4dBEreK504WxjtRcA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -597,8 +597,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-iat-string: refused at step 5"
       }
     },
     {
@@ -614,7 +614,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.MV_PqUddoMazvf6EzUpdHx4oo1ZDkogbKLdquiF4lOa4w-9DgoUvR4MMj9aWJG3hiAUTXNUA99rUNXCE39AFOw",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNuZiI6eyJqa3QiOiIwWmNPQ09SWk5ZeS1EV3BxcTMwalp5SkdIVE4wZDJIZ2xCVjN1aWd1QTRJIn19LCJvcmlnaW5hdG9yIjp7ImlzcyI6Imh0dHBzOi8vaWRwLmV4YW1wbGUuY29tIiwic3ViIjoiMjQ4Mjg5NzYxMDAxIn0sImNoYW5uZWwiOnsidHlwZSI6Imh0dHBzOi8vaW50YWtlLmV4YW1wbGUuY29tL2NoL3dlYiIsImFjciI6InBociIsImF1dGhfdGltZSI6MTc5MTAxNjEwMH0sImNhcHR1cmVkX2F0IjoxNzkxMDE2MTQwLCJyZXF1ZXN0X2RpZ2VzdCI6ImhtYWMtc2hhLTI1NjoteFZsRWp4ck1LcVJHSGJVT1MyWXZaaFc3dU4tUnBScmZWLUJzVElVRHUwIiwiY2FwdHVyZV9pZCI6Im9LR2lvNlNscHFlb3FhcXJySzJ1cncifQ.75Cbod5P8BGBgJCUeT2solqA_YjbGA4rewtv50pt34TTaBcLbLgiGdcnp0T4F5EtZW22A7BmA4dfl7qAScU3Zg",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -624,8 +624,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-no-client-id: refused at step 5"
       }
     },
     {
@@ -639,7 +639,7 @@
           ]
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6WyJodHRwczovL2FzLmV4YW1wbGUuY29tIl0sImlhdCI6MTc5MTAxNjIwMCwiZXhwIjoxNzkxMDE2NTAwLCJqdGkiOiJzTEd5czdTMXRyZTR1YnE3dkwyLXZ3IiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.Z_Z6tbm9OKzk4hsFMvqQ4IWE7yybqcbs_YtoGxdXTh-JtvxoAieqNZMmoqGprFeDUj_XwBto9lZ7O5H4Lmf03w",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6WyJodHRwczovL2FzLmV4YW1wbGUuY29tIl0sImlhdCI6MTc5MTAxNjIwMCwiZXhwIjoxNzkxMDE2NTAwLCJqdGkiOiJzTEd5czdTMXRyZTR1YnE3dkwyLXZ3IiwiaW50ZW50X2hhc2giOiJzaGEtMjU2OlpHV25SQWpNdHZaVmxDNnJsNFRxS241bUdfcTJ5aXhiUmtpc3Z6Zm5tZXMiLCJwcmVzZW50ZXIiOnsiY2xpZW50X2lkIjoiYXAtYWdlbnQiLCJjbmYiOnsiamt0IjoiMFpjT0NPUlpOWXktRFdwcXEzMGpaeUpHSFROMGQySGdsQlYzdWlndUE0SSJ9fSwib3JpZ2luYXRvciI6eyJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLmNvbSIsInN1YiI6IjI0ODI4OTc2MTAwMSJ9LCJjaGFubmVsIjp7InR5cGUiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbS9jaC93ZWIiLCJhY3IiOiJwaHIiLCJhdXRoX3RpbWUiOjE3OTEwMTYxMDB9LCJjYXB0dXJlZF9hdCI6MTc5MTAxNjE0MCwicmVxdWVzdF9kaWdlc3QiOiJobWFjLXNoYS0yNTY6LXhWbEVqeHJNS3FSR0hiVU9TMll2WmhXN3VOLVJwUnJmVi1Cc1RJVUR1MCIsImNhcHR1cmVfaWQiOiJvS0dpbzZTbHBxZW9xYXFycksydXJ3In0.3lnntxcSQ7ZiBHzoxaiSR8qRz46eUHzlrX_XF0MA2H3UD1eY6W21MgOl0DtVF8PVqzONkMbonfhiGP8rtKS7DA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -649,8 +649,8 @@
         "test": "src/packages/request-provenance/test/assertion.test.ts > the provenance assertion (@spec request-provenance#assertion, request-provenance#signing, #939) > aud is one string, and every required claim is present with its defined type"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-aud-array: refused at step 5"
       }
     },
     {
@@ -662,7 +662,7 @@
           "aud": "https://other-as.example.com"
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vb3RoZXItYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.wvagvE8gmW4-TLEgQwSK_lFLVYLp9lGihB6S8VYMJ3VZUveD7-hVpXlEIKF-X0CfpUDQnp9exk7T-T2w4djK9A",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vb3RoZXItYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.uXSMUJe93Je7cfLiwwiqfbuTtAb3-l_VQJzPDhDnAILeqp5YBo05RGXRFP19B0mWfjU-4W_-l8Zxs19hDwPtGA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -672,8 +672,8 @@
         "reason": "the intake signs for the audience its caller names"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-aud-other-as: refused at step 6"
       }
     },
     {
@@ -685,7 +685,7 @@
           "now": 1791016531
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -695,8 +695,8 @@
         "reason": "expiry is judged at verification"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-expired: refused at step 7"
       }
     },
     {
@@ -708,7 +708,7 @@
           "now": 1791016169
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -718,8 +718,8 @@
         "reason": "judged at verification"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-iat-future: refused at step 7"
       }
     },
     {
@@ -731,7 +731,7 @@
           "max_assertion_lifetime_seconds": 299
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -741,8 +741,8 @@
         "reason": "the AS's declared bound"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-lifetime-over-max: refused at step 7"
       }
     },
     {
@@ -754,7 +754,7 @@
           "captured_at": 1791016320
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYzMjAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.2mWPS9W9l7pJJCxLBRXJwZecTgqLewIN88ckyy2_lBQe6gOhkelpBCgXsDsoRmvrRNeD4Q3skqzwXK_-MuzsPA",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYzMjAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.rMgbCWRvpCcqSDfc3Tggzh6RPUYcqtdQt6vU1Xk00WAQNBYT3kndMslQCBDTBqm3W2yxzWGZ7alGUCY22Zyv2w",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -764,8 +764,8 @@
         "test": "src/packages/request-provenance/test/signing.test.ts > signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses to sign while the clock reads earlier than captured_at"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-captured-after-iat: refused at step 7"
       }
     },
     {
@@ -777,7 +777,7 @@
           "max_capture_age_seconds": 59
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -787,8 +787,8 @@
         "test": "src/packages/request-provenance/test/signing.test.ts > signing only from the intake's own capture (@spec request-provenance#signing, #939) > refuses a capture past the maximum capture age, and signs at the bound"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-capture-age-over-max: refused at step 7"
       }
     },
     {
@@ -831,7 +831,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -841,8 +841,8 @@
         "reason": "AS trust configuration"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-originator-out-of-scope: refused at step 8"
       }
     },
     {
@@ -885,7 +885,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -895,8 +895,8 @@
         "reason": "AS trust configuration"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-channel-out-of-scope: refused at step 8"
       }
     },
     {
@@ -914,7 +914,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -924,8 +924,8 @@
         "reason": "the AS's comparison"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-intent-mismatch: refused at step 9"
       }
     },
     {
@@ -939,7 +939,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -949,8 +949,8 @@
         "reason": "the AS's comparison"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-client-mismatch: refused at step 9"
       }
     },
     {
@@ -966,7 +966,7 @@
           }
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.KGYkp9g3s7S7h-Jcgx5gIzYy_fxNrHXxO-M-guKgq0bg95McnJhAGq3yp4VRRhdb50EYgYFOeKevtR7o_EWhpQ",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
       "expected": {
         "outcome": "refuse",
         "error": "invalid_mission_intent_evidence"
@@ -976,8 +976,33 @@
         "reason": "the AS's comparison"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-cnf-mismatch: refused at step 9"
+      }
+    },
+    {
+      "id": "neg-presenter-cnf-unestablished",
+      "description": "the exchange established the same client_id and no confirmation key, as a PAR does: a presenter carrying cnf does not agree, and no key is inferred from the assertion (D1119 Q3)",
+      "step": 9,
+      "construction": {
+        "verifier_context_patch": {
+          "presenter": {
+            "cnf": null
+          }
+        }
+      },
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyJ9.yjtbRdh-Grs8bwsapu1ILa46Fjn42EaHJGtDVBCnr93K2RVwa_TyQ84tbDe4-KQDsokI8Hd0DA92zL0sqypJEA",
+      "expected": {
+        "outcome": "refuse",
+        "error": "invalid_mission_intent_evidence"
+      },
+      "producer": {
+        "status": "not-applicable",
+        "reason": "the AS's comparison"
+      },
+      "verifier": {
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > neg-presenter-cnf-unestablished: refused at step 9"
       }
     },
     {
@@ -989,7 +1014,7 @@
           "instruction_sha256": "sha-256:2tS9JkP7r6jl4NE72Xn5EVC44UygCZmFbFCL-zAo2Nw"
         }
       },
-      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyIsImluc3RydWN0aW9uX3NoYTI1NiI6InNoYS0yNTY6MnRTOUprUDdyNmpsNE5FNzJYbjVFVkM0NFV5Z0NabUZiRkNMLXpBbzJOdyJ9.8mqyCXbc2sbgFtyQ7D0dRGKG4UsNo5WuQDrW1Pg_yqAWr-dz5dH2YDMoYRvbiPWttv0jRrJtWZti68XCrXB3Uw",
+      "token": "eyJ0eXAiOiJtaXNzaW9uLXJlcXVlc3QtcHJvdmVuYW5jZStqd3QiLCJhbGciOiJFUzI1NiIsImtpZCI6ImludGFrZS0yMDI2LTEwIn0.eyJpc3MiOiJodHRwczovL2ludGFrZS5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJpYXQiOjE3OTEwMTYyMDAsImV4cCI6MTc5MTAxNjUwMCwianRpIjoic0xHeXM3UzF0cmU0dWJxN3ZMMi12dyIsImludGVudF9oYXNoIjoic2hhLTI1NjpaR1duUkFqTXR2WlZsQzZybDRUcUtuNW1HX3EyeWl4YlJraXN2emZubWVzIiwicHJlc2VudGVyIjp7ImNsaWVudF9pZCI6ImFwLWFnZW50IiwiY25mIjp7ImprdCI6IjBaY09DT1JaTll5LURXcHFxMzBqWnlKR0hUTjBkMkhnbEJWM3VpZ3VBNEkifX0sIm9yaWdpbmF0b3IiOnsiaXNzIjoiaHR0cHM6Ly9pZHAuZXhhbXBsZS5jb20iLCJzdWIiOiIyNDgyODk3NjEwMDEifSwiY2hhbm5lbCI6eyJ0eXBlIjoiaHR0cHM6Ly9pbnRha2UuZXhhbXBsZS5jb20vY2gvd2ViIiwiYWNyIjoicGhyIiwiYXV0aF90aW1lIjoxNzkxMDE2MTAwfSwiY2FwdHVyZWRfYXQiOjE3OTEwMTYxNDAsInJlcXVlc3RfZGlnZXN0IjoiaG1hYy1zaGEtMjU2Oi14VmxFanhyTUtxUkdIYlVPUzJZdlpoVzd1Ti1ScFJyZlYtQnNUSVVEdTAiLCJjYXB0dXJlX2lkIjoib0tHaW82U2xwcWVvcWFxcnJLMnVydyIsImluc3RydWN0aW9uX3NoYTI1NiI6InNoYS0yNTY6MnRTOUprUDdyNmpsNE5FNzJYbjVFVkM0NFV5Z0NabUZiRkNMLXpBbzJOdyJ9.3wyPe6cTMi6z8xXPY_1YUJISC0ZqQGvR0r3jBkKbu4XXcSJWPi9n8_NxPnOtcDF6DmTyoe28NoCbSN0_M7F4tg",
       "expected": {
         "outcome": "accept",
         "recorded_facts": {
@@ -1017,8 +1042,8 @@
         "test": "src/packages/request-provenance/test/privacy.test.ts > the assertion commits to no request content (@spec request-provenance#assertion, request-provenance#privacy-considerations, #939) > the claim set is exactly the defined claims, and no public artifact carries the secret, the instruction, the media type or an unsalted digest of either"
       },
       "verifier": {
-        "status": "pending",
-        "tracking": "#939 slice 2 (AS verifier)"
+        "status": "checked",
+        "test": "src/services/authorization-server/test/request-provenance-verifier.test.ts > assertion-cases.json through the verifier (@spec request-provenance#verification, request-provenance#recorded-facts, #939) > ign-extra-content-claim: accepted, recording exactly the positive vector's facts"
       }
     }
   ]

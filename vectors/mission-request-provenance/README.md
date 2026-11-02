@@ -56,12 +56,16 @@ Each case carries:
 | `token` | The assertion to verify |
 | `expected` | `outcome` (`refuse` or `accept`); on `refuse`, `error`; on `accept`, `recorded_facts` |
 | `producer` | `checked`, with the producer test showing this package's intake never emits the defect, or `not-applicable`, with the reason |
-| `verifier` | `pending`: the AS verifier is #939 slice 2 |
+| `verifier` | `checked`, with the AS verifier test that runs the case: `<id>: refused at step <step>`, or, for an accepted case, `<id>: accepted, recording exactly the positive vector's facts` |
 
 A consumer runs each case alone, against a fresh replay store, with `assertion.json`'s `verifier_context` after applying the case's `verifier_context_patch` as a JSON Merge Patch (RFC 7386; arrays are replaced whole). A case's `token` is signed with the test key unless `construction.signature` says otherwise, so a refusal in steps 2, 3, 5 and later never depends on a bad signature.
+
+`neg-missing-iss` refuses at step 3, not step 5: step 3 looks the signer up by the `iss` claim, so an assertion without one names no signer.
+
+`neg-presenter-cnf-unestablished` is the PAR case: the exchange established the client and no confirmation key, so a `presenter` carrying `cnf` does not agree, and no key is inferred from the assertion.
 
 `ign-extra-content-claim` is accepted, not refused. A producer MUST NOT emit a claim that commits to request content, and this package's intake is checked never to emit one; a verifier ignores claims the draft does not define, as RFC 7519 requires, and records no fact from them. The expected recorded facts are the positive vector's.
 
 ## Status
 
-The producer column is checked now by `src/packages/request-provenance/test/`. Every verifier column is pending until the AS verifier lands (#939 slice 2).
+The producer column is checked by `src/packages/request-provenance/test/`. The verifier column is checked by `src/services/authorization-server/test/request-provenance-verifier.test.ts`, which runs every case through the AS verifier module (`services/authorization-server/src/kernel/request-provenance.ts`, #939 slice 2a-1) with the case's patched trust configuration loaded through `@mission/demo-data`'s loader. The module does not reserve: the replay store and the AS endpoints that carry the type are later slices, so a case's "fresh replay store" is not yet exercised.
