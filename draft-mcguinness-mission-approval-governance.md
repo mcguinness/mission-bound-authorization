@@ -27,14 +27,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  I-D.draft-mcguinness-mission-substrate:
-    title: "Mission Substrate Requirements"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   RFC3339:
   RFC4648:
   RFC6838:
@@ -51,6 +43,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-substrate:
+    title: "Mission Substrate Requirements"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -237,13 +237,15 @@ A digest is encoded in the integrity-anchor encoded form of
 {{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix followed
 by the base64url, no-padding encoding of the digest. This document
 defines no digest algorithm of its own. Its digests are constructed with
-the issuance profile's commitment mechanisms
-({{I-D.draft-mcguinness-oauth-mission}}) and classified under the
-substrate's default commitment construction, which this document imports
-normatively ({{I-D.draft-mcguinness-mission-substrate}}):
-`approval_policy.digest`, `approval_context_commitment`, and
-`submission_evidence_commitment` are envelope anchors, and the record
-digest ({{envelope}}) is a canonical-object digest.
+the issuance profile's commitment mechanisms and classified under the
+species of that profile's commitment taxonomy, whose section this
+document imports normatively ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Commitment Mechanisms"): `approval_policy.digest`,
+`approval_context_commitment`, and `submission_evidence_commitment` are
+envelope anchors, and the record digest ({{envelope}}) is a
+canonical-object digest. That construction instantiates the default
+commitment construction of {{I-D.draft-mcguinness-mission-substrate}},
+which is informative here.
 
 The terms Mission, Mission Record, Mission Issuer, Approver, Subject,
 approval event, Mission Intent, Authority Set, audit horizon,
@@ -2474,6 +2476,12 @@ disclosed mismatch is definitive.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The digest classification imports the OAuth binding's Commitment
+  Mechanisms section normatively, in place of the substrate's default
+  commitment construction, which that section instantiates; Mission
+  Substrate Requirements becomes an informative reference. The four
+  classifications and every construction rule are unchanged (#1944).
 
 - The record's `mission` binding and the Approval Context Manifest
   take the Mission Record's integrity anchors recorded or implied,
