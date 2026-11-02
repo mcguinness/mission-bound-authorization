@@ -22,6 +22,8 @@ Not complete, per the review against these criteria at `1988e136` (D1192), as co
 - **P2, P1 and P4** have not started. Grant Bindings and Related Mechanisms still carries the mechanism catalogue that P2 item 1 replaces.
 - **P5** has not run, and neither P0's tracking issue nor its execution baseline exists.
 
+**Update (2026-11-02, after #2007):** the execution baseline is frozen at `c79d84ad` (Size measurement), and the owner ruled that #1944 carries the gate rather than a new tracking issue (D1206).
+
 D1195 confirms this plan's eight exit conditions, P5 and completion record as the full gate for `-02`, subject to D1134's semantic ruling. The text below keeps the gate as written; passages about work that has since landed carry dated status notes.
 
 ## Baseline and delivery status
@@ -42,6 +44,8 @@ Supporting files:
 - [Companion citation inventory](CITATIONS.md) identifies each occurrence and its source section.
 - [Machine-readable citation inventory](citations.json) records the same occurrences for subsequent comparison.
 - [Inventory generator](inventory.py) regenerates the inventory from an explicit git revision without changing the checkout. It requires `--output`; the inventory files beside it are the pinned baseline.
+- [Prose budget measure](measure.py) for exit condition 8.
+- [Execution-baseline inventory](execution-baseline/CITATIONS.md) at `c79d84ad`, with its [machine-readable form](execution-baseline/citations.json): 112 family citations across 29 documents, and 16 to adjacent documents.
 
 Run the generator from the repository root, always with a scratch output directory. To reproduce the baseline, or to inventory a later revision for comparison:
 
@@ -177,7 +181,7 @@ Re-quote and re-anchor rows in the same commit as the text. Split or retire a ro
 
 ### P0 Establish the work record
 
-**Status (2026-11-02):** D1134 records the D1057 supersession in its own wording (see the decisions table), so the text quoted below is historical. #1895 is closed (PR #1960, D1123). Still to do: the tracking issue, its #302 row and the execution-baseline freeze. The issue is filed only on the owner's word.
+**Status (2026-11-02):** D1134 records the D1057 supersession in its own wording (see the decisions table), so the text quoted below is historical. #1895 is closed (PR #1960, D1123). Done after #2007: the execution baseline is frozen (Size measurement). No new tracking issue is filed: the owner ruled that #1944, whose release order already puts the binding's independence before `-02`, carries the gate, with a rewritten body that quotes the exit conditions and lists the remaining packages, and a #302 row that names the next package (D1206). Still to do: name the two P5 readers, or obtain a ruling on whether a disclosed cold model reader may serve as one.
 
 The inventory and this plan complete the initial local preparation. The owner's direction authorizes pursuing independence for `-02`; the plan itself is not a substitute for an explicit record of which previous decision is superseded. The P0 record must state:
 
@@ -193,7 +197,11 @@ The issue body must include the scope, required invariants, D1057 supersession, 
 
 ### P3 Remove the Approval Governance dependency
 
-**Status (2026-11-02):** the dependency inversion has landed (#1974, D1167; #1992, D1189; #2006, D1198), under D1134's option B, which differs from the steps below. The binding states local standing-consent requirements, and a profile defined elsewhere may meet them by another mechanism. The extension-contract work remains, as its own reviewable step. Its preparatory commit can no longer precede the landed change, and P3's acceptance item "direct-only conformance is fully answerable from the binding" is not demonstrated (D1195). The steps below stay as the record of the intended preservation checks. Do not restore the import or undo D1134's relaxation to recreate their order.
+**Status (2026-11-02):** the dependency inversion has landed (#1974, D1167; #1992, D1189; #2006, D1198), under D1134's option B, which differs from the steps below. The binding states local standing-consent requirements, and a profile defined elsewhere may meet them by another mechanism. The extension-contract work remains, as its own reviewable step. Its preparatory commit can no longer precede the landed change, and P3's acceptance item "direct-only conformance is fully answerable from the binding" is not demonstrated (D1195). The steps below stay as the record of the intended preservation checks. Do not restore the import or undo D1134's relaxation to recreate their order. Besides the extension-contract review, three items remain:
+
+- **A1:** delete the Governance example from `policy_version`'s definition, still on `main` at `c79d84ad`. D1195 resolves A1 by that deletion, which leaves the conditional rule complete.
+- **The adopter review:** confirm that Template, Progressive, Child Delegation and `governed_policy` each state their adoption of the Contract, with explicit scope for profile authors and activating issuers, and that their manifest edges match (#2006 asserted them).
+- **The Governance member explanations:** for the four Principals and Approval Basis citations and the Single Accountable Approver pair, keep the binding's recognition and opacity rules complete locally, and leave the companion-defined members to Governance.
 
 **Files:** the binding, Approval Governance, every existing standing-consent profile that adopts its contract, and the family and conformance manifests. Determine the adopter list from both normative references and actual `approval_basis.type` producers; searching only the phrase Approval Basis Contract is insufficient.
 
@@ -262,6 +270,8 @@ This commit's acceptance is: each hook identifies its author duties and baseline
 6. Add a dedicated fixture under `vectors/core-standalone/` and a deterministic generator/check command, proposed as `scripts/generate-core-standalone-fixture.mjs --check`. Record the exact Intent, approved entry, issuer, record member presence, commitment envelopes, JCS bytes and expected digests. Verify the generator against the binding's existing integrity vectors before generating the fixture. A test using the reference's independent anchor implementation must reproduce the new fixture's digests; the canonical-base64 checker alone does not prove correct preimages.
 7. Check that every displayed example object and hash agrees with the dedicated fixture, so a changed example field fails verification. If compact signed tokens are displayed, generate them from test-only keys and verify their signatures and claims. If signatures are omitted, label them as illustrative and do not present an invalid compact token as verifiable. Keep `baseline-q3` and its Resource Access consumers unchanged unless an independently reviewed change requires otherwise.
 8. Do not assume the existing AS accepts `payment_initiation`. The example fixture and its validation are part of P4; an actual end-to-end AS witness needs explicit support for the illustrated type. Report that separately from successful digest and schema checks. Never hand-edit a displayed hash to match an assumed result.
+
+**Status note (2026-11-02):** RFC 9396's payment fields define no subset relation, so the delegated example carries its entry unchanged or illustrates delegation without narrowing. Label the example's fields so it is not read as the family's standing-payment scenario.
 
 **Acceptance:** all example fields and operations are defined by the binding, the underlying OAuth standards or the locally stated example type. A consumer can reproduce changed commitments. No example implies immediate revocation of every JWT or imports an optional runtime decision. No normative requirement is inferred from a merely illustrative application type.
 
@@ -351,7 +361,7 @@ The owner retains merge, publication and upstream actions. Publication of `-02` 
 
 ## Size measurement and the Mapping Assessment
 
-At P0 freeze the execution baseline after incorporating any already-merged overlapping PRs. Status (2026-11-02): it is not yet frozen; freeze it before renewed package work, on a commit that includes #1974 (D1195). Count whitespace-separated prose tokens from Introduction to before IANA Considerations, excluding fenced code blocks, bibliography and Document History. Count the Extensibility chapter separately under the same rules. Keep the exact extraction script and both baseline values with the issue's acceptance record. Report appendix and example growth separately so moving text outside the measured body cannot conceal extra baseline reading. P5 compares the same regions and requires no net growth; a correctness-driven exception is an explicit reviewed change to the budget, not a silent waiver.
+At P0 freeze the execution baseline after incorporating any already-merged overlapping PRs. Status (2026-11-02): frozen at `c79d84ad`, which includes #1974 (D1195), with [measure.py](measure.py): body 35,829 words, Extensibility 2,089 and appendices 2,804. At `b2b6c052` the same script gives 35,639, 2,026 and 2,800. D1192's body figures used another extraction, so only this script's values are compared. Exit condition 5 adds author duties to Extension Points while exit condition 8 holds Extensibility flat, so the contract is funded from text already in that chapter: Mission-Creating Paths grew 56 words with #1974, and Extension Points restates rules that their home sections state. The owner may instead rule a single body budget, with Extensibility reported separately; until then both budgets hold. Count whitespace-separated prose tokens from Introduction to before IANA Considerations, excluding fenced code blocks, bibliography and Document History. Count the Extensibility chapter separately under the same rules. Keep the exact extraction script and both baseline values with the issue's acceptance record. Report appendix and example growth separately so moving text outside the measured body cannot conceal extra baseline reading. P5 compares the same regions and requires no net growth; a correctness-driven exception is an explicit reviewed change to the budget, not a silent waiver.
 
 Architecture's Mapping Assessment is an assessment of its pinned older binding snapshot. P5 must run check (t), confirm that the assessed snapshot and its scope warning remain accurate, and confirm the new binding does not claim that the old assessment covers it. Do not update the pin as mechanical housekeeping. A current-revision assessment requires a separate substantive clause-by-clause reassessment and its own disposition record. Keeping the honestly labelled historical assessment is compatible with `-02` publication; claiming current coverage without that reassessment is not.
 
