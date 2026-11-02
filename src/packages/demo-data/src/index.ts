@@ -16,6 +16,7 @@ import {
   type AuthorityDependencyDeclaration,
   type AuthorityEntry,
   actionOutsideGrammar,
+  assertContractDescriptors,
   carriesHttpUserinfo,
   computeAnchor,
   containmentSelectorViolation,
@@ -664,6 +665,9 @@ export function contractsRequiring(
           digest: v.digest,
           ...(v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
           ...(v.document !== undefined ? { document: v.document } : {}),
+          ...(v.evaluation_context_descriptors !== undefined
+            ? { evaluation_context_descriptors: v.evaluation_context_descriptors }
+            : {}),
         })),
       };
     }),
@@ -676,8 +680,11 @@ export function contractsRequiring(
  * credential's scope mapping. Either an action list, a mapping that states no
  * contract, or `{actions, resource_contract}`, a mapping that grants its
  * actions under exactly that contract. A stated reference must be one the
- * declarations support for `resource` now: declared for it, not retired,
- * within its retention, with its digest, and defining every mapped action.
+ * declarations configure for `resource`: declared for it, not retired, with
+ * its digest, and defining every mapped action. A superseded version past its
+ * retention still loads (#249, D1185): the value then authorizes nothing,
+ * since retention is enforced at use, against the current clock, so a
+ * configuration never stops loading when a retention ends.
  * A scope's contract never changes; a new contract version takes a new,
  * distinguishable scope value, so a credential issued under a mapping that
  * stated none never gains one.
@@ -688,7 +695,6 @@ export function parseScopeMappingValue(
   resource: string,
   fail: (message: string) => never,
   contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
-  now: Date = new Date(),
 ): { actions: string[]; resource_contract?: ResourceContractRef } {
   const actionsOf = (value: unknown, at: string): string[] => {
     if (
@@ -711,10 +717,11 @@ export function parseScopeMappingValue(
   const actions = actionsOf(value.actions, `${ctx}.actions`);
   if (value.resource_contract === undefined)
     fail(`${ctx}.resource_contract is required in the object form`);
-  const violation = contracts.carriedViolation(
-    { resource, actions, resource_contract: value.resource_contract },
-    now,
-  );
+  const violation = contracts.declaredViolation({
+    resource,
+    actions,
+    resource_contract: value.resource_contract,
+  });
   if (violation !== undefined) fail(`${ctx}.resource_contract: ${violation}`);
   return { actions, resource_contract: value.resource_contract as ResourceContractRef };
 }
@@ -800,6 +807,17 @@ export const EVALUATION_CONTEXT_BINDING: EvaluationContextBindingDeclarations = 
     throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
   }
 })();
+/**
+ * @spec runtime#resource-contract, runtime#evaluation-context-binding (#249,
+ * D1155): the contract versions and the claim agree at load, so no
+ * deployment ships a supported version whose descriptors the claim
+ * contradicts or does not publish.
+ */
+try {
+  assertContractDescriptors(RESOURCE_CONTRACTS, EVALUATION_CONTEXT_BINDING);
+} catch (e) {
+  throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
+}
 const runtimeStateSource = asObject(
   "enforcement-scope.json",
   asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement").state_source,

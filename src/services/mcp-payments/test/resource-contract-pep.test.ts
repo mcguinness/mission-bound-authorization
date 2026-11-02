@@ -32,7 +32,7 @@ import {
   type ResourceContractRef,
   resourceContractDigest,
 } from "@mission/core";
-import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { EVALUATION_CONTEXT_BINDING, RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
   committedEntry,
   createDecisionChannel,
@@ -85,11 +85,29 @@ const RETAINED_TABLE: Record<string, ActionMapping> = {
   get_invoice: { ...(TOOL_ACTIONS.get_invoice as ActionMapping), target: PAYMENTS_INVOICE_CONTRACT },
 };
 
+/**
+ * A synthetic contract document: each operation's action and phase and, for a
+ * crossing the shipped Evaluation-Context Binding claim covers, the
+ * descriptor it declares (#249, D1155), so a covered crossing performed
+ * under it captures its context.
+ */
 const doc = (version: string, profile: string) => ({
   id: CONTRACT,
   version,
   operation_profile: profile,
-  operations: Object.fromEntries(Object.entries(TOOL_ACTIONS).map(([tool, m]) => [tool, { action: m.action }])),
+  operations: Object.fromEntries(
+    Object.entries(TOOL_ACTIONS).map(([tool, m]) => {
+      const covered = EVALUATION_CONTEXT_BINDING.operation(m.action, m.phase);
+      return [
+        tool,
+        {
+          action: m.action,
+          ...(m.phase !== undefined ? { phase: m.phase } : {}),
+          ...(covered ? { evaluation_context_descriptor: covered.descriptor } : {}),
+        },
+      ];
+    }),
+  ),
 });
 const ref = (version: string, profile = PAYMENTS_PROFILE_VERSION): ResourceContractRef => ({
   id: CONTRACT,
@@ -337,6 +355,12 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       list: "sha-256:GujuA1Uzv_MUN7wzxQtOyG6iA6FX1Jon_6YpeDFNObs",
       reversal: "sha-256:w2ZqvQP0H3xLDCWwInxrbcxX5mDPInzeIg5wmbimnG8",
     },
+    // #249, D1155: the version names its descriptors; normalization is unchanged.
+    "2026-11-02": {
+      invoice: "sha-256:u_Ts2Z1zkNdll-qmricNSCXuAetq5psUkOeCKH3uQS8",
+      list: "sha-256:GujuA1Uzv_MUN7wzxQtOyG6iA6FX1Jon_6YpeDFNObs",
+      reversal: "sha-256:w2ZqvQP0H3xLDCWwInxrbcxX5mDPInzeIg5wmbimnG8",
+    },
   };
 
   it("each parameter form normalizes fixed inputs to the digest recorded for the current version", () => {
@@ -487,7 +511,7 @@ describe("the payments resource declares its contract versions (@spec runtime#re
     expect(v15).toEqual(v14);
   });
 
-  it("the current 2026-10-27 document differs from 2026-10-26's only in its version and its Operation Profile (#813, #816, D877)", () => {
+  it("the 2026-10-27 document differs from 2026-10-26's only in its version and its Operation Profile (#813, #816, D877)", () => {
     const docOf = (version: string) =>
       structuredClone(shipped?.versions.find((v) => v.version === version)?.document) as {
         version: string;
@@ -495,7 +519,6 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       };
     const v16 = docOf("2026-10-27");
     const v15 = docOf("2026-10-26");
-    expect(current?.version).toBe("2026-10-27");
     expect([v16.version, v16.operation_profile]).toEqual(["2026-10-27", "payments-runtime-profile-v16"]);
     v16.version = v15.version;
     v16.operation_profile = v15.operation_profile;
@@ -516,16 +539,49 @@ describe("the payments resource declares its contract versions (@spec runtime#re
     }
   });
 
-  it("resolves the current 2026-10-27 version, naming payments-runtime-profile-v16, for every operation, and the superseded 2026-10-26 version through its retained_until instant and not after it (#813, #816, D877)", () => {
+  // @spec runtime#resource-contract, runtime#evaluation-context-binding
+  // (#249, D1155): the descriptor references are contract material, so they
+  // arrive as a new version, and the published 2026-10-27 bytes are unchanged.
+  it("the current 2026-11-02 document differs from 2026-10-27's only in its version and the evaluation-context descriptor each covered operation names, the one the claim declares for it", () => {
+    const docOf = (version: string) =>
+      structuredClone(shipped?.versions.find((v) => v.version === version)?.document) as {
+        version: string;
+        operation_profile: string;
+        operations: Record<string, { action: string; phase?: string; evaluation_context_descriptor?: unknown }>;
+      };
+    const next = docOf("2026-11-02");
+    const v16 = docOf("2026-10-27");
+    expect(current?.version).toBe("2026-11-02");
+    expect([next.version, next.operation_profile]).toEqual(["2026-11-02", "payments-runtime-profile-v16"]);
+    const named: string[] = [];
+    for (const [tool, op] of Object.entries(next.operations)) {
+      const declared = EVALUATION_CONTEXT_BINDING.operation(op.action, op.phase);
+      expect(op.evaluation_context_descriptor, tool).toEqual(declared?.descriptor);
+      if (op.evaluation_context_descriptor !== undefined) named.push(tool);
+      delete op.evaluation_context_descriptor;
+    }
+    expect(named.sort()).toEqual(["check_transfer", "execute_wire_transfer", "hold_transfer", "reverse_wire_transfer", "send_remittance_email"]);
+    next.version = v16.version;
+    expect(next).toEqual(v16);
+  });
+
+  it("resolves the current 2026-11-02 version, naming payments-runtime-profile-v16, for every operation, and the superseded 2026-10-27 and 2026-10-26 versions each through its retained_until instant and not after it (#813, #816, D877; #249, D1155)", () => {
     const refOf = (version: string): ResourceContractRef => {
       const v = shipped?.versions.find((x) => x.version === version);
       return { id: CONTRACT, version, digest: v?.digest as string };
     };
     const at = (iso: string, action: string) => ({ target: CANONICAL_RESOURCE, action, now: new Date(iso) });
+    expect(shipped?.versions.find((x) => x.version === "2026-10-27")).toMatchObject({ state: "superseded", retained_until: "2027-11-02T00:00:00Z" });
     for (const action of ACTIONS) {
-      const resolved = RESOURCE_CONTRACTS.resolve(refOf("2026-10-27"), at("2030-01-01T00:00:00Z", action));
+      const resolved = RESOURCE_CONTRACTS.resolve(refOf("2026-11-02"), at("2030-01-01T00:00:00Z", action));
       expect(resolved.ok, action).toBe(true);
       expect(resolved.ok ? resolved.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v16");
+      const v16Within = RESOURCE_CONTRACTS.resolve(refOf("2026-10-27"), at("2027-11-02T00:00:00Z", action));
+      expect(v16Within.ok ? v16Within.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v16");
+      expect(RESOURCE_CONTRACTS.resolve(refOf("2026-10-27"), at("2027-11-02T00:00:01Z", action)), action).toEqual({
+        ok: false,
+        reason: "outside_retention",
+      });
       const within = RESOURCE_CONTRACTS.resolve(refOf("2026-10-26"), at("2027-10-27T00:00:00Z", action));
       expect(within.ok ? within.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v15");
       expect(RESOURCE_CONTRACTS.resolve(refOf("2026-10-26"), at("2027-10-27T00:00:01Z", action)), action).toEqual({

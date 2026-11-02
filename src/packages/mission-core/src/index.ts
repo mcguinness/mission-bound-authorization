@@ -396,6 +396,8 @@ export {
   sameResourceContract,
 } from "./resource-contract.js";
 export {
+  assertContractDescriptors,
+  contractDescriptor,
   type DeclaredContractVersion,
   type EntryContractConfiguration,
   RESOURCE_CONTRACT_STATES,
