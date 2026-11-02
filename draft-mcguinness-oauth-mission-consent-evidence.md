@@ -533,8 +533,8 @@ author.
 ## Material Notice Requirements {#material-notices}
 
 A material notice SHOULD be included for each of these conditions when
-present in the proposed Authority Set or Mission context, and MUST be
-for a high-risk class (below):
+present in the proposed Authority Set or Mission context; a high-risk
+class below requires one:
 
 - delegation to another actor or child Mission;
 - authority that crosses an organizational or issuer boundary;
