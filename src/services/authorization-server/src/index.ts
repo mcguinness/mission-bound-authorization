@@ -1972,6 +1972,7 @@ export async function buildAuthorizationServer(opts: {
                   requestProvenance.config.clock_skew_seconds,
                   opts.deferredApproval?.pendingLifetimeS,
                 ),
+                ...(opts.now ? { now: opts.now } : {}),
               }),
             ],
           ]),
