@@ -288,17 +288,16 @@ multi-step task is in scope as a service-owned Mission
 
 Without its optional capabilities ({{optional-capabilities}}), an
 implementation of this document needs nothing beyond its normative
-references and one `authorization_details` type that its AS and
-resource servers support ({{conformance}}). It turns an Approver's
-consent to a task's derived Authority Set into a Mission at approval
-and binds the Mission to the authorization code it issues
-({{grant-binding}}). Every token derived from that grant carries the
-Mission, every issuance is gated on its state and bounded by its
-Authority Set, every credential the Mission Issuer derives expires no
-later than the Mission, and the Mission Issuer accepts revocation by
-`mission_id` from a party its policy authorizes, independent of
-possession of any token ({{revocation}}). Resource servers enforce the
-carried entries, or a `scope` projected from them
+references and one AS-supported `authorization_details` type
+({{conformance}}). It turns an Approver's consent to a task's derived
+Authority Set into a Mission at approval and binds the Mission to the
+authorization code it issues ({{grant-binding}}). Every token derived
+from that grant carries the Mission, every issuance is gated on its
+state and bounded by its Authority Set, every credential the Mission
+Issuer derives expires no later than the Mission, and the Mission Issuer
+accepts revocation by `mission_id` from a party its policy authorizes,
+independent of possession of any token ({{revocation}}). Resource
+servers enforce the carried entries, or a `scope` projected from them
 ({{scope-projection}}); a runtime layer that evaluates each
 consequential action against the Mission is out of scope
 ({{runtime-boundary}}).
