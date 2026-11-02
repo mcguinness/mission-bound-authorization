@@ -104,7 +104,9 @@ export function floorReversibility(runtimeActionClass: RuntimeActionClass): Reve
  * given order (the assigned class first) is taken; any of them meets every
  * minimum, so the choice decides nothing the rule governs.
  */
-export function floorReversibilityOver(runtimeActionClasses: readonly RuntimeActionClass[]): ReversibilityClass {
+export function floorReversibilityOver(
+  runtimeActionClasses: readonly RuntimeActionClass[],
+): ReversibilityClass {
   const floors = runtimeActionClasses.map(floorReversibility);
   const floor = floors.find((f) => floors.every((g) => meets(f, g)));
   if (floor === undefined) throw new Error("a governed step has at least one runtime action class");
@@ -123,7 +125,9 @@ export function enforceReversibilityFloor(
 ): ReversibilityClass {
   const classes: readonly RuntimeActionClass[] =
     typeof runtimeActionClass === "string" ? [runtimeActionClass] : runtimeActionClass;
-  return classes.every((c) => meets(proposed, floorReversibility(c))) ? proposed : floorReversibilityOver(classes);
+  return classes.every((c) => meets(proposed, floorReversibility(c)))
+    ? proposed
+    : floorReversibilityOver(classes);
 }
 
 export interface DeriveReversibilityResult {
