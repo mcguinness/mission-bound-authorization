@@ -168,7 +168,8 @@ function decodeSegment(segment: string): { bytes: Uint8Array; value: Record<stri
 function isRequestDigest(v: unknown): v is string {
   if (typeof v !== "string" || !v.startsWith(REQUEST_DIGEST_PREFIX)) return false;
   const encoded = v.slice(REQUEST_DIGEST_PREFIX.length);
-  if (!BASE64URL.test(encoded)) return false;
+  // The round trip refuses padding, characters outside the base64url
+  // alphabet, and non-zero trailing bits alike.
   const bytes = Buffer.from(encoded, "base64url");
   return bytes.length === REQUEST_DIGEST_BYTES && bytes.toString("base64url") === encoded;
 }

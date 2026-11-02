@@ -219,6 +219,9 @@ describe("step 2, decoding the JWS (@spec request-provenance#verification, #939)
       `${h}.${b64('"claims"')}.${s}`,
       `${h}.${b64("{")}.${s}`,
       `${h}.${p.slice(0, 5)}*${p.slice(6)}.${s}`,
+      // A lenient decoder skips the stray characters and decodes the
+      // vector's claims; the strict decoding refuses them here.
+      `${h}.${p}****.${s}`,
     ]) {
       await refusedAt(verifyRequestProvenance(entry(bad), contextFor()), 2);
     }
