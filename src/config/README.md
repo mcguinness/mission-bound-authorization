@@ -390,7 +390,8 @@ Submission Evidence type (`@spec request-provenance#trust-configuration`,
 `services/authorization-server/src/kernel/request-provenance.ts`.
 
 `enabled` says whether the AS accepts the type. The shipped file sets it to
-`false` and authorizes no signer, and no service reads the file.
+`false` and authorizes no signer. `@mission/demo-data` validates the file
+at load, like every file here, and no service consults it.
 
 The deployment's declared bounds, each a positive whole number of seconds
 no larger than its cap:

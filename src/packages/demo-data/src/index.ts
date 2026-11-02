@@ -3757,6 +3757,6 @@ export function loadRequestProvenanceConfig(
 /**
  * The validated shipped request-provenance configuration (@see
  * loadRequestProvenanceConfig). Validated at load like every file here; no
- * service reads it, and the shipped file does not enable the type.
+ * service consults it, and the shipped file does not enable the type.
  */
 export const REQUEST_PROVENANCE_CONFIG: RequestProvenanceConfig = loadRequestProvenanceConfig();
