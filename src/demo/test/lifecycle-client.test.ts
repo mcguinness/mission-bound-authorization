@@ -263,7 +263,7 @@ describe("the reference Lifecycle client's verification of an expired replay (@s
 
   // @spec status#signing-key-retention (#1977): the client keeps no copy of
   // the key set, so a fetch that fails leaves it nothing to verify under.
-  it("accepts nothing when its jwks_uri fetch fails, though the same response verifies when the fetch succeeds (#1977)", async () => {
+  it("accepts nothing when its jwks_uri or metadata fetch fails, even with a valid body, though the same response verifies when the fetch succeeds (#1977)", async () => {
     const { m, request, jws } = await suspended();
     // The control: the key set is published, and the response verifies.
     expect(await verifyLifecycleResponse(jws, verifying(request))).toMatchObject({
@@ -271,17 +271,23 @@ describe("the reference Lifecycle client's verification of an expired replay (@s
       mission: { id: m.id, state: "suspended" },
     });
     const { jwksUri } = await discoverLifecycleIssuer(ISSUER);
+    const metadataUri = `${ISSUER}/.well-known/openid-configuration`;
+    // The bodies a successful fetch would carry, served under a failure status.
+    const publishedKeys = await (await fetch(jwksUri)).text();
+    const publishedMetadata = await (await fetch(metadataUri)).text();
     const realFetch = globalThis.fetch;
-    const failures: [string, () => Promise<Response>][] = [
-      ["the network fails", () => Promise.reject(new TypeError("fetch failed"))],
-      ["the AS answers 503", () => Promise.resolve(new Response("unavailable", { status: 503 }))],
+    const failures: [string, string, () => Promise<Response>][] = [
+      ["the network fails", jwksUri, () => Promise.reject(new TypeError("fetch failed"))],
+      ["the AS answers 503", jwksUri, () => Promise.resolve(new Response("unavailable", { status: 503 }))],
+      ["a 503 carrying a valid key set", jwksUri, () => Promise.resolve(new Response(publishedKeys, { status: 503 }))],
+      ["a 503 carrying valid metadata", metadataUri, () => Promise.resolve(new Response(publishedMetadata, { status: 503 }))],
     ];
-    for (const [label, failure] of failures) {
+    for (const [label, url, failure] of failures) {
       const spy = vi
         .spyOn(globalThis, "fetch")
-        .mockImplementation((input, init) => (String(input) === jwksUri ? failure() : realFetch(input, init)));
+        .mockImplementation((input, init) => (String(input) === url ? failure() : realFetch(input, init)));
       await expect(verifyLifecycleResponse(jws, verifying(request)), label).rejects.toThrow();
-      expect(spy.mock.calls.some(([input]) => String(input) === jwksUri), label).toBe(true);
+      expect(spy.mock.calls.some(([input]) => String(input) === url), label).toBe(true);
       spy.mockRestore();
     }
   });
