@@ -14,7 +14,7 @@
  */
 
 import { type Server } from "node:http";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, DERIVATION_POLICY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -45,6 +45,9 @@ const CONFIDENTIAL = "parent-P";
 const CLIENT_NAME = "<b>Invoice CLI</b>";
 /** A public client registered for no authorization_details type. */
 const NO_RAR = "device-no-rar";
+/** A public and a confidential device client of the shipped `service_owned` source `ledger-reconciler`. */
+const SVC_PUBLIC = "device-svc-cli";
+const SVC_CONFIDENTIAL = "device-svc-agent";
 const SESSIONS = new ApprovalSessionStore();
 const REDIRECT_URI = "http://localhost:9999/cb";
 const FORM = { "content-type": "application/x-www-form-urlencoded" };
@@ -82,6 +85,7 @@ let offServer: Server;
 let confidentialKey: CryptoKey;
 let strangerKey: CryptoKey;
 let agentKey: CryptoKey;
+let svcConfidentialKey: CryptoKey;
 
 beforeAll(async () => {
   const pair = await generateKeyPair("ES256", { extractable: true });
@@ -89,6 +93,9 @@ beforeAll(async () => {
   const confidentialJwk = { ...(await exportJWK(pair.publicKey)), kid: `${CONFIDENTIAL}-auth`, alg: "ES256", use: "sig" };
   strangerKey = (await generateKeyPair("ES256")).privateKey as CryptoKey;
   const publicClient = deviceClient({ client_id: PUBLIC, client_name: CLIENT_NAME, token_endpoint_auth_method: "none" });
+  const svcPair = await generateKeyPair("ES256", { extractable: true });
+  svcConfidentialKey = svcPair.privateKey as CryptoKey;
+  const svcJwk = { ...(await exportJWK(svcPair.publicKey)), kid: `${SVC_CONFIDENTIAL}-auth`, alg: "ES256", use: "sig" };
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     approvalSessions: SESSIONS,
@@ -118,7 +125,22 @@ beforeAll(async () => {
         redirect_uris: [REDIRECT_URI],
         authorization_details_types: [],
       }),
+      deviceClient({ client_id: SVC_PUBLIC, token_endpoint_auth_method: "none" }),
+      deviceClient({
+        client_id: SVC_CONFIDENTIAL,
+        token_endpoint_auth_method: "private_key_jwt",
+        token_endpoint_auth_signing_alg: "ES256",
+        jwks: { keys: [svcJwk] },
+      }),
     ],
+    // The shipped catalog, with both service clients added to the
+    // `service_owned` source `ledger-reconciler` (#1202).
+    authoritySources: {
+      ...AUTHORITY_SOURCES,
+      entries: AUTHORITY_SOURCES.entries.map((e) =>
+        e.id === "ledger-reconciler" ? { ...e, clients: [...e.clients, SVC_PUBLIC, SVC_CONFIDENTIAL] } : e,
+      ),
+    },
   });
   server = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -161,9 +183,11 @@ const assertion = (client: string, key: CryptoKey, aud = ISSUER) =>
 
 /** The client's own authentication, or its `client_id` alone when public. */
 async function clientAuth(client: string): Promise<Record<string, string>> {
-  return client === CONFIDENTIAL
-    ? { client_assertion: await assertion(CONFIDENTIAL, confidentialKey), client_assertion_type: JWT_BEARER }
-    : { client_id: client };
+  if (client === CONFIDENTIAL) return { client_assertion: await assertion(CONFIDENTIAL, confidentialKey), client_assertion_type: JWT_BEARER };
+  if (client === SVC_CONFIDENTIAL) {
+    return { client_assertion: await assertion(SVC_CONFIDENTIAL, svcConfidentialKey), client_assertion_type: JWT_BEARER };
+  }
+  return { client_id: client };
 }
 
 async function postForm(url: string, pairs: [string, string][]): Promise<{ status: number; body: Record<string, unknown> }> {
@@ -1106,6 +1130,29 @@ describe("Mission Device Authorization polling (@spec device-authorization#polli
     const res = await poll(PUBLIC, s.deviceCode, await newKeys());
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_grant");
+    expect(res.body.access_token).toBeUndefined();
+  });
+});
+
+describe("a service_owned source and a public client (@spec device-authorization#session-binding, #1202)", () => {
+  const RECONCILER = { sub: "dana", subject: "agt_ledger_reconciler" };
+
+  it("creates no Mission when a service_owned source would rest on a public client's client_id, and the next poll is access_denied", async () => {
+    // The control: a confidential client of the same service_owned source gets its Mission.
+    const control = await approvedSession(SVC_CONFIDENTIAL, RECONCILER);
+    const record = missionOf(control.uid);
+    expect(record?.authority_source.type).toBe("service_owned");
+    expect(record?.subject.sub).toBe("agt_ledger_reconciler");
+    expect(record?.client_id).toBe(SVC_CONFIDENTIAL);
+    // The public client of the same source: refused at the decision, before any write.
+    const s = await pendingSession(SVC_PUBLIC, RECONCILER);
+    const decided = await decide(s.uid, s.headers, CONFIRMED);
+    expect(decided.status, decided.text).toBe(200);
+    expect(missionOf(s.uid)).toBeUndefined();
+    const res = await poll(SVC_PUBLIC, s.deviceCode, await newKeys());
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("access_denied");
+    expect(res.body.error_description).toMatch(/public client's client_id cannot establish a service_owned authority source/);
     expect(res.body.access_token).toBeUndefined();
   });
 });
