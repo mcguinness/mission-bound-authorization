@@ -181,7 +181,6 @@ const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
 const readJson = (c: Context): Promise<Record<string, unknown>> =>
   c.req.json().catch(() => ({}) as Record<string, unknown>);
 
-/** Decode a compact JWS payload (base64url) without verifying, for display. */
 /**
  * The demo server's Mission Intent Submission envelope: the semantic task
  * context is its `intent` member, expiring a fixed distance after `now`, the
@@ -197,6 +196,7 @@ export function demoMissionIntent(now: Date): string {
   });
 }
 
+/** Decode a compact JWS payload (base64url) without verifying, for display. */
 function decodeClaims(jwt: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
 }

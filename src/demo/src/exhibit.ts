@@ -364,7 +364,8 @@ function act(stack: DemoStack, numeral: string, title: string, oneLine: string) 
 // ===========================================================================
 
 /** A far-future ceiling expiry, well above the per-instance clamp so the clamp
- *  (and the refresh-family lifetime bound) is observable but never expires mid-run. */
+ *  (and the refresh-family lifetime bound) is observable but never expires mid-run.
+ *  A deliberate fixed date (#1976, D1159): the three AAM Intents below expire here. */
 const AAM_FAR_FUTURE = "2099-01-01T00:00:00Z";
 const AAM_TAINT_EVENT_ID = "aam-exhibit-taint-1";
 
