@@ -1380,10 +1380,9 @@ submission ({{proposal-validation}}).
 
 A later token issuance is bounded by the subset rule against the
 Authority Set ({{subset}}), not by the target list again. A type whose
-subset relation admits a narrower `resource` (for
-`mission_resource_access`, a descendant of a `prefix` entry) can yield a
-token entry that `target_resources` does not name, and a candidate
-outside every Authority Set entry fails that rule.
+subset relation admits a narrower `resource` can yield a token entry
+that `target_resources` does not name, and a candidate outside every
+Authority Set entry fails that rule.
 
 Where recorded, the Mission's `policy_version` names the policy
 version in force ({{mission-record}}).
@@ -1428,9 +1427,7 @@ the shaper's job, before admission and outside the trust boundary
 
 A client-proposed constraint on an individual Authority Set entry enters
 through the `authorization_details` proposal: constraints a supported
-type's specification defines (for example, the Common Constraints that
-{{I-D.draft-mcguinness-oauth-mission-resource-access}} defines for
-`mission_resource_access`), and the collision-resistant deployment
+type's specification defines, and the collision-resistant deployment
 extensions the AS understands ({{extensibility}}).
 
 Authority is further bounded by:
@@ -1480,10 +1477,9 @@ because `delegation` is per entry:
 A derived `authorization_details` entry is a subset of a reference
 entry when it is no broader under the subset relation the entry's
 own type defines; {{other-types}} states the general rule and each
-supported type defines its own relation (for `mission_resource_access`,
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}). The AS MUST
-refuse to derive an entry that is not a subset, under its type's
-relation, of some Mission Authority Set entry.
+supported type defines its own relation. The AS MUST refuse to derive an
+entry that is not a subset, under its type's relation, of some Mission
+Authority Set entry.
 
 The AS MUST refuse a request that would widen authority under a
 Mission after the approval event on any dimension (a new resource,
@@ -2575,13 +2571,10 @@ to computing an anchor and to comparing committed values:
 - URI-valued members are compared byte-for-byte, with no
   normalization ({{Section 12 of RFC9396}}), unless a member's own type
   definition
-  specifies a normalization. Where a type defines one, as
-  `mission_resource_access` does for its `prefix`-match resource
-  containment test
-  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), it applies
-  to that comparison alone: the default `resource` equality test
-  remains an exact match, and anchor computation is always byte-exact
-  over the recorded values.
+  specifies a normalization. Where a type defines one, it applies only
+  to the comparison the type defines it for: the default `resource`
+  equality test remains an exact match, and anchor computation is always
+  byte-exact over the recorded values.
 
 ### Digest Input and Algorithm {#digest-algorithm}
 
@@ -2598,9 +2591,7 @@ The commitment is over the parsed I-JSON data value, not the source
 text: JCS does not preserve a source lexeme's spelling or excess
 precision. A profile whose values need exact decimal or large-integer
 semantics carries them as strings, as {{Section 3.1 of RFC8785}}
-recommends, or defines a stricter numeric domain, as the Mission
-Resource Access Profile's Common Constraints do for constraint values
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+recommends, or defines a stricter numeric domain.
 
 The security considerations of {{RFC8785}} apply to every JCS
 computation.
@@ -3033,13 +3024,11 @@ invalid `resource` value in the sense of {{RFC8707}}.
 Three identifiers stay distinct. An entry's `resource`, where its type
 defines one, names the protected resource its authority covers, and a
 resource server matches each request's operation target against it
-under the entry's type (for
-`mission_resource_access`,
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}). A token
-request's `resource` parameter ({{RFC8707}}) selects the audience the
-client asks for. The token's `aud` names the recipients that accept
-the token, and the AS relates an entry to them through the entry's
-original approved audience ({{transformation-capabilities}}).
+under the entry's type. A token request's `resource` parameter
+({{RFC8707}}) selects the audience the client asks for. The token's
+`aud` names the recipients that accept the token, and the AS relates an
+entry to them through the entry's original approved audience
+({{transformation-capabilities}}).
 
 A token issued for an audience carries only the entries whose original
 approved audience includes that audience; an entry approved for another
@@ -3334,9 +3323,8 @@ target. This rule applies to every issuance path that can emit
 Exchange, and any other derived-token path.
 
 This is the type-agnostic form of the rule; a type's own
-specification states when the mapping in step 3 is safe for that
-type's entries (for `mission_resource_access`,
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+specification states when the mapping in step 3 is safe for that type's
+entries.
 
 The runtime profile's enforcement-scope declarations
 ({{I-D.draft-mcguinness-mission-runtime}}) can reference the same
@@ -3382,8 +3370,7 @@ values can request a Mission in configured-mapping mode
 `authorization_details` as {{Section 3.1 of RFC9396}} leaves to the AS.
 
 - Each requested value stands for the entries that the type's
-  specification derives from the mapping (for `mission_resource_access`,
-  {{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+  specification derives from the mapping.
 - The Authority Set is those entries narrowed to policy, and the token
   for that target carries their projection under the steps above.
 - A requested value the target's trusted mapping does not name cannot be
@@ -3980,11 +3967,9 @@ A resource server:
 
 1. MUST treat `authorization_details` as the authoritative expression
    of authority and enforce each applicable entry according to that
-   entry's own type specification (for `mission_resource_access`,
-   {{I-D.draft-mcguinness-oauth-mission-resource-access}}). Where
-   more than one carried entry applies, entries are alternative
-   grants of authority, not conjunctive filters, unless the entry's
-   type states otherwise.
+   entry's own type specification. Where more than one carried entry
+   applies, entries are alternative grants of authority, not conjunctive
+   filters, unless the entry's type states otherwise.
 2. MUST treat as providing no authority any applicable entry whose
    type it does not implement, or whose type-defined enforcement it
    cannot complete (an unrecognized member, an unenforceable
@@ -4810,9 +4795,7 @@ below bind only an AS that advertises it:
   NOT list a type absent from them; and
 - the AS MUST publish, within that response, an entry for every
   supported type whose schema validates that type's documented object
-  shape. For `mission_resource_access`, that shape, including the
-  Common Constraints structure, is the Mission Resource Access
-  Profile's ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+  shape.
 
 The optional capabilities are discovered first through existing OAuth
 metadata ({{RFC8414}}): `introspection_endpoint` for introspection,
@@ -4840,9 +4823,7 @@ parameter {{RFC9728}}:
   deployment's classification.
 
 A type-defined `authorization_details` member may define its own
-constraint-discovery surface; `mission_resource_access`'s is defined
-by the Mission Resource Access Profile
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+constraint-discovery surface.
 
 A protected resource can list the `authorization_details` types it
 accepts in the `authorization_details_types_supported` parameter
@@ -5207,12 +5188,11 @@ from the token-specific inputs of its active introspection response
 or issuer-local resolution ({{introspected-consumption}}).
 
 In either form, it enforces each applicable entry its tokens carry
-under that entry's type, which for `mission_resource_access` is work
-a plain {{RFC9068}} resource server does not do. Conformance in this
-role implies support for no particular type: an entry of a type the
-resource server does not implement provides no authority there
-({{rs-requirements}}), so interoperable enforcement needs a type that
-both the AS and the resource server implement.
+under that entry's type, work a plain {{RFC9068}} resource server does
+not do. Conformance in this role implies support for no particular type:
+an entry of a type the resource server does not implement provides no
+authority there ({{rs-requirements}}), so interoperable enforcement
+needs a type that both the AS and the resource server implement.
 
 A **Mission Client** implements the client surfaces:
 
