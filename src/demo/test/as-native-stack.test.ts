@@ -1867,7 +1867,10 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       await first.close();
     }
 
-    // The whole target restarts on the same key ring, with nothing else kept.
+    // The whole target restarts on the same configured files: the key ring and
+    // its key binding record, the RAS redemption store, and the PDP claim and
+    // write-reservation files. With no kernel file, nothing keeps the Missions,
+    // and the resource's pending operations were only ever in memory.
     const second = await launchAsNative(launchOptions(env, files));
     try {
       const decisions: unknown[] = [];
@@ -1924,9 +1927,10 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
         htm: "POST",
       });
       expect(verified).toEqual({ ok: false, refusal_reason: "txn_unknown" });
-      // No decision request, and nothing executed.
+      // No decision request, and nothing executed on any connector: no wire,
+      // no reversal and no remittance email.
       expect(decisions).toHaveLength(0);
-      expect(second.stack.connectors.ledgerEntries()).toHaveLength(0);
+      expect(second.stack.connectors.committedEffects()).toHaveLength(0);
     } finally {
       await second.close();
     }
