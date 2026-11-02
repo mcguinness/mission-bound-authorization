@@ -228,8 +228,10 @@ export interface IntentSubmissionEvidenceVerifyInput {
  *  - Stage 2 `verify`: ASYNC verification (signature, issuer trust, audience,
  *    freshness, `intent_hash` equality, presenter conjunction, status/replay)
  *    returning the NORMALIZED verified output facts the Mission Record lands
- *    (the nested `facts` object of {@link IntentSubmissionEvidenceFact}). Any
- *    throw maps to `invalid_mission_intent_evidence`.
+ *    (the nested `facts` object of {@link IntentSubmissionEvidenceFact}). A
+ *    verification failure maps to `invalid_mission_intent_evidence`; a charge
+ *    past the verification-work bound ({@link IntentSubmissionEvidenceWork})
+ *    refuses the submission `invalid_request`, even where the type catches it.
  */
 export interface IntentSubmissionEvidenceType {
   validate(entry: Record<string, JsonValue>): void;
@@ -495,8 +497,11 @@ function dispatchEvidenceEntry(entry: Record<string, JsonValue>): IntentSubmissi
  * types this submission MUST present (resolved BEFORE derivation from global
  * or per-client configuration). A required type absent from the submission is
  * refused; successful processing without evidence never satisfies a
- * requirement. ALL verification failures map to
- * `invalid_mission_intent_evidence`.
+ * requirement. Verification failures map to
+ * `invalid_mission_intent_evidence`. A submission whose verification would
+ * pass the verification-work bound is refused `invalid_request` instead
+ * (@spec submission-evidence#verification-bounds, #1962), before the excess
+ * work is done.
  *
  * On IDEMPOTENT operations the completed-operation recovery lookup PRECEDES
  * this call: recovery of an already-completed request never re-verifies
