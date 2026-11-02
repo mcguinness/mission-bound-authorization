@@ -40,7 +40,14 @@ const hoisted = await vi.hoisted(async () => {
 
 import { rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { CONTAINMENT_POLICY, DERIVATION_POLICY, DEV_SERVICE_TOKEN, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
+import {
+  CONTAINMENT_POLICY,
+  DERIVATION_POLICY,
+  DEV_SERVICE_TOKEN,
+  pinnedToCurrentContract,
+  SCOPE_PROJECTION,
+  TOPOLOGY,
+} from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -292,14 +299,17 @@ describe("a configured prefix ceiling derives through the authorization server (
 
   it("a Token Exchange from a prefix entry issues a narrower prefix or an exact resource beneath it, and refuses a broader prefix or a sibling", async () => {
     const issued = await issue([read(INVOICES, "prefix")], [RESOURCE, INVOICES]);
-    for (const requested of [read(`${INVOICES}/2026`, "prefix"), read(INV1)]) {
+    // Each request carries the reference the grant carries where one applies:
+    // the payments resource requires one, so a fresh approval records it
+    // (#249 C.3b, D989), and a refusal below is for the resource alone.
+    for (const requested of [read(`${INVOICES}/2026`, "prefix"), read(INV1)].map((e) => pinnedToCurrentContract(e))) {
       const ok = await exchange(issued.at, issued.keys, [requested]);
       expect(ok.status, JSON.stringify(ok.body)).toBe(200);
       expect(resourcesOf(claims(ok.body.access_token as string).authorization_details as AuthorityEntry[])).toEqual(
         resourcesOf([requested]),
       );
     }
-    for (const requested of [read(RESOURCE, "prefix"), read(SIBLING)]) {
+    for (const requested of [read(RESOURCE, "prefix"), read(SIBLING)].map((e) => pinnedToCurrentContract(e))) {
       const res = await exchange(issued.at, issued.keys, [requested]);
       expect(res.status, JSON.stringify(requested)).toBe(400);
       expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");

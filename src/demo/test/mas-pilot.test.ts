@@ -26,7 +26,23 @@ import type { EvaluationRequest } from "@mission/pdp";
 import { generateKeyPair } from "jose";
 import type { MasPilot } from "../src/mas-pilot/compose.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
-import { admin, approve, call, composeRecorded, estateToken, openfgaReachable, READ_ACTIONS, reference } from "./mas-pilot-support.js";
+import { loadMasPilotConfig } from "../src/mas-pilot/config.js";
+import {
+  admin,
+  approve,
+  call,
+  composeRecorded,
+  estateToken,
+  INVOICES_READ,
+  openfgaReachable,
+  READ_ACTIONS,
+  reference,
+  REMIT_SEND,
+  VENDORS_READ,
+} from "./mas-pilot-support.js";
+
+/** The shipped mapping contract's version; a test installs later ones (#249 C.3b moved it to 2). */
+const SHIPPED = (loadMasPilotConfig().mapping_contract as { version: number }).version;
 
 const HIGH_CONSEQUENCE = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
@@ -47,7 +63,7 @@ d("MAS pilot: the estate is a separate issuer with its own client registrations 
   });
 
   it("issues an ordinary RFC 9068 token under the estate issuer, with no mission claim and a client the MAS never registered", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     const claims = claimsOf(credential.token);
     expect(claims.iss).toBe(pilot.estate.issuer);
     expect(claims.iss).not.toBe(pilot.missionIssuer);
@@ -89,7 +105,7 @@ d("MAS pilot: the gateway joins estate credentials under the mapping contract (#
   });
 
   it("permits a joined read: the estate subject and client map to the Mission's own, and authority comes from the Mission", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(res.ok, JSON.stringify(res)).toBe(true);
     // The PEP attested the estate-namespace identity; the PDP mapped it.
@@ -103,7 +119,7 @@ d("MAS pilot: the gateway joins estate credentials under the mapping contract (#
   });
 
   it("refuses the same estate credential on the resource's own route before any decision, though the gateway admits it (bypass)", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     const decided = requests.length;
     const retained = pilot.evidence.all().length;
     const url = pilot.resourceRoute.url;
@@ -143,14 +159,14 @@ d("MAS pilot: the gateway joins estate credentials under the mapping contract (#
   it("never conflates an estate client registered under the Mission's own client_id string: the join denies mission_binding_failed", async () => {
     // The estate registered "ap-agent", the Mission's client_id, but the
     // contract maps no estate client of that name.
-    const credential = await estateToken(pilot, "ap-agent", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "ap-agent", "u-1001", INVOICES_READ);
     const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("mission_binding_failed");
   });
 
   it("never conflates estate account \"alice\" with the Mission subject alice: it joins dana's Mission, which its row maps it to, and not alice's", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "alice", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "alice", INVOICES_READ);
     const onAlice = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(onAlice.ok).toBe(false);
     expect(onAlice.denial_reason).toBe("mission_binding_failed");
@@ -159,22 +175,22 @@ d("MAS pilot: the gateway joins estate credentials under the mapping contract (#
   });
 
   it("denies a disabled estate account whose row still names the Mission's subject", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1003", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1003", INVOICES_READ);
     const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("mission_binding_failed");
   });
 
   it("denies an estate account the contract does not map at all", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1004", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1004", INVOICES_READ);
     const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(res.ok).toBe(false);
     expect(res.denial_reason).toBe("mission_binding_failed");
   });
 
   it("joins two estate accounts mapped to one Mission subject (many-to-one), and the audit log keeps which account acted", async () => {
-    const first = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
-    const second = await estateToken(pilot, "estate-ap-bot-7f3", "u-1002", "invoices.read");
+    const first = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
+    const second = await estateToken(pilot, "estate-ap-bot-7f3", "u-1002", INVOICES_READ);
     const before = pilot.mapping.audit().length;
     expect((await call(pilot, first, aliceMission, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
     expect((await call(pilot, second, aliceMission, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
@@ -190,7 +206,7 @@ d("MAS pilot: the gateway joins estate credentials under the mapping contract (#
 
   it("bounds a joined credential by its own scope as the contract maps it: an action its scope does not carry is refused", async () => {
     // vendors.read is not in this token's scope, though the Mission grants it.
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     const res = await call(pilot, credential, aliceMission, "lookup_vendor", { vendor_id: "acme" });
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("out_of_authority");
@@ -208,7 +224,7 @@ d("MAS pilot: delegates need a recorded actor edge under the Mission (#818, D284
   });
 
   it("denies a mapped delegate with no actor record, then joins it once the deployment records the edge", async () => {
-    const credential = await estateToken(pilot, "estate-extractor-2c1", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-extractor-2c1", "u-1001", INVOICES_READ);
     const missing = await call(pilot, credential, delegableMission, "get_invoice", { invoice_id: "inv-1" });
     expect(missing.ok).toBe(false);
     expect(missing.denial_reason).toBe("mission_binding_failed");
@@ -251,7 +267,7 @@ d("MAS pilot: a joined ordinary token never takes a high-consequence path (#818,
   });
 
   it("denies a remittance under a joined credential whose scope, Mission and Resource policy all carry it, commits nothing, and still permits the joined read", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read remit.send");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", `${INVOICES_READ} ${REMIT_SEND}`);
     // Resource policy entitles the estate account to pay, so only the class
     // reservation stands between the joined credential and the effect.
     await admin(pilot, "grant", "--iss", pilot.estate.issuer, "--sub", "u-1001", "--relation", "payer", "--vendor", "acme");
@@ -285,19 +301,19 @@ d("MAS pilot: a newer contract version moves a reassigned account (#818, D284)",
     await pilot?.close();
   });
 
-  it("an outstanding estate token for u-1001 stops joining alice's Mission once version 2 reassigns the account to dana", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+  it("an outstanding estate token for u-1001 stops joining alice's Mission once a later version reassigns the account to dana", async () => {
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     expect((await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
     const v1 = pilot.config.mapping_contract as Record<string, unknown> & { subjects: Array<Record<string, unknown>> };
     const v2 = {
       ...v1,
-      version: 2,
+      version: SHIPPED + 1,
       provenance: { source: "estate-directory-export", export_id: "estate-dir-2026-10-19-002", exported_at: "2026-10-19T09:00:00Z" },
       subjects: v1.subjects.map((row) =>
         (row.from as { sub: string }).sub === "u-1001" ? { ...row, to: { iss: pilot.missionIssuer, sub: "dana" } } : row,
       ),
     };
-    expect(pilot.mapping.install(v2)).toEqual({ ok: true, version: 2 });
+    expect(pilot.mapping.install(v2)).toEqual({ ok: true, version: SHIPPED + 1 });
     const onAlice = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(onAlice.ok).toBe(false);
     expect(onAlice.denial_reason).toBe("mission_binding_failed");
@@ -330,7 +346,7 @@ d("MAS pilot: a committed containment narrows a joined Mission (#818 review P1)"
 
   it("denies authority_contained for the action a containment removed, while the uncontained read still permits", async () => {
     const missionId = approve(pilot, "alice", { label: "contained" });
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read vendors.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", `${INVOICES_READ} ${VENDORS_READ}`);
     expect((await call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
     const contained = pilot.kernel.contain(missionId, {
       event: { type: "anomaly.detected", source: "svc:soc", observed_at: new Date().toISOString(), event_id: "mas-pilot-contain-1" },
@@ -366,8 +382,8 @@ d("MAS pilot: an unavailable mapping fails the join, not the credential bound (#
   };
 
   it("control: a usable contract whose scope mapping does not cover the action refuses out_of_authority before any decision", async () => {
-    // invoices.read maps to the invoice actions only, not the vendor read.
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    // INVOICES_READ maps to the invoice actions only, not the vendor read.
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     const decided = requests.length;
     const res = await call(pilot, credential, aliceMission, "lookup_vendor", { vendor_id: "acme" });
     expect(res.ok).toBe(false);
@@ -377,7 +393,7 @@ d("MAS pilot: an unavailable mapping fails the join, not the credential bound (#
   });
 
   it("an invalidated contract denies mission_binding_failed at the PDP's join, and a newly installed version permits the same request", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     pilot.mapping.invalidate();
     const decided = requests.length;
     const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
@@ -385,15 +401,15 @@ d("MAS pilot: an unavailable mapping fails the join, not the credential bound (#
     expect(res.denial_reason).toBe("mission_binding_failed");
     expect(requests.length).toBe(decided + 1);
     expect(lastIdentityOutcome()).toBe("no_snapshot");
-    expect(pilot.mapping.install(contractVersion(pilot, 2))).toEqual({ ok: true, version: 2 });
+    expect(pilot.mapping.install(contractVersion(pilot, SHIPPED + 1))).toEqual({ ok: true, version: SHIPPED + 1 });
     const retry = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(retry.ok, JSON.stringify(retry)).toBe(true);
   });
 
   it("a contract past its staleness bound denies mission_binding_failed at the PDP's join, and a fresh version permits the same request", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     mappingSkewMs = (pilot.config.mapping_cache.max_stale_seconds + 1) * 1000;
-    expect(pilot.mapping.install(contractVersion(pilot, 3))).toEqual({ ok: true, version: 3 });
+    expect(pilot.mapping.install(contractVersion(pilot, SHIPPED + 2))).toEqual({ ok: true, version: SHIPPED + 2 });
     mappingSkewMs = 0;
     const decided = requests.length;
     const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
@@ -401,7 +417,7 @@ d("MAS pilot: an unavailable mapping fails the join, not the credential bound (#
     expect(res.denial_reason).toBe("mission_binding_failed");
     expect(requests.length).toBe(decided + 1);
     expect(lastIdentityOutcome()).toBe("stale");
-    expect(pilot.mapping.install(contractVersion(pilot, 4))).toEqual({ ok: true, version: 4 });
+    expect(pilot.mapping.install(contractVersion(pilot, SHIPPED + 3))).toEqual({ ok: true, version: SHIPPED + 3 });
     const retry = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(retry.ok, JSON.stringify(retry)).toBe(true);
   });

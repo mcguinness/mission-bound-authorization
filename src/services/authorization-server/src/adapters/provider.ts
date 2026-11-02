@@ -2275,8 +2275,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     // @spec mission#downgrade-by-omission — the per-client Mission-governance
     // flag (a deployment MAY register a client as Mission-governed). Declared so
     // oidc-provider retains it on the client registration; read by the RAR
-    // validate hook below to reject a governed client's bare
-    // authorization_details request.
+    // validate hook below to refuse a governed client's authorization
+    // request that carries authorization_details without mission_intent.
     extraClientMetadata: { properties: ["mission_governed", "required_intent_evidence_types"] },
     findAccount: accountFinder(opts.knownSubjects) as never,
     features: {
@@ -2357,11 +2357,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
               // obtain ungoverned tokens by stripping the Intent, so its
               // authorization request carrying authorization_details but no
               // mission_intent is refused invalid_request, the code Authority
-              // Proposal names. Scoped to the authorization-request routes (PAR,
-              // the authorization endpoint and its resume), as that rule is
-              // (D585): this same hook also runs at the token endpoint, where
-              // authorization_details is an RFC 9396 subset request under an
-              // existing Mission-bound grant and needs no mission_intent.
+              // Proposal names. Scoped to the authorization-request routes, as
+              // that rule is (D585, #1448). oidc-provider 9.10.0 runs this hook
+              // at PAR and at the authorization endpoint, which reads the pushed
+              // request again; it does not run it on the resume route, which
+              // restores the parameters the authorization endpoint admitted,
+              // under the same static registration, so the omission cannot
+              // first appear there. The `resume` arm keeps the rule should a
+              // later version validate there. The hook also runs at the token
+              // endpoint (the authorization_code and refresh_token grants),
+              // where authorization_details is an RFC 9396 subset request under
+              // an existing Mission-bound grant and needs no mission_intent; the
+              // Token Exchange grant does not call it.
               const governed = (client as unknown as { mission_governed?: unknown })
                 .mission_governed === true;
               const authorizationRoute =

@@ -31,7 +31,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 import { type Server } from "node:http";
 import { type AuthorityEntry, canonicalize, type JsonValue } from "@mission/core";
-import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, pinnedToCurrentContract, TOPOLOGY } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -134,6 +134,22 @@ function restatedFrom<E extends { resource: unknown; actions: string[] }>(missio
     const ref = granted.find((g) => g.resource === e.resource && e.actions.every((a) => g.actions.includes(a)))?.resource_contract;
     return ref === undefined ? e : { ...e, resource_contract: ref };
   });
+}
+
+/**
+ * @spec resource-access#resource-contract (#249 C.3b, D989): requested
+ * `details` as a client restates them from its grant. A fresh approval
+ * records the current reference in every entry on the payments resource, so
+ * each requested entry carries it too; anything other than an entry is sent
+ * as given.
+ */
+function pinnedRequest(details: unknown): unknown {
+  if (!Array.isArray(details)) return details;
+  return details.map((e: unknown) =>
+    typeof e === "object" && e !== null && Array.isArray((e as { actions?: unknown }).actions)
+      ? pinnedToCurrentContract(e as { resource: unknown; actions: string[] })
+      : e,
+  );
 }
 
 const confinedAuthority = () => [
@@ -419,7 +435,7 @@ async function asyncDelegate(baseAccessToken: string, opts: ExchangeOpts = {}): 
     params.creation_request_id = opts.creationRequestId ?? crypto.randomUUID();
   }
   if (opts.authorizationDetails !== undefined) {
-    params.authorization_details = JSON.stringify(opts.authorizationDetails);
+    params.authorization_details = JSON.stringify(pinnedRequest(opts.authorizationDetails));
   }
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
     fetch(`${ISSUER}/token`, {

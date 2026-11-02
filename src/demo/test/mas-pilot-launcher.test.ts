@@ -30,7 +30,7 @@ import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "
 import { launchMasPilot, type MasPilotLaunch, masPilotLaunchOptions, type MasPilotTopology, spawnMasProcess } from "../src/mas-pilot/launcher.js";
 import { newStatusClientKey, parseStatusClients } from "../src/mas-pilot/mas-as.js";
 import { composeSeparatedMasPilot } from "../src/mas-pilot/separated.js";
-import { estateToken, handshakeStatus, OPENFGA, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
+import { estateToken, handshakeStatus, INVOICES_READ, OPENFGA, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
 
 const d = (await openfgaReachable()) ? describe : describe.skip;
 const dirs: string[] = [];
@@ -101,7 +101,7 @@ async function walk(launch: MasPilotLaunch, masConsole: string, containedReason:
     ["estate-ap-bot-7f3", "jwt"],
     ["estate-opaque-bot-4e2", "opaque"],
   ] as const) {
-    const credential = await consoleRequest(launch, pilotConsole, "/estate-tokens", { client_id: client, account: "u-1001", scope: "invoices.read" });
+    const credential = await consoleRequest(launch, pilotConsole, "/estate-tokens", { client_id: client, account: "u-1001", scope: INVOICES_READ });
     expect(credential, JSON.stringify(credential)).toMatchObject({ status: 201, body: { token_format: format } });
     const read = await consoleRequest(launch, pilotConsole, "/calls", {
       credential_id: credential.body.credential_id,
@@ -119,7 +119,7 @@ async function walk(launch: MasPilotLaunch, masConsole: string, containedReason:
   const credential = await consoleRequest(launch, pilotConsole, "/estate-tokens", {
     client_id: "estate-ap-bot-7f3",
     account: "u-1001",
-    scope: "invoices.read",
+    scope: INVOICES_READ,
   });
   const refused = await consoleRequest(launch, pilotConsole, "/calls", {
     credential_id: credential.body.credential_id,
@@ -175,7 +175,7 @@ d("the MAS pilot launcher, in process (#818 slice 5B)", () => {
     try {
       const missionId = (await consoleRequest(launch, launch.consoles.pilot, "/missions", { subject: "alice", label: "launcher-rotation" })).body
         .mission_id as string;
-      const issued = await estateToken(launch.pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+      const issued = await estateToken(launch.pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
       expect(decodeProtectedHeader(issued.token).kid).toBe(launch.pilot.estate.kid);
       expect(await handshakeStatus(launch.pilot, issued, missionId)).toBe(200);
 
@@ -195,7 +195,7 @@ d("the MAS pilot launcher, in process (#818 slice 5B)", () => {
       expect(launch.pilot.evidence.forMission(missionId)).toHaveLength(recorded);
 
       // Introspection asks the estate on each validation: no key is cached.
-      const opaque = await estateToken(launch.pilot, "estate-opaque-bot-4e2", "u-1001", "invoices.read");
+      const opaque = await estateToken(launch.pilot, "estate-opaque-bot-4e2", "u-1001", INVOICES_READ);
       expect(await handshakeStatus(launch.pilot, opaque, missionId)).toBe(200);
     } finally {
       await launch.close();
@@ -272,7 +272,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
           await consoleRequest(launch, launch.consoles.pilot, "/estate-tokens", {
             client_id: "estate-opaque-bot-4e2",
             account: "u-1002",
-            scope: "invoices.read",
+            scope: INVOICES_READ,
           })
         ).body.credential_id;
         const read = (mission: string) =>
