@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         1 November 2026
-Expires: 5 May 2027
+Intended status: Standards Track                         2 November 2026
+Expires: 6 May 2027
 
 
                         Mission Authority Server
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 May 2027.
+   This Internet-Draft will expire on 6 May 2027.
 
 Copyright Notice
 
@@ -1184,9 +1184,11 @@ Table of Contents
 
    delegate_depth:  An integer.  The joining client's depth under the
       Mission, from the deployment's actor records, which rule 5 of
-      Section 6.1 evaluates.  Present when the joining client is a
-      delegate; the Mission's own client is depth 0.  On the assertion
-      path, the assertion's join claim governs (Section 8.3).
+      Section 6.1 evaluates; the Mission's own client is depth 0.  On a
+      mapping join, it is present when the joining client is a delegate.
+      On the assertion path, the assertion's join claim supplies the
+      depth, so the member is optional, and a reported value is compared
+      with that claim (Section 8.3).
 
    assertion:  A string.  A Mission Join Assertion (Section 8.2) for the
       presented credential.
@@ -1654,11 +1656,12 @@ Table of Contents
       HTTP 403 and the join_failed error code.
 
    Visibility on this endpoint is bounded: a Mission is visible to its
-   client_id, its recorded delegates, and the PEPs and PDPs enrolled for
-   the Mission's enforcement scope.  Any other caller MUST receive
-   not_found, so the join_failed (403) and not_found (404) split never
-   acts as a mapping oracle for callers outside that set.  Visibility
-   alone does not establish a caller's role.
+   client_id, each delegate with an actor record under the Mission
+   (Section 6.1), and the PEPs and PDPs enrolled for the Mission's
+   enforcement scope.  Any other caller MUST receive not_found, so the
+   join_failed (403) and not_found (404) split never acts as a mapping
+   oracle for callers outside that set.  Visibility alone does not
+   establish a caller's role.
 
    An assertion's lifetime is capped by the acting token's, so with
    short token lifetimes, minting is on the token-rotation path: each
