@@ -1134,9 +1134,9 @@ a `stale_state` denial ({{runtime-denial-classification}}).
   action-scoped members ({{parameter-digest}}). A registered extension
   point owned by the harness profile
   ({{I-D.draft-mcguinness-mission-harness}}), which defines the
-  predicate and how the PEP computes it. REQUIRED for every action in
-  a class for which the deployment declares PDP-enforced taint;
-  OPTIONAL otherwise.
+  predicate and how the PEP computes it. REQUIRED for every action to
+  which a class applies for which the deployment declares PDP-enforced
+  taint; OPTIONAL otherwise.
 
 ## Taint Context {#context-taint}
 
@@ -1146,10 +1146,12 @@ a `stale_state` denial ({{runtime-denial-classification}}).
   ({{I-D.draft-mcguinness-mission-harness}}), which defines the
   member shape (`tainted`, `granularity`, `source_class`) and the
   taint-state trust rules. Where the deployment's Enforcement Scope
-  Statement declares PDP-enforced taint for the action's class, the
-  fail-closed default applies: the PDP MUST deny with
-  `taint_context_missing` ({{runtime-denial-classification}}) when
-  `context.taint` is absent from an in-scope decision.
+  Statement declares PDP-enforced taint for a class that applies to
+  the action ({{I-D.draft-mcguinness-mission-runtime}}, Section
+  "Action Classification"), the fail-closed default applies: the PDP
+  MUST deny with `taint_context_missing`
+  ({{runtime-denial-classification}}) when `context.taint` is absent
+  from an in-scope decision.
 
 ## Work-Item Context {#context-work-item}
 
@@ -1175,8 +1177,8 @@ The PDP MUST refuse, before evaluation, a request whose
 input, recorded as the Refusal Record `work_item_invalid`
 ({{failure-condition-coverage}}), never an evaluated denial. Where
 the deployment's Enforcement Scope Statement claims work-item
-attribution for the action's class, the PDP MUST deny with
-`work_item_context_missing`
+attribution for a class that applies to the action, the PDP MUST deny
+with `work_item_context_missing`
 ({{runtime-denial-classification}}) a decision from which
 `context.work_item` is absent. Elsewhere its absence relaxes nothing,
 and the deployment claims Mission-level attribution only.
@@ -1256,10 +1258,14 @@ predicates favorable to it.
 This document defines one predicate type that policy MAY name,
 `action_class_completed`. It is satisfied when the PDP's evidence store
 holds, for the established Mission, at least one Decision Evidence
-record with `decision` `permit` and a named `action_class`, and every
-such record has a linked Execution Evidence record
+record with `decision` `permit` to which the named class applied, and
+every such record has a linked Execution Evidence record
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}) whose `outcome` is
-`completed`. The predicate carries an `action_class`: a runtime action
+`completed`. The named class applied to a record when its
+`action_classes` member lists that class or, in a record without
+`action_classes`, its `action_class` is that class, so an execution
+the class applied to counts whichever class was assigned. The
+predicate carries an `action_class`: a runtime action
 class name, from the same value space as the Decision Evidence
 `action_class` member
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}). For a migration
@@ -2289,13 +2295,14 @@ Decision Evidence's `denial_reason`:
   `context.approval` fails a Mission or ARAP check, with the default
   `next_action` values {{context-approval}} lists.
 - `taint_context_missing`: the deployment declares PDP-enforced taint
-  for the action's class, as the harness profile defines
-  ({{I-D.draft-mcguinness-mission-harness}}), and the decision request
-  carries no `context.taint` ({{context-taint}}).
+  for a class that applies to the action, as the harness profile
+  defines ({{I-D.draft-mcguinness-mission-harness}}), and the decision
+  request carries no `context.taint` ({{context-taint}}).
 - `work_item_context_missing`: the deployment claims work-item
-  attribution for the action's class and the decision request carries
-  no `context.work_item` ({{context-work-item}}). A malformed one is
-  the pre-evaluation refusal `work_item_invalid` instead.
+  attribution for a class that applies to the action and the decision
+  request carries no `context.work_item` ({{context-work-item}}). A
+  malformed one is the pre-evaluation refusal `work_item_invalid`
+  instead.
 - `stale_state`: the Mission state the decision relies on is not
   current: the PEP-supplied freshness is outside the deployment's
   staleness bound (a freshness-bound violation), the PDP cannot
@@ -2600,7 +2607,7 @@ rule.
 | Request Mission `id` or `issuer`, or (when carried) `authority_hash` or `policy_view_id`, inconsistent with the loaded view or the directly evaluated Mission record | PDP denial | `view_inconsistent` |
 | Mission not `active`, including a passed `expires_at` | PDP denial | `mission_inactive` |
 | External Mission-binding join verification fails | PDP denial | `mission_binding_failed` |
-| Work-item context absent where work-item attribution is claimed for the action's class | PDP denial | `work_item_context_missing` |
+| Work-item context absent where work-item attribution is claimed for a class that applies to the action | PDP denial | `work_item_context_missing` |
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
 | Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
 | Credential authority absent, or carrying an entry the PDP cannot evaluate in full | PDP denial | `credential_invalid` |
@@ -2820,9 +2827,9 @@ in addition to the members other sections require the PDP to record:
   ({{decision-conditions}}).
 - `denial_reason` carries the value returned in `context.reason`
   ({{runtime-denial-classification}}).
-- `action_class`, `class_source`, and `mission_state_version` are not
-  on this profile's wire: the PDP computes them and records them
-  directly.
+- `action_class`, `action_classes`, `class_source`, and
+  `mission_state_version` are not on this profile's wire: the PDP
+  computes them and records them directly.
 
 The runtime evidence companion's integrity envelope is this profile's
 one signing convention for evidence objects: the default envelope
@@ -3209,6 +3216,13 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   action class other than the one the PDP's trusted declaration assigns
   its operation and phase has no class established, and the PDP refuses
   it before evaluation as `action_class_missing`.
+
+- Taint, Work-Item and History Context: PDP-enforced taint, the
+  `external_communication` member and work-item attribution apply when
+  a class that applies to the action calls for them, and
+  `action_class_completed` counts a permit when the named class is in
+  its `action_classes`, or is its `action_class` where the record
+  carries no `action_classes` (#1994).
 
 - Credential Decision Context: requiring a credential's whole authority
   description to be evaluable is this profile's credential validation
