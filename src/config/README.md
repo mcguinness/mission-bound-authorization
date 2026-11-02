@@ -472,8 +472,9 @@ each budget naming its committed policies by `id` and `version`.
   composition without the AS start without it.
 - **Owner.** The payments operator, who owns the budget.
 - **Integrity.** Repository review and the strict loader. A missing or
-  unparsable file, a missing or unknown member, or an empty policy or
-  budget list refuses the composition before anything connects or listens,
+  unparsable file, a missing or unknown member, an empty policy or budget
+  list, or a `content_type` other than `application/json` refuses the
+  composition before anything connects or listens,
   as does a designating policy whose budget is not declared here under the
   Exact profile with the policy's currency, limit and committed version.
   The composition computes each policy's `digest` for its own issuer over

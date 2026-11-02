@@ -338,12 +338,17 @@ describe("config/standing-payment.json invalid or pinned: the enabled compositio
     );
   });
 
-  it("refuses a member the loader does not read, such as a digest beside a Dispatch Policy, rather than dropping it", async () => {
-    const dir = configDir((shipped) => ({
+  it("refuses a member the loader does not read, such as a digest beside a Dispatch Policy or beside a budget, rather than dropping it", async () => {
+    const besidePolicy = configDir((shipped) => ({
       ...shipped,
       dispatch_policies: { [POLICY_ID]: { ...shipped.dispatch_policies[POLICY_ID], digest: SHIPPED_DIGEST_AT_4400 } },
     }));
-    expect(await refusal(dir, 15160)).toBe(`[config:standing-payment.json] dispatch_policies.${POLICY_ID} has unknown member digest`);
+    expect(await refusal(besidePolicy, 15160)).toBe(`[config:standing-payment.json] dispatch_policies.${POLICY_ID} has unknown member digest`);
+    const besideBudget = configDir((shipped) => {
+      const [budget] = shipped.budget_metering.budgets;
+      return { ...shipped, budget_metering: { ...shipped.budget_metering, budgets: [{ ...budget, digest: SHIPPED_DIGEST_AT_4400 }] } };
+    });
+    expect(await refusal(besideBudget, 15160)).toMatch(/budget_metering\.budgets\[0\].*unknown member digest/);
   });
 
   it("refuses an operator digest pin that does not match the digest this issuer computes, the shipped issuer's own value pinned at another issuer included", async () => {
