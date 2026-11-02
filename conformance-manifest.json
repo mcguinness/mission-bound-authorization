@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "92a67d4e062e07f82744cb146eb5a3e6fc1fd946",
-    "content_sha256": "e47c8deee7b1b3bb75355aeed4ae871acd4d2608fca1bfb512fb9ebb4d4386dd"
+    "revision": "8eef493b7cf0b2e9ad0bfa3a8f424c4ae422b086",
+    "content_sha256": "e0b473aa2d1355ec1e0bf6af119de88a0a8fd5bd9fd5ca87f85e285570a2e9c2"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "b576809d4bb1d8d5a9065e4b1bcc5e6868e8e2b2",
@@ -3101,59 +3101,6 @@
     }
    ],
    "notes": "#1535 (D649, finding 2). The resolver takes no allowance on any reliance bound. Proven by adding a 30 s allowance to the fresh_until and exp comparisons together (the exp test fails), to the expires_at comparison (the expires_at test fails) and to the ceiling (the ceiling test fails). Control: an allowance on fresh_until alone, the MAY, leaves the exp test passing, so the row does not forbid it."
-  },
-  {
-   "id": "status.security.replay-reliance-bound",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "security-considerations",
-   "text": "a consumer MUST NOT use a cached response after that bound.",
-   "role": "verifier",
-   "strength": "MUST NOT",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [],
-   "surface": "verification",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a cached Mission Status Response is not used after its reliance bound",
-    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
-   },
-   "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
-     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer only before its signed fresh_until",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
-     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer no longer than iat plus the issuer's mission_max_stale_seconds",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
-     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)",
-     "level": "unit",
-     "surface": "verification"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
-     "level": "unit",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
-     "level": "unit",
-     "surface": "decision-request"
-    }
-   ],
-   "notes": "#1535 (D649, finding 2). The Response Replay restatement of status.caching.reliance-bound, witnessed by the same tests and partial for the same reason (#1543 re-review): of the reference's two consumer paths, only the resolver enforces every term of the bound. The PEP-carried `assertion` path in evaluate.ts holds no issuer metadata, so it cannot enforce the advertised ceiling (iat plus mission_max_stale_seconds); only the action class's staleness window bounds the observation's age there. That path is tested on fresh_until (the two evaluate tests) and, through check 10, on exp."
   },
   {
    "id": "status.failures.decision-does-not-proceed",
@@ -22126,7 +22073,7 @@
    "id": "status.idempotency.idempotent-success",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "An operation whose resulting state ({{legal-transitions}}) and, for `terminated`, termination reason equal the Mission's current ones is idempotent success: the AS returns the current Mission Status Response, with no state change and, except for the schedule replacement below, no event emitted.",
+   "text": "An operation whose resulting state ({{legal-transitions}}) and, for `terminated`, termination reason equal the Mission's current ones is idempotent success: the AS returns the current Mission Status Response, with no state change and, except for the schedule replacement below, no transition event emitted.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -22161,7 +22108,7 @@
    "id": "status.lifecycle.stale-version-refusal",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "the AS MUST refuse the operation with HTTP 409 and error symbol `stale_version`, leaving the Mission unchanged, when the Mission's current state version differs.",
+   "text": "the AS MUST refuse the operation with HTTP 409 and error code `stale_version`, leaving the Mission unchanged, when the Mission's current state version differs.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24285,7 +24232,7 @@
    "id": "status.lifecycle.rfc7009-coupled-revoke-transition",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "Where a deployment's revocation policy treats revoking a Mission's refresh token as revoking the Mission ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Revocation\"), the AS MUST commit that revocation as the same `revoke` transition this endpoint applies: decided by that policy for the revoking party and the Mission, recorded with a new state version, and emitting the same transition event ({{idempotency}}).",
+   "text": "Where a deployment's revocation policy treats revoking a Mission's refresh token as revoking the Mission ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Revocation\"), the AS MUST commit that revocation as the same `revoke` transition this endpoint applies: decided by that policy for the revoking party and the Mission, recorded with a new state version, and emitting the same transition event.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24329,7 +24276,7 @@
    "id": "status.lifecycle.tls",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of {{RFC9325}}.",
+   "text": "The endpoint MUST be served over TLS as the Mission Status endpoint is ({{mission-status}})",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24347,6 +24294,29 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+  },
+  {
+   "id": "status.read.endpoint-tls",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status",
+   "text": "The endpoint MUST be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of {{RFC9325}}",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Mission Status endpoint is reachable only over TLS 1.2 or later",
+    "local": "the reference listens on plain HTTP for local development, so no test witnesses this; the deployment evidence that would is a TLS terminator in front of mission_status_endpoint that refuses protocol versions below TLS 1.2, recorded with the deployment (#1240 review)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1864 item 5g: the Mission Status endpoint's own TLS row. Before #1864, `status.lifecycle.tls` matched this sentence and the Lifecycle endpoint's identical one; the Lifecycle endpoint now points here."
   },
   {
    "id": "status.lifecycle.form-request",
@@ -24651,7 +24621,7 @@
    "id": "status.response.termination-version",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "`version` is REQUIRED in every termination the Mission Issuer commits, and absent while a termination that takes effect without a request, such as `expired`, is observed but not yet committed;",
+   "text": "`version` is REQUIRED in every termination the AS commits, and absent while a termination that takes effect without a request, such as `expired`, is observed but not yet committed;",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24690,7 +24660,7 @@
    "id": "status.idempotency.reason-aware-conflict",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "or `revoke` against one terminated with reason `completed`) is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body whose error symbol is `conflict`, leaving the Mission state unchanged.",
+   "text": "or `revoke` against one terminated with reason `completed`) is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body whose error code is `conflict`, leaving the Mission state unchanged.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24736,7 +24706,7 @@
    "id": "status.request.served-audience-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-request",
-   "text": "The Mission Issuer MUST honor a request's `audience` only where that configuration authorizes the authenticated caller for it, and MUST otherwise refuse the request with the not-found response of {{mission-status-errors}}.",
+   "text": "The AS MUST honor a request's `audience` only where that configuration authorizes the authenticated caller for it, and MUST otherwise refuse the request with the not-found response of {{mission-status-errors}}.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -25657,7 +25627,7 @@
    "id": "status.response.state-only-aud",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "When the request omitted `audience` ({{mission-status-request}}), the response is state-only and the AS MUST set `aud` to the authenticated client's `client_id`, as the Lifecycle endpoint does ({{mission-lifecycle-endpoint}})",
+   "text": "When the request omitted `audience` ({{mission-status-request}}), the response is state-only and the AS MUST set `aud` to the authenticated client's `client_id`, as the Lifecycle endpoint does ({{lifecycle-operations}})",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -26827,7 +26797,7 @@
    "id": "status.lifecycle.schedule-applied-at-deadline",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `terminated` with reason `revoked` for `revoke`) and emit the corresponding transition, without a further request, unless expiry governs (below).",
+   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `terminated` with reason `revoked` for `revoke`) and emit the corresponding transition event, without a further request, unless expiry governs (below).",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -27250,7 +27220,7 @@
    "id": "status.lifecycle.schedule-replacement",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "the AS MUST update the recorded values and their committing party, emitting the corresponding transition-metadata change and reporting the updated values in the response",
+   "text": "the AS MUST update the recorded values and their committing party, emitting the transition event for that metadata-only change and reporting the updated values in the response",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -27690,7 +27660,7 @@
    "id": "status.signing-keys.no-heuristic-freshness",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "signing-key-retention",
-   "text": "A response without valid explicit freshness information is stale when received",
+   "text": "A `jwks_uri` response without valid explicit freshness information is stale when received and is never given a heuristic lifetime ({{Section 4.2.2 of RFC9111}})",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
