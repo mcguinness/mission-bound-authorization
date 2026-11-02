@@ -11,6 +11,7 @@ import { MissionKernel, validateMissionIntent } from "@mission/authorization-ser
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { checkOnResume, EMA_CAPABILITY, initializeCapabilities, shapeIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 
@@ -27,7 +28,7 @@ describe("M12 scenario 14: 02:00 resume (harness stop-on-non-active)", () => {
         JSON.stringify({
           goal: "board packet",
           target_resources: [DERIVATION_POLICY.ceiling[0].resource],
-          expires_at: "2027-01-01T00:00:00Z",
+          expires_at: FIXTURE_EXPIRES_AT,
         }),
       ),
       subject: { iss: ISS, sub: "alice" },
@@ -75,7 +76,7 @@ describe("M12 agent: EMA capability and untrusted shaper", () => {
     const { missionIntent, authorizationDetails } = shapeIntent({
       goal: "pay everything",
       resources: [DERIVATION_POLICY.ceiling[0].resource],
-      expiresAt: "2027-01-01T00:00:00Z",
+      expiresAt: FIXTURE_EXPIRES_AT,
       proposedActions: ["payments:payment.execute", "payments:vendor.delete"],
       vendors: ["acme", "evilcorp"],
     });

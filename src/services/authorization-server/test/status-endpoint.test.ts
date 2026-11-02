@@ -43,6 +43,7 @@ import {
   formOf,
   postRaw,
 } from "./lifecycle-endpoint.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14891;
 const ISSUER = `http://localhost:${PORT}`;
@@ -74,7 +75,7 @@ function approve(): MissionRecord {
   approvals += 1;
   return as.kernel.approve({
     intent: validateMissionIntent(
-      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT }),
     ),
     proposedAuthority: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }],
     subject: { iss: ISSUER, sub: "alice" },

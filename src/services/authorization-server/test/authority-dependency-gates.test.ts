@@ -26,6 +26,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, IntentError, validateMissionIntent } from "../src/index.js";
 import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 15321;
 const ISSUER = `http://localhost:${PORT}`;
@@ -158,7 +159,7 @@ async function approvedCode(goal: string): Promise<{ missionId: string; code: st
       ["scope", "openid"],
       ["code_challenge", CHALLENGE],
       ["code_challenge_method", "S256"],
-      ["mission_intent", JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" } })],
+      ["mission_intent", JSON.stringify({ intent: { goal, target_resources: [PLAIN], expires_at: FIXTURE_EXPIRES_AT } })],
       ...(await clientAuth()),
     ]).toString(),
   });
@@ -196,7 +197,7 @@ const redeem = (code: string, keys: Keys) =>
 /** A user-delegated Mission for Alice approved at the kernel by `approver`. */
 function approveAtKernel(approver: string) {
   return as.kernel.approve({
-    intent: validateMissionIntent(JSON.stringify({ goal: `gate fixture approved by ${approver}`, target_resources: [PLAIN], expires_at: "2027-01-01T00:00:00Z" })),
+    intent: validateMissionIntent(JSON.stringify({ goal: `gate fixture approved by ${approver}`, target_resources: [PLAIN], expires_at: FIXTURE_EXPIRES_AT })),
     proposedAuthority: [{ type: "mission_resource_access", resource: PLAIN, actions: ["reports:report.read"] }],
     subject: { iss: ISSUER, sub: "alice" },
     approver: { iss: ISSUER, sub: approver },

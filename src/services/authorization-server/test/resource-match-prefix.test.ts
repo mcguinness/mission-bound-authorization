@@ -19,6 +19,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISSUER = "https://as.prefix.example";
 const SERVICE = "https://erp.example.com";
@@ -51,7 +52,7 @@ describe("a prefix Mission entry through approval and the effective-set projecti
     });
     const mission = kernel.approve({
       intent: validateMissionIntent(
-        JSON.stringify({ goal: "Read Q3 invoices", target_resources: [INVOICES, INV1], expires_at: "2099-01-01T00:00:00Z" }),
+        JSON.stringify({ goal: "Read Q3 invoices", target_resources: [INVOICES, INV1], expires_at: FAR_EXPIRES_AT }),
       ),
       proposedAuthority: [at(INVOICES, "prefix"), at(INV1)],
       subject: { iss: ISSUER, sub: "alice" },

@@ -7,7 +7,7 @@ import {
   jwtVerify,
   type KeyLike,
 } from "jose";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MissionKernel,
   type MissionRecord,
@@ -24,6 +24,14 @@ import {
   verifyStatusListToken,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+
+// The kernel's clock is injected below; Intent validation reads `Date`, so the
+// file runs on a controlled clock before the fixtures' expiries (#1968, D1133).
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+afterAll(() => controlledClock.restore());
 
 const ISS = "https://as.test";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;

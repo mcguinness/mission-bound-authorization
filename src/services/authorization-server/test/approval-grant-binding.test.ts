@@ -26,12 +26,13 @@ import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js"
 import { IntentError } from "../src/kernel/intent.js";
 import { INTERACTION_TTL_S, PROVIDER_CLOCK_TOLERANCE_S } from "../src/kernel/interaction-lifetime.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14794;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "approval-grant-binding-verifier-0123456789-0123456789";
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 

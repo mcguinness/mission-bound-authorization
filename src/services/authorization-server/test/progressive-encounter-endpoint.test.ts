@@ -64,12 +64,13 @@ import {
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { browserApprovalHeaders, FIXTURE_BROWSER_LOGIN, FIXTURE_LOGIN_TIME, floorApprovalHeaders, renderedRevision } from "./approval-fixture.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14858;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-01-01T00:00:00Z";
+const FAR_EXP = FIXTURE_EXPIRES_AT;
 /** A resource under the payments `prefix` read ceiling that no ceiling entry names. */
 const ENCOUNTERED = `${RESOURCE}/vendors/acme`;
 const ORIGIN = new URL(RESOURCE).origin;

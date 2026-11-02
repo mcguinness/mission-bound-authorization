@@ -30,12 +30,13 @@ import { gateErrorToMissionError } from "../src/adapters/provider.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14783;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "refresh-precheck-verifier-0123456789-0123456789-01234";
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 

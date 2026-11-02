@@ -81,6 +81,7 @@ import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withMissionContractReference } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it, with the contract
@@ -99,7 +100,7 @@ const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POL
 const PORT = 14501;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 // The consent ceiling's bounded lifetime (the AAM "bounded task budget"). Well
 // below FAR_FUTURE, so the clamp is observable but never expires mid-run.
 const LIFETIME_S = AAM_RECONCILIATION_LIFETIME_S;

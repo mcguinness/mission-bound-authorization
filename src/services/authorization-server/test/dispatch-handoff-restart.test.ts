@@ -23,11 +23,12 @@ import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { buildAuthorizationServer, type BuiltAs, initSigningKeyRing } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14832;
 const ISSUER = `http://localhost:${PORT}`;
 const TOKEN_ENDPOINT = `${ISSUER}/token`;
-const FAR_FUTURE = "2099-01-01T00:00:00Z";
+const FAR_FUTURE = FAR_EXPIRES_AT;
 const AGENT_ID = "subagent-invoice-extractor";
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 type Party = "dispatcher" | "agent";

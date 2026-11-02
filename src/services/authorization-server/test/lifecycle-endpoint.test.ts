@@ -62,13 +62,14 @@ import {
   postRaw,
   readAnswer,
 } from "./lifecycle-endpoint.helper.js";
+import { EARLIER_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14798;
 const ISSUER = `http://localhost:${PORT}`;
 const BARE_PORT = 14799;
 const BARE_ISSUER = `http://localhost:${BARE_PORT}`;
 const ENDPOINT = `${ISSUER}${LIFECYCLE_ENDPOINT_PATH}`;
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 const UNKNOWN = "msn_unknown_0000000000000000000000";
 /** Another tenant's Subject issuer, beside this AS's own. */
 const TENANT_B = "https://tenant-b.example";
@@ -500,12 +501,12 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
     const m = approve();
     const before = as.kernel.get(m.id);
     for (const members of [
-      { operation: "revoke", suspend_until: "2026-12-01T00:00:00Z", on_expiry: "revoke" },
-      { operation: "suspend", suspend_until: "2026-12-01T00:00:00Z" },
+      { operation: "revoke", suspend_until: EARLIER_EXPIRES_AT, on_expiry: "revoke" },
+      { operation: "suspend", suspend_until: EARLIER_EXPIRES_AT },
       { operation: "suspend", on_expiry: "resume" },
       { operation: "suspend", suspend_until: "next tuesday", on_expiry: "resume" },
-      { operation: "suspend", suspend_until: "2026-12-01T00:00:00Z", on_expiry: "complete" },
-      { operation: "suspend", suspend_until: "2026-12-01T00:00:00Z", on_expiry: "resume" },
+      { operation: "suspend", suspend_until: EARLIER_EXPIRES_AT, on_expiry: "complete" },
+      { operation: "suspend", suspend_until: EARLIER_EXPIRES_AT, on_expiry: "resume" },
       { operation: "suspend", reason: "r".repeat(1025) },
     ]) {
       const refused = await op({ mission_id: m.id, nonce: nonce(), ...members });
@@ -590,7 +591,7 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
   });
 
   it("parses the schedule members only on suspend, and only as a complete pair", () => {
-    const until = "2026-12-01T00:00:00Z";
+    const until = EARLIER_EXPIRES_AT;
     expect(parseTransitionMembers("suspend", { suspend_until: until, on_expiry: "revoke" })).toEqual({
       ok: true,
       value: { schedule: { suspendUntil: until, onExpiry: "revoke" } },
@@ -964,8 +965,8 @@ describe("Mission Lifecycle endpoint extension operations and the common guard (
       event_id: "close-guard-1",
     };
     for (const members of [
-      { ...containMembers(), suspend_until: "2026-12-01T00:00:00Z", on_expiry: "revoke" },
-      { ...discharge, suspend_until: "2026-12-01T00:00:00Z", on_expiry: "resume" },
+      { ...containMembers(), suspend_until: EARLIER_EXPIRES_AT, on_expiry: "revoke" },
+      { ...discharge, suspend_until: EARLIER_EXPIRES_AT, on_expiry: "resume" },
       { ...discharge, expected_version: String(m.version) },
     ]) {
       const known = await op({ mission_id: m.id, nonce: nonce(), ...members });

@@ -25,12 +25,13 @@ import {
   TOKEN_EXCHANGE_CAPABILITIES,
 } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14862;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 const VERIFIER = "self-exchange-off-verifier-0123456789-0123456789-0123456789";
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 

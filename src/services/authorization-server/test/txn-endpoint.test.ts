@@ -83,6 +83,17 @@ import { openStore } from "@mission/store";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createLocalJWKSet, decodeJwt, type JWK } from "jose";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+
+// The file's transaction-authorization scenarios admit superseded contract
+// versions inside their declared retention, so it runs on a controlled clock
+// inside every retention (#1968, D1133), installed before the modules that
+// read the time at load.
+const controlledClock = await vi.hoisted(async () => {
+  const { CONTROLLED_CLOCK_MS, installControlledClock } = await import("./controlled-clock.helper.js");
+  return installControlledClock(CONTROLLED_CLOCK_MS);
+});
+afterAll(() => controlledClock.restore());
 
 const PORT = 14450;
 const ISSUER = `http://localhost:${PORT}`;
@@ -284,7 +295,7 @@ async function issueBaseMissionToken(
     max_amount: { amount: "500.00", currency: "USD" },
     vendors: ["acme"],
   },
-  expiresAt = "2027-01-01T00:00:00Z",
+  expiresAt = FIXTURE_EXPIRES_AT,
 ): Promise<{ token: string; missionId: string }> {
   const verifier = "txn-endpoint-verifier-0123456789-0123456789-01234";
   const challenge = Buffer.from(

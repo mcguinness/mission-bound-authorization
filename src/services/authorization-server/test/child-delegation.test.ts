@@ -22,6 +22,7 @@ import {
 import { inheritActionApprovalRequirement, presentedTokenChildRefusal } from "../src/kernel/child-delegation.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT, daysAfter } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.test";
 // The AS asserts these child actors as `ai_agent` (config-driven in production;
@@ -49,7 +50,7 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 // and read-only), so `ceiling[1]` no longer names the ledger resource.
 const LEDGER = TOPOLOGY.resources.saas;
 const now = () => new Date("2026-07-01T00:00:00Z");
-const PARENT_EXP = "2027-01-01T00:00:00Z";
+const PARENT_EXP = FIXTURE_EXPIRES_AT;
 
 /** A proposed entry restating the ceiling's Common Constraints (so the derived
  * entry carries max_amount/vendors and subset probes are constraint-attributable). */
@@ -360,7 +361,7 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
   it("clamps the child expires_at to the parent's (@spec child-delegation#attenuation)", () => {
     const parent = approveParent();
     const { child } = createChild(parent.id, ["payments:invoice.read"], {
-      intentOver: { expires_at: "2030-01-01T00:00:00Z" },
+      intentOver: { expires_at: daysAfter(PARENT_EXP, 365) },
     });
     expect(child.expires_at).toBe(parent.expires_at);
     expect(child.expires_at).toBe(PARENT_EXP);

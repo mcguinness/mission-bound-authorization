@@ -18,6 +18,7 @@ import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = DERIVATION_POLICY.ceiling[0]?.resource as string;
@@ -83,7 +84,7 @@ async function harness(port: number, resourceContracts: ResourceContractDeclarat
         code_challenge_method: "S256",
         login_hint: "alice",
         mission_intent: JSON.stringify({
-          intent: { goal: "Review third-quarter Acme invoices", target_resources: [RESOURCE], expires_at: "2027-06-01T00:00:00Z" },
+          intent: { goal: "Review third-quarter Acme invoices", target_resources: [RESOURCE], expires_at: LATER_EXPIRES_AT },
         }),
         authorization_details: JSON.stringify(proposal),
         client_assertion: await assertion(),

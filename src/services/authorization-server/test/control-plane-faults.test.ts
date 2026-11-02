@@ -18,11 +18,12 @@ import {
 } from "../src/index.js";
 import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 let statusKey: CryptoKey;
 beforeAll(async () => { statusKey = (await generateKeyPair("ES256")).privateKey; });
 function setup(issuer = "https://issuer-one.test", options: { containmentPolicy?: ContainmentPolicy } = {}) {
-  const expiresAt = "2027-01-01T00:00:00Z";
+  const expiresAt = FIXTURE_EXPIRES_AT;
   const commits = vi.fn();
   const clock = { at: new Date("2026-09-01T00:00:00Z") };
   const kernel = new MissionKernel({ issuer, policy: DERIVATION_POLICY as never,
@@ -110,7 +111,7 @@ describe("single-process control-plane fault boundaries", () => {
   it("an expiry materialized under a transition refuses the operation once, at one version", () => {
     const { kernel, record, commits, clock } = setup();
     try {
-      clock.at = new Date("2027-02-01T00:00:00Z");
+      clock.at = new Date(Date.parse(FIXTURE_EXPIRES_AT) + 31 * 86_400_000);
       // The expiry clock materializes `expired` inside this call. The revoke is
       // then illegal from the state that commit left, and the refusal names it.
       expect(() => kernel.transition(record.id, "revoke")).toThrow(LifecycleConflictError);
@@ -126,7 +127,7 @@ describe("single-process control-plane fault boundaries", () => {
   it("an expiry materialized under a guarded transition makes the caller's earlier version stale (@spec status#idempotency, #250)", () => {
     const { kernel, record, commits, clock } = setup();
     try {
-      clock.at = new Date("2027-02-01T00:00:00Z");
+      clock.at = new Date(Date.parse(FIXTURE_EXPIRES_AT) + 31 * 86_400_000);
       // The guard is compared with the record the expiry left, so the version
       // the caller observed before it is stale, not a conflict with `expired`.
       expect(() => kernel.transition(record.id, "revoke", { expectedVersion: record.version })).toThrow(
@@ -312,7 +313,7 @@ describe("control-plane state observations", () => {
   it("observes authoritative state, committing an expiry the observation itself materialized", async () => {
     const { kernel, record, commits, clock } = setup();
     try {
-      clock.at = new Date("2027-02-01T00:00:00Z");
+      clock.at = new Date(Date.parse(FIXTURE_EXPIRES_AT) + 31 * 86_400_000);
       const observed = kernel.statusObservation(record.id, { requester: "svc:reader" });
       // The observation read the stored row inside one transaction and the
       // expiry clock materialized there, so the reported state is the one that
@@ -361,7 +362,7 @@ describe("control-plane state observations", () => {
           JSON.stringify({
             goal: "Read an invoice",
             target_resources: [DERIVATION_POLICY.ceiling[0].resource],
-            expires_at: "2027-01-01T00:00:00Z",
+            expires_at: FIXTURE_EXPIRES_AT,
           }),
         ),
         subject: { iss: "https://issuer-strict.test", sub: "alice" },

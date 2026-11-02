@@ -42,10 +42,11 @@ import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 import { capabilitiesWith, UNDECLARED_VARIANTS } from "./transformation-capabilities.helper.js";
+import { LATER_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const VERIFIER = "qualified-narrowing-verifier-0123456789-0123456789-01";
-const FAR_EXP = "2027-06-01T00:00:00Z";
+const FAR_EXP = LATER_EXPIRES_AT;
 /** The payments read ceiling entry, `prefix` in this suite's configuration. */
 const CEILING = DERIVATION_POLICY.ceiling[0] as AuthorityEntry;
 const RESOURCE = CEILING.resource as string;

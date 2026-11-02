@@ -56,6 +56,7 @@ import {
   validateMissionIntentSubmission,
   verifyIntentSubmissionEvidence,
 } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.example.com";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -63,7 +64,7 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const TASK_INTENT = {
   goal: "Reconcile Q3 invoices",
   target_resources: [RESOURCE],
-  expires_at: "2027-01-01T00:00:00Z",
+  expires_at: FIXTURE_EXPIRES_AT,
 };
 
 /** An UNREGISTERED type: every use below must be refused as unknown. */

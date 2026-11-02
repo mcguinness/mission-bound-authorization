@@ -26,6 +26,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MissionSignalReceiver, signLifecycleEvent } from "../src/index.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.status-keys.test";
 const AUD = "https://consumer.status-keys.test";
@@ -33,7 +34,7 @@ const CLIENT = "consumer-client";
 const JWKS = `${ISS}/jwks`;
 const HISTORICAL = `${ISS}/historical-jwks`;
 const KIDS = ["as-status", "as-status-2"];
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 interface StatusKey {
   kid: string;

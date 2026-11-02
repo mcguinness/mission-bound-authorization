@@ -32,11 +32,12 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MissionSignalReceiver, type ReceiverOptions, signLifecycleEvent } from "../src/index.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISS = "https://as.reliance.test";
 const AUD = "https://consumer.reliance.test";
 const CLIENT = "consumer-client";
-const EXPIRES_AT = "2099-01-01T00:00:00Z";
+const EXPIRES_AT = FAR_EXPIRES_AT;
 
 let setKey: CryptoKey;
 let statusKey: CryptoKey;

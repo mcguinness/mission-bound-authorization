@@ -26,7 +26,7 @@ import {
   scopeMappingEntries,
 } from "@mission/demo-data";
 import { Fga } from "@mission/pdp";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { composeMasPilot, requireDeclaredMappingContract } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
 import { parseMappingContract } from "../src/mas-pilot/mapping-contract.js";
@@ -170,6 +170,15 @@ const joinWith = (scope_actions: Record<string, unknown>) => ({
  * stating none keeps its own entry.
  */
 describe("the shared-namespace join's scope mapping states a scope value's contract (@spec authority-server#mission-join, resource-access#resource-contract, #1847, D989)", () => {
+  // The join policy reads `Date` for each declared version's retention; a
+  // controlled clock inside every retention (#1968, D1133), never the host's date.
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(Date.parse("2026-11-02T12:00:00Z"));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
   const READS = ["payments:invoice.read", "payments:invoice.list"];
 
   it("records the contract a value states, and none for an action list", () => {

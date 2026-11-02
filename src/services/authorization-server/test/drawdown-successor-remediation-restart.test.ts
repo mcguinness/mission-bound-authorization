@@ -27,9 +27,10 @@ import {
 } from "../src/index.js";
 import { assembledCeilingOffer, createCeilingDrawdownInCallerTx } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISSUER = "http://localhost:14851";
-const FAR_EXP = "2099-01-01T00:00:00Z";
+const FAR_EXP = FAR_EXPIRES_AT;
 const OWN = "ap-agent";
 const OTHER = "test-carryover-child";
 const dirs: string[] = [];

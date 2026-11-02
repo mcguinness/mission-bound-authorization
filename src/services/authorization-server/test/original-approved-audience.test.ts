@@ -30,6 +30,7 @@ import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14813;
 const ISSUER = `http://localhost:${PORT}`;
@@ -125,7 +126,7 @@ async function approve(
     code_challenge_method: "S256",
     login_hint: "alice",
     mission_intent: JSON.stringify({
-      intent: { goal: "Read invoices", target_resources: targets, expires_at: "2099-01-01T00:00:00Z" },
+      intent: { goal: "Read invoices", target_resources: targets, expires_at: FAR_EXPIRES_AT },
     }),
     authorization_details: JSON.stringify(proposal),
     client_assertion: await clientAssertion(),
@@ -450,7 +451,7 @@ describe("a child's redemption carries only the entries approved for its audienc
           creation_request_id: crypto.randomUUID(),
           login_hint: "alice",
           mission_intent: JSON.stringify({
-            intent: { goal: "List Acme invoices and reports", target_resources: [PAYMENTS, ADDED], expires_at: "2099-01-01T00:00:00Z" },
+            intent: { goal: "List Acme invoices and reports", target_resources: [PAYMENTS, ADDED], expires_at: FAR_EXPIRES_AT },
           }),
           authorization_details: JSON.stringify([payments, reports]),
           child_actor: JSON.stringify({ sub: CHILD_ACTOR, sub_profile: "ai_agent" }),

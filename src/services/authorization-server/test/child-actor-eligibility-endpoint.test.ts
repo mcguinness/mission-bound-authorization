@@ -50,10 +50,11 @@ import {
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { FIXTURE_BROWSER_LOGIN, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { asTokenSigningKeyPair } from "./subject-possession.helper.js";
+import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const PORT = 14741;
 const BARE_PORT = 14742;
-const EXP = "2099-01-01T00:00:00Z";
+const EXP = FAR_EXPIRES_AT;
 
 const RESOURCE = CANONICAL_RESOURCE;
 const resourceOf = (action: string): string => {

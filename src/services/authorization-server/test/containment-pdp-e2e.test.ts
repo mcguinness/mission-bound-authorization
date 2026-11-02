@@ -26,6 +26,7 @@ import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer, createExpa
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
 import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withMissionContractReference } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it, with the contract
@@ -36,7 +37,7 @@ const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateReques
 const PORT = 14495;
 const ISSUER = `http://localhost:${PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
-const EXPIRES_AT = "2027-01-01T00:00:00Z";
+const EXPIRES_AT = FIXTURE_EXPIRES_AT;
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
