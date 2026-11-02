@@ -2230,10 +2230,9 @@ approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref"
 <ul class="normal">
 <li class="normal" id="section-7-2.4.2.1">
               <p id="section-7-2.4.2.1.1">When <code>decision</code> is <code>approved</code>, it contains <code>id</code>, <code>issuer</code>,
-<code>intent_hash</code>, <code>authority_hash</code>, <code>proposal_hash</code> when the Mission
-records an authority proposal, <code>consent_rendering_hash</code> when this
-profile records it on the Mission, and, where the
-deployment computes it, <code>approval_context_commitment</code>
+<code>intent_hash</code>, <code>authority_hash</code>, <code>consent_rendering_hash</code>,
+<code>proposal_hash</code> when the Mission records an authority proposal,
+and, where the deployment computes it, <code>approval_context_commitment</code>
 (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>): <span class="bcp14">OPTIONAL</span>,
 a string, the commitment over the created Mission's immutable
 creation facts, carried so this object and another authenticated
@@ -2243,7 +2242,8 @@ transaction.<a href="#section-7-2.4.2.1.1" class="pilcrow">¶</a></p>
             <li class="normal" id="section-7-2.4.2.2">
               <p id="section-7-2.4.2.2.1">When <code>decision</code> is <code>declined</code>, no Mission was created
 (<a href="#declined-events" class="auto internal xref">Section 8.1</a>), so there is no <code>id</code>. It instead contains
-<code>issuer</code> and the <code>intent_hash</code> and <code>authority_hash</code> (with
+<code>issuer</code>, the <code>consent_rendering_hash</code> of the disclosure the
+Approver declined, and the <code>intent_hash</code> and <code>authority_hash</code> (with
 <code>proposal_hash</code> where present) the disclosure
 corresponded to, matching the disclosure object's <code>source_hashes</code>
 (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>). It <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.2.2.1" class="pilcrow">¶</a></p>
@@ -2251,9 +2251,9 @@ corresponded to, matching the disclosure object's <code>source_hashes</code>
             <li class="normal" id="section-7-2.4.2.3">
               <p id="section-7-2.4.2.3.1">When <code>decision</code> is <code>narrowed</code>, the review required a narrowing
 revision and no Mission was created (<a href="#revision-events" class="auto internal xref">Section 8.2</a>). Like a
-decline, it contains <code>issuer</code> and the reviewed disclosure's
-<code>intent_hash</code> and <code>authority_hash</code> (with <code>proposal_hash</code> where
-present), matching that disclosure's
+decline, it contains <code>issuer</code>, the reviewed disclosure's
+<code>consent_rendering_hash</code>, and its <code>intent_hash</code> and <code>authority_hash</code>
+(with <code>proposal_hash</code> where present), matching that disclosure's
 <code>source_hashes</code>, and <span class="bcp14">MUST NOT</span> contain <code>id</code>.<a href="#section-7-2.4.2.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
@@ -2310,7 +2310,7 @@ values it possesses at the approval event.<a href="#section-7-2.12.1" class="pil
         <dd style="margin-left: 1.5em" id="section-7-2.14">
           <p id="section-7-2.14.1"><span class="bcp14">REQUIRED</span>. The Consent Disclosure object, or a durable reference to it
 (<a href="#minimization" class="auto internal xref">Section 9.1</a>) paired with the <code>consent_rendering_hash</code> it verifies
-against.<a href="#section-7-2.14.1" class="pilcrow">¶</a></p>
+against. That paired value <span class="bcp14">MUST</span> equal <code>mission.consent_rendering_hash</code>.<a href="#section-7-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-2.15">
@@ -2618,11 +2618,12 @@ material or configured trust anchors; and<a href="#section-7.1-2.5.1" class="pil
 </li>
           <li id="section-7.1-2.6">
             <p id="section-7.1-2.6.1">when <code>decision</code> is <code>approved</code>, verifies that the Mission anchors in
-<code>mission</code> match the Mission record being audited. When <code>decision</code> is
-<code>declined</code> or <code>narrowed</code> there is no Mission record
-(<a href="#declined-events" class="auto internal xref">Section 8.1</a>, <a href="#revision-events" class="auto internal xref">Section 8.2</a>); the verifier instead
-confirms the <code>mission</code> descriptor carries <code>issuer</code> and the two
-<code>source_hashes</code> anchors and no <code>id</code>; and<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
+<code>mission</code>, <code>consent_rendering_hash</code> among them, match the Mission
+record being audited. When <code>decision</code> is <code>declined</code> or <code>narrowed</code>
+there is no Mission record (<a href="#declined-events" class="auto internal xref">Section 8.1</a>,
+<a href="#revision-events" class="auto internal xref">Section 8.2</a>); the verifier instead confirms the <code>mission</code>
+descriptor carries <code>issuer</code>, <code>consent_rendering_hash</code>, and the two
+<code>source_hashes</code> anchors, and no <code>id</code>; and<a href="#section-7.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-7.1-2.7">
             <p id="section-7.1-2.7.1">when <code>rendering_confirmation</code> is present
@@ -2654,13 +2655,16 @@ record).<a href="#section-7.1-2.9.1" class="pilcrow">¶</a></p>
 <p id="section-7.1-3">The absence of <code>rendering_confirmation</code> or <code>rendering_attestation</code> is
 not a failure; it means the evidence asserts no rung above the rendering
 the AS recorded.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
-<p id="section-7.1-4">Steps 1 through 6 establish the integrity of the evidence record itself
-and rely only on the record, since <code>consent_rendering_hash</code> is carried
-inside the signed <code>mission</code>. Reconstructing the disclosure is a separate
-step that depends on retrieval: when the disclosure object is inlined, a
-verifier recomputes <code>consent_rendering_hash</code> over it and compares; when
-it is carried by reference (<a href="#minimization" class="auto internal xref">Section 9.1</a>), the verifier retrieves it
-and verifies it against <code>consent_rendering_hash</code>.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-4">Steps 1 through 6 do not require retrieving the Consent Disclosure
+object. Neither does the reference check: when <code>disclosure</code> is a
+durable reference (<a href="#minimization" class="auto internal xref">Section 9.1</a>), a verifier <span class="bcp14">MUST</span> compare its paired
+<code>consent_rendering_hash</code> with <code>mission.consent_rendering_hash</code> and treat
+unequal values as an integrity failure of the evidence record.
+Reconstructing the disclosure is a separate step that depends on retrieval: when the
+disclosure object is inlined, a verifier recomputes
+<code>consent_rendering_hash</code> over it and compares it with the <code>mission</code>
+descriptor's value; when it is carried by reference (<a href="#minimization" class="auto internal xref">Section 9.1</a>),
+the verifier retrieves it and verifies it against that value.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <p id="section-7.1-5">A verifier <span class="bcp14">MUST NOT</span> treat a disclosure that is merely unretrievable as
 an integrity failure of the evidence record; failure to retrieve a
 referenced disclosure within the retention window is an audit failure
@@ -3500,7 +3504,7 @@ records the approval-time rungs above.<a href="#appendix-A-2.8.1" class="pilcrow
 specific disclosure commitment is verifiable up to trust in that
 authenticator, rather than in an arbitrary rendering layer. The
 verifier obligations for these rungs
-are steps 7 and 8 of <a href="#integrity" class="auto internal xref">Section 7.1</a>; their absence asserts no rung above
+are steps 7 and 9 of <a href="#integrity" class="auto internal xref">Section 7.1</a>; their absence asserts no rung above
 the ones the record satisfies and is never an integrity failure.<a href="#appendix-A-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -3789,51 +3793,67 @@ encoding difference to resolve before interoperating.<a href="#appendix-B-9" cla
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">Material Notice Requirements makes the high-risk notices and their
+          <p id="appendix-C-2.1.1">Editorial: the rung-check pointer in Rendering-Assurance Rungs Above
+the Floor cites steps 7 and 9 of Integrity and Verification. No
+requirement changes (#1957).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.2">
+          <p id="appendix-C-2.2.1">Every decision's signed <code>mission</code> descriptor carries
+<code>consent_rendering_hash</code>: the approved branch lists it without a
+condition, and a declined or narrowed descriptor carries the hash of
+the disclosure the decision was made on, still with no <code>id</code> or
+<code>approval_context_commitment</code>. Integrity and Verification checks the
+member on each branch and compares a reconstructed disclosure with it.
+A disclosure reference's paired hash is required to equal the
+descriptor's, and a verifier treats unequal values as an integrity
+failure without retrieving the disclosure (#1956).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.3">
+          <p id="appendix-C-2.3.1">Material Notice Requirements makes the high-risk notices and their
 acknowledgments mandatory: each high-risk condition present gets its
 notice and an acknowledgment action, and <code>approved</code> waits for every
 high-risk acknowledgment, while other acknowledgments stay a <span class="bcp14">SHOULD</span>
 and a declined or narrowed decision is never blocked. The
 <code>approver_actions</code> member and the conformance floor reference it
-(#1945).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">Consent Disclosure states that re-verifying the submission's evidence
-renews the disclosure, since <code>submission_provenance_hash</code> commits
-each element's <code>verified_at</code> (#1927).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.3">
-          <p id="appendix-C-2.3.1">Editorial (#1176): examples of the canonical Mission follow one
-dated history; an example line too long for the page is folded per
-RFC 8792. No requirement changes.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+(#1945).<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.4">
-          <p id="appendix-C-2.4.1">The Consent Evidence <code>approver</code> correlates with the Mission record's
-<code>approval_basis.consent_principal</code> (#705).<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.4.1">Consent Disclosure states that re-verifying the submission's evidence
+renews the disclosure, since <code>submission_provenance_hash</code> commits
+each element's <code>verified_at</code> (#1927).<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.5">
-          <p id="appendix-C-2.5.1">Binding to Mission Approval and the conformance floor apply at each
-human approval: a Mission instance activated by policy under a
-standing consent has no disclosure of its own (#1078).<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.5.1">Editorial (#1176): examples of the canonical Mission follow one
+dated history; an example line too long for the page is folded per
+RFC 8792. No requirement changes.<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.6">
-          <p id="appendix-C-2.6.1">Defined and registered the <code>mission_shaping_evidence_hash</code> request
-parameter, which carries a client-supplied <code>shaping_evidence_hash</code>
-in the pushed authorization request into the Consent Disclosure
-object, as a commitment that is never provenance or authority.<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.6.1">The Consent Evidence <code>approver</code> correlates with the Mission record's
+<code>approval_basis.consent_principal</code> (#705).<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.7">
-          <p id="appendix-C-2.7.1">Removed the uncited Mission Deferred Approval reference; the
-Approval Governance Record is the cited home of approval-governance
-facts.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.7.1">Binding to Mission Approval and the conformance floor apply at each
+human approval: a Mission instance activated by policy under a
+standing consent has no disclosure of its own (#1078).<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.8">
-          <p id="appendix-C-2.8.1">Layered Rendering adds non-normative practices for a large or varied
+          <p id="appendix-C-2.8.1">Defined and registered the <code>mission_shaping_evidence_hash</code> request
+parameter, which carries a client-supplied <code>shaping_evidence_hash</code>
+in the pushed authorization request into the Consent Disclosure
+object, as a commitment that is never provenance or authority.<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.9">
+          <p id="appendix-C-2.9.1">Removed the uncited Mission Deferred Approval reference; the
+Approval Governance Record is the cited home of approval-governance
+facts.<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.10">
+          <p id="appendix-C-2.10.1">Layered Rendering adds non-normative practices for a large or varied
 Authority Set, grouping and splitting, from the OAuth binding's
 Approval Comprehension, the split practice citing the architecture
 document's Mission Granularity; the evidence model cites the binding's
 rule that a committed approval surface covers the provenance facts.
-No requirement changes (#1892).<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
+No requirement changes (#1892).<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
