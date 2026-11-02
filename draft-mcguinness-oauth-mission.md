@@ -295,11 +295,13 @@ and binds the Mission to the authorization code it issues
 ({{grant-binding}}). Every token derived from that grant carries the
 Mission, every issuance is gated on its state and bounded by its
 Authority Set, every credential the Mission Issuer derives expires no
-later than the Mission, and the Mission can be revoked by
-`mission_id`, independent of possession of any token. Resource
-servers enforce the carried entries, or a `scope` projected from them
-({{scope-projection}}); evaluating each action at its point of use is
-out of scope ({{runtime-boundary}}).
+later than the Mission, and the Mission Issuer accepts revocation by
+`mission_id` from a party its policy authorizes, independent of
+possession of any token ({{revocation}}). Resource servers enforce the
+carried entries, or a `scope` projected from them
+({{scope-projection}}); a runtime layer that evaluates each
+consequential action against the Mission is out of scope
+({{runtime-boundary}}).
 
 The direct realization creates each Mission at an approval
 interaction on the authorization endpoint, and a Mission is intended
