@@ -338,6 +338,24 @@ describe("step 5, the required claims and their types (@spec request-provenance#
     }
   });
 
+  /** The vector's claims text with presenter.cnf.extra nested `depth` arrays deep around 0. */
+  const deepCnfText = (depth: number): string =>
+    JSON.stringify(V.expected.claims).replace('"cnf":{', `"cnf":{"extra":${"[".repeat(depth)}0${"]".repeat(depth)},`);
+
+  it.each([500, 1000, 2000, 3000, 4000, 6000])(
+    "refuses at step 9, without exhausting the stack, a signed presenter.cnf holding arrays nested %i deep beside the established key",
+    async (depth) => {
+      const text = deepCnfText(depth);
+      expect(text).toContain(`"extra":${"[".repeat(depth)}0`);
+      await refusedAt(verifyRequestProvenance(entry(await sign(text)), contextFor()), 9);
+    },
+  );
+
+  it("resolves to a refusal, never a throw, for a signed presenter.cnf nested past what the strict parser reads", async () => {
+    const result = await verifyRequestProvenance(entry(await sign(deepCnfText(100_000))), contextFor());
+    expect(result.ok).toBe(false);
+  });
+
   it("accepts, recording nothing from them, an undefined claim and undefined members of originator and channel holding 1e400", async () => {
     const text = JSON.stringify(V.expected.claims)
       .replace('"originator":{', '"originator":{"extra":1e400,')
@@ -533,6 +551,21 @@ describe("step 9, cnf compared exactly as signed (@spec request-provenance#verif
       step: 9,
       reason: "presenter.cnf is not the confirmation key the exchange established",
     });
+  });
+
+  it("compares a deeply nested cnf exactly without exhausting the stack: the same value is accepted and one differing innermost is refused at step 9", async () => {
+    const depth = 4000;
+    const nested = (inner: number): Json => {
+      let v: Json = inner;
+      for (let i = 0; i < depth; i += 1) v = [v];
+      return v;
+    };
+    const established = { jkt, deep: nested(0) };
+    const context = { ...contextFor(), presenter: { clientId: "ap-agent", cnf: established as never } };
+    const signedAs = async (inner: number): Promise<string> =>
+      sign(JSON.stringify(V.expected.claims).replace('"cnf":{', `"cnf":{"deep":${"[".repeat(depth)}${inner}${"]".repeat(depth)},`));
+    accepted(await verifyRequestProvenance(entry(await signedAs(0)), context));
+    await refusedAt(verifyRequestProvenance(entry(await signedAs(1)), context), 9);
   });
 
   it("refuses at step 9 a signed cnf naming the established key only inside a __proto__ member", async () => {

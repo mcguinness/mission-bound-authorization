@@ -345,7 +345,7 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
         mission: { id: missionId, issuer: MAS_URL },
         token: { sha256: missionJoin.token_sha256, jkt: missionJoin.token_jkt },
         join: { client_id: "ap-agent", disposition: "client" },
-        mapping_version: "mas-pilot-identity@2",
+        mapping_version: "mas-pilot-identity@3",
       });
       const evidence = decisions(missionId).at(-1)?.content as Record<string, unknown> | undefined;
       expect(evidence, format).toMatchObject({ decision: "permit" });

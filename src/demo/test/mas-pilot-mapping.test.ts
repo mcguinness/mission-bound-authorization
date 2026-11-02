@@ -72,8 +72,9 @@ describe("mapping contract loader (@spec authority-server#mapping-contract, #818
     const shipped = loadMasPilotConfig().mapping_contract;
     expect(() => parseMappingContract(shipped)).not.toThrow();
     const parsed = parseMappingContract(shipped);
-    // The shipped contract's version: 2 since the contract-stating scope values were added (#249 C.3b).
-    expect(parsed.version).toBe(2);
+    // The shipped contract's version: 2 since the contract-stating scope values
+    // were added (#249 C.3b), 3 since those stating 2026-11-02 were (D1155).
+    expect(parsed.version).toBe(3);
     expect(parsed.failure).toBe("mission_binding_failed");
     expect(parsed.subjects.filter((r) => r.to.sub === "alice").length).toBeGreaterThan(1);
   });
@@ -424,11 +425,11 @@ describe("mapping contract cache: a scope value's stated contract (@spec authori
   });
 
   it("refuses at load a value stating a reference the declarations do not support for the action", () => {
-    expect(() => parseMappingContract(withScopes({ "invoices.read.bad": { actions: READ, resource_contract: contractAt("1999-01-01") } }), undefined, now)).toThrow(
+    expect(() => parseMappingContract(withScopes({ "invoices.read.bad": { actions: READ, resource_contract: contractAt("1999-01-01") } }))).toThrow(
       /resource_contract/,
     );
     expect(() =>
-      parseMappingContract(withScopes({ "reverse.bad": { actions: ["payments:payment.reverse"], resource_contract: contractAt(LACKING_REVERSE) } }), undefined, now),
+      parseMappingContract(withScopes({ "reverse.bad": { actions: ["payments:payment.reverse"], resource_contract: contractAt(LACKING_REVERSE) } })),
     ).toThrow(/every action/);
   });
 

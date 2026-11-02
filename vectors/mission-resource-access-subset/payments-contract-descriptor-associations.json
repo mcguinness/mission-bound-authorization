@@ -1,0 +1,109 @@
+{
+  "format": "mission-resource-contract-descriptor-associations/1",
+  "description": "The evaluation-context descriptors each payments contract version published before its document could name them was performed under while it was current, keyed by the version's contract reference (id, version and digest). A deployment declares them beside the version's unchanged bytes (evaluation_context_descriptors in extensions.resource_contracts), and this file freezes them: the declared association of each listed version must equal its entry here, no other version declares one, and a new contract version names its descriptors in its committed document instead. 2026-10-24 omits the reversal, which its retained payments-runtime-profile-v14 does not perform; 2026-10-20, published before the Evaluation-Context Binding claim, has none, so a covered crossing under it is refused. Frozen: a changed association is never an edit of this file.",
+  "spec": "draft-mcguinness-mission-runtime",
+  "refs": [
+    "#249",
+    "D1155",
+    "D1170"
+  ],
+  "associations": [
+    {
+      "contract": {
+        "id": "https://payments.example/contracts/payments",
+        "version": "2026-10-27",
+        "digest": "sha-256:wLsBMvOEFtvnozYZjgIgZyFAh5QuP6eF8y5Dmk_ze8Y"
+      },
+      "descriptors": {
+        "check_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "hold_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "execute_wire_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "reverse_wire_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-reverse",
+          "version": "2026-10-26",
+          "digest": "sha-256:ELN9R2UG9gCg8MnbaBTgg0xRSc0FRjX14cDUpivPbYI"
+        },
+        "send_remittance_email": {
+          "id": "https://payments.example/evaluation-context/remittance-send",
+          "version": "2026-10-24",
+          "digest": "sha-256:F-czt37mgd3Ab_IG9DMPnkQ8ecuf9KaudTggxV7TjXM"
+        }
+      }
+    },
+    {
+      "contract": {
+        "id": "https://payments.example/contracts/payments",
+        "version": "2026-10-26",
+        "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+      },
+      "descriptors": {
+        "check_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "hold_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "execute_wire_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "reverse_wire_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-reverse",
+          "version": "2026-10-26",
+          "digest": "sha-256:ELN9R2UG9gCg8MnbaBTgg0xRSc0FRjX14cDUpivPbYI"
+        },
+        "send_remittance_email": {
+          "id": "https://payments.example/evaluation-context/remittance-send",
+          "version": "2026-10-24",
+          "digest": "sha-256:F-czt37mgd3Ab_IG9DMPnkQ8ecuf9KaudTggxV7TjXM"
+        }
+      }
+    },
+    {
+      "contract": {
+        "id": "https://payments.example/contracts/payments",
+        "version": "2026-10-24",
+        "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+      },
+      "descriptors": {
+        "check_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "hold_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "execute_wire_transfer": {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"
+        },
+        "send_remittance_email": {
+          "id": "https://payments.example/evaluation-context/remittance-send",
+          "version": "2026-10-24",
+          "digest": "sha-256:F-czt37mgd3Ab_IG9DMPnkQ8ecuf9KaudTggxV7TjXM"
+        }
+      }
+    }
+  ]
+}

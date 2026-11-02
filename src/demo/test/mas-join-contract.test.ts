@@ -22,9 +22,12 @@ import {
   MAS_JOIN,
   type MasJoinPolicy,
   parseMasJoinPolicy,
+  parseScopeMappingValue,
   RESOURCE_CONTRACTS,
+  RUNTIME_SCOPE_CONFIG,
   scopeMappingEntries,
 } from "@mission/demo-data";
+import { ResourceContractDeclarations } from "@mission/core";
 import { Fga } from "@mission/pdp";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { composeMasPilot, requireDeclaredMappingContract } from "../src/mas-pilot/compose.js";
@@ -198,6 +201,45 @@ describe("the shared-namespace join's scope mapping states a scope value's contr
     ["an unknown member", { actions: READS, resource_contract: contractAt(CURRENT_VERSION), note: "x" }, /not a known member/],
   ])("refuses at load a value stating %s", (_why, value, message) => {
     expect(() => parseMasJoinPolicy(joinWith({ "payments.read.bad": value }))).toThrow(message);
+  });
+
+  // @spec resource-access#resource-contract (#249, D1185): the load check is
+  // independent of the clock. A value naming a version superseded past its
+  // retention loads, keeping exactly its contract, and authorizes nothing,
+  // retention being enforced at use; a retired version and a malformed
+  // reference are refused at load as before.
+  it("loads the shipped mapping past every declared retention, its .2026-10-27 value keeping exactly that contract", () => {
+    vi.setSystemTime(Date.parse("2030-01-01T12:00:00Z"));
+    try {
+      const policy = parseMasJoinPolicy(JSON.parse(readFileSync(new URL("../../config/mas-join.json", import.meta.url), "utf8")));
+      expect(policy.scope_contracts["payments.read.2026-10-27"]).toEqual(contractAt("2026-10-27"));
+      expect(policy.scope_contracts["payments.read.2026-11-02"]).toEqual(contractAt("2026-11-02"));
+      const retention = PAYMENTS_DECLARED?.versions.find((v) => v.version === "2026-10-27")?.retained_until as string;
+      expect(Date.parse(retention)).toBeLessThan(Date.now());
+    } finally {
+      vi.setSystemTime(Date.parse("2026-11-02T12:00:00Z"));
+    }
+  });
+
+  it("refuses at load, whatever the clock, a value naming a retired version or a malformed reference", () => {
+    const raw = structuredClone(
+      (RUNTIME_SCOPE_CONFIG as { extensions: { resource_contracts: Array<{ versions: Array<Record<string, unknown>> }> } }).extensions
+        .resource_contracts,
+    );
+    const oldest = raw[0]?.versions.find((v) => v.version === "2026-10-20");
+    if (!oldest) throw new Error("2026-10-20 is declared");
+    oldest.state = "retired";
+    delete oldest.retained_until;
+    const retired = new ResourceContractDeclarations(raw);
+    const fail = (message: string): never => {
+      throw new Error(message);
+    };
+    expect(() =>
+      parseScopeMappingValue({ actions: READS, resource_contract: contractAt("2026-10-20") }, "payments.read.retired", CANONICAL_RESOURCE, fail, retired),
+    ).toThrow(/retired/);
+    expect(() =>
+      parseScopeMappingValue({ actions: READS, resource_contract: { id: "not a uri" } }, "payments.read.malformed", CANONICAL_RESOURCE, fail),
+    ).toThrow(/malformed/);
   });
 
   it("confers one entry per distinct contract, a value stating none in its own, and merges values under the same contract", () => {

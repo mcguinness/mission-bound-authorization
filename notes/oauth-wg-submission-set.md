@@ -43,46 +43,46 @@ Both are on the datatracker:
 The profile was published alone, with its companion references made
 informative and its own invariants stated in the profile (D645).
 
-Mission Approval Governance is not a member. Since `0d7c3a8b` (#1920,
-D1056) the core cites it normatively, so it belongs to the core's
-normative dependency closure at the bound commit (In-family normative
-dependency, below). Its posting is sequenced separately (Release
+Mission Approval Governance is not a member. The core cites it
+informatively since `fa7cee10` (#1967, merged as `f02a1306`, D1167), so
+it is outside the core's normative closure at the bound commit (Approval
+Governance, below). Its posting is sequenced separately (Release
 sequencing, below).
 
 ## Record binding
 
 The composition, the direct-reference inventory, and the category verification
 below are all bound to one commit, not asserted as a standing current
-state. Computed at commit `8853de3b6354f76f52f53e35e5d38c189dbe401b` (2026-10-31): the #1944 option A2
-change, which carries Approval Governance's final bytes, on `main` at
-`3d318537`:
+state. Computed at commit `fa7cee104ad45e3019b8c26c2c8e87e891008f8e`
+(2026-11-01): the #1967 change, which carries the core's final bytes and
+which the ledger pins for the core, on `main` at `f02a1306`. Both
+members' ledger coverage is the same there and at #1974's merged head
+`64d1a6a6`:
 
 | Member | Commit | Content SHA-256 |
 |---|---|---|
-| `draft-mcguinness-oauth-mission.md` | `8853de3b6354f76f52f53e35e5d38c189dbe401b` | `bbd0aa897d928cf7b7fecdb28ac6604b638d90d6dae0cd970bf756ece8cc5693` |
-| `draft-mcguinness-oauth-mission-resource-access.md` | `8853de3b6354f76f52f53e35e5d38c189dbe401b` | `96fdafec3635a416aa03edd70762528b824e7fa59f8aeb0f8398bde977ed475d` |
-
-| In-family normative dependency | Commit | Content SHA-256 |
-|---|---|---|
-| `draft-mcguinness-mission-approval-governance.md` | `8853de3b6354f76f52f53e35e5d38c189dbe401b` | `bef9bac88520317c8b40333da91bea4da46a6af7c53a105f6d08a60e97532e8e` |
+| `draft-mcguinness-oauth-mission.md` | `fa7cee104ad45e3019b8c26c2c8e87e891008f8e` | `ededb3d81e86dfe9a82d31af1d132c515d2311a65e1b959933379911580374a8` |
+| `draft-mcguinness-oauth-mission-resource-access.md` | `fa7cee104ad45e3019b8c26c2c8e87e891008f8e` | `96fdafec3635a416aa03edd70762528b824e7fa59f8aeb0f8398bde977ed475d` |
 
 A later change to any of these files does not retroactively change this
 record; it would need a fresh binding.
 
 The verified Internet-Draft closure is computed from published texts
 instead: the core's `-01` and each archived draft, checked 2026-10-23.
-Its roots are the three external drafts this commit cites; each is still
-at the revision the published core cites (rechecked 2026-10-31). The
-fourth normative Internet-Draft, Approval Governance, is in the family
-and unposted.
+Its roots are the three Internet-Drafts this commit cites normatively,
+all external; each is still at the revision the published core cites
+(rechecked 2026-11-02).
 
-This binding replaces the second one, at
-`a9e35e79064409136f438b6495f110c68f67b059` (2026-10-23, #1562), and the
-first, at `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1` (2026-08-25, the
-merge of PR #727); both are in this file's git history. Since the second
-binding, the core's `normative:` block has gained Approval Governance
-(by `0d7c3a8b`, #1920, D1056) and RFC 9110, already cited by
-resource-access.
+This binding replaces the third one, at
+`8853de3b6354f76f52f53e35e5d38c189dbe401b` (2026-10-31, #1951), the
+second, at `a9e35e79064409136f438b6495f110c68f67b059` (2026-10-23,
+#1562), and the first, at `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1`
+(2026-08-25, the merge of PR #727); all are in this file's git history.
+Since the second binding, the core's `normative:` block gained Approval
+Governance (by `0d7c3a8b`, #1920, D1056) and RFC 9110, already cited by
+resource-access. Since the third, it has lost Approval Governance (by
+`fa7cee10`, #1967, D1134), which it cites informatively; nothing else in
+either member's `normative:` block changed.
 
 The first binding's closure property ("None is a work-in-progress
 external Internet-Draft") no longer holds. Since that binding the core's
@@ -189,17 +189,15 @@ unchanged from the first binding:
 
 ### Internet-Draft dependencies
 
-The core cites four Internet-Drafts normatively: three external ones,
-and Approval Governance in the family. Resource-access cites none beyond
-the core. Datatracker states of the external three, checked live on
-2026-10-23 and unchanged on 2026-10-31:
+The core cites three Internet-Drafts normatively, all external.
+Resource-access cites none beyond the core. Datatracker states, checked
+live on 2026-10-23 and unchanged on 2026-10-31 and 2026-11-02:
 
 | Internet-Draft | Revision | Stream | State | Cited from (core) |
 |---|---|---|---|---|
 | `draft-mcguinness-oauth-client-instance-id` | `-00` | individual | I-D Exists, expires 2027-04-01 | Instance Context in Delegated Tokens; the error-table note; an appendix future-work example |
 | `draft-mcguinness-oauth-actor-profile` | `-01` | individual | I-D Exists, expires 2027-04-12 | Delegation Within a Mission; Delegated Exchange; Instance Context in Delegated Tokens; Scope and Future Work |
 | `draft-ietf-oauth-rar-metadata-remediation` | `-00` | IETF, oauth WG | WG Document, expires 2027-02-24 | Denial Responses; Remediation Grains; Authorization Server Metadata |
-| `draft-mcguinness-mission-approval-governance` | none posted | in-family | not on the datatracker | Single Accountable Approver; Principals and Approval Basis; Provenance and Expiry; Integrity Anchors; Mission-Creating Paths; Consent Binding |
 
 A normative reference to an Internet-Draft does not block submission,
 adoption or last call. Per RFC 7322 Section 4.8.6, it holds the RFC's
@@ -209,33 +207,31 @@ Editor then publishes the documents together; the queue state is
 
 Those drafts have normative references of their own.
 
-### In-family normative dependency: Mission Approval Governance
+### Approval Governance: informative from the core
 
-The core cites Approval Governance normatively because every
-standing-consent basis, including a future one, conforms to the Approval
-Basis Contract it defines (D1056's mandatory connection). At the bound
-commit its normative references are the core, RFC 3339 (Proposed
-Standard), RFC 4648 (Proposed Standard), RFC 6838 (BCP 13), RFC 7515
-(Proposed Standard), RFC 8259 (Internet Standard) and RFC 8785
-(Informational). RFC 6838 and RFC 7515 are the two the members do not
-cite. Neither is in the downref registry, and neither needs downref
-handling: RFC 7515 is Standards Track and RFC 6838 a BCP (checked live on
-2026-10-31, by the method above). RFC 8785 raises the same downref as for
-the core.
+The core cites no family draft normatively at the bound commit. Its
+`normative:` block holds no Mission family entry, and each of its 112
+citations of a family draft, across 29 drafts, is to an informative
+reference. Six of those citations sit in a sentence carrying a BCP 14
+keyword. In each, the obligation is stated locally, and the citation
+names an example, an optional type's own specification, work outside the
+core's scope (shaping), or, for the one conditional REQUIRED, a feature
+that applies only where a deployment uses it (Approval Governance's
+Standing-Consent Recency).
 
-Its only normative Internet-Draft is the core, so the core and Approval
-Governance cite each other normatively; as RFCs they would publish
-together (RFC 7322 Section 4.8.6). It cites Mission Substrate
-informatively since #1944 (option A2, `8853de3b`): its digests are
-classified under the core's Commitment Mechanisms section, which it
-imports normatively. A2 removes Substrate from the core's normative
-closure. It does not remove the core and Approval Governance's mutual
-normative reference, and it does not establish the core's independence;
-this record makes neither claim.
+The core states its standing-consent requirements locally since #1967
+(D1134). A standing-consent basis's defining profile specifies its basis
+and activation semantics, and the activating issuer records the instance
+members. A profile defined elsewhere may use another mechanism while
+meeting those requirements; the Approval Basis Contract keeps binding its
+existing adopters (Template, Progressive, Child Delegation and
+`governed_policy`). D1134 records this as an intentional normative
+relaxation.
 
-Ledger coverage at the bound commit: 105 rows, 72 tested, 21 partial,
-12 todo. It is `spec_maturity: experimental` and has no entry in
-`candidate-gate.json`.
+Approval Governance still cites the core normatively, so the reference is
+one-way, and the core's RFC publication does not wait on it. Governance
+cites Mission Substrate informatively since #1944 (option A2,
+`8853de3b`).
 
 ### Verified closure (cited revisions)
 
@@ -335,23 +331,21 @@ What this establishes:
   Profile and the drafts it pulls in are 13 of the 16, and 12 of the 15
   unpublished.
 - **The closure property of this binding.** Every normative reference is
-  a published RFC, a fixed-edition external standard, the in-family
-  core, the in-family Approval Governance (whose own normative
-  references are the core and RFCs), or one of the three external
+  a published RFC, a fixed-edition external standard, the in-family core
+  (cited by resource-access), or one of the three external
   Internet-Drafts above. The table is the verified closure of those
-  three at the cited revisions; Approval Governance adds no external
-  Internet-Draft.
-- **The in-family coupling.** The core's RFC publication also waits on
-  Approval Governance, which cites the core normatively in turn.
+  three at the cited revisions.
+- **No in-family coupling.** The core's normative closure contains no
+  family draft, so its RFC publication waits on none.
 
 ## Release sequencing
 
-The OAuth binding's `-02` release waits for the core-independence work,
-including removal of its normative dependency on Approval Governance.
-Publishing Governance does not substitute for that work. Governance's
-posting is sequenced separately and must cite an accessible binding
-revision containing every rule it imports. Neither tag is authorized
-here.
+The OAuth binding's `-02` release waits for the core-independence work.
+Its normative dependency on Approval Governance is removed (#1967,
+D1167); whether that work is complete is the owner's ruling, and this
+record makes no claim either way. Governance's posting is sequenced
+separately and must cite an accessible binding revision containing every
+rule it imports. Neither tag is authorized here.
 
 The direction is D1100; #1944 tracks Governance's posting.
 
@@ -389,8 +383,8 @@ not an RFC-category judgment:
   substrate normatively at the bound commit.
 
 At the bound commit the substrate is in neither member's normative
-closure: Approval Governance cites it informatively (#1944, A2). Its
-readiness gate above is unchanged.
+closure: the core cites it informatively and takes no requirement from
+the substrate contract. Its readiness gate above is unchanged.
 
 ### Architecture
 
@@ -423,10 +417,13 @@ commit (`conformance-manifest.json`):
 
 | Member | Rows | Tested | Partial | Todo |
 |---|---|---|---|---|
-| core | 331 | 221 | 43 | 67 |
-| resource-access | 188 | 156 | 20 | 12 |
+| core | 335 | 227 | 42 | 66 |
+| resource-access | 188 | 159 | 17 | 12 |
 
-The core's body carries 283 BCP 14 keywords.
+The core's body carries 289 BCP 14 keywords. The third binding's figure,
+283, was a miscount: counting every BCP 14 keyword in the body after the
+abstract marker, the method that reproduces the second binding's 261,
+gives 289 at `8853de3b` as at the bound commit.
 
 The 2026-08-25 audit records are historical: they found 61 core rows
 and 13 resource-access rows, all `todo`. They remain the method of
