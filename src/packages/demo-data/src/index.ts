@@ -3757,7 +3757,10 @@ export function parseRequestProvenanceConfig(
     // the one use this key has, verifying signatures, and so with each other.
     // Validated, they are dropped: neither establishes the evidence-type mapping.
     if (Object.hasOwn(jwk, "use") && jwk.use !== "sig") {
-      throw new ConfigError(file, `${ctx}.use must be sig, the use of a key that verifies signatures`);
+      throw new ConfigError(
+        file,
+        `${ctx}.use must be sig, the use of a key that verifies signatures`,
+      );
     }
     if (Object.hasOwn(jwk, "key_ops")) {
       const ops = jwk.key_ops;
@@ -3768,7 +3771,10 @@ export function parseRequestProvenanceConfig(
         throw new ConfigError(file, `${ctx}.key_ops names an operation twice`);
       }
       if (!ops.includes("verify") || ops.some((op) => !RP_SIGNATURE_KEY_OPS.has(op))) {
-        throw new ConfigError(file, `${ctx}.key_ops must name verify and only signature operations (sign, verify)`);
+        throw new ConfigError(
+          file,
+          `${ctx}.key_ops must name verify and only signature operations (sign, verify)`,
+        );
       }
     }
     const key = {

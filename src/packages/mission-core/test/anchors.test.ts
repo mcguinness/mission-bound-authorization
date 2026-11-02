@@ -149,7 +149,9 @@ describe("parseStrictJson", () => {
   });
 
   it("rejects a duplicated __proto__ member", () => {
-    expect(() => parseStrictJson('{"__proto__":null,"__proto__":{}}')).toThrow(DuplicateMemberError);
+    expect(() => parseStrictJson('{"__proto__":null,"__proto__":{}}')).toThrow(
+      DuplicateMemberError,
+    );
   });
 });
 
