@@ -2409,7 +2409,9 @@ the "OAuth Parameters" registry ({{Section 11.2 of RFC6749}}):
 - Parameter name: `mission_continuation`
 - Parameter usage location: token response, authorization request
 - Change controller: IETF
-- Specification document(s): this document, {{interactive-handoff}}
+- Specification document(s): this document, {{interactive-handoff}};
+  also carried by the child delegation profile
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 
 - Parameter name: `creation_request_id`
 - Parameter usage location: token request
@@ -2427,7 +2429,9 @@ Error Registry" ({{Section 11.4 of RFC6749}}):
 - Error usage location: token error response
 - Related protocol extension: Mission Expansion
 - Change controller: IETF
-- Specification document(s): this document, {{interactive-handoff}}
+- Specification document(s): this document, {{interactive-handoff}};
+  also used by the child delegation profile
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 
 --- back
 
@@ -2475,6 +2479,10 @@ approved, not the predecessor's authority plus a delta.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The `mission_continuation` and `mission_interaction_required`
+  registrations note that the child delegation profile also uses them,
+  for its interactive child creation (#1130).
 
 - A successor created from an exchange carrying a proposal records
   `proposed_authority`, its `proposal_hash` recorded or implied
