@@ -91,10 +91,11 @@ export const RECOGNIZED_HISTORY_PREDICATES: ReadonlySet<string> = new Set(["acti
 
 interface VerifiedDecision {
   evaluation_id: string;
-  decision: string;
+  decision: "permit" | "deny";
   audience: string | undefined;
-  action_class: unknown;
-  action_classes: unknown;
+  action_class: string;
+  /** Present only when the record carries it, then an array of strings holding `action_class`. */
+  action_classes: string[] | undefined;
   /** The record's (Mission, emitter) stream: its emitter's role and id. */
   stream: string;
   sequence: number;
@@ -178,6 +179,24 @@ async function verifiedHistory(
       if (typeof record.evaluation_id !== "string") return undefined;
       const sequence = record.sequence;
       if (typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 0) return undefined;
+      // @spec runtime-evidence#decision-evidence-object `decision`,
+      // `action_class`, `action_classes`: a malformed member would drop the
+      // record out of the permits a predicate counts, so it leaves the history
+      // unestablished rather than uncounted. A present `action_classes` holds
+      // strings, "`action_class` among them".
+      const decision = record.decision;
+      if (decision !== "permit" && decision !== "deny") return undefined;
+      const actionClass = record.action_class;
+      if (typeof actionClass !== "string") return undefined;
+      const actionClasses = record.action_classes;
+      if (
+        actionClasses !== undefined &&
+        (!Array.isArray(actionClasses) ||
+          !actionClasses.every((c) => typeof c === "string") ||
+          !actionClasses.includes(actionClass))
+      ) {
+        return undefined;
+      }
       const content = signedContent(record);
       const prior = decisions.get(record.evaluation_id);
       if (prior !== undefined) {
@@ -186,10 +205,10 @@ async function verifiedHistory(
       }
       decisions.set(record.evaluation_id, {
         evaluation_id: record.evaluation_id,
-        decision: record.decision as string,
+        decision,
         audience: typeof record.audience === "string" ? record.audience : undefined,
-        action_class: record.action_class,
-        action_classes: record.action_classes,
+        action_class: actionClass,
+        action_classes: actionClasses as string[] | undefined,
         stream: JSON.stringify([emitter.role, emitter.id]),
         sequence,
         content,
@@ -253,12 +272,11 @@ async function verifiedHistory(
 /**
  * @spec authzen#context-history `action_class_completed`: the named class
  * applied to a record when its `action_classes` lists that class or, only in
- * a record without `action_classes`, its `action_class` is that class.
+ * a record without `action_classes`, its `action_class` is that class. Both
+ * members were validated when the record was read.
  */
 function classApplied(decision: VerifiedDecision, actionClass: string): boolean {
-  if (decision.action_classes !== undefined) {
-    return Array.isArray(decision.action_classes) && decision.action_classes.includes(actionClass);
-  }
+  if (decision.action_classes !== undefined) return decision.action_classes.includes(actionClass);
   return decision.action_class === actionClass;
 }
 

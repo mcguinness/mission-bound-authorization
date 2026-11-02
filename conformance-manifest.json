@@ -44435,12 +44435,12 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-history.test.ts",
-     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > falls back to action_class only where action_classes is absent: a record listing action_classes is counted by membership alone",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > falls back to action_class only where action_classes is absent: a listing record counts by membership alone, and a pending single-class permit keeps the predicate unsatisfied",
      "level": "unit",
      "surface": "decision-request"
     }
    ],
-   "notes": "Mutation-proved (#2015): reading action_class alone permits with a further class's execution pending (M6); falling back to action_class where action_classes is present counts a record the class did not apply to (M7)."
+   "notes": "Mutation-proved (#2015), on conformant records only: reading action_class alone permits with a further class's execution pending (M6, the membership witness); reading action_class in place of a present action_classes denies a completed record listing the class (M7, the fallback witness's first case; on conformant records it coincides with M6); never consulting action_class where action_classes is absent permits beside a pending single-class permit (the fallback witness's second case). Counting action_class beside a present action_classes that omits it is unreachable: such a record is non-conforming and leaves the history unestablishable (the malformed-member witness under authzen.context-history.deny-when-unsatisfied-or-unestablishable)."
   },
   {
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",

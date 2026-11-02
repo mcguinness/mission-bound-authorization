@@ -76,6 +76,17 @@ interface DecisionShape {
   audience?: string;
   /** This record's position in the PDP's (Mission, emitter) stream; 0 unless the store holds more than one. */
   sequence?: number;
+  /** Members signed as given, replacing the shape's own: how a malformed record is built. */
+  overrides?: Record<string, unknown>;
+  /** Members left out of the signed record. */
+  omit?: string[];
+}
+
+/** The signed record: `base` with `overrides` applied and `omit` removed. */
+function shaped(base: Record<string, unknown>, overrides: Record<string, unknown> = {}, omit: string[] = []): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base, ...overrides };
+  for (const member of omit) delete out[member];
+  return out;
 }
 
 /** A record signed in the PEP's role with the PEP's own trusted key: a valid signature, the wrong signer for a decision. */
@@ -87,7 +98,7 @@ async function decisionRecord(
   key = pdpKeys.privateKey,
   as?: { key: typeof pdpKeys.privateKey; kid: string; emitter: { id: string; role: string } },
 ): Promise<Record<string, unknown>> {
-  const unsigned = {
+  const unsigned = shaped({
     evidence_id: `evd_${d.evaluation_id}`,
     evaluation_id: d.evaluation_id,
     mission: { id: d.mission ?? MISSION, issuer: ISSUER, policy_view_id: "pv_history" },
@@ -102,7 +113,7 @@ async function decisionRecord(
     sequence: d.sequence ?? 0,
     emitter: as?.emitter ?? { id: PDP_ID, role: "pdp" },
     evaluated_at: NOW.toISOString(),
-  };
+  }, d.overrides, d.omit);
   return {
     ...unsigned,
     evidence_envelope: await signEvidenceEnvelope(unsigned, DECISION_EVIDENCE_MEDIA_TYPE, { kid: as?.kid ?? "hist-pdp", key: as?.key ?? key }),
@@ -435,17 +446,49 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(historyOf(pending)?.[0]?.outcome).toBe("not_satisfied");
   });
 
-  it("falls back to action_class only where action_classes is absent: a record listing action_classes is counted by membership alone", async () => {
-    const records = [
-      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }),
-      await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
-      // Signed by the trusted PDP but listing classes that exclude its own `action_class`:
-      // it is not a consequential_write permit, so its missing execution does not count.
-      await decisionRecord({ evaluation_id: "x1", action_class: "consequential_write", action_classes: ["irreversible_action", "external_commitment"], sequence: 1 }),
+  it("falls back to action_class only where action_classes is absent: a listing record counts by membership alone, and a pending single-class permit keeps the predicate unsatisfied", async () => {
+    // Conformant records only: m1 lists the named class beside its assigned one; w2 carries no
+    // action_classes, so its action_class alone names the class that applied to it.
+    const m1 = await decisionRecord({ evaluation_id: "m1", action_class: "irreversible_action", action_classes: ["irreversible_action", "consequential_write"], sequence: 0 });
+    const m1Done = await executionRecord({ evaluation_id: "m1", outcome: "completed", sequence: 0 });
+    // Where action_classes is present it alone decides: m1 counts for consequential_write
+    // although its assigned action_class is irreversible_action.
+    const listed = await evaluate(request(), options(historyBinding([m1, m1Done])));
+    expect(listed.decision, JSON.stringify(listed.context)).toBe(true);
+    expect(historyOf(listed)?.[0]?.outcome).toBe("satisfied");
+    const w2 = await decisionRecord({ evaluation_id: "w2", action_class: "consequential_write", sequence: 1 });
+    const pending = await evaluate(request(), options(historyBinding([m1, m1Done, w2])));
+    expect(pending.decision).toBe(false);
+    expect(pending.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(pending)?.[0]?.outcome).toBe("not_satisfied");
+    // Control: once w2's execution completes, both permits of the class have completed.
+    const w2Done = await executionRecord({ evaluation_id: "w2", outcome: "completed", sequence: 1 });
+    const satisfied = await evaluate(request(), options(historyBinding([m1, m1Done, w2, w2Done])));
+    expect(satisfied.decision, JSON.stringify(satisfied.context)).toBe(true);
+    expect(historyOf(satisfied)?.[0]?.outcome).toBe("satisfied");
+  });
+
+  it("fails closed on a malformed Decision Evidence member rather than leaving the record uncounted", async () => {
+    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: 0 });
+    const w1Done = await executionRecord({ evaluation_id: "w1", outcome: "completed", sequence: 0 });
+    const malformed: Array<[string, DecisionShape, boolean]> = [
+      // action_classes that leaves out the record's own action_class.
+      ["omits action_class", { evaluation_id: "x1", action_class: "consequential_write", action_classes: ["irreversible_action", "external_commitment"] }, false],
+      // action_classes holding a non-string, beside a completed execution.
+      ["non-string member", { evaluation_id: "x2", action_class: "consequential_write", overrides: { action_classes: ["consequential_write", 7] } }, true],
+      // an action_class that is not a string.
+      ["non-string action_class", { evaluation_id: "x3", action_class: "consequential_write", overrides: { action_class: 7 } }, false],
+      // a decision outside permit and deny.
+      ["unknown decision", { evaluation_id: "x4", action_class: "consequential_write", overrides: { decision: "Permit" } }, false],
     ];
-    const decision = await evaluate(request(), options(historyBinding(records)));
-    expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
-    expect(historyOf(decision)?.[0]?.outcome).toBe("satisfied");
+    for (const [label, shape, executed] of malformed) {
+      const records = [w1, w1Done, await decisionRecord({ ...shape, sequence: 1 })];
+      if (executed) records.push(await executionRecord({ evaluation_id: shape.evaluation_id, outcome: "completed", sequence: 1 }));
+      const decision = await evaluate(request(), options(historyBinding(records)));
+      expect(decision.decision, label).toBe(false);
+      expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, label).toBe("unavailable");
+    }
   });
 
   it("records mission_history on a decision denied before the Mission is established, each selected predicate unavailable", async () => {
