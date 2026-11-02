@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-02T22:57:02Z
-Source repository commit: 7a7fd71d5334c12541a12a9534a73d59a1cca724
+Generated: 2026-11-02T23:04:52Z
+Source repository commit: 7461797c843b8a3436ddd502ab966d938913f48d
 Member count: 9
 
 Reading order:
@@ -8771,10 +8771,12 @@ Table of Contents
    token derived from that grant carries the Mission, every issuance is
    gated on its state and bounded by its Authority Set, every credential
    the Mission Issuer derives expires no later than the Mission, and the
-   Mission can be revoked by mission_id, independent of possession of
-   any token.  Resource servers enforce the carried entries, or a scope
-   projected from them (Section 7.7); evaluating each action at its
-   point of use is out of scope (Section 17.3.1).
+   Mission Issuer accepts revocation by mission_id from a party its
+   policy authorizes, independent of possession of any token
+   (Section 10.2).  Resource servers enforce the carried entries, or a
+   scope projected from them (Section 7.7); a runtime layer that
+   evaluates each consequential action against the Mission is out of
+   scope (Section 17.3.1).
 
    The direct realization creates each Mission at an approval
    interaction on the authorization endpoint, and a Mission is intended

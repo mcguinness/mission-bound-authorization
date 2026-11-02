@@ -1816,11 +1816,13 @@ and binds the Mission to the authorization code it issues
 (<a href="#grant-binding" class="auto internal xref">Section 6.4</a>). Every token derived from that grant carries the
 Mission, every issuance is gated on its state and bounded by its
 Authority Set, every credential the Mission Issuer derives expires no
-later than the Mission, and the Mission can be revoked by
-<code>mission_id</code>, independent of possession of any token. Resource
-servers enforce the carried entries, or a <code>scope</code> projected from them
-(<a href="#scope-projection" class="auto internal xref">Section 7.7</a>); evaluating each action at its point of use is
-out of scope (<a href="#runtime-boundary" class="auto internal xref">Section 17.3.1</a>).<a href="#section-1.1-3" class="pilcrow">¶</a></p>
+later than the Mission, and the Mission Issuer accepts revocation by
+<code>mission_id</code> from a party its policy authorizes, independent of
+possession of any token (<a href="#revocation" class="auto internal xref">Section 10.2</a>). Resource servers enforce the
+carried entries, or a <code>scope</code> projected from them
+(<a href="#scope-projection" class="auto internal xref">Section 7.7</a>); a runtime layer that evaluates each
+consequential action against the Mission is out of scope
+(<a href="#runtime-boundary" class="auto internal xref">Section 17.3.1</a>).<a href="#section-1.1-3" class="pilcrow">¶</a></p>
 <p id="section-1.1-4">The direct realization creates each Mission at an approval
 interaction on the authorization endpoint, and a Mission is intended
 to cover one concrete task, not an agent's whole lifetime.

@@ -310,10 +310,12 @@ Table of Contents
    token derived from that grant carries the Mission, every issuance is
    gated on its state and bounded by its Authority Set, every credential
    the Mission Issuer derives expires no later than the Mission, and the
-   Mission can be revoked by mission_id, independent of possession of
-   any token.  Resource servers enforce the carried entries, or a scope
-   projected from them (Section 7.7); evaluating each action at its
-   point of use is out of scope (Section 17.3.1).
+   Mission Issuer accepts revocation by mission_id from a party its
+   policy authorizes, independent of possession of any token
+   (Section 10.2).  Resource servers enforce the carried entries, or a
+   scope projected from them (Section 7.7); a runtime layer that
+   evaluates each consequential action against the Mission is out of
+   scope (Section 17.3.1).
 
    The direct realization creates each Mission at an approval
    interaction on the authorization endpoint, and a Mission is intended
