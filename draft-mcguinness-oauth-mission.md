@@ -2031,10 +2031,6 @@ Mission. Two richer patterns are out of scope:
   is governance state about the delegate, not the standing-consent
   basis that `approval_basis` records ({{mission-record}}).
 
-{{I-D.draft-mcguinness-mission-architecture}} (Section "Approval Role
-Mapping") shows how the common creation scenarios assign the three
-`approval_basis` roles.
-
 ## Mission Record {#mission-record}
 
 A Mission is the durable record created at the approval event; a
@@ -2258,8 +2254,7 @@ value.
   - `approval_basis` is provenance: none of the record's integrity
     anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
     covers it ({{integrity-anchors}}); a profile that commits the
-    Mission Record itself covers it under that profile's own anchor. Two
-    optional profiles commit it ({{consent-binding}}).
+    Mission Record itself covers it under that profile's own anchor.
   - Its disclosure through introspection follows
     {{caller-authorization-and-minimization}}.
   - It is not carried on the baseline `mission` claim
@@ -5429,24 +5424,17 @@ integrity anchors.
 
 A deployment whose Missions carry high-risk authority can retain
 presentation-level audit evidence from which the disclosure shown can
-be reconstructed and audited. Mission Consent Evidence
-{{I-D.draft-mcguinness-oauth-mission-consent-evidence}} binds a
-`consent_rendering_hash` over a structured consent-disclosure object on
-the wire; an AS that does not implement it can record equivalent
-evidence out of band. Such a commitment binds the structured disclosure
-the AS records, not the presentation itself; it narrows this gap for
-audit but does not close it.
+be reconstructed and audited, such as a commitment over a structured
+consent-disclosure object ({{extensibility}}). Such a commitment binds
+the structured disclosure the AS records, not the presentation itself;
+it narrows this gap for audit but does not close it.
 
 The anchors do not commit the approval basis either: who consented,
 who activated the Mission, and under which basis ({{mission-record}}).
 The record's immutability protects it, and only the AS enforces that.
-A deployment that needs the approval basis checkable outside the AS
-can register the approval event under Mission Audit Transparency
-{{I-D.draft-mcguinness-mission-audit}}, whose registration covers the
-record at creation except its `state` and `termination`, or carry the
-Approval Context Commitment of
-{{I-D.draft-mcguinness-mission-approval-governance}}, whose closed
-manifest includes the approval basis, in a signed artifact.
+A deployment that needs the approval basis checkable outside the AS can
+commit it under a profile's own anchor `typ` ({{integrity-anchors}},
+{{extensibility}}) in a signed or externally registered artifact.
 
 ### Downgrade by Omission {#downgrade-by-omission}
 
@@ -5538,14 +5526,12 @@ ambient authority for individual consequential actions. Short token
 lifetimes and narrow authority bound this exposure but do not
 eliminate it.
 
-A deployment can use Missions for issuance alone
-({{I-D.draft-mcguinness-mission-architecture}}, Section "The
-Issuance-Only Deployment"). A runtime layer
+A deployment can use Missions for issuance alone. A runtime layer
 ({{I-D.draft-mcguinness-mission-runtime}}), out of scope for this
-document, evaluates each consequential action against
-the Mission, with parameter binding, and records evidence for the
-actions it covers. A deployment adds one for an action class that needs
-any of the following, which issuance-time bounds alone do not provide:
+document, evaluates each consequential action against the Mission, with
+parameter binding, and records evidence for the actions it covers. A
+deployment adds one for an action class that needs any of the following,
+which issuance-time bounds alone do not provide:
 
 - per-action evaluation or evidence;
 - approval bound to a single action; or
@@ -5662,12 +5648,11 @@ or self-exchanged.
 
 Delegation depth ({{delegation-constraints}}) resets at each
 cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})
-and, where a deployment runs the child-delegation profile, at each
-child generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}),
-so the authority a Mission's descendants can reach can exceed what a
-single approval appears to bound at consent time. Where that apparent
-bound must hold in practice, a deployment can impose a global cap out
-of band; the Mission Security Model
+and in each Mission created from an existing Mission's authority
+({{grant-binding-related}}), so the authority a Mission's descendants
+can reach can exceed what a single approval appears to bound at consent
+time. Where that apparent bound must hold in practice, a deployment can
+impose a global cap out of band; the Mission Security Model
 ({{I-D.draft-mcguinness-mission-security-model}}) analyzes the
 composition.
 
@@ -5698,9 +5683,8 @@ the AS's signing key, whose publication and rotation
 Verification for audit outlives validity: keeping a key resolvable for
 the audit horizon ({{audit-horizon}}) of every Mission whose tokens it
 signed lets an auditor verify those tokens later. A companion that
-anchors a longer-lived artifact to the same keys (a status assertion, a
-Mandate {{I-D.draft-mcguinness-mission-mandate}}, registered evidence)
-states its own retention bound.
+anchors a longer-lived artifact to the same keys states its own
+retention bound.
 
 Revocation for a known or suspected compromise is distinct from routine
 retirement: the issuer publishes the compromised key as revoked, or
@@ -5804,9 +5788,8 @@ Third-party personal data can enter through any Intent, proposal,
 authority, or recorded-evidence member:
 
 - the prose members (`goal`, `task_bounds`) and `purpose`;
-- `target_resources` and any explicit member a companion profile defines
-  (for example, the metering companion's consumption bounds,
-  {{I-D.draft-mcguinness-mission-metering}});
+- `target_resources` and any explicit member a companion profile
+  defines;
 - any type-owned member of a proposed entry, and the derived Authority
   Set entries that reach tokens ({{mission-bound-tokens}}); and
 - `submission_evidence` facts, including a consent reference.
@@ -5846,14 +5829,6 @@ a byproduct of holding a Mission reference. Retention and erasure are
 deployment policy, bounded below by the audit horizon
 ({{audit-horizon}}).
 
-Where approval-event evidence was registered under the audit
-transparency profile ({{I-D.draft-mcguinness-mission-audit}}), its
-erasure record and data-subject-request basis are the
-transparency-side mechanism. That mechanism records an erasure but
-neither performs one nor overrides retention law, and it leaves the
-operational Mission Record and its audit-horizon retention floor
-untouched.
-
 # Internationalization Considerations {#i18n}
 
 Mission Intent prose (`goal`, `task_bounds`) is human-readable
@@ -5871,11 +5846,8 @@ Three rules apply to the declaration:
   {{rendering-safeguards}} unchanged: client prose stays inert text in
   any language and any script, including bidirectional text. Where the
   approval surface presents a translation, the rendered disclosure is
-  what the deployment's consent evidence records (Mission Consent
-  Evidence binds one locale, one disclosure, one hash,
-  {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); `goal_lang`
-  declares the source's language and is not a record of what was
-  rendered.
+  what the deployment's consent evidence records; `goal_lang` declares
+  the source's language and is not a record of what was rendered.
 - Authority Set entries carry machine-facing identifiers (URIs, action
   strings, structured constraints), not prose, and this document adds no
   language-tagged display fields to them. Localizing how authority is
@@ -6488,7 +6460,7 @@ or configuration. The cited sections govern.
 | Designated-client separation ({{designation}}) | Deployment | AS: no protocol signal; the AS establishes by deployment means, for example its configuration, that no resource server accepts the client's identifier as an audience |
 | Designation redemption count ({{designation}}) | AS | Delegate: no protocol signal; the AS's policy governs, and deployment documentation may describe it. An attempt reveals only its own outcome, not the permitted count |
 | Subject-authentication conveyance ({{rs-denials}}) | Deployment | Resource server: the `acr`, `amr`, and `auth_time` claims ({{token-authentication-lifetime}}), or introspection ({{Section 6 of RFC9470}}); where no Subject authentication applies, they are absent |
-| Revocation means ({{revocation}}) | Mission Issuer, for the means; the deployment's policy, for who may revoke | A party authorized to revoke: none in this document; a deployment-defined surface, or Mission Status's `revoke` operation |
+| Revocation means ({{revocation}}) | Mission Issuer, for the means; the deployment's policy, for who may revoke | A party authorized to revoke: none in this document; a deployment-defined surface |
 {: title="Deployment choices and how each party learns them"}
 
 # Design Context and Boundaries {#design-context}
@@ -6557,29 +6529,17 @@ The following are out of scope for this document:
   business transaction.
 - **Approval-free authorization upgrade.** The Authority Set is
   committed at approval, and this document defines no mid-stream
-  widening that bypasses consent. Widening requires a new approval, a
-  successor Mission, as specified by Mission Expansion
-  {{I-D.draft-mcguinness-oauth-mission-expansion}}.
+  widening that bypasses consent. Widening requires a new approval
+  ({{subset}}).
 - **Lifecycle event distribution.** A resource server learns Mission
   state from the token lifetime or optional introspection
   ({{introspection}}); this document defines no push-based
-  notification of Mission state changes. Mission Lifecycle Signals
-  ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared
-  Signals and CAEP profile for Mission lifecycle events, delivered as
-  Security Event Tokens ({{RFC8935}}).
+  notification of Mission state changes.
 - **Human-in-the-loop suspension.** The base lifecycle is `active` and
-  `terminated` ({{lifecycle}}). Mission Status
-  ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a
-  `suspended` state with `resume`/`complete` transitions as an
-  optional extension. A pending-human-approval state and a
+  `terminated` ({{lifecycle}}). A pending-human-approval state and a
   holding-token pause-and-resume protocol are future lifecycle work.
-- **Multi-hop cross-domain projection.** Cross-Domain Projection
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies a
-  single projection hop. Mission Cross-Organizational Delegation
-  ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}})
-  profiles recursive delegation across organizations; a destination
-  verifies that delegation chain before projecting. Re-projecting a
-  Mission from one Resource AS into a further domain is future work.
+- **Multi-hop cross-domain projection.** Re-projecting a Mission from
+  one Resource AS into a further domain is future work.
 - **Decentralized agent identity.** Agent identity and credentialing
   are out of scope ({{I-D.draft-ietf-wimse-aims}} and the WIMSE
   architecture, {{I-D.draft-ietf-wimse-arch}}); this document governs
