@@ -54,6 +54,18 @@ export function relocateEstate(config: MasPilotConfig, port: number): MasPilotCo
 
 export const READ_ACTIONS = ["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"];
 
+/**
+ * The contract-stating scope values (#249 C.3b): the payments resource requires
+ * a reference, so a Mission approved now carries the current contract's (D989),
+ * and a joined credential's authority covers it only under a value whose
+ * mapping states the same contract. The legacy values keep their meaning, a
+ * mapping that states no contract, which joins only a Mission approved without
+ * one.
+ */
+export const INVOICES_READ = "invoices.read.2026-10-27";
+export const VENDORS_READ = "vendors.read.2026-10-27";
+export const REMIT_SEND = "remit.send.2026-10-27";
+
 export interface Credential {
   token: string;
   dpopKeys: DpopKeys;

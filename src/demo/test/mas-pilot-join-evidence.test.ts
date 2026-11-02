@@ -363,12 +363,12 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
       join: { client_id: "ap-agent", disposition: "client" },
       caller: pdpClient,
       audience: pdpClient,
-      mapping_version: "mas-pilot-identity@1",
+      mapping_version: "mas-pilot-identity@2",
       iat: claims.iat,
       exp: claims.exp,
       retain_until: new Date(Date.parse("2027-06-01T00:00:00Z") + AUDIT_RETENTION_MS).toISOString(),
     };
-    expect(claims.mapping_version).toBe("mas-pilot-identity@1");
+    expect(claims.mapping_version).toBe("mas-pilot-identity@2");
     const path = `/missions/${missionId}/join-evidence`;
     const first = mas.console;
     if (!first) throw new Error("the MAS process serves no operator console");

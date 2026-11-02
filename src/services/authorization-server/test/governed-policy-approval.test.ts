@@ -8,7 +8,7 @@ import {
   ResourceContractDeclarations,
   type ResourceContractRef,
 } from "@mission/core";
-import { DERIVATION_POLICY, RESOURCE_CONTRACTS } from "@mission/demo-data";
+import { contractsRequiring, DERIVATION_POLICY, pinnedToCurrentContract, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -938,13 +938,16 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
       };
       return { view, act: () => activate(kernel, c.consent_id, { approvalEventId, modelOutputs: [output] }) };
     };
+    // The entry as a fresh approval records it: the payments resource requires
+    // a reference, so the bounded set carries the current one (#249 C.3b, D989).
+    const approved = pinnedToCurrentContract(readEntry());
     const narrowed = run("ape-n1", { remove: [{ resource: RESOURCE, actions: ["payments:vendor.read"] }], reason: "vendor data" });
-    expect(narrowed.view.authority).toEqual([readEntry()]);
+    expect(narrowed.view.authority).toEqual([approved]);
     expect(outcome(narrowed.act)).toBe("narrowing_not_permitted");
     expect(kernel.allMissions()).toHaveLength(0);
     // Control: a model with no objection leaves the entry unchanged, and it activates.
     const plain = run("ape-n2", {});
-    expect(plain.act().mission.authority_set).toEqual([readEntry()]);
+    expect(plain.act().mission.authority_set).toEqual([approved]);
     expect(kernel.allMissions()).toHaveLength(1);
   });
 
@@ -1458,7 +1461,8 @@ describe("governed adjudication assembles the reference before evaluation (@spec
   });
 
   it("adds no reference where configuration requires none (positive control)", () => {
-    const kernel = makeKernel();
+    // The configuration before the cutover: the same declarations, requiring no reference.
+    const kernel = makeKernel({ resourceContracts: contractsRequiring([]) });
     expect(activate(kernel, consent(kernel).consent_id).mission.authority_set.map((e) => e.resource_contract)).toEqual([undefined]);
   });
 

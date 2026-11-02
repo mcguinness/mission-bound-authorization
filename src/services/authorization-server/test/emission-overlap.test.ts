@@ -17,7 +17,7 @@
  */
 
 import type { Server } from "node:http";
-import { APPROVAL_FLOOR, AUTHORITY_SOURCES, SCOPE_PROJECTION } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUTHORITY_SOURCES, pinnedToCurrentContract, SCOPE_PROJECTION } from "@mission/demo-data";
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
@@ -251,7 +251,9 @@ describe("the token endpoint checks every entry an audience serves against that 
     // The trusted payments catalog also resolves the invoice-level entry's
     // catalog-sourced action, as for the service's own entry (#1440).
     const { capability_sources: sources, ...emitted } = details[0] as Json;
-    expect([emitted]).toEqual([invoice]);
+    // The entry as a fresh approval records it: the payments resource requires
+    // a reference, so it carries the current one (#249 C.3b, D989).
+    expect([emitted]).toEqual([pinnedToCurrentContract(invoice)]);
     expect((sources as Json[]).map((b) => b.action)).toEqual([READ]);
   });
 
