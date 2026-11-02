@@ -66,7 +66,7 @@ describe("the request-provenance trust configuration loader (@spec request-prove
     expect(REQUEST_PROVENANCE_CONFIG.signers).toEqual([]);
   });
 
-  it("loads the vector's trust configuration, keeping only each key's curve and coordinates, and accepts use and key_ops without giving them effect", () => {
+  it("loads the vector's trust configuration, keeping only each key's curve and coordinates, and accepts a consistent use and key_ops without giving them effect", () => {
     const loaded = parseRequestProvenanceConfig(valid());
     const control = valid();
     expect(loaded.signers).toHaveLength(1);
@@ -83,6 +83,29 @@ describe("the request-provenance trust configuration loader (@spec request-prove
       jwk(c).kid = key(c).kid as string;
     })();
     expect(parseRequestProvenanceConfig(withUse)).toStrictEqual(loaded);
+    for (const ops of [["verify"], ["sign", "verify"], ["verify", "sign"]]) {
+      const withOps = with_((c) => {
+        jwk(c).key_ops = ops;
+      })();
+      expect(parseRequestProvenanceConfig(withOps), ops.join()).toStrictEqual(loaded);
+    }
+  });
+
+  it.each([
+    ["use enc", (j: JsonRecord) => { j.use = "enc"; }, /use must be sig/],
+    ["use in another case", (j: JsonRecord) => { j.use = "SIG"; }, /use must be sig/],
+    ["a non-string use", (j: JsonRecord) => { j.use = ["sig"]; }, /use must be sig/],
+    ["key_ops that is not an array", (j: JsonRecord) => { j.key_ops = "verify"; }, /key_ops must be an array of strings/],
+    ["key_ops holding a non-string", (j: JsonRecord) => { j.key_ops = ["verify", 1]; }, /key_ops must be an array of strings/],
+    ["key_ops naming verify twice", (j: JsonRecord) => { j.key_ops = ["verify", "verify"]; }, /names an operation twice/],
+    ["empty key_ops", (j: JsonRecord) => { j.key_ops = []; }, /must name verify and only signature operations/],
+    ["key_ops without verify", (j: JsonRecord) => { j.key_ops = ["sign"]; }, /must name verify and only signature operations/],
+    ["key_ops naming encrypt beside verify", (j: JsonRecord) => { j.key_ops = ["verify", "encrypt"]; }, /must name verify and only signature operations/],
+    ["key_ops of an encryption key", (j: JsonRecord) => { j.key_ops = ["encrypt", "decrypt"]; }, /must name verify and only signature operations/],
+    ["use sig with key_ops naming wrapKey", (j: JsonRecord) => { j.use = "sig"; j.key_ops = ["verify", "wrapKey"]; }, /must name verify and only signature operations/],
+    ["use enc with key_ops naming verify", (j: JsonRecord) => { j.use = "enc"; j.key_ops = ["verify"]; }, /use must be sig/],
+  ])("refuses a JWK with %s: use and key_ops are validated before they are dropped (RFC 7517 Sections 4.2 and 4.3)", (_what, mutate, message) => {
+    expect(() => parseRequestProvenanceConfig(with_((c) => mutate(jwk(c)))())).toThrow(message);
   });
 
   it.each([

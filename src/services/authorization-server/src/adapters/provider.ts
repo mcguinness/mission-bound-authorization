@@ -682,6 +682,10 @@ import {
   deviceClientView,
   deviceDecisionPage,
   deviceFlowFeature,
+  DeviceVerificationThrottle,
+  type DeviceVerificationState,
+  type DeviceVerificationThrottleOptions,
+  deviceThrottledPage,
   devicePending,
   formatUserCode,
   loadDeviceSession,
@@ -950,6 +954,13 @@ export interface AdapterOptions {
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
+  /**
+   * RFC 8628 Section 5.1 (#1202, D1121): the verification page's throttle of
+   * codes that match no session, per verification user agent address. The
+   * default allows 10 such codes per 10 minutes, and tracks 10,000
+   * addresses apart before new ones share one overflow key.
+   */
+  deviceVerificationThrottle?: DeviceVerificationThrottleOptions;
   /**
    * @spec mission#approval-authentication (#1320, D496): the approval
    * surface's login as an OpenID Connect relying party to an upstream
@@ -3077,6 +3088,32 @@ export function buildProvider(opts: AdapterOptions): Provider {
     // this request was in flight (a write elsewhere, the request-path drain)
     // still refuses its response, here where nothing awaits after.
     refuseWhileUncertain(ctx);
+  });
+  // RFC 8628 Section 5.1 (#1202, D1121): the verification page refuses a user
+  // agent's entries, before any code lookup, once its codes that matched no
+  // session reach the throttle's limit, and ends no session doing so. The
+  // key is the request's address (`ctx.ip`): behind a proxy, a deployment
+  // sets the provider's proxy trust so it names the user agent.
+  const verificationThrottle = new DeviceVerificationThrottle(opts.deviceVerificationThrottle);
+  provider.use(async (ctx, next) => {
+    if (ctx.method !== "POST" || ctx.path !== "/device" || !enabled("device-authorization")) return next();
+    // The entry reserves its place before the lookup, so overlapping entries
+    // never pass the limit together; it settles once the lookup answered.
+    const ticket = verificationThrottle.admit(ctx.ip);
+    if (!ticket) {
+      ctx.status = 429;
+      ctx.set("content-type", "text/html; charset=utf-8");
+      ctx.set("cache-control", "no-store");
+      ctx.body = deviceThrottledPage();
+      return;
+    }
+    let counted = false;
+    try {
+      await next();
+      counted = (ctx.state as DeviceVerificationState).deviceCodeUnknown === true;
+    } finally {
+      verificationThrottle.settle(ticket, counted);
+    }
   });
   // @spec #831 (role binding): the provider's keystore holds the access-token
   // key alone (`jwks`), so it signs nothing under another role's key. The

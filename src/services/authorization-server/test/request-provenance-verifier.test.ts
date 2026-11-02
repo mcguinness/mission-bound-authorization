@@ -12,7 +12,7 @@
  * lands with the wiring.
  */
 
-import { randomBytes } from "node:crypto";
+import { createPrivateKey, sign as cryptoSign, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -118,6 +118,27 @@ async function sign(
 ): Promise<string> {
   const text = typeof claims === "string" ? claims : JSON.stringify(claims);
   return new CompactSign(new TextEncoder().encode(text)).setProtectedHeader(header as never).sign(vectorKey);
+}
+
+const vectorSigningKey = createPrivateKey({ key: V.key.private_jwk_test_only as never, format: "jwk" });
+
+/** An ES256 signature over exactly these encoded segments, spelled as given (RFC 7515 Section 5.1). */
+function signSegments(header: string, payload: string): string {
+  const input = Buffer.from(`${header}.${payload}`, "ascii");
+  const signature = cryptoSign("sha256", input, { key: vectorSigningKey, dsaEncoding: "ieee-p1363" });
+  return `${header}.${payload}.${signature.toString("base64url")}`;
+}
+
+const BASE64URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+/** The same bytes spelled with non-zero trailing bits, which a lenient decoder reads unchanged. */
+function nonCanonical(segment: string): string {
+  expect(segment.length % 4, segment).not.toBe(0);
+  const last = BASE64URL_ALPHABET.indexOf(segment.slice(-1));
+  const spelled = `${segment.slice(0, -1)}${BASE64URL_ALPHABET[last | 1]}`;
+  expect(spelled).not.toBe(segment);
+  expect(Buffer.from(spelled, "base64url")).toEqual(Buffer.from(segment, "base64url"));
+  return spelled;
 }
 
 const claimsWith = (set: JsonRecord = {}, drop: string[] = []): JsonRecord => {
@@ -244,6 +265,29 @@ describe("step 2, decoding the JWS (@spec request-provenance#verification, #939)
     const noAlg = `${Buffer.from(JSON.stringify(header)).toString("base64url")}.${p}.${s}`;
     await refusedAt(verifyRequestProvenance(entry(noAlg), contextFor()), 2);
   });
+
+  it("refuses at step 2 a signature segment that is padded, empty, or not the canonical spelling of its bytes, though its bytes verify (RFC 7515 Sections 2 and 5.2)", async () => {
+    const token = V.expected.entry.assertion;
+    // The control: the vector's own spelling verifies.
+    accepted(await verifyRequestProvenance(entry(token), contextFor()));
+    const [h, p, s] = token.split(".") as [string, string, string];
+    for (const bad of [`${token}==`, `${token}=`, `${h}.${p}.${nonCanonical(s)}`, `${h}.${p}.`]) {
+      await refusedAt(verifyRequestProvenance(entry(bad), contextFor()), 2);
+    }
+  });
+
+  it("refuses at step 2 a header or claims segment spelled with non-zero trailing bits, though signed as spelled", async () => {
+    const [h] = V.expected.entry.assertion.split(".") as [string, string, string];
+    // Trailing whitespace keeps the claims set and leaves its last group partial.
+    let text = JSON.stringify(V.expected.claims);
+    while (Buffer.byteLength(text, "utf8") % 3 === 0) text += " ";
+    const p = Buffer.from(text, "utf8").toString("base64url");
+    // The control: signed over the canonical spellings, it verifies.
+    accepted(await verifyRequestProvenance(entry(signSegments(h, p)), contextFor()));
+    for (const bad of [signSegments(nonCanonical(h), p), signSegments(h, nonCanonical(p))]) {
+      await refusedAt(verifyRequestProvenance(entry(bad), contextFor()), 2);
+    }
+  });
 });
 
 describe("step 3, the signer from configuration only (@spec request-provenance#verification, request-provenance#trust-configuration, #939)", () => {
@@ -284,6 +328,24 @@ describe("step 5, the required claims and their types (@spec request-provenance#
     ["a numeric capture_id", { capture_id: 7 }],
   ])("refuses at step 5 %s", async (_what, set) => {
     await refusedAt(verifyRequestProvenance(entry(await sign(claimsWith(set as JsonRecord))), contextFor()), 5);
+  });
+
+  it("refuses at step 5, without throwing, a signed presenter.cnf holding a number no JSON value represents (1e400)", async () => {
+    for (const member of ['"extra":1e400,', '"extra":[1,-1e400],', '"extra":{"n":1e400},']) {
+      const text = JSON.stringify(V.expected.claims).replace('"cnf":{', `"cnf":{${member}`);
+      expect(text).toContain(member);
+      await refusedAt(verifyRequestProvenance(entry(await sign(text)), contextFor()), 5);
+    }
+  });
+
+  it("accepts, recording nothing from them, an undefined claim and undefined members of originator and channel holding 1e400", async () => {
+    const text = JSON.stringify(V.expected.claims)
+      .replace('"originator":{', '"originator":{"extra":1e400,')
+      .replace('"channel":{', '"channel":{"extra":1e400,')
+      .replace(/}$/, ',"extra":1e400}');
+    expect(text.match(/"extra":1e400/g)).toHaveLength(3);
+    const result = accepted(await verifyRequestProvenance(entry(await sign(text)), contextFor()));
+    expect(result.facts).toStrictEqual(V.expected.recorded_facts);
   });
 
   const digest = V.expected.claims.request_digest as string;
@@ -452,6 +514,32 @@ const liveContext = (
   trust: liveTrust(sub),
   intentHash: provisionalIntentHash(AS, intent as never),
   presenter,
+});
+
+describe("step 9, cnf compared exactly as signed (@spec request-provenance#verification, #939)", () => {
+  const jkt = V.verifier_context.presenter.cnf?.jkt as string;
+  const cnf = JSON.stringify({ jkt });
+
+  it.each([
+    ["null", "null"],
+    ["a scalar", "7"],
+    ["an empty object", "{}"],
+    ["an object naming the established key", cnf],
+  ])("refuses at step 9 a signed cnf carrying a __proto__ member valued %s beside the established key", async (_what, value) => {
+    const text = JSON.stringify(V.expected.claims).replace('"cnf":{', `"cnf":{"__proto__":${value},`);
+    expect(text).toContain(`"__proto__":${value},"jkt"`);
+    await expect(verifyRequestProvenance(entry(await sign(text)), contextFor())).resolves.toMatchObject({
+      ok: false,
+      step: 9,
+      reason: "presenter.cnf is not the confirmation key the exchange established",
+    });
+  });
+
+  it("refuses at step 9 a signed cnf naming the established key only inside a __proto__ member", async () => {
+    const text = JSON.stringify(V.expected.claims).replace(`"cnf":${cnf}`, `"cnf":{"__proto__":${cnf}}`);
+    expect(text).toContain(`"cnf":{"__proto__":${cnf}}`);
+    await refusedAt(verifyRequestProvenance(entry(await sign(text)), contextFor()), 9);
+  });
 });
 
 describe("assertions minted live by @mission/request-provenance (@spec request-provenance#verification, request-provenance#recorded-facts, #939)", () => {

@@ -412,14 +412,18 @@ its `keys`, each with a `kid`, a `public_jwk`, the `evidence_types` the
 configuration maps the key to, and the `algs` it permits; the `originators`
 it may attest for, each an `iss` with an optional `sub`; and the
 `channel_types` it may attest. A key verifies this type only where its
-`evidence_types` names `mission-request-provenance`. The JWK's `use` and
-`key_ops` are accepted and ignored: they never establish that mapping, and
+`evidence_types` names `mission-request-provenance`. A JWK's `use`, when
+present, must be `sig`, and its `key_ops` an array of distinct strings that
+names `verify` and only `sign` and `verify` (RFC 7517 Sections 4.2 and 4.3).
+Once validated, both are dropped: they never establish that mapping, and
 the verifier imports the key from its curve and coordinates alone. An
 originator carrying `sub` makes the signer a user-device signer, and that
 entry, its only one, is the AS's own binding of the signer's keys to that
-originator. Trust comes only from this file: the verifier looks up the
-signer by the assertion's `iss` and `kid`, and never takes a key from the
-assertion.
+originator. That shape is this reference's representation, not a protocol
+rule: it cannot express a service signer narrowed to several specific
+principals, which the draft permits. Trust comes only from this file: the
+verifier looks up the signer by the assertion's `iss` and `kid`, and never
+takes a key from the assertion.
 
 - **Owner.** The AS's security owner, with each intake's operator for that
   intake's keys and scope.
@@ -427,7 +431,8 @@ assertion.
   duplicate member names; unknown members at any level; a signer `iss`
   named twice, or a `kid` named twice within one signer; a JWK carrying a
   private member, whose `kty` or `crv` is not the EC P-256 that ES256
-  takes, or whose coordinates are not a P-256 point; any alg other than
+  takes, or whose coordinates are not a P-256 point; a `use` or `key_ops`
+  that does not fit a signature-verification key; any alg other than
   ES256; an empty key, originator, channel-type or evidence-type list; an
   originator with `sub` beside another originator; and a bound that is not
   a positive integer or exceeds its cap.
