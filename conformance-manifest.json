@@ -34343,9 +34343,21 @@
      "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses at load a further class beside an assigned class that is not high-consequence, and a further class that is not",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses at load a compound operation whose declared phases carry different further classes; a phased operation every declared phase of which carries the same set loads",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read) > refuses phase_invalid, before evaluation, a phase a compound operation with further classes does not declare, or no phase; a declared phase decides",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement; payments:remittance.send declares irreversible_action beside its assigned external_commitment). Mutation proofs: resolving the set to the assigned class alone fails all five witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness. Cold read: the set is the union of the PEP's label, the declaration's own class and its further classes, a phase on an operation declared phaseless is refused phase_invalid, and the loader admits further classes only among the high-consequence classes, so no admitted combination drops a duty. Mutation proofs: dropping the declaration's own class fails the mislabel witness; disabling the phase refusal fails the phase witness; disabling the load restriction fails the load witness."
+   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement; payments:remittance.send declares irreversible_action beside its assigned external_commitment). Mutation proofs: resolving the set to the assigned class alone fails all five witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness. Cold read: the set is the union of the PEP's label, the declaration's own class and its further classes, a phase on an operation declared phaseless is refused phase_invalid, and the loader admits further classes only among the high-consequence classes, so no admitted combination drops a duty. Mutation proofs: dropping the declaration's own class fails the mislabel witness; disabling the phase refusal fails the phase witness; disabling the load restriction fails the load witness. Compound operations: a phased operation carries the same further classes on every declared phase, and where an operation's declarations name further classes a phase (or no phase) matching none of them is refused phase_invalid, so no crossing of it decides without them. Mutation proofs: disabling the uniformity check loads a statement whose payment.execute commit alone carries a further class, failing the load witness; disabling the unmatched-phase refusal lets a preflight decide, failing the phase witness."
   },
   {
    "id": "runtime.classification.multi-predicate-bounds",
