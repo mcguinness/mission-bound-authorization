@@ -348,6 +348,37 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(historyOf(decision)).toEqual([{ predicate: "action_class_completed", action_class: "consequential_write", outcome: "unavailable" }]);
   });
 
+  it("fails closed, recording unavailable, when the evidence store does not answer within the binding's read bound, and aborts the read", async () => {
+    const records = [await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }), await executionRecord({ evaluation_id: "w1", outcome: "completed" })];
+    const signals: AbortSignal[] = [];
+    /** A store that answers with a satisfying history, `delayMs` real milliseconds late (a duration, not a clock instant). */
+    const slowBinding = (delayMs: number, readTimeoutMs: number): HistoryBinding => ({
+      policy: (input) => (input.action === READ ? [WRITE_COMPLETED] : []),
+      reader: {
+        records: (_mission, opts) => {
+          if (opts) signals.push(opts.signal);
+          return new Promise((resolve) => setTimeout(() => resolve(records), delayMs));
+        },
+      },
+      resolveKey,
+      readTimeoutMs,
+    });
+    // Control: the same history, answered within the bound, satisfies the predicate.
+    const prompt = await evaluate(request(), options(slowBinding(0, 1000)));
+    expect(prompt.decision, JSON.stringify(prompt.context)).toBe(true);
+    expect(signals.at(-1)?.aborted).toBe(false);
+    const late = await evaluate(request(), options(slowBinding(80, 20)));
+    expect(late.decision).toBe(false);
+    expect(late.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(late)).toEqual([{ predicate: "action_class_completed", action_class: "consequential_write", outcome: "unavailable" }]);
+    expect(signals.at(-1)?.aborted).toBe(true);
+    // A bound that is not a positive integer of milliseconds bounds nothing: no history is established.
+    const unbounded = await evaluate(request(), options({ ...historyBinding(records), readTimeoutMs: 0 }));
+    expect(unbounded.decision).toBe(false);
+    expect(unbounded.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(unbounded)?.[0]?.outcome).toBe("unavailable");
+  });
+
   it("fails closed when a retained record does not verify: a permit signed by an untrusted key, or an execution altered after signing", async () => {
     const forged = [
       await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }, rogueKeys.privateKey),

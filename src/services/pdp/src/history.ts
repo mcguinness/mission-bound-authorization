@@ -11,6 +11,13 @@
  * cannot be established, no outcome can be established and every selected
  * predicate is `unavailable`: the decision fails closed. No predicate outcome
  * is ever taken from a request member.
+ *
+ * Cost and reach: each decision that selects a predicate reads the Mission's
+ * whole retained history and verifies every record, one signature each,
+ * uncached, so its cost grows linearly with the Mission's records. One record
+ * that cannot be used, a Refusal Record or a record signed under a key the
+ * resolver no longer publishes among them, leaves the whole history
+ * unestablished for every later decision on the Mission.
  */
 import { canonicalize, type JsonValue } from "@mission/core";
 import {
@@ -54,11 +61,16 @@ export type HistoryPolicy = (input: HistorySelectionInput) => ReadonlyArray<Hist
 /**
  * The deployment's retained evidence, as stored: complete outer records, each
  * carrying its `evidence_envelope`. A read that cannot be completed rejects;
- * the PDP then treats every selected predicate as `unavailable`.
+ * the PDP then treats every selected predicate as `unavailable`, as it does
+ * when the read outlasts {@link HistoryBinding.readTimeoutMs}, after which
+ * `signal` is aborted and any later result is ignored.
  */
 export interface HistoryEvidenceReader {
-  records(mission: { id: string; issuer: string }): Promise<ReadonlyArray<unknown>>;
+  records(mission: { id: string; issuer: string }, options?: { signal: AbortSignal }): Promise<ReadonlyArray<unknown>>;
 }
+
+/** The default bound on one history read, in milliseconds. */
+export const DEFAULT_HISTORY_READ_TIMEOUT_MS = 5000;
 
 /**
  * @spec authzen#context-history (#2015): this PDP's history binding, bound
@@ -82,6 +94,15 @@ export interface HistoryBinding {
   decisionEmitterRoles?: ReadonlyArray<string>;
   /** Emitter roles trusted to sign Execution Evidence. Defaults to `pep` and `executor`. */
   executionEmitterRoles?: ReadonlyArray<string>;
+  /**
+   * @spec runtime#input-history, runtime-evidence#evidence-extensions
+   * `mission_history` ("an evidence store that could not be consulted within
+   * its bound"): how long one read may take, a positive integer of
+   * milliseconds, default {@link DEFAULT_HISTORY_READ_TIMEOUT_MS}. A read
+   * that outlasts it, or a bound that is not a positive integer, leaves every
+   * selected predicate `unavailable`.
+   */
+  readTimeoutMs?: number;
 }
 
 /** The runtime action classes `action_class_completed` may name: Decision Evidence's `action_class` value space. */
@@ -139,6 +160,34 @@ function requiredAudience(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
+/**
+ * One read of the Mission's records, bounded by `timeoutMs`: rejects when the
+ * reader rejects or throws, or when the bound elapses first, aborting the
+ * reader's signal. A result arriving after the bound is ignored.
+ */
+async function boundedRead(
+  reader: HistoryEvidenceReader,
+  mission: { id: string; issuer: string },
+  timeoutMs: number,
+): Promise<ReadonlyArray<unknown>> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const read = Promise.resolve().then(() => reader.records(mission, { signal: controller.signal }));
+  // A read that settles after the bound settles unobserved, never unhandled.
+  read.catch(() => undefined);
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`no history read within ${timeoutMs} ms`));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([read, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** A verified record's signed content: the canonical bytes its envelope's payload equals. */
 function signedContent(record: Record<string, unknown>): string {
   const { evidence_envelope: _envelope, ...content } = record;
@@ -160,9 +209,11 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
 
 /**
  * Read and verify the Mission's retained evidence. Returns `undefined` when
- * the history cannot be established: the read failed, a record is of no
- * known kind, a signer is not trusted for the record's kind, a signature or
- * the payload binding does not verify, a record names another Mission, two
+ * the history cannot be established: the read failed or outlasted its bound,
+ * a record is of no known kind, a signer is not trusted for the record's
+ * kind, a signature or the payload binding does not verify (a record signed
+ * by a key the resolver no longer publishes among them), a record names
+ * another Mission, two
  * records conflict (Decision Evidence of one `evaluation_id`, or Execution
  * Evidence of one `execution_id`, with different content, or one permit with
  * more than one disposition), a Decision Evidence stream has a gap or a
@@ -175,9 +226,11 @@ async function verifiedHistory(
   binding: HistoryBinding,
   mission: { id: string; issuer: string },
 ): Promise<{ decisions: VerifiedDecision[]; executions: VerifiedExecution[] } | undefined> {
+  const timeoutMs = binding.readTimeoutMs ?? DEFAULT_HISTORY_READ_TIMEOUT_MS;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) return undefined;
   let raw: ReadonlyArray<unknown>;
   try {
-    raw = await binding.reader.records(mission);
+    raw = await boundedRead(binding.reader, mission, timeoutMs);
   } catch {
     return undefined;
   }

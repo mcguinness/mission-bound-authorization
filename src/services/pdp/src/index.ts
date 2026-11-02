@@ -319,6 +319,7 @@ export {
   type WorkItemRef,
 } from "./work-item.js";
 export {
+  DEFAULT_HISTORY_READ_TIMEOUT_MS,
   evaluateHistory,
   RECOGNIZED_HISTORY_PREDICATES,
   type HistoryBinding,
