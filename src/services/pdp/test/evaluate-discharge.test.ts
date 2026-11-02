@@ -115,7 +115,10 @@ describe("discharged entries are excluded from the PDP's authority input", () =>
 
   it("tells approved-then-discharged apart from never-approved", async () => {
     const v = view({ version: 2, discharged: { entry_digests: [writeDigest] } });
-    const never = await evaluate(req("payments:remittance.send"), opts(v));
+    // A never-approved action of the request's own class: remittance.send would
+    // also take the irreversible class its declaration names (#1994), whose
+    // freshness gate this file's stub request does not meet.
+    const never = await evaluate(req("payments:vendor.read"), opts(v));
     expect(never.decision).toBe(false);
     expect(never.context.denial_reason).toBe("out_of_authority");
   });

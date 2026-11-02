@@ -115,8 +115,10 @@ import {
 } from "./resource-policy.js";
 import {
   allowsNoActiveFreshness,
+  applicableActionClasses,
   RUNTIME_POSTURE,
   reversibleWritePermitMaxSeconds,
+  stalenessBoundOver,
   type StalenessBound,
   type StateSourcePlacement,
 } from "./runtime-posture.js";
@@ -723,6 +725,15 @@ export interface EvaluateOptions {
    * deployment's policy does not declare (@spec runtime#state-freshness).
    */
   stalenessBound: (actionClass: string | undefined) => StalenessBound;
+  /**
+   * @spec runtime#classification (#1735, #1994): every runtime action class
+   * whose requirements apply to an action, given the class the trusted PEP
+   * assigned: that class first, then each further class this PDP's own
+   * operation declaration names. A PDP-side binding, like
+   * `resourceContracts`: an enforcement component that could supply it
+   * could drop a class. Defaults to the deployment's statement.
+   */
+  actionClassesFor?: (action: string, assignedClass: string, phase?: string) => readonly string[];
   /** Map an action name to the FGA relation and object type it needs. */
   relationForAction: (action: string) => { relation: "payer" | "reader"; needsAmount: boolean } | null;
   /** Deployment/Resource policy: does this action require an action-bound approval? */
@@ -1016,6 +1027,9 @@ export type DecisionOptions = Omit<
   | "durationLeases"
   | "phasedActions"
   | "evaluationContextBinding"
+  // @spec runtime#classification (#1994): so is the operation class set,
+  // for the reason the contract declarations are.
+  | "actionClassesFor"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -1111,6 +1125,25 @@ function evaluationContextOf(
   if (!isEvaluationContextDigest(digest) || !isEvaluationContextBindingRef(binding)) return "invalid";
   if (!sameEvaluationContextBinding(binding, entry.descriptor)) return "invalid";
   return { digest, binding: { id: binding.id, version: binding.version, digest: binding.digest } };
+}
+
+/**
+ * @spec runtime#classification (#1735, #1994): every runtime action class
+ * whose requirements apply to the request's action, the assigned class
+ * first, resolved from this PDP's own operation declarations, never from a
+ * request member. Empty when no class is assigned, which the PDP refuses
+ * before evaluation.
+ */
+function actionClassesOf(
+  req: { action: { name: string }; context: { action_class?: string; action_phase?: string } },
+  opts: Pick<EvaluateOptions, "actionClassesFor">,
+): readonly string[] {
+  const assigned = req.context.action_class;
+  if (assigned === undefined) return [];
+  const phase = typeof req.context.action_phase === "string" ? req.context.action_phase : undefined;
+  return opts.actionClassesFor
+    ? [...new Set([assigned, ...opts.actionClassesFor(req.action.name, assigned, phase)])]
+    : applicableActionClasses(RUNTIME_POSTURE, assigned, req.action.name, phase);
 }
 
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
@@ -1356,6 +1389,12 @@ async function emitDecisionEvidence(
     ...(req.context.action_class !== undefined
       ? { action_class: req.context.action_class as RuntimeActionClass }
       : {}),
+    // @spec runtime-evidence#decision-evidence-object `action_classes`
+    // (#1994): every class whose requirements this decision applied, when
+    // more than one applies; `action_class` stays the assigned class.
+    ...((classes) => (classes.length > 1 ? { action_classes: classes as RuntimeActionClass[] } : {}))(
+      actionClassesOf(req, opts),
+    ),
     // @spec runtime-evidence#decision-evidence-object `action_phase` — the
     // VALIDATED phase from the evaluation context, recorded on a permit and
     // on a denial alike. A denial has no permit condition to mirror, so the
@@ -1429,6 +1468,12 @@ async function evaluateInner(
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
+  // @spec runtime#classification (#1735, #1994): every class whose
+  // requirements apply. Comparable bounds resolve to the tightest across
+  // it; a duty any class in it carries applies; an exemption applies only
+  // where every class in it is exempt.
+  const actionClasses = actionClassesOf(req, opts);
+  const anyClass = (pred: (c: string) => boolean): boolean => actionClasses.some(pred);
   // @spec authzen#context-work-item (#815): the request's work item as this
   // PDP reads it; only this value reaches the permit condition.
   const workItem = parseWorkItem(req.context.work_item);
@@ -1572,7 +1617,7 @@ async function evaluateInner(
   // `work_item_invalid`. The class is the deployment class the trusted PEP
   // supplied; the claim is this PDP's own binding, never a request member.
   // Elsewhere an absent member relaxes nothing: Mission-level attribution only.
-  if (workItem === undefined && actionClass !== undefined && opts.workItemAttributedClasses?.has(actionClass)) {
+  if (workItem === undefined && anyClass((c) => opts.workItemAttributedClasses?.has(c) === true)) {
     return deny("work_item_context_missing");
   }
 
@@ -1656,10 +1701,15 @@ async function evaluateInner(
   // row) runs the remaining gates with no observation window, and an action
   // class the policy does not declare at all is a request fault refused
   // below. Neither is `stale_state`, which asserts a freshness fact.
-  const declaredStaleness = opts.stalenessBound(actionClass);
+  const declaredStaleness =
+    actionClasses.length === 0
+      ? opts.stalenessBound(actionClass)
+      : stalenessBoundOver(actionClasses.map((c) => opts.stalenessBound(c)));
   // A custom/injected policy cannot opt a consequential class out of the
   // freshness floor even if it bypasses the deployment config loader.
-  if (declaredStaleness.kind === "none" && !allowsNoActiveFreshness(actionClass)) return deny("out_of_authority");
+  if (declaredStaleness.kind === "none" && (actionClasses.length === 0 || anyClass((c) => !allowsNoActiveFreshness(c)))) {
+    return deny("out_of_authority");
+  }
   // @spec authzen#runtime-denial-classification, authzen#failure-condition-coverage
   // ("Action outside the Authority Set ..., or the request would broaden it"):
   // the PDP cannot place an undeclared class under any gate the deployment
@@ -1728,7 +1778,7 @@ async function evaluateInner(
       // valid-through; under `pdp` placement the PDP's own read reports none.
       acceptedObservationMs = observedAtMs;
       acceptedValidThroughMs = "validThroughMs" in relied ? relied.validThroughMs : undefined;
-    } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
+    } else if (anyClass((c) => HIGH_CONSEQUENCE_ACTION_CLASSES.has(c))) {
       // Reached only with no declared placement: both declared placements
       // refused a missing state input above.
       return staleState(false);
@@ -1854,7 +1904,7 @@ async function evaluateInner(
     // @spec authority-server#high-consequence-binding (#818): a class this
     // scope reserves for Mission-bound credentials denies a joined request
     // before the join runs, rather than falling back to the mapping join.
-    if (actionClass !== undefined && opts.missionBoundOnlyClasses?.has(actionClass)) {
+    if (anyClass((c) => opts.missionBoundOnlyClasses?.has(c) === true)) {
       return deny("mission_binding_failed");
     }
     const clientId = req.context.actor?.client_id;
@@ -1889,7 +1939,12 @@ async function evaluateInner(
       const joined = resolveAssertedJoin({ view, join: asserted, onEntryEvaluated: entry => { contributions.add(entry.type); } });
       if (!joined.ok) return deny("mission_binding_failed");
       joinedAuthority = { disposition: joined.disposition, clientId: asserted.clientId, authoritySet: joined.authoritySet };
-    } else if (assertionPolicy !== undefined && joinAssertionRequired(assertionPolicy, actionClass)) {
+    } else if (
+      assertionPolicy !== undefined &&
+      (actionClasses.length === 0
+        ? joinAssertionRequired(assertionPolicy, actionClass)
+        : anyClass((c) => joinAssertionRequired(assertionPolicy, c)))
+    ) {
       return deny("mission_binding_failed");
     } else {
       let joinSubject = { iss: req.subject.properties?.iss ?? "", sub: req.subject.id };
@@ -2546,7 +2601,9 @@ async function evaluateInner(
   }
   const entryRequiresApproval = (e: AuthorityEntry): boolean => e.constraints?.requires_action_approval === true;
   const policyRequiresApproval =
-    opts.requiresActionApproval?.(req.action.name, actionClass) === true || credentialRequiresApproval;
+    (actionClasses.length === 0
+      ? opts.requiresActionApproval?.(req.action.name, actionClass) === true
+      : anyClass((c) => opts.requiresActionApproval?.(req.action.name, c) === true)) || credentialRequiresApproval;
   // @spec resource-access#initial-common-constraints (#1375): an entry carrying
   // `requires_action_approval: true` is satisfied only by an approval that
   // passes every check below; without one, an applicable entry that requires
@@ -2630,7 +2687,7 @@ async function evaluateInner(
   // (REQUIRED exactly 1 for a high-consequence-class permit; was the
   // boolean `single_use`), and `parameter_digest` (CONDITIONAL, present
   // when the action was parameter-bound).
-  const permitTtl = actionClass === "irreversible_action" ? 120 : 300;
+  const permitTtl = anyClass((c) => c === "irreversible_action") ? 120 : 300;
   // @spec runtime#state-freshness — "A permit issued from that state view MUST
   // expire no later than this state valid-through". ONE calculation owns every
   // ceiling on a permit's validity (permit-deadline.ts), fed the observation
@@ -2660,7 +2717,7 @@ async function evaluateInner(
       atMs: Math.max(...(credentialWindowEnds as number[])),
     });
   }
-  const reversibleWriteMaxSeconds = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "")
+  const reversibleWriteMaxSeconds = anyClass((c) => HIGH_CONSEQUENCE_ACTION_CLASSES.has(c))
     ? undefined
     : (
         opts.reversibleWritePermitMaxSeconds ??
@@ -2710,7 +2767,7 @@ async function evaluateInner(
   // on. Previously this checked only "irreversible_action", so a
   // send_remittance_email (external_commitment) permit never carried a use
   // limit at all: a genuine value-level bug this migration also fixes.
-  const highConsequence = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "");
+  const highConsequence = anyClass((c) => HIGH_CONSEQUENCE_ACTION_CLASSES.has(c));
   // @spec runtime#permit-binding (#1080, D317): a reversible consequential
   // write takes "either a single-use decision identifier or a short validity
   // window combined with an idempotency key". One whose selected declaration
@@ -2805,7 +2862,7 @@ async function evaluateInner(
       };
     } else if (
       req.context.amount !== undefined &&
-      (actionClass === undefined || !BUDGET_EXEMPT_CLASSES.has(actionClass)) &&
+      (actionClasses.length === 0 || anyClass((c) => !BUDGET_EXEMPT_CLASSES.has(c))) &&
       !covered
     ) {
       return deny("constraint_unsupported");
