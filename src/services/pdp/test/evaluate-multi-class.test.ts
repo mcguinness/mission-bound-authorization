@@ -243,6 +243,47 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
     expect(() => loadRuntimePosture(withFurther(REMIT, ["irreversible_action"]))).not.toThrow();
   });
 
+  it("refuses at load a compound operation whose declared phases carry different further classes; a phased operation every declared phase of which carries the same set loads", () => {
+    type Entry = { operation: string; phase?: string; action_class: string; additional_action_classes?: string[] };
+    const withFurther = (operation: string, phase: string, further: string[]) => {
+      const statement = structuredClone(RUNTIME_SCOPE_CONFIG) as { extensions: { execution_capabilities: Entry[] } };
+      const entry = statement.extensions.execution_capabilities.find((d) => d.operation === operation && d.phase === phase);
+      if (!entry) throw new Error(`fixture: no declaration for ${operation} ${phase}`);
+      entry.additional_action_classes = further;
+      return statement;
+    };
+    expect(() => loadRuntimePosture(withFurther("payments:payment.execute", "commit", ["external_commitment"]))).toThrow(
+      "every declared phase of a compound operation carries the same further classes",
+    );
+    expect(() => loadRuntimePosture(withFurther("payments:payment.reverse", "compensate", ["external_commitment"]))).not.toThrow();
+  });
+
+  it("refuses phase_invalid, before evaluation, a phase a compound operation with further classes does not declare, or no phase; a declared phase decides", async () => {
+    const PAY = "payments:payment.execute";
+    const declarations = {
+      operationDeclarations: [
+        {
+          operation: PAY,
+          phase: "commit",
+          action_class: "irreversible_action",
+          additional_action_classes: ["external_commitment"],
+        } as unknown as ExecutionCapabilityDeclaration,
+      ],
+    };
+    const refusalOf = (req: EvaluationRequest) =>
+      evaluate(req, options([PAY], declarations)).then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+    for (const extra of [{ action_phase: "preflight" }, {}]) {
+      const refusal = await refusalOf(request(PAY, "consequential_read", 0, extra));
+      expect(refusal, JSON.stringify(extra)).toBeInstanceOf(DecisionRequestRefused);
+      expect((refusal as DecisionRequestRefused).denial_reason).toBe("phase_invalid");
+    }
+    const declared = await evaluate(request(PAY, "irreversible_action", 0, { action_phase: "commit" }), options([PAY], declarations));
+    expect(declared.context).toHaveProperty("decision_id");
+  });
+
   it("bounds the remote decision call by the tightest window across the set: 30 seconds for remittance.send, 60 for external_commitment alone", () => {
     expect(channelDeadlineMs("external_commitment", 120_000, REMIT)).toBe(30_000);
     expect(channelDeadlineMs("external_commitment", 120_000)).toBe(60_000);

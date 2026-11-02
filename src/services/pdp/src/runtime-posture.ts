@@ -274,6 +274,23 @@ export function phaseOnPhaselessOperation(
 }
 
 /**
+ * @spec authzen#context-action-phase, runtime#classification (#1994): whether
+ * a request's phase, or its absence, matches no declaration of an operation
+ * whose declarations name further classes. Its set would lose those classes,
+ * so the PDP refuses it (`phase_invalid`). An operation that names none keeps
+ * the undeclared-phase case open (a `preflight` with no effect).
+ */
+export function phaseUnmatchedWithFurtherClasses(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  action: string,
+  phase: string | undefined,
+): boolean {
+  const own = declarations.filter((d) => d.operation === action);
+  if (!own.some((d) => (d.additional_action_classes?.length ?? 0) > 0)) return false;
+  return !own.some((d) => d.phase === phase);
+}
+
+/**
  * @spec runtime#classification, runtime#state-freshness (#1994): the posture
  * for an action several classes apply to. Staleness bounds are comparable, so
  * the tighter applies; a class the deployment does not declare leaves the

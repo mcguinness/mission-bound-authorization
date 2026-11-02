@@ -118,6 +118,7 @@ import {
   allowsNoActiveFreshness,
   declaredActionClasses,
   phaseOnPhaselessOperation,
+  phaseUnmatchedWithFurtherClasses,
   RUNTIME_POSTURE,
   reversibleWritePermitMaxSeconds,
   stalenessBoundOver,
@@ -1189,11 +1190,17 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // @spec runtime#classification (#1994, cold read): so is a phase on an
   // operation this PDP's own declarations name only without one, whose class
   // set would otherwise match no declaration.
+  // So is a phase, or its absence, that matches no declaration of an
+  // operation whose declarations name further classes.
   const phaseUnusable =
     actionPhase !== undefined
       ? !isActionPhase(actionPhase) ||
-        (typeof actionName === "string" && phaseOnPhaselessOperation(declarationsOf(opts), actionName, actionPhase))
-      : typeof actionName === "string" && opts.phasedActions?.has(actionName) === true;
+        (typeof actionName === "string" &&
+          (phaseOnPhaselessOperation(declarationsOf(opts), actionName, actionPhase) ||
+            phaseUnmatchedWithFurtherClasses(declarationsOf(opts), actionName, actionPhase)))
+      : typeof actionName === "string" &&
+        (opts.phasedActions?.has(actionName) === true ||
+          phaseUnmatchedWithFurtherClasses(declarationsOf(opts), actionName, undefined));
   if (phaseUnusable) {
     await recordPdpRefusal(opts.refusals, "phase_invalid", req);
     throw new DecisionRequestRefused("phase_invalid");
