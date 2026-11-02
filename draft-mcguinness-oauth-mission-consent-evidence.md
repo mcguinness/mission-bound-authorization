@@ -1581,7 +1581,7 @@ At Rung 3 the claim that the Approver's authenticator confirmed a
 specific disclosure commitment is verifiable up to trust in that
 authenticator, rather than in an arbitrary rendering layer. The
 verifier obligations for these rungs
-are steps 7 and 8 of {{integrity}}; their absence asserts no rung above
+are steps 7 and 9 of {{integrity}}; their absence asserts no rung above
 the ones the record satisfies and is never an integrity failure.
 
 # Worked Disclosure and Test Vector {#disclosure-vector}
@@ -1862,6 +1862,10 @@ encoding difference to resolve before interoperating.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial: the rung-check pointer in Rendering-Assurance Rungs Above
+  the Floor cites steps 7 and 9 of Integrity and Verification. No
+  requirement changes (#1957).
 
 - Every decision's signed `mission` descriptor carries
   `consent_rendering_hash`: the approved branch lists it without a
