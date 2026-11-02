@@ -32,7 +32,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 import { type Server } from "node:http";
 import { formatWithOptions } from "node:util";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, contractsRequiring, currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -329,6 +329,8 @@ async function createChildViaExchange(fields: {
   sentProofs?: string[];
   /** Send once, with no dpop-nonce retry (a release-fence witness: its injection fires on the first request). */
   once?: boolean;
+  /** The proposed child authority; by default `childAuthority()`. */
+  authority?: unknown[];
 }): Promise<Response> {
   const params: Record<string, string> = {
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -345,7 +347,7 @@ async function createChildViaExchange(fields: {
         expires_at: PARENT_EXP,
       },
     }),
-    authorization_details: JSON.stringify(childAuthority()),
+    authorization_details: JSON.stringify(fields.authority ?? childAuthority()),
     child_actor: JSON.stringify(fields.childActor),
   };
   if (fields.parent !== undefined) params.parent = fields.parent;
@@ -1277,5 +1279,78 @@ describe("the release fence on the child's JWT-bearer redemption (@spec mission#
     expect(injected.missionId()).toBe(childId);
     expect(as.kernel.get(childId)?.termination?.reason).toBe("revoked");
     expectFenceRefusal({ status: res.status, body }, "invalid_grant");
+  });
+});
+
+/**
+ * @spec resource-access#resource-contract, child-delegation#child-creation
+ * (#249, D1104): a child created over the wire, and the token its actor
+ * redeems, carry the parent entry's reference exactly; a child of a parent
+ * approved before the payments resource required a reference gains none,
+ * though the configuration now requires one, and a proposal cannot add it.
+ */
+describe("a child created and redeemed over the wire carries its parent entry's resource contract reference exactly, and one under a parent approved without a reference gains none (@spec resource-access#resource-contract, child-delegation#child-creation, #249, D1104)", () => {
+  const SHIPPED = currentContractRef({ resource: RESOURCE, actions: ["payments:invoice.read"] });
+  const ACTOR = { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" };
+  type Entries = { authorization_details?: Array<{ resource_contract?: unknown }> };
+  const referencesOf = (jwt: string) => ((decodeJwt(jwt) as Entries).authorization_details ?? []).map((e) => e.resource_contract);
+  const recordReferences = (id: string) =>
+    ((as.kernel.get(id) as { authority_set: Array<{ resource_contract?: unknown }> }).authority_set ?? []).map((e) => e.resource_contract);
+  /** A parent approved under the configuration before the cutover, which required no reference. */
+  async function preCutoverParent(): ReturnType<typeof issueParentMission> {
+    const before = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+    try {
+      return await issueParentMission();
+    } finally {
+      before.mockRestore();
+    }
+  }
+  /** Create a child of `parentOf` over the wire, and redeem its child-bound grant as the child actor. */
+  async function createAndRedeem(parentOf: { missionId: string; accessToken: string }) {
+    const res = await createChildViaExchange({ subjectToken: parentOf.accessToken, parent: parentOf.missionId, childActor: ACTOR });
+    const created = (await res.json()) as { mission_id?: string; access_token?: string };
+    expect(res.status, JSON.stringify(created)).toBe(200);
+    const redeemed = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion: created.access_token as string });
+    const body = (await redeemed.json()) as { access_token?: string };
+    expect(redeemed.status, JSON.stringify(body)).toBe(200);
+    return { childId: created.mission_id as string, grant: created.access_token as string, token: body.access_token as string };
+  }
+
+  it("a child of a parent approved against the contract carries the parent entry's reference unchanged in its record, its child-bound grant and its redeemed token", async () => {
+    const pinnedParent = await issueParentMission();
+    expect(SHIPPED).toBeDefined();
+    const parentReferences = recordReferences(pinnedParent.missionId);
+    expect(parentReferences.length).toBeGreaterThan(0);
+    for (const r of parentReferences) expect(r).toEqual(SHIPPED);
+    const child = await createAndRedeem(pinnedParent);
+    expect(recordReferences(child.childId)).toEqual([SHIPPED]);
+    expect(referencesOf(child.grant)).toEqual([SHIPPED]);
+    expect(referencesOf(child.token)).toEqual([SHIPPED]);
+  });
+
+  it("a child of a parent approved before the cutover carries none, through creation and redemption, under the configuration now requiring one", async () => {
+    const unpinnedParent = await preCutoverParent();
+    expect(recordReferences(unpinnedParent.missionId).every((r) => r === undefined)).toBe(true);
+    const child = await createAndRedeem(unpinnedParent);
+    expect(recordReferences(child.childId)).toEqual([undefined]);
+    expect(referencesOf(child.grant)).toEqual([undefined]);
+    expect(referencesOf(child.token)).toEqual([undefined]);
+  });
+
+  it("refuses, creating no child, a proposal that restates the current reference under a parent approved without one: a proposal never adds it (invalid_request, not_strict_subset)", async () => {
+    const unpinnedParent = await preCutoverParent();
+    const before = as.kernel.allMissions().length;
+    const res = await createChildViaExchange({
+      subjectToken: unpinnedParent.accessToken,
+      parent: unpinnedParent.missionId,
+      childActor: ACTOR,
+      authority: childAuthority().map((e) => pinnedToCurrentContract(e)),
+    });
+    const body = (await res.json()) as { error?: string; mission_denial_reason?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_denial_reason).toBe("not_strict_subset");
+    expect(body.access_token).toBeUndefined();
+    expect(as.kernel.allMissions().length).toBe(before);
   });
 });
