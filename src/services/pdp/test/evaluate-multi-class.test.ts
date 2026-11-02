@@ -311,6 +311,19 @@ describe("the class set comes from this PDP's own declarations (@spec runtime#cl
     expect(declared.decision).toBe(true);
   });
 
+  it("refuses phase_invalid, before evaluation, no phase on an operation every declaration of which names one, even with no further classes, so a read label never reaches a declared write or irreversible phase's duties", async () => {
+    const phasedOnly = {
+      operationDeclarations: [
+        { operation: PAY, phase: "prepare", action_class: "consequential_write" },
+        { operation: PAY, phase: "commit", action_class: "irreversible_action" },
+      ] as unknown as ExecutionCapabilityDeclaration[],
+    };
+    refusedAs(await outcomeOf(request(PAY, "consequential_read", 0, AMOUNT), phasedOnly), "phase_invalid", "no phase");
+    const prepare = await evaluate(request(PAY, "consequential_write", 0, { ...AMOUNT, action_phase: "prepare" }), options([PAY], phasedOnly));
+    expect(prepare.decision).toBe(true);
+    expect((prepare.context.conditions as { use_limit?: number }).use_limit).toBe(1);
+  });
+
   it("bounds the remote decision call by the tightest window across the set: 30 seconds for remittance.send, 60 for external_commitment alone", () => {
     expect(channelDeadlineMs("external_commitment", 120_000, REMIT)).toBe(30_000);
     expect(channelDeadlineMs("external_commitment", 120_000)).toBe(60_000);

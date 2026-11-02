@@ -293,6 +293,23 @@ export function phaseOnPhaselessOperation(
 }
 
 /**
+ * @spec authzen#context-action-phase, runtime#classification (#1994, owner
+ * review): whether a request names no phase for an operation every
+ * declaration of which names one. The declarations require a phase, and
+ * with none the request would match no declaration and be decided under its
+ * assigned class alone, so the PDP refuses it (`phase_invalid`).
+ */
+export function phaseAbsentOnPhasedOperation(
+  declarations: ReadonlyArray<ExecutionCapabilityDeclaration>,
+  action: string,
+  phase: string | undefined,
+): boolean {
+  if (phase !== undefined) return false;
+  const own = declarations.filter((d) => d.operation === action);
+  return own.length > 0 && own.every((d) => d.phase !== undefined);
+}
+
+/**
  * @spec authzen#context-action-phase, runtime#classification (#1994): whether
  * a request's phase, or its absence, matches no declaration of an operation
  * that names further classes on any phase. Each declared phase carries its

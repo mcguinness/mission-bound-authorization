@@ -118,6 +118,7 @@ import {
   allowsNoActiveFreshness,
   assignedClassConflicts,
   declaredActionClasses,
+  phaseAbsentOnPhasedOperation,
   phaseOnPhaselessOperation,
   phaseUnmatchedWithFurtherClasses,
   RUNTIME_POSTURE,
@@ -1192,7 +1193,8 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // operation this PDP's own declarations name only without one, whose class
   // set would otherwise match no declaration.
   // So is a phase, or its absence, that matches no declaration of an
-  // operation whose declarations name further classes.
+  // operation whose declarations name further classes, and no phase for an
+  // operation every declaration of which names one (#1994, owner review).
   const phaseUnusable =
     actionPhase !== undefined
       ? !isActionPhase(actionPhase) ||
@@ -1201,6 +1203,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
             phaseUnmatchedWithFurtherClasses(declarationsOf(opts), actionName, actionPhase)))
       : typeof actionName === "string" &&
         (opts.phasedActions?.has(actionName) === true ||
+          phaseAbsentOnPhasedOperation(declarationsOf(opts), actionName, undefined) ||
           phaseUnmatchedWithFurtherClasses(declarationsOf(opts), actionName, undefined));
   if (phaseUnusable) {
     await recordPdpRefusal(opts.refusals, "phase_invalid", req);
