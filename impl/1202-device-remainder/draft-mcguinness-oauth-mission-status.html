@@ -2723,7 +2723,20 @@ mirrors that endpoint: the accepted methods in
 <code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
 (<a href="#as-metadata" class="auto internal xref">Section 8</a>). Its authentication failures follow
 <a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
-<p id="section-5.3-2">For the sender-constrained access-token path, this
+<p id="section-5.3-2">Where this endpoint is the deployment's means of revoking a Mission
+by <code>mission_id</code> independent of possession of any token, which the
+issuance profile requires (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Revocation"), the AS <span class="bcp14">MUST</span> accept <code>revoke</code> through client
+authentication, without requiring an access token or any token issued
+under the Mission. Client authentication grants no revocation
+authority by itself: the AS still authorizes the caller for <code>revoke</code>
+on that Mission (<a href="#lifecycle-authorization" class="auto internal xref">Section 5.4</a>). A freshly signed
+<code>private_key_jwt</code> client assertion is authentication proof, not a
+token the caller holds. Where another authenticated surface provides
+that means, this endpoint can accept only access tokens. The
+requirement covers <code>revoke</code> only; the endpoint's other operations keep
+whichever paths the AS supports.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">For the sender-constrained access-token path, this
 endpoint is an OAuth protected resource exactly as the Mission Status
 endpoint is: the AS publishes, in its Protected Resource Metadata for
 this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, the <code>resource</code> identifier the token's
@@ -2735,7 +2748,7 @@ operation defines. A private-key JWT
 presented access token <span class="bcp14">MUST</span> be audience-restricted to this endpoint's
 protected-resource identifier, exactly as at the Mission Status
 endpoint. A caller that authenticates directly as a client carries
-the deployment-defined equivalent grant, never a scope.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+the deployment-defined equivalent grant, never a scope.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle-authorization">
@@ -4363,6 +4376,12 @@ the Mission Status operation and introspection.<a href="#appendix-A-3.7.1" class
         <li class="normal" id="appendix-A-3.8">
           <p id="appendix-A-3.8.1">The Lifecycle <code>mission_id</code> member and base-operations list point to
 the Mission Status request and the Legal Transitions table.<a href="#appendix-A-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.9">
+          <p id="appendix-A-3.9.1">Where the Lifecycle endpoint is the issuance profile's
+token-independent revocation means, the AS accepts <code>revoke</code> through
+client authentication without requiring any token, and still
+authorizes the caller (#1895, D1114).<a href="#appendix-A-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
