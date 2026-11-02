@@ -18,7 +18,12 @@
  */
 import type { Server } from "node:http";
 import { activationPolicyDigest } from "@mission/core";
-import { CANONICAL_RESOURCE, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import {
+  AUTHORITY_SOURCES,
+  CANONICAL_RESOURCE,
+  DERIVATION_POLICY,
+  DEV_SERVICE_TOKEN,
+} from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -121,6 +126,20 @@ const EURO_DERIVATION_POLICY = (() => {
   return euro;
 })();
 
+/**
+ * The shipped authority sources with each source whose ceiling is the
+ * deployment's ("deployment" in config/authority-sources.json) taking the EUR
+ * derivation policy's, so the EUR deployment's sources match its policy.
+ */
+const EURO_AUTHORITY_SOURCES = {
+  ...AUTHORITY_SOURCES,
+  entries: AUTHORITY_SOURCES.entries.map((entry) =>
+    JSON.stringify(entry.ceiling) === JSON.stringify(DERIVATION_POLICY.ceiling)
+      ? { ...entry, ceiling: EURO_DERIVATION_POLICY.ceiling }
+      : entry,
+  ),
+} as typeof AUTHORITY_SOURCES;
+
 interface Deployment {
   issuer: string;
   as: BuiltAs;
@@ -133,7 +152,7 @@ let euro: Deployment;
 let dpopKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 let seq = 0;
 
-async function deploy(port: number, derivationPolicy?: typeof DERIVATION_POLICY): Promise<Deployment> {
+async function deploy(port: number, euroPolicy = false): Promise<Deployment> {
   const issuer = `http://localhost:${port}`;
   const as = await buildAuthorizationServer({
     issuer,
@@ -142,7 +161,9 @@ async function deploy(port: number, derivationPolicy?: typeof DERIVATION_POLICY)
     dispatchPolicies: POLICIES,
     enforcementScopeStatement: meteringStatement(issuer),
     budgetExposure: new FakeBudgetCounters(),
-    ...(derivationPolicy ? { derivationPolicy } : {}),
+    ...(euroPolicy
+      ? { derivationPolicy: EURO_DERIVATION_POLICY, authoritySources: EURO_AUTHORITY_SOURCES }
+      : {}),
   });
   const server = as.provider.listen(port);
   const clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -151,7 +172,7 @@ async function deploy(port: number, derivationPolicy?: typeof DERIVATION_POLICY)
 
 beforeAll(async () => {
   shipped = await deploy(SHIPPED_PORT);
-  euro = await deploy(EURO_PORT, EURO_DERIVATION_POLICY);
+  euro = await deploy(EURO_PORT, true);
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
 });
 
@@ -295,6 +316,8 @@ describe("standing-payment currencies refused in adjudication order at the token
   });
 
   it("refuses dispatch_prohibited_class at /token a Dispatch from a stored ceiling bounding the payment in EUR under a derivation policy bounding it in EUR, where the intersection survives to the currency check, creating nothing (#813)", async () => {
+    // The EUR deployment's user-delegated source takes its policy's ceiling.
+    expect(EURO_AUTHORITY_SOURCES.entries.some((e) => e.ceiling === EURO_DERIVATION_POLICY.ceiling)).toBe(true);
     const id = await consented(euro);
     storeCeilingIn(euro, id, "EUR");
     const before = created(euro, id);
