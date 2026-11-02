@@ -86201,6 +86201,28 @@
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
   },
   {
+   "id": "consent-evidence.consent-evidence.disclosure-reference-hash-equal",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "consent-evidence",
+   "text": "That paired value MUST equal `mission.consent_rendering_hash`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.recording"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when disclosure is a durable reference, the consent_rendering_hash paired with it equals mission.consent_rendering_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1124). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row."
+  },
+  {
    "id": "consent-evidence.consent-evidence.co-approvals-correspond-agr",
    "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
    "anchor": "consent-evidence",
@@ -86824,6 +86846,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1927 A6 (D1082). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. D1099: gated on consent-evidence.verification, since an independent verifier performs this check without recording disclosures. #1956 (D1107): re-quoted; every decision's descriptor carries consent_rendering_hash."
+  },
+  {
+   "id": "consent-evidence.integrity.reference-hash-mismatch",
+   "spec": "draft-mcguinness-oauth-mission-consent-evidence.md",
+   "anchor": "integrity",
+   "text": "a verifier MUST compare its paired `consent_rendering_hash` with `mission.consent_rendering_hash` and treat unequal values as an integrity failure of the evidence record.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "consent-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "evidence whose disclosure reference pairs a consent_rendering_hash unequal to mission.consent_rendering_hash fails verification as an integrity failure, decided without retrieving the disclosure"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1956 (D1124). Todo: the reference implements no Consent Evidence (deferred as O-11 in src/docs/CONFORMANCE.md), so no test witnesses this row. Gated on consent-evidence.verification, as the other verifier rows (D1099)."
   },
   {
    "id": "consent-evidence.integrity.unretrievable-not-integrity-failure",

@@ -901,7 +901,7 @@ A Consent Evidence object has these members:
 `disclosure`:
 : REQUIRED. The Consent Disclosure object, or a durable reference to it
   ({{minimization}}) paired with the `consent_rendering_hash` it verifies
-  against.
+  against. That paired value MUST equal `mission.consent_rendering_hash`.
 
 `co_approvals`:
 : OPTIONAL. An array of evidence descriptors, one per co-approver, each
@@ -1165,10 +1165,12 @@ The absence of `rendering_confirmation` or `rendering_attestation` is
 not a failure; it means the evidence asserts no rung above the rendering
 the AS recorded.
 
-Steps 1 through 6 establish the integrity of the evidence record itself
-and rely only on the record, since every decision's signed `mission`
-descriptor carries `consent_rendering_hash`. Reconstructing the
-disclosure is a separate step that depends on retrieval: when the
+Steps 1 through 6 do not require retrieving the Consent Disclosure
+object. Neither does the reference check: when `disclosure` is a
+durable reference ({{minimization}}), a verifier MUST compare its paired
+`consent_rendering_hash` with `mission.consent_rendering_hash` and treat
+unequal values as an integrity failure of the evidence record.
+Reconstructing the disclosure is a separate step that depends on retrieval: when the
 disclosure object is inlined, a verifier recomputes
 `consent_rendering_hash` over it and compares it with the `mission`
 descriptor's value; when it is carried by reference ({{minimization}}),
@@ -1872,8 +1874,10 @@ encoding difference to resolve before interoperating.
   condition, and a declined or narrowed descriptor carries the hash of
   the disclosure the decision was made on, still with no `id` or
   `approval_context_commitment`. Integrity and Verification checks the
-  member on each branch and compares a reconstructed disclosure with it
-  (#1956).
+  member on each branch and compares a reconstructed disclosure with it.
+  A disclosure reference's paired hash is required to equal the
+  descriptor's, and a verifier treats unequal values as an integrity
+  failure without retrieving the disclosure (#1956).
 
 - Material Notice Requirements makes the high-risk notices and their
   acknowledgments mandatory: each high-risk condition present gets its
