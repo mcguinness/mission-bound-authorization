@@ -159,10 +159,31 @@ const SUBMISSION_TOP_LEVEL = new Set(["intent", "evidence"]);
  */
 export const DEFAULT_MAX_EVIDENCE_ENTRIES = 8;
 export const DEFAULT_MAX_EVIDENCE_ENTRY_BYTES = 16384;
+/**
+ * @spec submission-evidence#verification-bounds (#1962) — the default
+ * verification work one submission may impose, in units of one signature
+ * verification (or a step of like cost): two per entry at the default entry
+ * bound.
+ */
+export const DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK = 16;
 
 export interface SubmissionEvidenceBounds {
   maxEvidenceEntries?: number;
   maxEvidenceEntryBytes?: number;
+  /** @spec submission-evidence#verification-bounds (#1962): the verification-work budget per submission. */
+  maxVerificationWork?: number;
+}
+
+/**
+ * @spec submission-evidence#verification-bounds (#1962) — the verification
+ * work a submission has left. The dispatch charges one unit before each
+ * entry's `verify` (its first signature verification); a type whose
+ * verification does more (further signatures, a certificate chain, a key
+ * fetch) MUST charge each further unit before doing it. A charge past the
+ * budget throws `invalid_request`, so the excess work is never done.
+ */
+export interface IntentSubmissionEvidenceWork {
+  charge(units: number): void;
 }
 
 /**
@@ -193,6 +214,8 @@ export interface IntentSubmissionEvidenceVerifyInput {
   now: Date;
   /** Carrier-specific context (e.g. which submission carrier), advisory. */
   requestContext?: Record<string, unknown>;
+  /** The submission's remaining verification work (#1962). */
+  work: IntentSubmissionEvidenceWork;
 }
 
 /**
@@ -481,7 +504,7 @@ function dispatchEvidenceEntry(entry: Record<string, JsonValue>): IntentSubmissi
  */
 export async function verifyIntentSubmissionEvidence(
   evidence: IntentSubmissionEvidenceEntry[] | undefined,
-  ctx: Omit<IntentSubmissionEvidenceVerifyInput, "entry">,
+  ctx: Omit<IntentSubmissionEvidenceVerifyInput, "entry" | "work">,
   required: readonly string[] = [],
   bounds: SubmissionEvidenceBounds = {},
 ): Promise<IntentSubmissionEvidenceFact[] | undefined> {
@@ -507,22 +530,46 @@ export async function verifyIntentSubmissionEvidence(
   // #1411) runs it here (step 6); the structural rules, and for any other
   // carrier the dispatch too, repeat the parse-time result.
   checkIntentSubmissionEvidenceEntries(evidence as unknown as JsonValue[], bounds);
+  // @spec submission-evidence#verification-bounds (#1962): the work this
+  // submission's verification may do, beyond the size and count bounds. A
+  // refused charge is a refusal of the submission even where the type caught
+  // it and returned.
+  const budget = bounds.maxVerificationWork ?? DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK;
+  let spent = 0;
+  let exceeded = false;
+  const overBound = () =>
+    new IntentError("invalid_request", `the submission's evidence exceeds the verification-work bound (${budget})`);
+  const work: IntentSubmissionEvidenceWork = {
+    charge(units) {
+      if (!Number.isSafeInteger(units) || units < 0) {
+        throw new Error(`verification work is a non-negative integer, not ${String(units)}`);
+      }
+      if (exceeded || spent + units > budget) {
+        exceeded = true;
+        throw overBound();
+      }
+      spent += units;
+    },
+  };
   const facts: IntentSubmissionEvidenceFact[] = [];
   for (const entry of evidence) {
     const impl = EVIDENCE_TYPE_REGISTRY.get(entry.type);
     if (!impl) {
       throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${entry.type}`);
     }
+    work.charge(1);
     let verified: Record<string, JsonValue>;
     try {
-      verified = await impl.verify({ ...ctx, entry });
+      verified = await impl.verify({ ...ctx, entry, work });
     } catch (e) {
+      if (exceeded) throw overBound();
       if (e instanceof IntentError) throw e;
       throw new IntentError(
         "invalid_mission_intent_evidence",
         `evidence verification failed (${entry.type}): ${e instanceof Error ? e.message : "verifier error"}`,
       );
     }
+    if (exceeded) throw overBound();
     facts.push({
       type: entry.type,
       // The artifact digest as the record lands it: the family anchor idiom
