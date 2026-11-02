@@ -72,7 +72,6 @@ informative:
   RFC7009:
   RFC8935:
   RFC9493:
-  RFC8628:
   RFC8792:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -270,14 +269,6 @@ informative:
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-device-authorization:
-    title: "Mission Device Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-device-authorization.html
     author:
       -
         ins: K. McGuinness
@@ -1029,12 +1020,6 @@ and preserves:
   ({{approval-event}}, {{mission-creating-paths}}, with a direct
   approval relocated only as {{extensibility}} permits); and
 - the grant binding ({{grant-binding}}).
-
-The experimental Mission Device Authorization profile
-({{I-D.draft-mcguinness-oauth-mission-device-authorization}}) defines
-such a carriage for a client that cannot complete the
-authorization-code path, on the device authorization grant
-{{RFC8628}}.
 
 ## Authority Proposal {#authority-proposal}
 
