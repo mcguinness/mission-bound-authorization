@@ -39,6 +39,13 @@ const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 const INTENT = { goal: "Reconcile Q3 invoices.", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" };
+/** The device authorization parameters of a Mission Intent expiring `ms` from now, not at the fixed INTENT date. */
+const intentExpiringIn = (ms: number): Record<string, string> => ({
+  mission_intent: JSON.stringify({
+    intent: { ...INTENT, expires_at: new Date(Math.ceil(Date.now() / 1000) * 1000 + ms).toISOString().replace(".000Z", "Z") },
+  }),
+});
+const THIRTY_DAYS_MS = 30 * 86_400_000;
 const DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 const JWT_BEARER = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 const PUBLIC = "agent-A1";
@@ -1131,11 +1138,9 @@ describe("Mission Device Authorization polling (@spec device-authorization#polli
   // Mission run to its expires_at, never revoking it
   // (docs/provider-integration-port.md, section 3.4).
   it("lets every Mission whose approved device_code expired unredeemed run to its expires_at: Mission Status reports it active, then expired, never revoked", async () => {
-    const expiresAt = new Date(Math.ceil(Date.now() / 1000) * 1000 + 3000).toISOString().replace(".000Z", "Z");
-    const short = await approvedSession(PUBLIC, ALICE_BY_BOB, {
-      mission_intent: JSON.stringify({ intent: { ...INTENT, expires_at: expiresAt } }),
-    });
-    const long = await approvedSession();
+    const short = await approvedSession(PUBLIC, ALICE_BY_BOB, intentExpiringIn(3000));
+    const expiresAt = missionOf(short.uid)?.expires_at as string;
+    const long = await approvedSession(PUBLIC, ALICE_BY_BOB, intentExpiringIn(THIRTY_DAYS_MS));
     for (const s of [short, long]) {
       await lapse(s.deviceCode);
       expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("expired_token");
@@ -1175,13 +1180,13 @@ describe("a service_owned source and a public client (@spec device-authorization
 
   it("creates no Mission when a service_owned source would rest on a public client's client_id, and the next poll is access_denied", async () => {
     // The control: a confidential client of the same service_owned source gets its Mission.
-    const control = await approvedSession(SVC_CONFIDENTIAL, RECONCILER);
+    const control = await approvedSession(SVC_CONFIDENTIAL, RECONCILER, intentExpiringIn(THIRTY_DAYS_MS));
     const record = missionOf(control.uid);
     expect(record?.authority_source.type).toBe("service_owned");
     expect(record?.subject.sub).toBe("agt_ledger_reconciler");
     expect(record?.client_id).toBe(SVC_CONFIDENTIAL);
     // The public client of the same source: refused at the decision, before any write.
-    const s = await pendingSession(SVC_PUBLIC, RECONCILER);
+    const s = await pendingSession(SVC_PUBLIC, RECONCILER, intentExpiringIn(THIRTY_DAYS_MS));
     const decided = await decide(s.uid, s.headers, CONFIRMED);
     expect(decided.status, decided.text).toBe(200);
     expect(missionOf(s.uid)).toBeUndefined();

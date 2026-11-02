@@ -21,14 +21,16 @@ import {
 } from "@mission/authorization-server";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createMissionByDevice, type DeviceMissionClient, type DeviceUserInstruction } from "../src/device-mission-client.js";
 import type { DpopKeys } from "../src/oauth-client.js";
 
 const DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
-const EXPIRES_AT = new Date(Date.now() + 30 * 86_400_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+/** The suite's controlled clock (D1091): the Mission's expiry derives from it, never from the real date. */
+const CLOCK_MS = Date.parse("2026-11-02T12:00:00Z");
+const EXPIRES_AT = new Date(CLOCK_MS + 30 * 86_400_000).toISOString().replace(/\.\d{3}Z$/, "Z");
 const REQUEST = {
   missionIntent: { intent: { goal: "Reconcile Q3 invoices.", target_resources: [RESOURCE], expires_at: EXPIRES_AT } },
   authorizationDetails: READ,
@@ -63,6 +65,7 @@ type Answer = { status: number; body: Record<string, unknown> };
 const stubs: Stub[] = [];
 afterAll(() => {
   for (const s of stubs) s.server.close();
+  vi.useRealTimers();
 });
 
 /** Metadata advertising the profile at the stub's own endpoints. */
@@ -112,6 +115,9 @@ async function stubAs(meta: (issuer: string) => Record<string, unknown>, answers
 
 let dpopKeys: DpopKeys;
 beforeAll(async () => {
+  // Before the reference AS is composed, so every time it reads is on the clock.
+  vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+  vi.setSystemTime(CLOCK_MS);
   const pair = await generateKeyPair("ES256", { extractable: true });
   dpopKeys = { privateKey: pair.privateKey, publicKey: pair.publicKey };
 });
