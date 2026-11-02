@@ -940,9 +940,7 @@ The following rules govern a submission:
   total size, the Intent's total size and the lengths of its arrays,
   and the count and per-entry sizes of `evidence` entries, refusing
   a submission that exceeds the deployment-defined limits with
-  `invalid_request`. The verification-cost bound of
-  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}
-  accompanies these.
+  `invalid_request`.
 
 The following is an example of a Submission envelope carrying a
 compact Intent and one evidence entry of an illustrative,
@@ -4694,7 +4692,7 @@ exchange rows of the third table.
 
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
-| PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
+| PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent ({{submission-processing}}) | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Token request: the requested audience is approved for none of the entries the token would carry, the request's `authorization_details` names an entry not approved for its audience, or the audiences it names are approved for different entries ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the `act` chain ({{rs-mission-unaware}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
@@ -4744,9 +4742,7 @@ exchange rows of the third table.
 | Protected resource: insufficient carried authority, or an unenforceable constraint ({{rs-denials}}) | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
 {: title="Protected resource challenges"}
 
-In these tables, which evidence types are required follows
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, and
-`invalid_client_attestation` is the error code that
+In these tables, `invalid_client_attestation` is the error code that
 {{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}}
 specifies.
 
@@ -5201,11 +5197,7 @@ Submission Evidence type. Such an AS refuses every presented entry
 under the dispatch and refusal rules ({{intent-submission-evidence}}):
 a structurally invalid entry with the `invalid_request` error code, and
 any other entry, as an unsupported type, with the
-`invalid_mission_intent_evidence` error code. It need not implement the
-evidence framework of
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}} for this
-configuration. The companion defines conformance for ASs supporting an
-evidence type, whether its evidence is optional or required.
+`invalid_mission_intent_evidence` error code.
 
 A **Mission-aware Resource Server** implements resource server
 enforcement ({{rs-enforcement}}). It enforces a JWT from the token's
