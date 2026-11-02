@@ -7,6 +7,7 @@ import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, buildAuthorizationServer
 import { clientAssertionSigner, dpopProofFor, jarClosures, redeemMissionApproval, submitMissionApproval, type IssueOpts, type IssuedMission, type SubmittedApproval } from "../src/oauth-client.js";
 import { renderApproval, resolveMissionApproval } from "../src/approval-console.js";
 import { installConsoleSessionBoundary } from "../src/console-session-boundary.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const ISSUER = "http://localhost:14959";
 const TRUSTED = "independent-approver-identity-test";
@@ -17,7 +18,7 @@ let as: Awaited<ReturnType<typeof buildAuthorizationServer>>;
 let server: Server;
 let agentCredential: IssuedMission;
 const defaults: IssueOpts = {
-  missionIntent: JSON.stringify({ intent: { goal: "Read approved invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" } }),
+  missionIntent: JSON.stringify({ intent: { goal: "Read approved invoices", target_resources: [CANONICAL_RESOURCE], expires_at: FIXTURE_EXPIRES_AT } }),
   authorizationDetails: JSON.stringify([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]),
 };
 beforeAll(async () => {

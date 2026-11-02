@@ -26,6 +26,7 @@ import { shapeIntent } from "@mission/agent";
 import { deriveAuthoritySet, validateAuthorityProposal, validateMissionIntent } from "@mission/authorization-server";
 import { CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
 import { proposalDiff } from "../src/server.js";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 // The exact default values demo/public/index.html ships on #f_goal, #f_cap,
 // #f_actions, #f_vendors (the form the "over-ask so the narrowing is visible"
@@ -40,7 +41,7 @@ function defaultUiProposal() {
   const shaped = shapeIntent({
     goal: DEFAULT_GOAL,
     resources: [CANONICAL_RESOURCE],
-    expiresAt: "2027-01-01T00:00:00Z",
+    expiresAt: FIXTURE_EXPIRES_AT,
     proposedActions: DEFAULT_ACTIONS,
     vendors: DEFAULT_VENDORS,
   });
