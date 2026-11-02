@@ -28,14 +28,6 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  I-D.draft-mcguinness-mission-approval-governance:
-    title: "Mission Approval Governance"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-ietf-oauth-rar-metadata-remediation:
   I-D.draft-mcguinness-oauth-actor-profile:
@@ -158,6 +150,14 @@ informative:
   I-D.draft-mcguinness-oauth-mission-derivation-limits:
     title: "Mission Derivation Limits for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-approval-governance:
+    title: "Mission Approval Governance"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-approval-governance.html
     author:
       -
         ins: K. McGuinness
@@ -2238,9 +2238,12 @@ value.
   `root_commitment` MUST each match its implied value. The implied
   values are semantic defaults: an omitted member has its implied value,
   and a reader does not insert it into a record before hashing or
-  committing the record. A standing-consent basis requires and defines
-  all three ({{I-D.draft-mcguinness-mission-approval-governance}},
-  Section "Standing-Consent Bases").
+  committing the record. For a standing-consent basis, the activating
+  issuer records all three ({{mission-creating-paths}}): `activation`
+  is an object in the shape the basis's defining profile specifies,
+  `activation_actor` is an object with `iss` and `sub`, and
+  `root_commitment` is a string that identifies the exact consented
+  root.
 
   `adjudication`:
   : OPTIONAL. A discriminated object naming the decision *mechanism*
@@ -2267,16 +2270,18 @@ value.
     For `kind: human`: no additional kind-specific members; the
     deciding human is `consent_principal`.
 
-    For `kind: policy`: the kind-specific members that the Approval
-    Basis Contract defines
-    ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+    For `kind: policy`: the kind-specific members that the profile
+    defining the standing-consent basis specifies (for example,
+    {{I-D.draft-mcguinness-mission-approval-governance}}, Section
     "Policy Adjudication").
 
   `approved_at`:
   : Absent for `direct`, whose approval event carries its own instant
-    ({{approval-event}}); a standing-consent basis carries it
-    ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-    "Standing-Consent Bases").
+    ({{approval-event}}). For a standing-consent basis, the activating
+    issuer records it ({{mission-creating-paths}}): an RFC 3339
+    date-time, the instant the accountable human approved the exact
+    consented root that `root_commitment` identifies, not the instant
+    this instance was activated.
 
   The following rules apply to `approval_basis`:
 
@@ -2517,7 +2522,7 @@ issuer-bound envelope:
    ~~~
    {
      "typ": "<mission-intent | mission-proposed-authority
-             | mission-authority-set | mission-activation-policy>",
+             | mission-authority-set>",
      "iss": "<the AS issuer URL>",
      "value": <the committed object>
    }
@@ -2535,11 +2540,6 @@ issuer-bound envelope:
      exactly when a proposal was submitted.
    - For `authority_hash`, `typ` is `mission-authority-set` and
      `value` is the Authority Set as a JSON array of entries.
-   - For an activation policy reference's `digest`, `typ` is
-     `mission-activation-policy` and `value` is the policy snapshot
-     object that the Approval Basis Contract defines
-     ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-     "Activation Policy Commitment").
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
@@ -4922,8 +4922,9 @@ following remain stable across revisions of this document:
 - the `act` delegation chain ({{delegated-exchange}}).
 
 {{mission-creating-paths}} states how a profile creates Missions on
-another path, including the Approval Basis Contract every
-standing-consent basis meets, and {{commitment-mechanisms}} the contract
+another path, including what a standing-consent basis's defining
+profile and its activating issuer meet, and {{commitment-mechanisms}}
+the contract
 for a commitment another specification defines. Their requirements bind
 a specification or profile that uses them and each party that implements
 it; this document's own commitments also follow
@@ -5075,16 +5076,17 @@ in one of two ways, which stay distinct:
   standing-consent basis, under which a template or policy activates
   Mission instances against an accountable human's earlier approval,
   with no fresh human approval per instance; each instance is still
-  created at its own approval event ({{approval-event}}). Any
-  companion profile that defines a standing-consent basis MUST make
-  the basis conform to the Approval Basis Contract
-  ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-  "Approval Basis Contract"), and an issuer that activates a Mission
-  under such a basis MUST conform to the Contract for it. Neither
-  requirement binds a deployment that creates Missions only on the
-  direct path. The basis's `approval_basis.type` values form a
-  specification-defined namespace with no registry
-  ({{namespace-taxonomy}}).
+  created at its own approval event ({{approval-event}}). A companion
+  profile that defines a standing-consent basis MUST specify its
+  `approval_basis.type` value and its activation semantics: what
+  activates an instance, and the shape of the instance's `activation`.
+  An issuer that activates a Mission under such a basis MUST record the
+  instance's `activation`, `activation_actor`, `root_commitment`, and
+  `approved_at`, as {{record-principal-members}} defines them for a
+  standing-consent basis. Neither requirement binds a deployment that
+  creates Missions only on the direct path. The basis's
+  `approval_basis.type` values form a specification-defined namespace
+  with no registry ({{namespace-taxonomy}}).
 
 When a human approves a standing consent's consented root (the
 template version, the ceiling, or the activation policy), the issuer
@@ -5115,6 +5117,14 @@ integrity anchors (step 6); and atomic creation, deduplicated as
 An unrecognized `type` or `adjudication.kind` is handled as
 {{record-principal-members}} states for every record consumer.
 
+Mission Approval Governance
+{{I-D.draft-mcguinness-mission-approval-governance}} defines an
+Approval Basis Contract, covering activation policy commitment,
+standing-consent recency, and policy adjudication, which the companion
+profiles that define standing-consent bases for this document adopt. A
+profile defined elsewhere can meet this section's requirements by
+another mechanism.
+
 ## Commitment Mechanisms {#commitment-mechanisms}
 
 This document's default prefixed construction commits to bytes in
@@ -5123,8 +5133,8 @@ commitment classifies it as one of them:
 
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
-  `authority_hash`, an activation policy reference's `digest`, and
-  commitments produced with companion-defined `typ` values).
+  `authority_hash`, and commitments produced with companion-defined
+  `typ` values, such as an activation policy reference's `digest`).
 - **Canonical-object digest**: `sha-256:` over the JCS serialization
   of a normalized JSON object without the envelope, where protocol
   context already fixes what is committed (for example, a runtime
@@ -6908,6 +6918,19 @@ resolve before interoperating.
 
 -02
 
+- Intentional normative relaxation: Mission Approval Governance becomes
+  an informative reference. Mission-Creating Paths no longer requires
+  every standing-consent basis to conform to Governance's Approval
+  Basis Contract. It requires the profile that defines a basis to
+  specify its `type` value and activation semantics, and the activating
+  issuer to record `activation`, `activation_actor`, `root_commitment`,
+  and `approved_at`, whose types and meanings the Mission Record states
+  for a standing-consent basis. A profile defined elsewhere can meet
+  these requirements without the Contract; the companion profiles that
+  define standing-consent bases still adopt it. This document no longer
+  lists `mission-activation-policy` among its anchors: Governance
+  defines and classifies it under the `typ` extension point, with its
+  construction unchanged (#1967, D1134).
 - Revocation says what a token's consumer does after its Mission
   terminates: one that enforces from the token alone can honor it until
   it expires, and one that checks Mission state refuses it when that

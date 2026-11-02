@@ -61,6 +61,7 @@ import {
   createMediatedClient,
   credentialAuthorityFrom,
   type DecisionEvidence,
+  DpopProofError,
   dpopProofFor,
   EvidenceRetentionStore,
   EvidenceStore,
@@ -576,11 +577,14 @@ describe("each PEP establishes its boundary from configuration, and every consum
         refusal_reason: "txn_invalid",
       });
     }
-    // A singleton naming the boundary passes the audience gate and meets the next check.
+    // A singleton naming the boundary passes the audience gate and meets the next check: the proof itself fails.
     expect(await x.server.verifyTransactionCredential(await txnToken(CANONICAL_RESOURCE), pop)).toEqual({
       ok: false,
       refusal_reason: "txn_cnf_mismatch",
+      proofFailure: true,
     });
+    // @spec #1970: so the HTTP gate's credential check reports a proof failure, not another refusal.
+    await expect(x.server.validateCredential(await txnToken(CANONICAL_RESOURCE), pop)).rejects.toBeInstanceOf(DpopProofError);
   });
 
   it("carries the boundary, never the aud value or alias, in all three evidence forms, and signs each only under a key authorized for it", async () => {
