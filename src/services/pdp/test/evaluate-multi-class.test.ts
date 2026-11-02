@@ -22,7 +22,10 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import {
   applicableActionClasses,
+  channelDeadlineMs,
   createDecisionEvidenceEmitter,
+  DecisionRequestRefused,
+  type ExecutionCapabilityDeclaration,
   type DecisionEvidenceObject,
   evaluate,
   type EvaluateOptions,
@@ -161,7 +164,14 @@ describe("an action several class predicates apply to takes every applicable cla
   });
 
   it("an exemption stated for one class relieves only what it names: audit_only's no-freshness posture does not relieve a further write class's bound", async () => {
-    const withWrite = { actionClassesFor: (_a: string, assigned: string) => (assigned === "audit_only" ? ["consequential_write"] : []) };
+    // A PDP-side declaration bound directly: the shipped loader admits further
+    // classes only among the high-consequence ones, but the PDP rule holds for
+    // any set its declarations name.
+    const withWrite = {
+      operationDeclarations: [
+        { operation: READ, action_class: "audit_only", additional_action_classes: ["consequential_write"] } as unknown as ExecutionCapabilityDeclaration,
+      ],
+    };
     const exemptOnly = await evaluate(request(READ, "audit_only", 3600), options([READ]));
     expect(exemptOnly.decision).toBe(true);
     const alsoWrite = await evaluate(request(READ, "audit_only", 3600), options([READ], withWrite));
@@ -187,5 +197,67 @@ describe("an action several class predicates apply to takes every applicable cla
     const posture = loadRuntimePosture(statement);
     expect(executionLeaseMaxSecondsOver(posture, ["external_commitment"])).toBe(60);
     expect(executionLeaseMaxSecondsOver(posture, applicableActionClasses(posture, "external_commitment", REMIT))).toBe(30);
+  });
+});
+
+describe("the class set comes from this PDP's own declarations (@spec runtime#classification, authzen#context-action-phase, #1994 cold read)", () => {
+  it("takes the declaration's own class beside a mislabeled assignment: remittance.send labeled consequential_write still takes external_commitment and irreversible_action, and is refused at 45 seconds", async () => {
+    const decision = await evaluate(request(REMIT, "consequential_write", 45, AMOUNT), options([REMIT], { evidence: emitter() }));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("stale_state");
+    const record = decision.context.decision_evidence as DecisionEvidenceObject;
+    expect(record.action_class).toBe("consequential_write");
+    expect(record.action_classes).toEqual(["consequential_write", "external_commitment", "irreversible_action"]);
+  });
+
+  it("refuses phase_invalid, before evaluation, a phase on remittance.send, which the declarations name without one; an undeclared phase of a compound action still decides", async () => {
+    const refusal = await evaluate(
+      request(REMIT, "external_commitment", 0, { ...AMOUNT, action_phase: "commit" }),
+      options([REMIT]),
+    ).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(refusal).toBeInstanceOf(DecisionRequestRefused);
+    expect((refusal as DecisionRequestRefused).denial_reason).toBe("phase_invalid");
+    const preflight = await evaluate(
+      request("payments:payment.execute", "consequential_read", 0, { action_phase: "preflight" }),
+      options(["payments:payment.execute"]),
+    );
+    expect(preflight.context).toHaveProperty("decision_id");
+  });
+
+  it("refuses at load a further class beside an assigned class that is not high-consequence, and a further class that is not", () => {
+    type Entry = { operation: string; action_class: string; additional_action_classes?: string[] };
+    const withFurther = (operation: string, further: string[]) => {
+      const statement = structuredClone(RUNTIME_SCOPE_CONFIG) as { extensions: { execution_capabilities: Entry[] } };
+      const entry = statement.extensions.execution_capabilities.find((d) => d.operation === operation);
+      if (!entry) throw new Error(`fixture: no declaration for ${operation}`);
+      entry.additional_action_classes = further;
+      return statement;
+    };
+    expect(() => loadRuntimePosture(withFurther("payments:payment.schedule", ["irreversible_action"]))).toThrow(
+      "high-consequence",
+    );
+    expect(() => loadRuntimePosture(withFurther(REMIT, ["consequential_write"]))).toThrow("high-consequence");
+    expect(() => loadRuntimePosture(withFurther(REMIT, ["irreversible_action"]))).not.toThrow();
+  });
+
+  it("bounds the remote decision call by the tightest window across the set: 30 seconds for remittance.send, 60 for external_commitment alone", () => {
+    expect(channelDeadlineMs("external_commitment", 120_000, REMIT)).toBe(30_000);
+    expect(channelDeadlineMs("external_commitment", 120_000)).toBe(60_000);
+  });
+
+  it("issues the irreversible class's 120-second permit lifetime to a remittance, where no staleness window caps it below", async () => {
+    const wide = { stalenessBound: () => ({ kind: "bounded" as const, seconds: 600 }) };
+    const remit = await evaluate(request(REMIT, "external_commitment", 0, AMOUNT), options([REMIT], wide));
+    expect(remit.decision).toBe(true);
+    expect(Date.parse((remit.context.conditions as { valid_until: string }).valid_until)).toBe(NOW.getTime() + 120_000);
+    const alone = await evaluate(
+      request(REMIT, "external_commitment", 0, AMOUNT),
+      options([REMIT], { ...wide, operationDeclarations: [] }),
+    );
+    expect(alone.decision).toBe(true);
+    expect(Date.parse((alone.context.conditions as { valid_until: string }).valid_until)).toBe(NOW.getTime() + 300_000);
   });
 });
