@@ -21,12 +21,20 @@
  *
  * A deployment substitutes its own provider. The authorization server's side
  * (`approver-login.ts`) is unchanged by that substitution.
+ *
+ * @spec request-provenance#capture (#939 slice 2b-1, D1119 Q6): the same
+ * provider can also register further relying parties of its own, each with
+ * its own client credentials and redirect URI, and its accounts need not be
+ * Approvers. The demo request intake (`request-intake.ts`) is one: it logs an
+ * originator (Alice) in here, with the same password and one-time code, and
+ * takes the originator and the channel facts from the ID Token this provider
+ * issues for that login, its `acr`, `amr` and `auth_time` included.
  */
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { exportJWK, generateKeyPair } from "jose";
-import Provider, { type Configuration, type KoaContextWithOIDC } from "oidc-provider";
+import Provider, { type ClientMetadata, type Configuration, type KoaContextWithOIDC } from "oidc-provider";
 
 /** The authorization server's client registration at this provider. */
 export const APPROVER_LOGIN_CLIENT_ID = "mission-approval-surface";
@@ -70,11 +78,19 @@ export interface CompletedLogin {
   auth_time: number;
 }
 
+/** A further relying party this provider registers beside the authorization server. */
+export interface IdpClientRegistration {
+  clientId: string;
+  redirectUri: string;
+}
+
 export interface ApproverIdp {
   /** This provider's issuer identifier. */
   issuer: string;
   /** The authorization server's client credentials (`client_secret_basic`). */
   client: { clientId: string; clientSecret: string };
+  /** Each further relying party's credentials (`client_secret_basic`), by client ID. */
+  clients: ReadonlyMap<string, { clientId: string; clientSecret: string }>;
   /** Each account by username. */
   accounts: ReadonlyMap<string, ApproverAccount>;
   /** Every login completed, in order. */
@@ -142,13 +158,16 @@ const codeForm = (uid: string, error?: string): string =>
 
 /**
  * Start the provider on `port` (0: any free port) at `host`, with one account
- * per entry of `accounts` and the authorization server registered as its one
- * client at `redirectUri`. Each account's password and device are generated
- * here and returned to the caller, the accounts' holder.
+ * per entry of `accounts`, the authorization server registered as a client at
+ * `redirectUri`, and each entry of `clients` registered as a further client.
+ * Each account's password and device, and each client's secret, are
+ * generated here and returned to the caller, their holder.
  */
 export async function startApproverIdp(opts: {
   redirectUri: string;
   accounts: readonly { sub: string; username: string }[];
+  /** Further relying parties, each registered like the authorization server under its own client ID. */
+  clients?: readonly IdpClientRegistration[];
   host?: string;
   port?: number;
 }): Promise<ApproverIdp> {
@@ -175,21 +194,32 @@ export async function startApproverIdp(opts: {
   const logins: CompletedLogin[] = [];
   const pending = new Map<string, PendingFactor>();
   const clientSecret = randomBytes(32).toString("base64url");
+  const extraClients = new Map<string, { clientId: string; clientSecret: string }>();
+  for (const c of opts.clients ?? []) {
+    if (c.clientId === APPROVER_LOGIN_CLIENT_ID || extraClients.has(c.clientId)) {
+      throw new Error(`the provider registers client ${c.clientId} once`);
+    }
+    extraClients.set(c.clientId, { clientId: c.clientId, clientSecret: randomBytes(32).toString("base64url") });
+  }
   const { privateKey } = await generateKeyPair("ES256", { extractable: true });
   const signingKey = { ...(await exportJWK(privateKey)), kid: "approver-idp-1", alg: "ES256", use: "sig" };
+  const registration = (clientId: string, secret: string, redirectUri: string): ClientMetadata => ({
+    client_id: clientId,
+    client_secret: secret,
+    redirect_uris: [redirectUri],
+    grant_types: ["authorization_code"],
+    response_types: ["code"],
+    token_endpoint_auth_method: "client_secret_basic",
+    id_token_signed_response_alg: "ES256",
+    require_auth_time: true,
+  });
 
   const configuration: Configuration = {
     clients: [
-      {
-        client_id: APPROVER_LOGIN_CLIENT_ID,
-        client_secret: clientSecret,
-        redirect_uris: [opts.redirectUri],
-        grant_types: ["authorization_code"],
-        response_types: ["code"],
-        token_endpoint_auth_method: "client_secret_basic",
-        id_token_signed_response_alg: "ES256",
-        require_auth_time: true,
-      },
+      registration(APPROVER_LOGIN_CLIENT_ID, clientSecret, opts.redirectUri),
+      ...(opts.clients ?? []).map((c) =>
+        registration(c.clientId, (extraClients.get(c.clientId) as { clientSecret: string }).clientSecret, c.redirectUri),
+      ),
     ],
     jwks: { keys: [signingKey as never] },
     acrValues: [PASSWORD_ONLY_ACR, MULTI_FACTOR_ACR],
@@ -205,8 +235,9 @@ export async function startApproverIdp(opts: {
     },
     interactions: { url: (_ctx: KoaContextWithOIDC, interaction) => `/interaction/${interaction.uid}` },
     findAccount: (_ctx, id) => (bySub.has(id) ? { accountId: id, claims: () => ({ sub: id }) } : undefined),
-    // The authorization server is this provider's first-party client: its
-    // `openid` request needs no consent screen.
+    // The authorization server, like every client registered here, is this
+    // provider's first-party client: its `openid` request needs no consent
+    // screen.
     loadExistingGrant: async (ctx) => {
       const { client, session } = ctx.oidc;
       if (!client || !session?.accountId) return undefined;
@@ -322,6 +353,7 @@ export async function startApproverIdp(opts: {
   return {
     issuer,
     client: { clientId: APPROVER_LOGIN_CLIENT_ID, clientSecret },
+    clients: extraClients,
     accounts,
     logins,
     close: () =>
