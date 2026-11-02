@@ -92,7 +92,11 @@ export interface LifecycleIssuerMetadata {
  * `jwks_uri` comes from another issuer.
  */
 export async function discoverLifecycleIssuer(issuer: string): Promise<LifecycleIssuerMetadata> {
-  const meta = (await (await fetch(`${issuer}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+  // @spec #1977 review: only a successful response is the issuer's metadata,
+  // whatever its body holds.
+  const discovered = await fetch(`${issuer}/.well-known/openid-configuration`);
+  if (!discovered.ok) throw new Error(`${issuer} metadata fetch failed: ${discovered.status}`);
+  const meta = (await discovered.json()) as Record<string, unknown>;
   if (meta.issuer !== issuer) throw new Error(`${issuer} serves metadata for issuer ${String(meta.issuer)}`);
   const endpoint = meta.mission_lifecycle_endpoint;
   if (typeof endpoint !== "string") throw new Error(`${issuer} advertises no mission_lifecycle_endpoint`);
@@ -223,7 +227,11 @@ export async function verifyLifecycleResponse(
     return { kind: "refused", reason: "not a JWS" };
   }
   if (typeof alg !== "string" || alg === "none" || !meta.signingAlgs.includes(alg)) return { kind: "refused", reason: "alg" };
-  const published = (await (await fetch(meta.jwksUri)).json()) as JSONWebKeySet;
+  // @spec #1977 review: only a successful response is the published key set;
+  // a failed one, whatever its body holds, leaves nothing to verify under.
+  const fetched = await fetch(meta.jwksUri);
+  if (!fetched.ok) throw new Error(`${meta.jwksUri} fetch failed: ${fetched.status}`);
+  const published = (await fetched.json()) as JSONWebKeySet;
   const verified = await verifyMissionStatusResponse(
     jws,
     { missionId: request.missionId, issuer, audience: client.clientId },
