@@ -92719,12 +92719,20 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a submission whose evidence verification would exceed the configured verification-work bound, beyond the binding's size and count bounds, is refused invalid_request before the excess work is done"
+    "normative": "a submission whose evidence verification would exceed the configured verification-work bound, beyond the binding's size and count bounds, is refused invalid_request before the excess work is done",
+    "local": "the evidence dispatch meters verification work in units of one signature verification: one charged before each entry's verify, each further one charged by the type before doing it; the bound is the authorization server's submissionEvidenceVerificationWork, 16 by default, and every carrier's verification passes the same dispatch"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1962 (D1119): no row covered this clause; the reference bounds evidence size and count only. Todo with #1962, which lands before the real request-provenance verifier is enabled in the reference composition."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "the verification-work bound at PAR (@spec submission-evidence#verification-bounds, #1962) > refuses invalid_request a submission whose evidence verification would pass the configured bound, beyond the size and count bounds, before the excess work is done, and accepts one at the bound",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work."
   },
   {
    "id": "request-provenance.trust.no-header-key",
