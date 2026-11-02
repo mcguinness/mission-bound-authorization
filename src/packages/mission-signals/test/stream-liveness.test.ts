@@ -358,6 +358,21 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
         verifiedLive: false,
         stale: true,
       });
+      // Mission Status re-establishes current state on the stale stream: a
+      // Status-sourced state is bounded by its response, not by the stream.
+      await s.commit("msn_status", 1, "active");
+      expect(s.lease("msn_status")).toBeUndefined();
+      expect(await s.refresh("msn_status", 1, "active")).toMatchObject({
+        status: "resynchronized",
+      });
+      expect(s.receiver.streamLiveness(iso(clock.t)).stale).toBe(true);
+      expect(s.lease("msn_status")).toMatchObject({
+        state: "active",
+        version: 1,
+        status_checked_at: iso(T0 + 70 * S),
+        status_expires_at: iso(T0 + 130 * S),
+        state_source: "status",
+      });
 
       // The heartbeat that ends the silence does not vouch for state that
       // arrived during it.

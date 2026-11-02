@@ -222,8 +222,8 @@ describe("Signals consumer reliance (@spec control-plane#state-surfaces, signals
     const committed = "2026-11-01T00:00:00.000Z";
     // Both receivers subscribe at the commit (#1896, D1117): the stream's
     // silence, which runs from the subscription until a liveness event,
-    // reaches maxStaleSeconds no earlier than this bound does, so only the
-    // bound decides each read below.
+    // passes maxStaleSeconds no earlier than this bound does, so the bound
+    // decides each read of the active state below.
     const subscribed = { now: () => new Date(committed) };
     const r = receiver(subscribed);
     const short = receiver({ ...subscribed, maxStaleSeconds: 60 });
@@ -248,8 +248,10 @@ describe("Signals consumer reliance (@spec control-plane#state-surfaces, signals
       });
       expect(short.lease("msn_a", plus(committed, 60))).toBeUndefined();
       // A state that is not active permits nothing; its lease keeps the
-      // observation time and the Mission's expiry.
+      // observation time and the Mission's expiry, on a stream that has been
+      // silent, and so stale, for a day.
       await r.verifyAndApply(await set("msn_t", 1, "terminated", committed));
+      expect(r.streamLiveness(plus(committed, 86_400)).stale).toBe(true);
       expect(r.lease("msn_t", plus(committed, 86_400))).toMatchObject({
         state: "terminated",
         status_checked_at: committed,
