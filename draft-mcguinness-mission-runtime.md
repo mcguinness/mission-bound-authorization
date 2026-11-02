@@ -690,8 +690,9 @@ class, adopted absent a documented, consequence-specific analysis:
 | Privileged administration | Active source required; immediate check, suitable for composition with local step-up, target under 300 s |
 | Audit-only | No active freshness required |
 
-An external-communication action ({{classification}}), whatever its
-class, adds an egress PEP to its class's posture ({{pep-placement}}).
+For an external-communication action ({{classification}}), whatever
+its class, each of these default postures also includes an egress PEP
+({{pep-placement}}).
 A deployment justifies any looser value for a high-consequence class
 in its Enforcement Scope Statement.
 
@@ -1900,7 +1901,9 @@ and a floor it MUST observe.
 
 The table's per-class requirements (the PDP gate and parameter
 binding) are requirements for an action **once it is assigned to that
-class**. Assigning an action to a class is deployment policy, bounded
+class**, and for an action that satisfies that class's predicate under
+the multi-predicate rule below. Assigning an action to a class is
+deployment policy, bounded
 by the floor below and by any Resource-policy minimum
 ({{decision}}): the profile does not require every read to reach a PDP.
 A read that is already fully constrained by the token's audience,
@@ -1927,7 +1930,9 @@ property, not a sixth class: an external-communication action keeps
 its class and that class's requirements, and rules stated over
 "external-communication and external-commitment actions" (the taint
 rule, trifecta containment, egress metering) apply to any action
-satisfying the predicate or classified `external_commitment`.
+satisfying the external-communication or External commitment
+predicate, whatever its class, and to any action classified
+`external_commitment`.
 
 The three highest classes are defined by predicates; the table's
 examples illustrate them:
@@ -1944,9 +1949,10 @@ Privileged administration:
 : the action changes who holds authority or how authority is
   evaluated.
 
-An action can satisfy more than one predicate: a payment or sent mail
-is irreversible and also binds the Subject to a party outside the
-deployment, so the table lists each under both classes. Every
+An action can satisfy more than one predicate: a payment to an outside
+party, or mail sent outside the deployment, is irreversible and also
+binds the Subject to that party, so the table lists each under both
+classes. Every
 requirement of each class whose predicate the action satisfies
 applies to it: classification under one class MUST NOT waive a
 requirement arising from another applicable predicate. Where
@@ -4307,7 +4313,10 @@ worked example shows the concrete record
   tighter; otherwise each applies, and an action that cannot satisfy
   every applicable requirement is refused. The External commitment
   examples add payment and sending mail, and the egress PEP is stated
-  once, for any external-communication action.
+  once, for any external-communication action. An exception relieves
+  only the requirement it names, and the rules stated over
+  external-communication and external-commitment actions apply wherever
+  either predicate holds.
 
 - Changes a requirement (#854, D814): the record retention floor is the
   Mission's retention period as its Mission Substrate Binding declares
