@@ -884,9 +884,9 @@ export class MissionSignalReceiver {
    *   the agreement. Until a liveness event arrives, silence runs from that
    *   instant, and a later open never moves it.
    * - An agreement that differs from the recorded one, the heartbeat
-   *   interval (known or not) or `maxStaleSeconds`, is a break, whether it
-   *   changed while the receiver ran on another handle or while it was down:
-   *   the stale generation is raised, so every Mission held across the change
+   *   interval (known or not) or `maxStaleSeconds`, is a break, including an
+   *   agreement changed while the receiver was down, during which the stream
+   *   may have gone stale: the stale generation is raised, so every Mission held across the change
    *   stays latched until Mission Status re-establishes it. A stream already
    *   stale under the recorded agreement when the receiver opens stays stale
    *   (`stale_held`) until a liveness event arrives: re-evaluating its

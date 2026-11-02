@@ -444,6 +444,10 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
         state_source: "signal",
       };
       expect(s.lease("msn_a")).toEqual(bound);
+      // A Mission that expires at T0+30 is relied on until then, never past.
+      await s.commit("msn_x", 1, "active", { expires_at: iso(T0 + 30 * S) });
+      const capped = { ...bound, status_expires_at: iso(T0 + 30 * S) };
+      expect(s.lease("msn_x")).toEqual(capped);
       // Heartbeats every 10 s keep the stream verified live; the lease keeps
       // the observation time and bound the event established.
       for (let t = 15; t <= 55; t += 10) {
@@ -453,6 +457,7 @@ describe("the reference receiver's stream liveness (@spec signals#consumer-behav
         clock.t += 9 * S;
         expect(s.receiver.streamLiveness(iso(clock.t)).verifiedLive).toBe(true);
         expect(s.lease("msn_a")).toEqual(bound);
+        expect(s.lease("msn_x")).toEqual(clock.t < T0 + 30 * S ? capped : undefined);
       }
       clock.t = T0 + 65 * S - 1;
       expect(s.lease("msn_a")).toEqual(bound);
