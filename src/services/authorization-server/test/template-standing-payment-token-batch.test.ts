@@ -682,6 +682,13 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
     await expect(built).rejects.toThrow("budget currency is not USD");
   });
 
+  it("refuses to start with a Dispatch Policy whose budget names USD in lower case, the currency compared exactly (#813, D1143)", async () => {
+    const t = terms("ap-usd-lower");
+    const built = startup("sp-usd-lower", { ...t, budget: { ...t.budget, currency: "usd" } });
+    await expect(built).rejects.toBeInstanceOf(StandingPaymentConfigError);
+    await expect(built).rejects.toThrow("budget currency is not USD");
+  });
+
   it("refuses to start with a Dispatch Policy whose class-named exception for the irreversible class or the consumption bound states no recency ceiling (@spec approval-governance#recency-high-risk, #813)", async () => {
     for (const cls of ["irreversible_action", "consumption_bound"]) {
       const built = startup(

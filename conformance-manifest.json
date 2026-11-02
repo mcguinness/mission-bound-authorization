@@ -47225,7 +47225,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance the budget meters. The guard's necessity is witnessed on the instance's expansion successor, which continues the budget's counter (its budget binding equals the instance's) but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
+   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance the budget meters. The guard's necessity is witnessed on the instance's expansion successor, which continues the budget's counter (its budget binding equals the instance's) but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. D961 ruled the instance question: 'instance' excludes the expansion successor, which was not dispatched, so this row stays partial, non-blocking for the restricted reference enablement (D1143 ruling 3 confirms it, without promotion); the broader child-accounting refusal applies to the successor and is witnessed under metering.capacity-across-missions.child-refused-without-accounting (#1828, D963). D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "metering.aggregate-bounds.refusal-names-counter",
@@ -47965,10 +47965,10 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Decision Evidence and Execution Evidence entry for one counter carries the same counter_id, across instances, successors and restarts"
+    "normative": "every Decision Evidence metering entry for one counter, on a permit or a refusal, carries the same counter_id, across instances (under one or several committed Dispatch Policies), successors and restarts"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -47995,7 +47995,30 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): the standing_consent counter_id is the same on two instances' Decision Evidence, under one policy and under two committed policies, and a successor's entries carry its predecessor's counter_ids; removing the reservation (A1), keying the instance counter by the successor's own id (T8f) and keying the shared counter by policy version (T8g) fail them. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): each counter's committed identifier is the same across a restart (qualifying it by the boot, W9, fails it). Through the executing PEP a completed wire's Execution Evidence carries no metering member while its Decision Evidence names both counters, so no Execution Evidence entry can disagree (W19, artificial: the PEP copies a metering member into Execution Evidence, fails it). The Execution Evidence half is the emitting PEP's conduct, witnessed on the composed path. Partial: the Decision Evidence clauses are witnessed at the PDP; the Execution Evidence clause is the emitting PEP's conduct and rests only on the composed PEP path with an artificial mutant (W19), so it is not credited on this PDP row."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): the standing_consent counter_id is the same on two instances' Decision Evidence, under one policy and under two committed policies, and a successor's entries carry its predecessor's counter_ids; removing the reservation (A1), keying the instance counter by the successor's own id (T8f) and keying the shared counter by policy version (T8g) fail them. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): each counter's committed identifier is the same across a restart (qualifying it by the boot, W9, fails it). D1143 ruling 3 (ledger/813-816-enablement-rows): narrowed to the PDP's Decision Evidence; the Execution Evidence clause is the emitting PEP's conduct and moves, with the W19 note, to metering.metering-evidence.counter-id-stable-pep. Re-proven on current main, each mutant alone with the source restored and the witnesses green after: the successor's refusal reporting its mission counter_id qualified by its own Mission id, the counter itself unchanged, fails the refusal's counter_id equality; keying the instance counter by the successor's own id (T8f) permits the successor on a fresh counter; keying the shared counter by policy id and version (T8g) fails the two-policy witness; keying it by instance fails the two-instance witness; qualifying each reserved counter's id by the claim domain's boot (W9) fails the restart witness. Tested: each Decision Evidence clause is asserted and killed."
+  },
+  {
+   "id": "metering.metering-evidence.counter-id-stable-pep",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "metering-evidence",
+   "text": "A stable identifier of the counter, the same value on every record the counter's decisions and settlements produce.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Execution Evidence carries a metering entry for a counter, the entry's counter_id is the counter_id that counter's Decision Evidence entries carry",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment, so the reference PEP's Execution Evidence carries no metering member: no Execution Evidence entry exists, and the clause is not exercised in the reference."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#816, D830, D1143 ruling 3. Split from metering.metering-evidence.counter-id-stable, whose Decision Evidence clauses the PDP witnesses; this row keeps the same quote and applicability for the Execution Evidence clause, the emitting PEP's conduct. Todo: the reference PEP emits no Execution Evidence metering entry (observation.local). The composed-path test at src/services/mcp-payments/test/budget-exhaustion.test.ts, 'exact budget exhaustion through the executing PEP (@spec metering#aggregate-bounds, #816) > a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while the wire's Decision Evidence carries one entry per counter (@spec metering#metering-evidence, #816, D877)' asserts only that a completed wire's Execution Evidence carries no metering member (W19, artificial: the PEP copies a metering member into Execution Evidence, fails it). An absent entry is never evidence that a counter identifier is stable (D1143), so that test is not cited. The row stays todo until an Operation Profile the reference implements conveys a metered quantity in Execution Evidence."
   },
   {
    "id": "metering.metering-evidence.requested-and-remaining",
@@ -48012,10 +48035,10 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each Decision Evidence metering entry for max_budget carries requested and remaining as {amount, currency}, and Execution Evidence entries carry neither"
+    "normative": "each Decision Evidence metering entry for max_budget, on a permit and on a refusal, carries requested and remaining as {amount, currency}"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -48024,7 +48047,30 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): each Decision Evidence entry, on a permit and on a refusal, carries requested and remaining as {amount, currency}; removing the reservation (A1) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): through the executing PEP a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while its Decision Evidence carries one entry per counter; W19 (artificial: the PEP copies a metering member into Execution Evidence) fails it. That clause is the emitting PEP's conduct, witnessed on the composed path. Partial: the Decision Evidence clauses are witnessed at the PDP; the Execution Evidence clause is the emitting PEP's conduct and rests only on the composed PEP path with an artificial mutant (W19), so it is not credited on this PDP row."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): each Decision Evidence entry, on a permit and on a refusal, carries requested and remaining as {amount, currency}; removing the reservation (A1) fails it. D1143 ruling 3 (ledger/813-816-enablement-rows): narrowed to the PDP's Decision Evidence; the Execution Evidence clause ('absent otherwise') is the emitting PEP's conduct and moves, with the W19 note, to metering.metering-evidence.requested-and-remaining-pep. Re-proven on current main, each mutant alone with the source restored and the witness green after: omitting requested (R1) or remaining (R2) from the emitted entries fails the permit's exact entry comparison; carrying a refusal's requested and remaining as bare amount strings (R3) fails the refusal's exact entry comparison. Tested: each Decision Evidence clause is asserted and killed."
+  },
+  {
+   "id": "metering.metering-evidence.requested-and-remaining-pep",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "metering-evidence",
+   "text": "REQUIRED in Decision Evidence, absent otherwise. The quantity the evaluation sought to consume",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Execution Evidence carries a metering entry, the entry carries neither requested nor remaining",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment, so the reference PEP's Execution Evidence carries no metering member: no Execution Evidence entry exists, and the clause is not exercised in the reference."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#816, D830, D1143 ruling 3. Split from metering.metering-evidence.requested-and-remaining, whose Decision Evidence clauses the PDP witnesses; this row keeps the same quote and applicability for the Execution Evidence clause, the emitting PEP's conduct. Todo: the reference PEP emits no Execution Evidence metering entry (observation.local). The composed-path test at src/services/mcp-payments/test/budget-exhaustion.test.ts, 'exact budget exhaustion through the executing PEP (@spec metering#aggregate-bounds, #816) > a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while the wire's Decision Evidence carries one entry per counter (@spec metering#metering-evidence, #816, D877)' asserts that a completed wire's Execution Evidence carries no metering member at all (W19, artificial, fails it). That absence would also fail a conforming PEP whose entry conveys consumed without requested or remaining, so it does not positively witness this clause and is not cited (D1143). The row stays todo until an Operation Profile the reference implements conveys a metered quantity in Execution Evidence."
   },
   {
    "id": "metering.metering-evidence.reserved-on-permit",
@@ -61884,11 +61930,48 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Dispatch under the exception is admitted only where the ceiling entry's per-payment max_amount, the Dispatch Policy's budget, and the instance's max_budget name one currency, compared exactly; any mismatch refuses the Dispatch with dispatch_prohibited_class"
+    "normative": "the ceiling entry's per-payment max_amount, the Dispatch Policy's budget, and every max_budget (each dispatched instance's and each successor's) name one currency, compared exactly; a Dispatch Policy, Template Ceiling or max_budget naming another currency admits no instance under the exception and no successor",
+    "local": "The reference refuses each mismatch where it is first observable, in the Template's adjudication order, and promises no one error for all of them. (1) The budget: with the capability on, a Dispatch Policy whose budget currency is not exactly USD (EUR, or usd in lower case) refuses AS startup (StandingPaymentConfigError 'budget currency is not USD'), so a running AS holds no such policy and no Dispatch error is observable for one (the D974 ruling 2 precedent). (2) The per-payment bound at consent: a ceiling bounding the payment in another currency is refused invalid_request at the consent route, creating no template. (3) The earlier intersection refusal: a stored ceiling (rewritten at rest after consent) bounding the payment in another currency than the deployment's derivation policy has no intersection with it (differing max_amount currencies never intersect, D446), so the Dispatch is refused out_of_template_ceiling at the double intersection (Adjudication step 5), before the currency check. (4) The later currency check (step 6) answers dispatch_prohibited_class only for a mismatch that survives the intersection: an instance max_budget in another currency, an Intent member outside the Authority Set that step 5 bounds, and a stored ceiling under a derivation policy bounding the payment in that same other currency (a deployment's derivationPolicy with matching authoritySources). (5) A successor whose max_budget differs from its instance's, in currency or amount, is refused invalid_request at /token, opening no deferral. The ceiling check compares with USD and the max_budget check with the budget's currency; they coincide because startup refuses any other budget currency. Every intake refuses a currency that is not three upper-case letters, so exactness is observable only below the intake: the kernel's max_budget and ceiling comparisons refuse usd, and startup refuses a usd budget."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose budget is in a currency other than USD (#813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose budget names USD in lower case, the currency compared exactly (#813, D1143)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a ceiling whose per-payment bound is in a currency other than USD (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment template defects refused at the consent route, creating no template (@spec template#template-consent, #813, D877) > refuses invalid_request a standing-payment consent whose ceiling bounds the payment in a currency other than the budget's, creating no template (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-currency.test.ts",
+     "name": "standing-payment currencies refused in adjudication order at the token endpoint (@spec template#standing-payment-exception, template#dispatch-adjudication, #813, D1143) > refuses out_of_template_ceiling at /token, before the currency check, a Dispatch from a stored ceiling bounding the payment in EUR under the shipped USD derivation policy, creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses dispatch_prohibited_class at /token an instance whose max_budget is in a currency other than the budget's, creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
      "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses an instance whose max_budget is in a currency other than the budget's (#813)",
@@ -61896,10 +61979,10 @@
      "surface": "token-endpoint"
     },
     {
-     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
-     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a ceiling whose per-payment bound is in a currency other than USD (#813)",
-     "level": "unit",
-     "surface": "approval-ceremony"
+     "file": "src/services/authorization-server/test/template-standing-payment-currency.test.ts",
+     "name": "standing-payment currencies refused in adjudication order at the token endpoint (@spec template#standing-payment-exception, template#dispatch-adjudication, #813, D1143) > refuses dispatch_prohibited_class at /token a Dispatch from a stored ceiling bounding the payment in EUR under a derivation policy bounding it in EUR, where the intersection survives to the currency check, creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
@@ -61909,24 +61992,24 @@
     },
     {
      "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment template defects refused at the consent route, creating no template (@spec template#template-consent, #813, D877) > refuses invalid_request a standing-payment consent whose ceiling bounds the payment in a currency other than the budget's, creating no template (#813)",
-     "level": "endpoint",
-     "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose budget is in a currency other than USD (#813)",
-     "level": "unit",
-     "surface": "deployment-documentation"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses dispatch_prohibited_class at /token an instance whose max_budget is in a currency other than the budget's, creating nothing (#813)",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses invalid_request at /token an expansion of a standing-payment instance whose max_budget is raised, in another currency or absent, opening no deferral and creating nothing (@spec metering#capacity-across-missions, #813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment currencies compared exactly (@spec template#standing-payment-exception, #813, D1143) > refuses dispatch_prohibited_class an instance whose max_budget names the budget's currency in lower case, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment currencies compared exactly (@spec template#standing-payment-exception, #813, D1143) > refuses a Template Ceiling whose per-payment bound names USD in lower case, and admits the same ceiling in USD (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance max_budget in EUR against a USD budget is refused dispatch_prohibited_class; a ceiling bounding the payment in EUR is refused at consent and, from a stored ceiling under an EUR derivation policy, at dispatch, committing no instance. Mutations: not checking the max_budget currency fails the first; not checking the ceiling currency fails the consent and dispatch tests; skipping the stored-ceiling re-check fails the dispatch test. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the consent route a ceiling bounding the payment in EUR is refused and no template is created; a Dispatch Policy whose budget is in EUR refuses startup. Mutations: not checking the ceiling currency (21) creates the template; not checking the budget currency (25) lets startup succeed. D961 level review (impl/813-proof-as at 5bd160e1b): the max_budget leg is reachable at /token, the intake admitting any three upper-case letters, so the new witness submits {amount: '100.00', currency: 'EUR'}; MC-cur (kernel/standing-payment.ts maxBudgetRefusal's `if (maxBudget.currency !== terms.budget.currency) { return ...; }` removed) issues a token. Partial: under the shipped derivation policy a stored ceiling bounding the payment in EUR is refused out_of_template_ceiling at /token before the currency re-check (observed: the policy's USD max_amount and the ceiling's EUR one intersect to nothing), so that leg reaches dispatch_prohibited_class only under a derivation policy bounding in the same other currency, as the kernel witness uses; the budget leg is refused at startup, a running AS holding no non-USD budget; and exactness is not observable at /token, the intake refusing any currency that is not three upper-case letters (MC-exact, a case-insensitive comparison, survives the witness)."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance max_budget in EUR against a USD budget is refused dispatch_prohibited_class; a ceiling bounding the payment in EUR is refused at consent and, from a stored ceiling under an EUR derivation policy, at dispatch, committing no instance. Mutations: not checking the max_budget currency fails the first; not checking the ceiling currency fails the consent and dispatch tests; skipping the stored-ceiling re-check fails the dispatch test. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the consent route a ceiling bounding the payment in EUR is refused and no template is created; a Dispatch Policy whose budget is in EUR refuses startup. Mutations: not checking the ceiling currency (21) creates the template; not checking the budget currency (25) lets startup succeed. D961 level review (impl/813-proof-as at 5bd160e1b): the max_budget leg is reachable at /token, the intake admitting any three upper-case letters, so the new witness submits {amount: '100.00', currency: 'EUR'}; MC-cur (kernel/standing-payment.ts maxBudgetRefusal's `if (maxBudget.currency !== terms.budget.currency) { return ...; }` removed) issues a token. D1143 ruling 4, option B (ledger/813-816-enablement-rows): the observation follows the adjudication order and promises no one error for the startup refusal, the earlier intersection refusal and the later currency check (observation.local). New witnesses, each mutation-proven alone with the source restored and the file green after: at /token under the shipped USD derivation policy a stored ceiling bounding the payment in EUR is refused out_of_template_ceiling and creates nothing; M1 (the stored ceiling's standing-payment check moved before the double intersection) answers dispatch_prohibited_class instead, and M1b (minAmount no longer refusing differing currencies) lets the entry survive to the double-intersection invariant, refused 400 invalid_request with no mission_denial_reason; both fail it. At /token under a deployment whose derivation policy and user-delegated source bound the payment in EUR, the same stored ceiling survives the intersection and is refused dispatch_prohibited_class, creating nothing; M2 (assertStandingPaymentCeiling's currency check removed) issues a token whose max_amount is EUR. Below the intake: M3 (maxBudgetRefusal comparing case-insensitively) admits an instance whose max_budget names usd; M4 (assertStandingPaymentCeiling comparing case-insensitively) accepts a usd ceiling; M5 (the budget currency parsed case-insensitively) still refuses startup, but through the Exact-profile check (the statement counts in USD, not the policy's usd), so the startup witness kills it only through its message, 'budget currency is not USD'. The successor witness, already cited under metering rows, witnesses every max_budget: M6 (assertSuccessorMaxBudget's currency comparison removed) opens a deferral for an EUR successor (authorization_pending). The budget leg is credited by its startup refusal, as D974 ruling 2 credits one. MC-exact still survives the /token max_budget witness; the kernel witness kills it. Tested: every clause of the observation is asserted, and each new witness is killed."
   },
   {
    "id": "template.standing-payment.conveys-policy-view",
@@ -62083,7 +62166,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance holding authority admitted under the Standing Payment Exception. The guard's necessity is witnessed on the instance's expansion successor, which carries the budget forward but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance holding authority admitted under the Standing Payment Exception. The guard's necessity is witnessed on the instance's expansion successor, which carries the budget forward but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. D961 ruled the instance question: 'instance' excludes the expansion successor, which was not dispatched, so this row stays partial, non-blocking for the restricted reference enablement (D1143 ruling 3 confirms it, without promotion); the broader child-accounting refusal applies to the successor and is witnessed under metering.capacity-across-missions.child-refused-without-accounting (#1828, D963). D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "template.instance-composition.cross-boundary-derivation-refused",
