@@ -574,9 +574,7 @@ Mission-aware Resource Server:
 Resource AS:
 : An authorization server in another trust domain that honors a
   Mission it did not issue, minting its own tokens for its resources;
-  it is never the Mission Issuer. The companion Mission Cross-Domain
-  Projection profile specifies cross-domain projection
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+  it is never the Mission Issuer.
 
 Mission Intent:
 : The structured description of the task the client submits
@@ -614,9 +612,8 @@ Authority Set derivation:
 Derivation:
 : One issuance operation the issuer AS performs for a single request
   ({{issuance-gating}}): the initial authorization-code exchange, a
-  refresh, a Token Exchange, a cross-domain grant issuance, or the
-  redemption of a profile-defined grant, such as the Template
-  profile's handoff grant.
+  refresh, a Token Exchange, or the redemption of a profile-defined
+  grant.
   Distinct from Authority Set derivation, which some section titles
   and fixed phrases, such as "derivation policy", also call
   derivation.
@@ -720,10 +717,6 @@ document defines no runtime lookup of it.
 
 The record's (`subject.iss`, `subject.sub`) and the token's (AS
 `iss`, `sub`) identify the same Subject in two issuer namespaces.
-Across trust domains, the cross-domain companion conveys Subject
-identity through its own subject-resolution claims, not a Mission
-lookup, and a token minted in another domain preserves the `mission`
-claim unchanged ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 Issuer roles obey two invariants: a Mission has exactly one Mission
 Issuer, its `issuer`, and a Resource AS never creates or alters a
@@ -2095,10 +2088,8 @@ or defined by the profile that uses it.
 
 `issuer`:
 : REQUIRED. A string. The issuer URL of the Mission Issuer that
-  approved the Mission. Equals the `iss` of tokens that AS derives;
-  for cross-domain tokens it remains the issuer AS that approved the
-  Mission even though the issuing `iss` differs
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+  approved the Mission. Equals the `iss` of tokens that AS derives
+  ({{mission-claim}}).
 
 `state`:
 : REQUIRED. A string. The current lifecycle state: `active` or
@@ -2791,10 +2782,7 @@ scope projection ({{scope-projection}}), and the `mission` claim
 
 A derivation is one issuance operation the issuer AS performs for a
 single request: the initial authorization-code exchange, a refresh, a
-Token Exchange, a cross-domain grant issuance
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or the
-redemption of a profile-defined grant, such as the Template profile's
-handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A
+Token Exchange, or the redemption of a profile-defined grant. A
 companion profile bounds the number of derivations under a Mission
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
@@ -3279,10 +3267,7 @@ carry per-entry `constraints`.
 
 A credential the Mission Issuer derives MUST have an `exp` that does
 not exceed the Mission's `expires_at`, so that no credential outlives
-the approved Mission. The cross-domain companion
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies how
-this bound extends transitively to tokens minted in another trust
-domain.
+the approved Mission.
 
 Within that bound, a derived token's lifetime is the AS's policy,
 which {{derived-token-lifetime}} recommends keeping short. Token
@@ -3428,7 +3413,7 @@ The `mission` claim is a JSON object:
   credential's `iss` names the party that minted it; `mission.issuer`
   names the party that approved and serves the Mission, and the two
   differ for tokens minted in another trust domain
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+  ({{mission-claim-reservation}}).
 
 The `id` and `issuer` members identify the Mission and carry no
 authority of their own; the token's own signature authenticates the
@@ -3858,9 +3843,7 @@ actor: the agent's own non-delegated token is depth 0, the first
 delegate is depth 1, and each further delegate adds 1. The depth
 checked against `max_depth` is that of the token being issued,
 computed after appending the new outermost actor, not the depth of
-the delegating token. A credential projected across a trust domain
-carries no `act` chain and enters the target domain at depth 0
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
+the delegating token.
 
 **Depth accounting.** The AS MUST establish delegation depth from
 accounting it maintains for the tokens it issues under the Mission
@@ -3872,10 +3855,9 @@ the source of the count.
 
 Over the exchanges this document defines, the accounting is complete:
 
-- each delegated exchange adds exactly one delegate;
+- each delegated exchange adds exactly one delegate; and
 - a designation ({{designation}}) and a self-exchange
-  ({{self-exchange}}) add none; and
-- a cross-domain projection is the one defined reset.
+  ({{self-exchange}}) add none.
 
 A profile that issues Mission-bound tokens by another path specifies
 how it preserves or reconstructs this accounting and any reset it
@@ -5778,9 +5760,7 @@ exposure by:
 ## Mission Identifier Correlation {#mission-identifier-correlation}
 
 This document carries a single canonical Mission Identifier on every
-derived token, and cross-domain projection
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) carries it across
-trust domains unchanged. Any party that observes credentials for the
+derived token. Any party that observes credentials for the
 same Mission, whether a resource server, a Resource AS, or an auditor
 spanning audiences, can correlate that activity by the Mission
 Identifier, and `mission.issuer` further identifies the issuing AS.
