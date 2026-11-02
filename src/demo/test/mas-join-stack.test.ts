@@ -32,6 +32,13 @@ import { composeStack, type DemoStack } from "../src/stack.js";
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
 const tempReservationsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-reservations-")), "write-reservations.sqlite");
 
+/**
+ * The shared namespace's contract-stating scope value (#249 C.3b): a Mission
+ * approved now carries the current payments contract (D989), so the ordinary
+ * credential is issued under the value whose mapping states it.
+ */
+const PAYMENTS_READ = "payments.read.2026-10-27";
+
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url;
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey;
@@ -105,7 +112,7 @@ d("composed stack: the MAS-governed channel joins an ordinary credential (#557)"
     const res = await fetch(`http://localhost:${AS_PORT}/dev/ordinary-token`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-      body: JSON.stringify({ sub: "alice", client_id: "ap-agent", scope: "payments.read", jkt }),
+      body: JSON.stringify({ sub: "alice", client_id: "ap-agent", scope: PAYMENTS_READ, jkt }),
     });
     expect(res.status, await res.clone().text()).toBe(200);
     credential = ((await res.json()) as { access_token: string }).access_token;
@@ -143,7 +150,7 @@ d("composed stack: the MAS-governed channel joins an ordinary credential (#557)"
       unknown
     >;
     expect(claims.mission).toBeUndefined();
-    expect(claims.scope).toBe("payments.read");
+    expect(claims.scope).toBe(PAYMENTS_READ);
     expect(claims.aud).toBe(MAS_JOIN.join_resource);
   });
 

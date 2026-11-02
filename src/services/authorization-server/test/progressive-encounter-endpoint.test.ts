@@ -52,6 +52,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import {
+  assembledCeilingOffer,
   type EncounterDisclosure,
   type EncounterFacts,
   encounterFacts,
@@ -235,11 +236,14 @@ async function issueMission(): Promise<{ missionId: string; accessToken: string 
   // The page renders only to the Approver's session (#1802), and that rendering is the one the decision names (#1446).
   const decideHeaders = { ...floorApprovalHeaders(approvalSessions, uid, cookieHeader(jar)), "content-type": "application/json" };
   const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
+  // The decision consents the offer as the page rendered it: assembled with
+  // the payments contract reference the configuration requires (#249 C.3b).
+  const rendered = assembledCeilingOffer(CEILING, as.kernel.resourceContracts()) ?? CEILING;
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
     headers: decideHeaders,
-    body: JSON.stringify({ decision: "approve", render_revision, ...CEILING }),
+    body: JSON.stringify({ decision: "approve", render_revision, ...rendered }),
   });
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;

@@ -32,7 +32,7 @@
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import type { Server } from "node:http";
-import { AUTHORITY_SOURCES, CANONICAL_RESOURCE } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, pinnedToCurrentContract } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, UnsecuredJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -63,10 +63,15 @@ const entry = (actions: string[]) => ({
   delegation: DELEGATION,
 });
 const MISSION_ENTRY = entry([LIST, READ]);
+/**
+ * Requests against the grant carry the reference its entries carry: the
+ * payments resource requires one, so a fresh approval records the current
+ * reference in every entry on it (#249 C.3b, D989).
+ */
 /** A subset of the Mission's authority. */
-const NARROWED = [entry([READ])];
+const NARROWED = [pinnedToCurrentContract(entry([READ]))];
 /** Beyond the Mission's authority: an action outside the grant. */
-const WIDENED = [entry([READ, EXECUTE])];
+const WIDENED = [pinnedToCurrentContract(entry([READ, EXECUTE]))];
 const INTENT = { intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP } };
 
 type Client = typeof GOVERNED | typeof DELEGATE | typeof UNGOVERNED;

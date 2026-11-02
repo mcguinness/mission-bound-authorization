@@ -1,5 +1,5 @@
 import { activationPolicyDigest, authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
-import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { DERIVATION_POLICY, pinnedToCurrentContract, TOPOLOGY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { withTransaction } from "@mission/store";
@@ -1175,20 +1175,23 @@ describe("requires_action_approval Common Constraint (@spec txn-authorization#ap
       { ...(granted[0] as AuthorityEntry), constraints: { ...granted[0]?.constraints, requires_action_approval: false } },
     ];
     expect(isSubsetSet(dropped, granted)).toBe(false);
+    // Pinned as the grant is (#249 C.3b, D989), so only the dropped requirement refuses it.
     const omitted: AuthorityEntry[] = [
-      {
+      pinnedToCurrentContract({
         type: "mission_resource_access",
         resource: RESOURCE,
         actions: ["payments:invoice.read"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
+      }),
     ];
     expect(isSubsetSet(omitted, granted)).toBe(false);
   });
 
   it("accepts a candidate that adds the requirement the grant does not carry", () => {
     const parent = approveParent();
-    expect(isSubsetSet(gated(["payments:invoice.read"]), parent.authority_set)).toBe(true);
+    // The candidate carries the reference the grant carries: the payments
+    // resource requires one, so a fresh approval records it (#249 C.3b, D989).
+    expect(isSubsetSet(gated(["payments:invoice.read"]).map((e) => pinnedToCurrentContract(e)), parent.authority_set)).toBe(true);
   });
 
   it("normalizes a child entry beneath a prefix ancestor entry carrying the requirement, through the shared matcher, and leaves a sibling outside the boundary alone (#1440)", () => {

@@ -1385,7 +1385,7 @@ describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14)
     expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
   });
 
-  it("the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest an unpinned entry gets", async () => {
+  it("the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest the current contract's entry gets, while an unpinned entry's execute is refused before any decision", async () => {
     const pinned = harness({ contract: V14_CONTRACT });
     const token = pinnedToken(V14_CONTRACT);
     const committed = await pinned.server.callTransactionTool(COMMIT.tool, commitArgs(), token);
@@ -1397,24 +1397,31 @@ describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14)
     expect(read.ok, JSON.stringify(read)).toBe(true);
     expect(pinned.requests.at(-1)?.resource.properties?.resource_contract).toEqual(V14_CONTRACT);
 
-    // The same execute under an unpinned entry binds the same parameters.
-    const unpinned = harness({ contract: "none" });
-    expect((await unpinned.server.callTransactionTool(COMMIT.tool, commitArgs(), UNPINNED_TOKEN)).ok).toBe(true);
+    // The same execute under an entry pinned to the current contract binds the same parameters.
+    const current = harness({ contract: V16_CONTRACT });
+    expect((await current.server.callTransactionTool(COMMIT.tool, commitArgs(), pinnedToken(V16_CONTRACT))).ok).toBe(true);
     const commitDecision = (h: Harness) =>
       decisions(h).find((d) => d.action.name === "payments:payment.execute" && d.action_phase === "commit");
     expect(commitDecision(pinned)?.decision).toBe("permit");
     expect(commitDecision(pinned)?.parameter_digest).toMatch(/^sha-256:/);
-    expect(commitDecision(pinned)?.parameter_digest).toBe(commitDecision(unpinned)?.parameter_digest);
+    expect(commitDecision(pinned)?.parameter_digest).toBe(commitDecision(current)?.parameter_digest);
+
+    // An unpinned entry, which the shipped configuration refuses for the
+    // execute (#249 C.3b): refused before any decision, with no effect.
+    const unpinned = harness({ contract: "none" });
+    const refused = await unpinned.server.callTransactionTool(COMMIT.tool, commitArgs(), UNPINNED_TOKEN);
+    expect(refused).toEqual({ ok: false, refusal_reason: "resource_contract_unresolvable" });
+    expect(unpinned.requests).toHaveLength(0);
+    expect(unpinned.connectors.committedEffects()).toHaveLength(0);
   });
 
   for (const [mode, contract] of [
     ["pinned to 2026-10-26", V15_CONTRACT],
     ["pinned to 2026-10-27", V16_CONTRACT],
-    ["unpinned", undefined],
   ] as const) {
     it(`an entry ${mode} performs the reversal under the paid vendor's current tenant`, async () => {
-      const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" }, contract: contract ?? "none" });
-      const token = contract ? pinnedToken(contract) : UNPINNED_TOKEN;
+      const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" }, contract });
+      const token = pinnedToken(contract);
       expect((await h.server.callTransactionTool(COMMIT.tool, commitArgs(), token)).ok).toBe(true);
       const wire = ledgerWire(h);
       addVendor(h.payments, "globex", "tenant-b");
@@ -1423,11 +1430,25 @@ describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14)
       expect(done.ok, JSON.stringify(done)).toBe(true);
       const properties = h.requests.at(-1)?.resource.properties;
       expect(properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
-      if (contract) expect(properties?.resource_contract).toEqual(contract);
-      else expect(properties).not.toHaveProperty("resource_contract");
+      expect(properties?.resource_contract).toEqual(contract);
       expect(h.connectors.reversalEntries("msn_773")).toEqual([expect.objectContaining({ reversed_op_key: wire?.op_key })]);
     });
   }
+
+  // #249 C.3b: the shipped configuration requires a reference for the
+  // reversal, so an unpinned entry no longer performs it.
+  it("an unpinned entry is refused the reversal resource_contract_unresolvable before any decision request, with no effect", async () => {
+    const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" }, contract: "none" });
+    const refused = await h.server.callTransactionTool(REVERSE, reverseArgs(), UNPINNED_TOKEN);
+    expect(refused).toEqual({ ok: false, refusal_reason: "resource_contract_unresolvable" });
+    expect(h.requests).toHaveLength(0);
+    expect(refusals(h).at(-1)).toMatchObject({
+      denial_reason: "resource_contract_unresolvable",
+      action: { name: "payments:payment.reverse" },
+    });
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    expect(h.connectors.committedEffects()).toHaveLength(0);
+  });
 });
 
 describe("restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773)", () => {

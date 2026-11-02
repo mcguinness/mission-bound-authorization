@@ -20,7 +20,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { bindSigningKeyRing, initSigningKeyRing, reconcileKernelRecovery } from "@mission/authorization-server";
-import { DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import { currentContractRef, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, type DecisionEvidence, type RefusalRecord } from "@mission/mcp-payments";
 import { type EvaluationRequest, type MissionView, policyViewId, privateKeyJwtClient } from "@mission/pdp";
 import { decodeJwt, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
@@ -30,7 +30,17 @@ import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config
 import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
 import { composeSeparatedMasPilot, type SeparatedMasPilot } from "../src/mas-pilot/separated.js";
-import { admin, call, estateToken, OPENFGA, openfgaReachable, READ_ACTIONS, relocateEstate } from "./mas-pilot-support.js";
+import {
+  admin,
+  call,
+  estateToken,
+  INVOICES_READ,
+  OPENFGA,
+  openfgaReachable,
+  READ_ACTIONS,
+  relocateEstate,
+  VENDORS_READ,
+} from "./mas-pilot-support.js";
 
 /** A kernel store's recovery witness, created before the MAS first starts on it (#250 step 3). */
 function kernelWitnessFor(storeFile: string, witnessFile: string): string {
@@ -49,25 +59,30 @@ const UNENROLLED_ESTATE_PORT = 14847;
 const TIMEOUT_ESTATE_PORT = 14850;
 const DOUBLE_ESTATE_PORT = 14852;
 const EXECUTE = "payments:payment.execute";
+/** The estate scope for the commit-phase witness: it states the current payments contract (#249 C.3b). */
+const EXECUTE_SCOPE = "payments.execute.2026-10-27";
 
 /**
  * The pilot configuration for the separated MAS: the estate at `estatePort`,
  * the Mission issuer moved to the MAS's own URL (wherever the configuration
  * names it), and, for the commit-phase witness, one estate scope that maps to
- * `payments:payment.execute`, which the shipped configuration maps to none.
+ * `payments:payment.execute` under the current payments contract, which the
+ * shipped configuration maps to none.
  */
 function separatedConfig(estatePort: number, timeoutMs?: number): MasPilotConfig {
   const base = relocateEstate(loadMasPilotConfig(), estatePort);
   const moved = JSON.parse(
     JSON.stringify(base).split(JSON.stringify(base.mission_issuer).slice(1, -1)).join(MAS_URL),
-  ) as MasPilotConfig & { mapping_contract: { scopes: { issuers: Record<string, Record<string, string[]>> } } };
+  ) as MasPilotConfig & { mapping_contract: { scopes: { issuers: Record<string, Record<string, unknown>> } } };
   moved.mapping_contract.scopes.issuers[moved.estate.issuer] = {
     ...moved.mapping_contract.scopes.issuers[moved.estate.issuer],
-    "payments.execute": [EXECUTE],
+    [EXECUTE_SCOPE]: { actions: [EXECUTE], resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: [EXECUTE] }) },
   };
-  moved.estate.resource_servers[CANONICAL_RESOURCE] = { scope: "invoices.read vendors.read remit.send payments.execute" };
+  moved.estate.resource_servers[CANONICAL_RESOURCE] = {
+    scope: `${moved.estate.resource_servers[CANONICAL_RESOURCE]?.scope} ${EXECUTE_SCOPE}`,
+  };
   moved.estate.clients = moved.estate.clients.map((c) =>
-    c.client_id === "estate-ap-bot-7f3" ? { ...c, scope: `${c.scope} payments.execute` } : c,
+    c.client_id === "estate-ap-bot-7f3" ? { ...c, scope: `${c.scope} ${EXECUTE_SCOPE}` } : c,
   );
   return {
     ...moved,
@@ -236,7 +251,7 @@ afterAll(async () => {
 d("the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b)", () => {
   it("permits a joined read on the Status view, with Join Disclosure, the MAS's own state version, and a permit capped by the signed fresh_until", async () => {
     const missionId = await approveAtMas("alice", "positive");
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read vendors.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", `${INVOICES_READ} ${VENDORS_READ}`);
     const res = await call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" });
     expect(res.ok, JSON.stringify(res)).toBe(true);
     // Placed with the PDP: the PEP sends no state observation.
@@ -262,7 +277,7 @@ d("the separated MAS pilot: the PDP reads Missions through the MAS's signed Miss
 
   it("denies the action a containment at the MAS removed out_of_authority, the Status view's declared diagnostic, while the uncontained read still permits", async () => {
     const missionId = await approveAtMas("alice", "contained");
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read vendors.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", `${INVOICES_READ} ${VENDORS_READ}`);
     expect((await call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
     await lifecycle(missionId, {
       operation: "contain",
@@ -288,7 +303,7 @@ d("the separated MAS pilot: the PDP reads Missions through the MAS's signed Miss
     // One audience, nothing contained or discharged: the Status view's
     // effective set is the committed set, and its authority_hash proves it.
     const missionId = await approveAtMas("alice", "never-granted", ["payments:invoice.read"]);
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read vendors.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", `${INVOICES_READ} ${VENDORS_READ}`);
     const res = await call(pilot, credential, missionId, "lookup_vendor", { vendor_id: "acme" });
     expect(res).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
     const remediation = (res.insufficient_authorization as { authorization_remediation: string } | undefined)?.authorization_remediation;
@@ -301,7 +316,7 @@ d("the separated MAS pilot: the PDP reads Missions through the MAS's signed Miss
 
   it("observes a revocation at the MAS within the signed bound: relied on until its fresh_until, then mission_inactive", async () => {
     const missionId = await approveAtMas("alice", "revoked");
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
     expect((await call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
     await lifecycle(missionId, { operation: "revoke" });
     // Inside the signed window the earlier observation stands (the declared bound).
@@ -314,7 +329,7 @@ d("the separated MAS pilot: the PDP reads Missions through the MAS's signed Miss
 
   it("refuses the commit crossing of a Mission revoked after its prepare: the commit-phase decision reads the MAS now, and commits nothing", async () => {
     const missionId = await approveAtMas("alice", "commit", [...READ_ACTIONS, EXECUTE]);
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read payments.execute");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", `${INVOICES_READ} ${EXECUTE_SCOPE}`);
     await admin(pilot, "grant", "--iss", pilot.estate.issuer, "--sub", "u-1001", "--relation", "payer", "--vendor", "acme");
     try {
       const prepare = await call(pilot, credential, missionId, "hold_transfer", { invoice_id: "inv-1" });
@@ -351,7 +366,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
     });
     try {
       const missionId = await approveAtMas("alice", "unenrolled");
-      const credential = await estateToken(other, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+      const credential = await estateToken(other, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
       const res = await call(other, credential, missionId, "get_invoice", { invoice_id: "inv-1" });
       expect(res).toMatchObject({ ok: false, denial_reason: "mission_binding_failed" });
       const read = other.resolver.peek({ id: missionId, issuer: MAS_URL });
@@ -379,7 +394,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
     });
     try {
       const missionId = await approveAtMas("alice", "slow");
-      const credential = await estateToken(slow, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+      const credential = await estateToken(slow, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
       const started = Date.now();
       const res = await call(slow, credential, missionId, "get_invoice", { invoice_id: "inv-1" });
       expect(Date.now() - started).toBeLessThan(1500);
@@ -432,7 +447,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
     });
     try {
       const missionId = await approveAtMas("alice", "forged");
-      const credential = await estateToken(forged, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+      const credential = await estateToken(forged, "estate-ap-bot-7f3", "u-1001", INVOICES_READ);
       const res = await call(forged, credential, missionId, "get_invoice", { invoice_id: "inv-1" });
       expect(res).toMatchObject({ ok: false, refusal_reason: "state_unavailable" });
       expect(decisions(forged, missionId)).toEqual([]);
@@ -446,7 +461,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
 d("the separated MAS pilot: the MAS stops and starts (#818 slice 4b)", () => {
   it("with the MAS down, a commit decision denies stale_state and an expired read refuses state_unavailable; restarted with its key ring and store, it reads again", async () => {
     const missionId = await approveAtMas("alice", "stop-start", [...READ_ACTIONS, EXECUTE]);
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read payments.execute");
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", `${INVOICES_READ} ${EXECUTE_SCOPE}`);
     expect((await call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
     await mas.stop();
     try {

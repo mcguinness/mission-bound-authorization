@@ -275,7 +275,13 @@
         "resource": "http://localhost:4403/mcp",
         "resource_match": "prefix",
         "id": "https://payments.example/contracts/payments",
-        "requires_reference": [],
+        "requires_reference": [
+          "payments:payment.schedule",
+          "payments:payment.schedule.cancel",
+          "payments:payment.execute",
+          "payments:payment.reverse",
+          "payments:remittance.send"
+        ],
         "versions": [
           {
             "version": "2026-10-27",

@@ -12,34 +12,34 @@
       {
         "client_id": "estate-ap-bot-7f3",
         "redirect_uri": "https://ap-bot.estate.invalid/cb",
-        "scope": "invoices.read vendors.read remit.send",
+        "scope": "invoices.read vendors.read remit.send invoices.read.2026-10-27 vendors.read.2026-10-27 remit.send.2026-10-27",
         "resources": ["http://localhost:4403/mcp"],
         "token_format": "jwt"
       },
       {
         "client_id": "estate-extractor-2c1",
         "redirect_uri": "https://extractor.estate.invalid/cb",
-        "scope": "invoices.read",
+        "scope": "invoices.read invoices.read.2026-10-27",
         "resources": ["http://localhost:4403/mcp"],
         "token_format": "jwt"
       },
       {
         "client_id": "ap-agent",
         "redirect_uri": "https://ap-agent.estate.invalid/cb",
-        "scope": "invoices.read vendors.read",
+        "scope": "invoices.read vendors.read invoices.read.2026-10-27 vendors.read.2026-10-27",
         "resources": ["http://localhost:4403/mcp"],
         "token_format": "jwt"
       },
       {
         "client_id": "estate-opaque-bot-4e2",
         "redirect_uri": "https://opaque-bot.estate.invalid/cb",
-        "scope": "invoices.read vendors.read remit.send",
+        "scope": "invoices.read vendors.read remit.send invoices.read.2026-10-27 vendors.read.2026-10-27 remit.send.2026-10-27",
         "resources": ["http://localhost:4403/mcp", "https://ledger.estate.invalid/api"],
         "token_format": "opaque"
       }
     ],
     "resource_servers": {
-      "http://localhost:4403/mcp": { "scope": "invoices.read vendors.read remit.send" },
+      "http://localhost:4403/mcp": { "scope": "invoices.read vendors.read remit.send invoices.read.2026-10-27 vendors.read.2026-10-27 remit.send.2026-10-27" },
       "https://ledger.estate.invalid/api": { "scope": "invoices.read" }
     }
   },
@@ -79,8 +79,8 @@
   },
   "mapping_contract": {
     "contract_id": "mas-pilot-identity",
-    "version": 1,
-    "issued_at": "2026-10-19T00:00:00Z",
+    "version": 2,
+    "issued_at": "2026-11-01T00:00:00Z",
     "provenance": {
       "source": "estate-directory-export",
       "export_id": "estate-dir-2026-10-19-001",
@@ -132,7 +132,10 @@
         "http://127.0.0.1:14818": {
           "invoices.read": ["payments:invoice.read", "payments:invoice.list"],
           "vendors.read": ["payments:vendor.read"],
-          "remit.send": ["payments:remittance.send"]
+          "remit.send": ["payments:remittance.send"],
+          "invoices.read.2026-10-27": { "actions": ["payments:invoice.read", "payments:invoice.list"], "resource_contract": { "id": "https://payments.example/contracts/payments", "version": "2026-10-27", "digest": "sha-256:wLsBMvOEFtvnozYZjgIgZyFAh5QuP6eF8y5Dmk_ze8Y" } },
+          "vendors.read.2026-10-27": { "actions": ["payments:vendor.read"], "resource_contract": { "id": "https://payments.example/contracts/payments", "version": "2026-10-27", "digest": "sha-256:wLsBMvOEFtvnozYZjgIgZyFAh5QuP6eF8y5Dmk_ze8Y" } },
+          "remit.send.2026-10-27": { "actions": ["payments:remittance.send"], "resource_contract": { "id": "https://payments.example/contracts/payments", "version": "2026-10-27", "digest": "sha-256:wLsBMvOEFtvnozYZjgIgZyFAh5QuP6eF8y5Dmk_ze8Y" } }
         }
       }
     },

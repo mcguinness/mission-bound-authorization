@@ -281,19 +281,30 @@ versions, each frozen in `vectors/mission-resource-access-subset/`:
   `retained_until`, after which it no longer resolves) or `retired` (it
   resolves for nothing; its digest may be kept). At most one version is
   current.
-- **Optional enforcement.** `requires_reference` is empty: the shipped
-  deployment enforces a reference an entry carries and requires one for no
-  operation, so an approval that committed none keeps working and never
-  gains one. Mandatory adoption is not shipped: listing operations there
-  makes a reference required for them (the Authorization Server then
-  records the current reference at approval, and the PEP refuses an entry
-  without one), and moving the payments deployment to it, with a migration
-  for unpinned approvals, is separate work (#249).
-- **Approval.** The Authorization Server reads the same declaration. A
-  proposed `resource_contract` that is not the current reference for the
-  entry's `resource`, or whose version does not define every action the
-  entry lists, is refused `invalid_authorization_details` at PAR intake and
-  at approval. `authority_hash` commits the reference, derivation and
+- **Required references.** `requires_reference` lists the five non-read
+  actions: `payments:payment.schedule`, `payments:payment.schedule.cancel`,
+  `payments:payment.execute` (its preflight, prepare and commit phases),
+  `payments:payment.reverse` and `payments:remittance.send` (#249). The
+  requirement is per operation: an entry without a reference provides no
+  authority for those five, at the PEP and the PDP, while the three reads
+  need none. An approval that committed no reference never gains one, by
+  refresh, exchange or any derivation: it keeps working for the reads and
+  is refused for the five, and only a new approval of an entry carrying
+  the reference restores them. The cutover's order, and what happens to
+  pending workflows, outstanding credentials and joined credentials, is
+  recorded in `docs/payments-contract-cutover.md`. This is the declaration's
+  configuration, not contract material: no version's document or digest
+  changes, and no operation's decision bytes change.
+- **Approval.** The Authorization Server reads the same declaration.
+  Because the resource requires a reference for some operation, a fresh
+  approval records the current contract's reference in every entry on the
+  resource, read-only entries included, so the Approver approves it with
+  the entry (D989; `assembleResourceContracts`); a requirement no single
+  current contract meets refuses rather than choosing. A proposed
+  `resource_contract` that is not the current reference for the entry's
+  `resource`, or whose version does not define every action the entry
+  lists, is refused `invalid_authorization_details` at PAR intake and at
+  approval. `authority_hash` commits the reference, derivation and
   projection preserve it exactly, and template consent refuses an entry
   carrying one.
 - **Decision request.** The PEP establishes the reference from the presented
@@ -327,6 +338,10 @@ versions, each frozen in `vectors/mission-resource-access-subset/`:
   the Operation Profile version from the challenged entry's reference, which
   must resolve at admission and again at completion, or records the
   resource's current version at admission; never from the entry's `type`.
+  An entry without a reference, for an operation the declaration requires
+  one for, is refused at admission (`invalid_grant`) and, for a workflow
+  admitted before the requirement, at completion (`access_denied`, the
+  workflow left pending); D1071, #1935.
 
 ## Money
 
