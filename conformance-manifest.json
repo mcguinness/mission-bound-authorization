@@ -99708,6 +99708,18 @@
     },
     {
      "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a metadata document that is JSON null, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
+     "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against a metadata document that is a JSON array, sends no request carrying mission_intent and no ordinary device authorization request, and reports the inability",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/device-mission-client.test.ts",
      "name": "the reference device client's discovery (@spec device-authorization#discovery, #1202) > against an AS advertising both members and naming the endpoint the client uses, sends one device authorization request carrying mission_intent",
      "level": "endpoint",
      "surface": "device-authorization-endpoint"
@@ -99719,7 +99731,7 @@
      "surface": "device-authorization-endpoint"
     }
    ],
-   "notes": "#1202: the reference client (demo/src/device-mission-client.ts) reads metadata at the configured issuer, refuses it unless its issuer equals that issuer, and sends a device authorization request only when both support members are the boolean true and the metadata names the device_authorization_endpoint the client is configured to use. Witnessed against stub authorization servers that record every request, since the reference AS never serves the refused metadata: device-grant metadata alone, either support member alone, a non-boolean member, another endpoint, no endpoint and another issuer each leave the metadata read as the only request; the control, with both members and the configured endpoint, sends one request carrying mission_intent. The reference AS's default assembly, which leaves the profile off, gets no device request and creates no Mission. Proved by dropping each of the two member checks, the endpoint match and the issuer check: a stub then receives the request."
+   "notes": "#1202: the reference client (demo/src/device-mission-client.ts) reads metadata at the configured issuer, refuses it unless its issuer equals that issuer, and sends a device authorization request only when both support members are the boolean true and the metadata names the device_authorization_endpoint the client is configured to use. Witnessed against stub authorization servers that record every request, since the reference AS never serves the refused metadata: device-grant metadata alone, either support member alone, a non-boolean member, another endpoint, no endpoint, another issuer and a document that is not a JSON object each leave the metadata read as the only request; the control, with both members and the configured endpoint, sends one request carrying mission_intent. The reference AS's default assembly, which leaves the profile off, gets no device request and creates no Mission. Proved by dropping each of the two member checks, the endpoint match and the issuer check: a stub then receives the request. Without the JSON-object check, a null document throws instead of reporting unsupported."
   },
   {
    "id": "device-authorization.discovery.no-ordinary-fallback",
@@ -100452,7 +100464,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1202: this deployment's one choice is to let the Mission run to its expires_at, never revoking it for an unredeemed device_code, as it does for an unredeemed authorization code; docs/provider-integration-port.md, section 3.4, documents it. The surface is Mission Status, since an unredeemed session issued no token to introspect. The witness lapses two approved sessions' device codes: each poll answers expired_token and Mission Status reports both Missions active; after the shorter Mission's expires_at it reports terminated with reason expired, and the other stays active. The choice is the absence of a revocation, so there is no guard to remove."
+   "notes": "#1202: this deployment's one choice is to let the Mission run to its expires_at, never revoking it for an unredeemed device_code, as it does for an unredeemed authorization code; docs/provider-integration-port.md, section 3.4, documents it. The surface is Mission Status, since an unredeemed session issued no token to introspect. The witness lapses two approved sessions' device codes: each poll answers expired_token and Mission Status reports both Missions active; with the kernel's clock advanced past the shorter Mission's expires_at, it reports that Mission terminated with reason expired, and the other stays active. The choice is the absence of a revocation, so there is no guard to remove."
   },
   {
    "id": "device-authorization.issuance.mission-id-required",
