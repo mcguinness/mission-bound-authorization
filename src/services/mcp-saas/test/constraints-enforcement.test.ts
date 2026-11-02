@@ -29,6 +29,7 @@ import {
 import { ResourceAuthorizationServer } from "@mission/ras";
 import { SAAS_ENFORCED_CONSTRAINTS, SAAS_RESOURCE, SaasMcpServer } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
@@ -104,7 +105,7 @@ async function pipelineToken(authority: AuthorityEntry[]): Promise<string> {
       JSON.stringify({
         goal: "Post journal entries to LedgerCloud",
         target_resources: [SAAS_RESOURCE],
-        expires_at: "2027-01-01T00:00:00Z",
+        expires_at: FIXTURE_EXPIRES_AT,
       }),
     ),
     proposedAuthority: authority,
