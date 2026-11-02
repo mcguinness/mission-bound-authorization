@@ -313,10 +313,12 @@ export {
 export {
   DEFAULT_MAX_EVIDENCE_ENTRIES,
   DEFAULT_MAX_EVIDENCE_ENTRY_BYTES,
+  DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK,
   INTENT_SUBMISSION_EVIDENCE_TYPES,
   IntentError,
   type IntentSubmissionEvidenceType,
   type IntentSubmissionEvidenceVerifyInput,
+  type IntentSubmissionEvidenceWork,
   type IntentSubmissionPresenter,
   provisionalIntentHash,
   registerIntentSubmissionEvidenceType,
@@ -1252,6 +1254,14 @@ export async function buildAuthorizationServer(opts: {
    */
   requiredIntentEvidenceTypes?: string[];
   /**
+   * @spec submission-evidence#verification-bounds (#1962) — the verification
+   * work one submission's evidence may impose, in units of one signature
+   * verification or a step of like cost; past it the submission is refused
+   * `invalid_request` before the excess work is done. Absent: 16
+   * (`DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK`).
+   */
+  submissionEvidenceVerificationWork?: number;
+  /**
    * @spec txn-authorization#challenge-redemption — the
    * transaction_authorization_endpoint's deployment configuration. The
    * transaction-token signing key is this AS's own per-purpose as-txn key and
@@ -1875,6 +1885,9 @@ export async function buildAuthorizationServer(opts: {
     // retained; a derived record inherits instead.
     entryAudiences: (entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry),
     policy: (opts.derivationPolicy ?? DERIVATION_POLICY) as never,
+    ...(opts.submissionEvidenceVerificationWork !== undefined
+      ? { submissionEvidenceVerificationWork: opts.submissionEvidenceVerificationWork }
+      : {}),
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;
     // the file-backed single-writer store is the declared opt-in.
     ...(opts.kernelStore?.file ? { store: { file: opts.kernelStore.file } } : {}),

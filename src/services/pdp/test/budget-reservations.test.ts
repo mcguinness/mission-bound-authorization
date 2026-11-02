@@ -141,7 +141,16 @@ async function executionRecord(
   evaluationId: string,
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
-  o: { error?: string | null; signer?: CryptoKeyLike; kid?: string; missionId?: string; audience?: string; emitterId?: string } = {},
+  o: {
+    error?: string | null;
+    signer?: CryptoKeyLike;
+    kid?: string;
+    missionId?: string;
+    audience?: string;
+    emitterId?: string;
+    /** Further members, such as `metering` or `measured_duration`, signed with the rest. */
+    members?: Record<string, unknown>;
+  } = {},
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
@@ -153,6 +162,7 @@ async function executionRecord(
     sequence: 1,
     emitter: { id: o.emitterId ?? RESOURCE, role: outcome === "completed" ? "executor" : "pep" },
     ...(outcome === "suppressed" ? { error: o.error ?? "kill_switch" } : o.error !== undefined ? { error: o.error } : {}),
+    ...(o.members ?? {}),
   };
   const evidence_envelope = await signEvidenceEnvelope(content, EXECUTION_EVIDENCE_MEDIA_TYPE, {
     kid: o.kid ?? "pep-exec-816",
@@ -226,15 +236,56 @@ function domainOnFile(
 function claimRowOf(
   file: string,
   evaluationId: string,
-): { state: string; execution_id: string | null; outcome: string | null; error: string | null; decision_json: string | null } | undefined {
+): ClaimRowRead | undefined {
   const db = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
   try {
     return db
-      .prepare("SELECT state, execution_id, outcome, error, decision_json FROM claims WHERE evaluation_id = ?")
-      .get(evaluationId) as { state: string; execution_id: string | null; outcome: string | null; error: string | null; decision_json: string | null } | undefined;
+      .prepare("SELECT state, execution_id, outcome, error, measures, decision_json FROM claims WHERE evaluation_id = ?")
+      .get(evaluationId) as ClaimRowRead | undefined;
   } finally {
     db.close();
   }
+}
+
+interface ClaimRowRead {
+  state: string;
+  execution_id: string | null;
+  outcome: string | null;
+  error: string | null;
+  measures: string | null;
+  decision_json: string | null;
+}
+
+/**
+ * Return a claim file to its shape before the measures column (#816,
+ * D1143): drop the claims column and rebuild the conflict table in its
+ * earlier shape, keeping its rows and their `seq`. The caller sets the
+ * schema version.
+ */
+function toSchemaBeforeMeasures(raw: ReturnType<typeof openDurableStore>): void {
+  raw.exec(`ALTER TABLE claims DROP COLUMN measures;
+    CREATE TABLE settlement_conflicts_prior (
+      seq INTEGER PRIMARY KEY AUTOINCREMENT,
+      evaluation_id TEXT NOT NULL,
+      execution_id TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      error TEXT NOT NULL,
+      applied_execution_id TEXT NOT NULL,
+      applied_outcome TEXT NOT NULL,
+      record_json TEXT NOT NULL,
+      received_at_ms INTEGER NOT NULL,
+      UNIQUE (evaluation_id, execution_id, outcome, error)
+    ) STRICT;
+    INSERT INTO settlement_conflicts_prior
+      SELECT seq, evaluation_id, execution_id, outcome, error, applied_execution_id, applied_outcome, record_json, received_at_ms
+      FROM settlement_conflicts;
+    DROP TABLE settlement_conflicts;
+    ALTER TABLE settlement_conflicts_prior RENAME TO settlement_conflicts;`);
+}
+
+/** An Execution Evidence `metering` entry committing `amount` on `counterId` (@spec metering#metering-evidence). */
+function consumedEntry(counterId: string, amount: string): Record<string, unknown> {
+  return { bound: "max_budget", counter_scope: "standing_consent", counter_id: counterId, consumed: { amount, currency: "USD" } };
 }
 
 /** Row counts straight from the file, after the domain released it. */
@@ -2066,6 +2117,198 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       expect(claimRowOf(file, a)).toMatchObject({ state: "failed", outcome: "failed", error: null });
       expect(claimRowOf(file, b)).toMatchObject({ state: "completed", outcome: "completed", error: null });
     });
+
+    it("the applied suppressed record redelivered with a metering entry added, its attempt, outcome and error unchanged and the whole re-signed, is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement, its measures and both counters are unchanged (@spec metering#settlement-contract, #816, D1143)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const first = await executionRecord(a, "suppressed", executionId, { error: "kill_switch" });
+      expect(await claims.settle(REQUESTER, first, () => executionId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      // The owner's probe (D1143): the first record's content plus one metering entry, signed again by the same PEP key.
+      const firstContent = Object.fromEntries(Object.entries(first).filter(([member]) => member !== "evidence_envelope"));
+      const changedContent = {
+        ...firstContent,
+        metering: [{ bound: "max_budget", counter_scope: "mission", counter_id: "review-counter", consumed: { amount: "300.00", currency: "USD" } }],
+      };
+      const changed = {
+        ...changedContent,
+        evidence_envelope: await signEvidenceEnvelope(changedContent, EXECUTION_EVIDENCE_MEDIA_TYPE, { kid: "pep-exec-816", key: executionKey.privateKey }),
+      };
+      expect(changed).toMatchObject({ execution_id: executionId, outcome: "suppressed", error: "kill_switch" });
+      // The changed record, delivered twice: retained and alarmed once, never the duplicate.
+      for (const record of [changed, changed]) {
+        expect(await claims.settle(REQUESTER, record, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      }
+      expect(claims.settlementConflicts(a)).toEqual([
+        { execution_id: executionId, outcome: "suppressed", applied_execution_id: executionId, applied_outcome: "suppressed", record: changed },
+      ]);
+      expect(conflicts).toEqual([
+        expect.objectContaining({ evaluation_id: a, execution_id: executionId, outcome: "suppressed", applied_execution_id: executionId, applied_outcome: "suppressed" }),
+      ]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", execution_id: executionId, outcome: "suppressed", error: "kill_switch", measures: "{}" });
+    });
+
+    it("records of the applied completed attempt that differ from it only in their metering entries, another consumed amount or no metering at all, are each a conflict retained and alarmed once, a redelivery of any retains and alarms nothing new, and the applied settlement, its measures and both counters are unchanged (@spec metering#settlement-contract, #816, D1143)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const entries = (amount: string) => [consumedEntry(SHARED, amount), consumedEntry(instanceCounter("msn_a"), amount)];
+      const applied = await executionRecord(a, "completed", executionId, { members: { metering: entries("300.00") } });
+      expect(await claims.settle(REQUESTER, applied)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      const lower = await executionRecord(a, "completed", executionId, { members: { metering: entries("250.00") } });
+      const higher = await executionRecord(a, "completed", executionId, { members: { metering: entries("350.00") } });
+      const none = await executionRecord(a, "completed", executionId);
+      expect(none).not.toHaveProperty("metering");
+      for (const record of [lower, higher, none, lower, higher, none]) {
+        expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: false, reason: "already_settled" });
+      }
+      expect(claims.settlementConflicts(a)).toEqual(
+        [lower, higher, none].map((record) => ({ execution_id: executionId, outcome: "completed", applied_execution_id: executionId, applied_outcome: "completed", record })),
+      );
+      expect(conflicts).toEqual(
+        [lower, higher, none].map(() =>
+          expect.objectContaining({ evaluation_id: a, execution_id: executionId, outcome: "completed", applied_execution_id: executionId, applied_outcome: "completed" }),
+        ),
+      );
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+      const row = claimRowOf(file, a);
+      expect(row).toMatchObject({ state: "completed", execution_id: executionId, outcome: "completed", error: null });
+      expect(JSON.parse(String(row?.measures))).toEqual({ metering: entries("300.00") });
+    });
+
+    it("records of the applied failed attempt that differ from it only in their measured_duration, another duration or none, are each a conflict retained and alarmed once, while the record redelivered with its own duration is the duplicate, and the held reservations and both counters are unchanged (@spec metering#settlement-contract, #816, D1143)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const redeemer = () => executionId;
+      const applied = await executionRecord(a, "failed", executionId, { members: { measured_duration: "PT30S" } });
+      expect(await claims.settle(REQUESTER, applied, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(await claims.settle(REQUESTER, applied, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: true });
+      const longer = await executionRecord(a, "failed", executionId, { members: { measured_duration: "PT45S" } });
+      const none = await executionRecord(a, "failed", executionId);
+      for (const record of [longer, none, longer, none]) {
+        expect(await claims.settle(REQUESTER, record, redeemer)).toEqual({ accepted: false, reason: "already_settled" });
+      }
+      expect(claims.settlementConflicts(a).map((r) => r.record)).toEqual([longer, none]);
+      expect(conflicts).toEqual([
+        expect.objectContaining({ evaluation_id: a, execution_id: executionId, outcome: "failed", applied_outcome: "failed" }),
+        expect.objectContaining({ evaluation_id: a, execution_id: executionId, outcome: "failed", applied_outcome: "failed" }),
+      ]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "0.00" } });
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", execution_id: executionId, outcome: "failed", measures: '{"measured_duration":"PT30S"}' });
+    });
+
+    it("a redelivery identical to the applied record in its attempt, outcome, error and metering entries is acknowledged as the duplicate and retains and alarms nothing: with entries, with each entry's members in another order under the same signature, and with no metering or measured_duration at all or both sent as null (@spec metering#settlement-contract, #816, D1143)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const b = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "200.00" });
+      const metering = [consumedEntry(SHARED, "300.00"), consumedEntry(instanceCounter("msn_a"), "300.00")];
+      const withEntries = await executionRecord(a, "completed", `exe_${randomUUID()}`, { members: { metering } });
+      expect(await claims.settle(REQUESTER, withEntries)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(await claims.settle(REQUESTER, withEntries)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      // The same signed content with each entry's members in reverse order: its canonical bytes, so its signature, are unchanged.
+      const reordered = { ...withEntries, metering: metering.map((e) => Object.fromEntries(Object.entries(e).reverse())) };
+      expect(JSON.stringify(reordered.metering)).not.toBe(JSON.stringify(withEntries.metering));
+      expect(await verifyEvidenceEnvelope(reordered, EXECUTION_EVIDENCE_MEDIA_TYPE, settlementKeys)).toEqual({ valid: true });
+      expect(await claims.settle(REQUESTER, reordered)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      const withNone = await executionRecord(b, "completed", `exe_${randomUUID()}`);
+      expect(withNone).not.toHaveProperty("metering");
+      expect(withNone).not.toHaveProperty("measured_duration");
+      expect(await claims.settle(REQUESTER, withNone)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(await claims.settle(REQUESTER, withNone)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      const withNulls = await executionRecord(b, "completed", String(withNone.execution_id), { members: { metering: null, measured_duration: null } });
+      expect(withNulls).toMatchObject({ metering: null, measured_duration: null });
+      expect(await claims.settle(REQUESTER, withNulls)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      expect(claims.settlementConflicts(a)).toEqual([]);
+      expect(claims.settlementConflicts(b)).toEqual([]);
+      expect(conflicts).toEqual([]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "500.00" } });
+      claims.close();
+      expect(JSON.parse(String(claimRowOf(file, a)?.measures))).toEqual({ metering });
+      expect(claimRowOf(file, b)).toMatchObject({ state: "completed", measures: "{}" });
+    });
+
+    it("on a claim file from before the measures column, a claim settled there acknowledges no redelivery as its duplicate: its applied record redelivered unchanged is refused already_settled, retained and alarmed once, and again retains and alarms nothing new, with the applied settlement and both counters unchanged; a conflict retained there takes its record's measures at the upgrade, so its redelivery retains and alarms nothing new; and a claim settled after the upgrade acknowledges its redelivery as the duplicate (@spec metering#settlement-contract, #816, D1143)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      let claims = open();
+      // a settles completed; b settles completed and then meets a conflicting completed record carrying a metering entry.
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const appliedA = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, appliedA)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      const b = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "200.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(b, "completed"))).accepted).toBe(true);
+      const conflictB = await executionRecord(b, "completed", `exe_${randomUUID()}`, { members: { metering: [consumedEntry(SHARED, "200.00")] } });
+      expect(await claims.settle(REQUESTER, conflictB)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+      // The file as a build before the column left it: the previous schema version, no measures on either table.
+      const raw = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
+      try {
+        toSchemaBeforeMeasures(raw);
+        raw.pragma(`user_version = ${CLAIM_SCHEMA_VERSION - 1}`);
+      } finally {
+        raw.close();
+      }
+      claims = open();
+      const db = (claims as unknown as { db: Database }).db;
+      expect(db.pragma("user_version", { simple: true })).toBe(CLAIM_SCHEMA_VERSION);
+      expect(db.prepare("SELECT evaluation_id, measures FROM claims ORDER BY claimed_at_ms").all()).toEqual([
+        { evaluation_id: a, measures: null },
+        { evaluation_id: b, measures: null },
+      ]);
+      const retained = db.prepare("SELECT evaluation_id, measures FROM settlement_conflicts").all() as Array<{ evaluation_id: string; measures: string }>;
+      expect(retained.map((r) => ({ evaluation_id: r.evaluation_id, measures: JSON.parse(r.measures) as unknown }))).toEqual([
+        { evaluation_id: b, measures: { metering: [consumedEntry(SHARED, "200.00")] } },
+      ]);
+      // a: its applied record redelivered unchanged is not the duplicate, since what that record carried was never recorded.
+      for (const record of [appliedA, appliedA]) {
+        expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: false, reason: "already_settled" });
+      }
+      expect(claims.settlementConflicts(a)).toEqual([
+        { execution_id: appliedA.execution_id, outcome: "completed", applied_execution_id: appliedA.execution_id, applied_outcome: "completed", record: appliedA },
+      ]);
+      // b: the conflict retained before the upgrade is the same retained record.
+      expect(await claims.settle(REQUESTER, conflictB)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.settlementConflicts(b).map((r) => r.record)).toEqual([conflictB]);
+      expect(conflicts).toEqual([
+        expect.objectContaining({ evaluation_id: b, execution_id: conflictB.execution_id, outcome: "completed" }),
+        expect.objectContaining({ evaluation_id: a, execution_id: appliedA.execution_id, outcome: "completed", applied_execution_id: appliedA.execution_id }),
+      ]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "500.00" } });
+      // A claim settled after the upgrade records its measures, and its redelivery is the duplicate.
+      const d = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "100.00" });
+      const appliedD = await executionRecord(d, "completed");
+      expect(await claims.settle(REQUESTER, appliedD)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(await claims.settle(REQUESTER, appliedD)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      expect(conflicts).toHaveLength(2);
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", execution_id: appliedA.execution_id, outcome: "completed", measures: null });
+      expect(claimRowOf(file, d)).toMatchObject({ state: "completed", measures: "{}" });
+    });
   });
 
   describe("a metered claim is retained while its Mission can present it (@spec metering#retry)", () => {
@@ -2878,9 +3121,11 @@ describe("settlement binds the record's audience to the settled permit's boundar
     // The file as a build before the column left it: the previous schema version, no audience column, and d's claim row gone.
     const raw = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
     try {
+      // The measures column (D1143) came after the boundary column: undo it first.
+      toSchemaBeforeMeasures(raw);
       raw.exec("ALTER TABLE claims DROP COLUMN audience");
       raw.prepare("DELETE FROM claims WHERE evaluation_id = ?").run(d);
-      raw.pragma(`user_version = ${CLAIM_SCHEMA_VERSION - 1}`);
+      raw.pragma(`user_version = ${CLAIM_SCHEMA_VERSION - 2}`);
     } finally {
       raw.close();
     }
