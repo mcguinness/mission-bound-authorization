@@ -10442,111 +10442,94 @@ resolve before interoperating.<a href="#appendix-D-36" class="pilcrow">¶</a></p
 <p id="appendix-E-3"><strong>Behavior changes</strong><a href="#appendix-E-3" class="pilcrow">¶</a></p>
 <ul class="compact">
 <li class="compact" id="appendix-E-4.1">
-          <p id="appendix-E-4.1.1">The legacy Mission-state reading is removed, with no compatibility
-window: <code>revoked</code>, <code>expired</code>, <code>completed</code>, <code>superseded</code>, and
-<code>cascaded</code> are no longer read as a <code>state</code> (#1504).<a href="#appendix-E-4.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.1.1">The legacy Mission-state reading is removed: <code>revoked</code>, <code>expired</code>,
+<code>completed</code>, <code>superseded</code>, and <code>cascaded</code> are no longer read as a
+<code>state</code> (#1504).<a href="#appendix-E-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.2">
-          <p id="appendix-E-4.2.1">Intentional normative relaxation: the standing-consent requirements
-of -01 (<code>approved_at</code>, <code>policy</code> adjudication, Activation Policy
-Commitment, and Standing-Consent Recency) move to Approval
-Governance, which stays informative and which the companion profiles
-defining standing-consent bases adopt. Mission-Creating Paths
-requires only that such a profile specify its basis type and
-activation semantics, and that the activating issuer record the
-activation members (#1915, #1967).<a href="#appendix-E-4.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.2.1">An intentional normative relaxation: the -01 standing-consent
+requirements (<code>approved_at</code>, <code>policy</code> adjudication, Activation Policy
+Commitment, Standing-Consent Recency) move to Approval Governance,
+which the profiles defining standing-consent bases adopt;
+Mission-Creating Paths keeps the basis type, activation semantics
+and recorded activation members (#1915, #1967).<a href="#appendix-E-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.3">
-          <p id="appendix-E-4.3.1">The Mission Record names its required members, <code>policy_version</code>
-and, for <code>direct</code>, the activation members become optional, and the
-integrity anchors are implied, an omitted one computed from the
-retained record (#1912, #1917).<a href="#appendix-E-4.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.3.1">Mission Record: its required members are named, <code>policy_version</code>
+and the <code>direct</code> activation members become optional, and an omitted
+integrity anchor is implied from the retained record (#1912, #1917).<a href="#appendix-E-4.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.4">
-          <p id="appendix-E-4.4.1">Approval: <code>approval_event_id</code> is allocated by the AS, never from a
-reusable client value (#1915); a direct approval whose commit finds
-the effective expiry passed is refused with <code>access_denied</code> (#1721);
-and the rendering attributes client-supplied text to the client
-(#1532).<a href="#appendix-E-4.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.4.1">Approval: the AS allocates <code>approval_event_id</code> (#1915); a commit past
+the effective expiry is refused with <code>access_denied</code> (#1721); the
+rendering attributes client text to the client (#1532).<a href="#appendix-E-4.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.5">
-          <p id="appendix-E-4.5.1">Issuance: a Mission-governed resource gets no token outside a
-Mission on any grant type, and a token carries only the entries whose
-original approved audience includes its audience, each refused with
-<code>invalid_target</code> (#1503). Declared Transformation Capabilities gain
-precedence and validation rules (#1377, #1720), and <code>mission_id</code> and
-<code>mission_expires_at</code> are required on the response that first
-delivers a new Mission and on a delegated exchange response (#1719).<a href="#appendix-E-4.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.5.1">Issuance: no token outside a Mission for a Mission-governed resource,
+and only entries whose approved audience includes the token's, each
+refused with <code>invalid_target</code> (#1503); transformation-capability
+precedence and validation (#1377, #1720); <code>mission_id</code> and
+<code>mission_expires_at</code> on a new Mission's first response and on a
+delegated exchange response (#1719).<a href="#appendix-E-4.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.6">
-          <p id="appendix-E-4.6.1">Delegation: a delegated exchange requires client authentication by a
-method the AS relies on, refusing every other client with
-<code>invalid_client</code> and an <code>actor_token</code> from an authenticated client
-with <code>invalid_request</code> (#1718); a delegated token goes only to a
-Mission-aware resource server that processes <code>act</code> (#1503). An AS
-that does not support self-exchange refuses it with
-<code>unsupported_grant_type</code> or <code>invalid_request</code> (#1892).<a href="#appendix-E-4.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.6.1">Delegation: client authentication by a method the AS relies on,
+refusing others with <code>invalid_client</code> and an <code>actor_token</code> from an
+authenticated client with <code>invalid_request</code> (#1718); delegated tokens
+only to resource servers that process <code>act</code> (#1503); unsupported
+self-exchange refused (#1892).<a href="#appendix-E-4.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.7">
-          <p id="appendix-E-4.7.1">Token consumption: the <code>mission</code> claim is reserved for issuance
-under a Mission-binding profile; a JWT access token is validated
-under RFC 9068 unless a companion profile defines its format
-(#1760); and a resource server refuses an entry it cannot enforce
-only with <code>insufficient_scope</code> or the RAR remediation challenge
-(#1721).<a href="#appendix-E-4.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.7.1">Token consumption: the <code>mission</code> claim is reserved to Mission-binding
+profiles; a JWT access token follows RFC 9068 unless a profile
+defines its format (#1760); an unenforceable entry is refused only
+with <code>insufficient_scope</code> or the RAR remediation challenge (#1721).<a href="#appendix-E-4.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.8">
-          <p id="appendix-E-4.8.1">Revocation: the Mission Issuer accepts a revocation by <code>mission_id</code>,
-from a party the deployment's policy authorizes, through an
-authenticated means independent of possession of any token, and
-should terminate a Mission whose recorded Subject it establishes as
-deprovisioned (#830, #1892, #1895).<a href="#appendix-E-4.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-E-4.8.1">Revocation: by <code>mission_id</code>, from a party the deployment's policy
+authorizes, independent of possession of any token; a Mission whose
+recorded Subject is deprovisioned should be terminated (#830, #1892,
+#1895).<a href="#appendix-E-4.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="appendix-E-5"><strong>Moved out.</strong> The Mapping Assessment, Role Mapping, and Derivation
-Policy appendices and other material on the family rather than the
-protocol move to the Architecture, the security analysis to the
-Mission Security Model, and the mechanics a companion profile defines
-to that profile (#1794, #1892, #2009).<a href="#appendix-E-5" class="pilcrow">¶</a></p>
-<p id="appendix-E-6"><strong>Editorial and structure.</strong> The sections follow processing order,
-with Mission Creation, Mission-Bound Token Issuance, Delegation Within
-a Mission, Token Consumption, and Mission Lifecycle as chapters, and
-procedures open Issuance Gating and Preparing the Approval. Text that
-restated a rule stated elsewhere becomes a pointer, and rules already
-stated as obligations carry BCP 14 keywords, with no new requirement
-(#1723, #1793, #1892). Applicability states the baseline an
-implementation needs and provides, and companion pointers remain only
-where they explain the hook they sit at (#2009).<a href="#appendix-E-6" class="pilcrow">¶</a></p>
-<p id="appendix-E-7"><strong>References.</strong> RFC 9110 is added as normative, and the AAuth
-protocol as informative. FAPI Grant Management, the Cedar RAR draft,
-SPIFFE client authentication, Transaction Tokens, GNAP, the Attenuating
-Agent Tokens draft, RFC 8628, RFC 8935, and the Audit, Capability
-Binding, Child Delegation, Consent Evidence, Containment,
+<p id="appendix-E-5"><strong>Structure.</strong> Sections follow processing order, with Mission
+Creation, Mission-Bound Token Issuance, Delegation Within a Mission,
+Token Consumption, and Mission Lifecycle as chapters (#1723, #1793).
+Applicability states the baseline. Restated rules become pointers, and
+existing obligations carry BCP 14 keywords, with no new requirement
+(#1892). Family material moves to the Architecture, the security
+analysis to the Mission Security Model, and companion mechanics to
+their profiles; companion pointers remain only at the hooks they
+explain (#1794, #2009).<a href="#appendix-E-5" class="pilcrow">¶</a></p>
+<p id="appendix-E-6"><strong>References.</strong> RFC 9110 is added as normative and the AAuth protocol
+as informative. No longer cited: FAPI Grant Management, the Cedar RAR
+draft, SPIFFE client authentication, Transaction Tokens, GNAP, the
+Attenuating Agent Tokens draft, RFC 8628, RFC 8935, and the Audit,
+Capability Binding, Child Delegation, Consent Evidence, Containment,
 Continuation, Cross-Organizational Delegation, Derivation Limits,
 Device Authorization, Expansion, Management, Mission Authority Server,
-Progressive, Signals, Template, and Work Products companions are no
-longer cited.<a href="#appendix-E-7" class="pilcrow">¶</a></p>
-<p id="appendix-E-8">-01<a href="#appendix-E-8" class="pilcrow">¶</a></p>
-<p id="appendix-E-9"><strong>Breaking wire changes</strong><a href="#appendix-E-9" class="pilcrow">¶</a></p>
+Progressive, Signals, Template, and Work Products companions.<a href="#appendix-E-6" class="pilcrow">¶</a></p>
+<p id="appendix-E-7">-01<a href="#appendix-E-7" class="pilcrow">¶</a></p>
+<p id="appendix-E-8"><strong>Breaking wire changes</strong><a href="#appendix-E-8" class="pilcrow">¶</a></p>
 <ul class="compact">
-<li class="compact" id="appendix-E-10.1">
-          <p id="appendix-E-10.1.1"><code>mission_intent</code> carries the Mission Intent Submission envelope,
+<li class="compact" id="appendix-E-9.1">
+          <p id="appendix-E-9.1.1"><code>mission_intent</code> carries the Mission Intent Submission envelope,
 <code>intent</code> plus an optional typed <code>evidence</code> array; a bare Intent is
 refused, and unsupported, invalid, or missing required evidence is
 refused with the new <code>invalid_mission_intent_evidence</code> error code.
 PAR carries it on the authorization-code path; other grants need a
 companion (#1202). The authority proposal moves from the removed
 Intent member <code>proposed_authority</code> to the <code>authorization_details</code>
-parameter, committed by the new <code>proposal_hash</code>.<a href="#appendix-E-10.1.1" class="pilcrow">¶</a></p>
+parameter, committed by the new <code>proposal_hash</code>.<a href="#appendix-E-9.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.2">
-          <p id="appendix-E-10.2.1">Inside a signed Request Object pushed through PAR, the
+        <li class="compact" id="appendix-E-9.2">
+          <p id="appendix-E-9.2.1">Inside a signed Request Object pushed through PAR, the
 <code>mission_intent</code> claim is the Submission envelope as a JSON object,
 not its serialization; any other value is refused with
-<code>invalid_request</code> (#1503).<a href="#appendix-E-10.2.1" class="pilcrow">¶</a></p>
+<code>invalid_request</code> (#1503).<a href="#appendix-E-9.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.3">
-          <p id="appendix-E-10.3.1">Intent members, with no aliases (#636, #706, #117): <code>resources</code> is
+        <li class="compact" id="appendix-E-9.3">
+          <p id="appendix-E-9.3.1">Intent members, with no aliases (#636, #706, #117): <code>resources</code> is
 renamed <code>target_resources</code> and <code>constraints</code> <code>task_bounds</code>;
 <code>controls</code> is removed, its <code>acr</code> replaced by the <code>acr_values</code> and
 <code>max_age</code> parameters and its <code>max_derivations</code> by Derivation Limits'
@@ -10554,34 +10537,34 @@ renamed <code>target_resources</code> and <code>constraints</code> <code>task_bo
 earlier Missions keep their recorded Intent. <code>goal_lang</code> is new
 (#534). The top level admits only defined members, a Mission Intent
 Members registry assigns short names, and test vectors are
-regenerated.<a href="#appendix-E-10.3.1" class="pilcrow">¶</a></p>
+regenerated.<a href="#appendix-E-9.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.4">
-          <p id="appendix-E-10.4.1">The baseline <code>mission</code> claim carries <code>id</code>, <code>issuer</code>, and an optional
+        <li class="compact" id="appendix-E-9.4">
+          <p id="appendix-E-9.4.1">The baseline <code>mission</code> claim carries <code>id</code>, <code>issuer</code>, and an optional
 <code>expires_at</code>; <code>authority_hash</code> leaves the claim, and introspection
 can disclose it (#702). The Mission Record replaces <code>approver</code> with
 <code>approval_basis.consent_principal</code> (#705) and adds <code>approval_basis</code>,
 <code>authority_source</code> (#316), <code>termination</code>, <code>proposed_authority</code>,
-<code>proposal_hash</code>, and <code>submission_evidence</code>.<a href="#appendix-E-10.4.1" class="pilcrow">¶</a></p>
+<code>proposal_hash</code>, and <code>submission_evidence</code>.<a href="#appendix-E-9.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.5">
-          <p id="appendix-E-10.5.1">The lifecycle states are <code>active</code> and <code>terminated</code>; the -00 states
+        <li class="compact" id="appendix-E-9.5">
+          <p id="appendix-E-9.5.1">The lifecycle states are <code>active</code> and <code>terminated</code>; the -00 states
 <code>revoked</code> and <code>expired</code> become termination reasons, and a consumer
 can read a legacy state that way during a transition (#705). New
 registries hold lifecycle states, any further one non-terminal
-(#170), and termination reasons.<a href="#appendix-E-10.5.1" class="pilcrow">¶</a></p>
+(#170), and termination reasons.<a href="#appendix-E-9.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.6">
-          <p id="appendix-E-10.6.1">The token endpoint adds <code>mission_expires_at</code>, the effective expiry,
+        <li class="compact" id="appendix-E-9.6">
+          <p id="appendix-E-9.6.1">The token endpoint adds <code>mission_expires_at</code>, the effective expiry,
 which can precede the requested <code>intent.expires_at</code>, and the
 <code>mission_error</code> diagnostic; <code>mission_id</code> is recommended.
 Authorization details type metadata can declare
 <code>mission_transformation_capabilities</code>, and entry commitments use
 <code>mission-authority-entry</code>. Resource server challenges add
-<code>mission_denial</code> and use RFC 9470 <code>insufficient_user_authentication</code>.<a href="#appendix-E-10.6.1" class="pilcrow">¶</a></p>
+<code>mission_denial</code> and use RFC 9470 <code>insufficient_user_authentication</code>.<a href="#appendix-E-9.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.7">
-          <p id="appendix-E-10.7.1">A Token Exchange refuses an inactive Mission (#1154) and an invalid,
+        <li class="compact" id="appendix-E-9.7">
+          <p id="appendix-E-9.7.1">A Token Exchange refuses an inactive Mission (#1154) and an invalid,
 unproven, or unacceptable subject or actor token (#1178) with
 <code>invalid_request</code>, unless its profile assigns a code; other grants
 keep <code>invalid_grant</code>, and DPoP proof failures use
@@ -10589,24 +10572,24 @@ keep <code>invalid_grant</code>, and DPoP proof failures use
 <code>invalid_authorization_details</code> where no <code>authorization_details</code> was
 submitted; <code>invalid_target</code> covers scope-projection and routing
 failures; and <code>invalid_scope</code> covers an ungrantable <code>scope</code> and an
-<code>openid</code> request whose Approver is not the Subject (#826).<a href="#appendix-E-10.7.1" class="pilcrow">¶</a></p>
+<code>openid</code> request whose Approver is not the Subject (#826).<a href="#appendix-E-9.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.8">
-          <p id="appendix-E-10.8.1">Delegation by designation (#1268): the delegate's <code>subject_token</code> is
+        <li class="compact" id="appendix-E-9.8">
+          <p id="appendix-E-9.8.1">Delegation by designation (#1268): the delegate's <code>subject_token</code> is
 a designation, which only the holder of a sender-constrained token
-obtains, by Token Exchange naming the delegate as <code>audience</code>.<a href="#appendix-E-10.8.1" class="pilcrow">¶</a></p>
+obtains, by Token Exchange naming the delegate as <code>audience</code>.<a href="#appendix-E-9.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-10.9">
-          <p id="appendix-E-10.9.1">Instance context no longer identifies the instance through <code>act.sub</code>
+        <li class="compact" id="appendix-E-9.9">
+          <p id="appendix-E-9.9.1">Instance context no longer identifies the instance through <code>act.sub</code>
 or <code>act.cnf</code>: the delegate's actor identity is established
 separately, the top-level <code>cnf</code> binds the presenting key, and a
 deployment can convey optional <code>client_instance</code> context under
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>. The
 instance-delegate matcher example uses the <code>ai_agent</code> actor type
-instead of the retired <code>client_instance</code> actor type.<a href="#appendix-E-10.9.1" class="pilcrow">¶</a></p>
+instead of the retired <code>client_instance</code> actor type.<a href="#appendix-E-9.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="appendix-E-11"><strong>Model changes.</strong> Approval separates <code>consent_principal</code>,
+<p id="appendix-E-10"><strong>Model changes.</strong> Approval separates <code>consent_principal</code>,
 <code>activation_actor</code>, and optional <code>adjudication</code> (#701): <code>direct</code>
 approval is human (#1185), approval activates only authority its
 source holds (#316), and standing-consent bases activate instances at
@@ -10625,14 +10608,14 @@ cross-domain projection where that profile's provenance rule keeps it
 provenance and does not deactivate the Mission, though no Mission is
 approved from a source the AS does not recognize, and an
 <code>authority_source.policy</code> digest follows the construction and issuer
-its policy format defines (#1503).<a href="#appendix-E-11" class="pilcrow">¶</a></p>
-<p id="appendix-E-12"><strong>Moved to companions.</strong> Resource Access (the <code>mission_resource_access</code>
+its policy format defines (#1503).<a href="#appendix-E-10" class="pilcrow">¶</a></p>
+<p id="appendix-E-11"><strong>Moved to companions.</strong> Resource Access (the <code>mission_resource_access</code>
 type, Common Constraints, tool modeling, and
 <code>mission_constraints_supported</code>; #637, #645, #698); Intent Submission
 Evidence (the verification framework; <code>evidence</code> stays); Approved-Set
 Verification; Derivation Limits (with <code>derivations_remaining</code>);
-Metering's Intent members; and Approval Governance's assertion rules.<a href="#appendix-E-12" class="pilcrow">¶</a></p>
-<p id="appendix-E-13"><strong>Security and privacy.</strong> Delegation hardening and no authority from
+Metering's Intent members; and Approval Governance's assertion rules.<a href="#appendix-E-11" class="pilcrow">¶</a></p>
+<p id="appendix-E-12"><strong>Security and privacy.</strong> Delegation hardening and no authority from
 an entry a resource server cannot fully enforce (#1258); Approver
 authentication kept off derived tokens and out of OpenID Connect
 results for another Subject (#826); task credentials that are
@@ -10646,8 +10629,8 @@ adopted cross-domain profile; the approval rendering identifies the
 receiving client from information the AS trusts; a refresh request
 beyond its grant is refused, never trimmed (#1503); and the approval
 basis named as outside the integrity anchors, with the profiles that
-commit it (#1518).<a href="#appendix-E-13" class="pilcrow">¶</a></p>
-<p id="appendix-E-14"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
+commit it (#1518).<a href="#appendix-E-12" class="pilcrow">¶</a></p>
+<p id="appendix-E-13"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501, #1526), with the issuance rules
 gathered under Mission-Bound Access Tokens, "Mission Lifecycle and
@@ -10657,19 +10640,19 @@ section; the error-table detail for a configured-mapping refusal
 aligned with Derivation Modes (#1495); subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
-Assessment, moved from the substrate (#708).<a href="#appendix-E-14" class="pilcrow">¶</a></p>
-<p id="appendix-E-15"><strong>References.</strong> The WIMSE AIMS draft, the RAR metadata remediation
+Assessment, moved from the substrate (#708).<a href="#appendix-E-13" class="pilcrow">¶</a></p>
+<p id="appendix-E-14"><strong>References.</strong> The WIMSE AIMS draft, the RAR metadata remediation
 draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
 6750, RFC 9700, Client Instance ID, OpenID Connect Core, the RAR
 metadata remediation draft and, for Delegation, the OAuth Actor
-Profile are normative.<a href="#appendix-E-15" class="pilcrow">¶</a></p>
-<p id="appendix-E-16">-00<a href="#appendix-E-16" class="pilcrow">¶</a></p>
+Profile are normative.<a href="#appendix-E-14" class="pilcrow">¶</a></p>
+<p id="appendix-E-15">-00<a href="#appendix-E-15" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="appendix-E-17.1">
-          <p id="appendix-E-17.1.1">Initial individual draft.<a href="#appendix-E-17.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="appendix-E-16.1">
+          <p id="appendix-E-16.1.1">Initial individual draft.<a href="#appendix-E-16.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
