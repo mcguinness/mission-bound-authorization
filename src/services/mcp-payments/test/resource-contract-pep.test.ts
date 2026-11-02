@@ -461,6 +461,40 @@ describe("the payments resource declares its contract versions (@spec runtime#re
     }
   });
 
+  // @spec runtime#read-binding, runtime#resource-contract (#249): the list
+  // form's normalization orders its vendor scope canonically, whatever order
+  // the entry's allowlist gives, so the digest the read commits names the same
+  // normal form for the same vendors. The scope is the matched entry's own
+  // `constraints.vendors`, supplied here in reverse canonical order.
+  it("normalizes a two-vendor list read's scope, supplied in reverse canonical order, to the canonical order, and commits the digest of exactly that normal form", async () => {
+    const pinnedRef = { id: CONTRACT, version: current?.version as string, digest: current?.digest as string };
+    const reversed = viewOf([entry(pinnedRef, CANONICAL_RESOURCE, { constraints: { vendors: ["globex", "acme"] } } as Partial<Entry>)]);
+    const secondVendor = (payments: PaymentsStore) =>
+      payments.seed(
+        [{ id: "globex", name: "Globex", status: "approved" }],
+        [{ id: "inv-g1", vendor_id: "globex", amount: "40.00", currency: "USD", payee_account: "acct-globex", status: "payable" }],
+      );
+    const x = await build("co-resident", reversed, RESOURCE_CONTRACTS, { seed: secondVendor });
+    try {
+      const res = await x.server.callReadTool("list_invoices", {}, tokenFor(reversed));
+      expect(res.ok, JSON.stringify(res)).toBe(true);
+      const req = x.decided[0] as { resource: { properties?: Record<string, unknown> }; context: Record<string, unknown> } | undefined;
+      const normal = (scope: string[]) =>
+        parameterDigest(
+          buildListEffectiveParams({ action: "payments:invoice.list", resource: CANONICAL_RESOURCE, vendor_scope: scope, vendor_scope_source: "entry" }),
+        );
+      // The exact normalized scope, in canonical order.
+      expect(req?.resource.properties?.vendor_ids).toEqual(["acme", "globex"]);
+      // The committed digest is the normal form's over that order, never the supplied order's.
+      expect(normal(["acme", "globex"])).not.toBe(normal(["globex", "acme"]));
+      expect(req?.context.parameter_digest).toBe(normal(["acme", "globex"]));
+      const decided = x.records().filter((e) => e.kind === "decision").map((e) => e.content as { parameter_digest?: string });
+      expect(decided.map((d) => d.parameter_digest)).toEqual([normal(["acme", "globex"])]);
+    } finally {
+      await x.close();
+    }
+  });
+
   it("performs the superseded 2026-10-20 version under the retained v13 profile: each crossing it names as the live profile does, and not the compensate crossing it lacks (#252)", () => {
     const superseded = shipped?.versions.find((v) => v.version === "2026-10-20");
     expect(superseded?.state).toBe("superseded");
