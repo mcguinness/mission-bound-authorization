@@ -34385,9 +34385,21 @@
      "name": "the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes) > keeps the prepare write's single-use control: the declared write permits with use_limit 1 and one class, and a read label is refused rather than permitted without it",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the declared write class, issuing no unkeyed scheduling permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the prepare class, issuing no permit without single use",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement): payments:remittance.send declares irreversible_action beside its assigned external_commitment, and the commit phase of payments:payment.execute and the compensate phase of payments:payment.reverse declare external_commitment beside their assigned irreversible_action. Mutation proofs: resolving the set to the assigned class alone fails all five remittance witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness. Owner review (hold at 3e8ed1ff): the earlier union of the PEP's label with the declaration's classes did not only add duties. A read label on a declared write fed the single-use default, the reversible-write key window and the claim domain, so a mislabeled payments:payment.schedule permitted without its scheduling key and a mislabeled payment.execute prepare without use_limit 1 while its evidence listed consequential_write. A label other than the class the PDP's declaration assigns the operation and phase is refused before evaluation (action_class_missing, no Decision Evidence), so the set is the declaration's and every single-class site reads the declared class; the loader admits further classes only among the high-consequence classes, per declared phase. A phase on an operation declared without one, and an effect-bearing phase (or no phase) of an operation declaring further classes on another phase, are refused phase_invalid; an undeclared preflight releases no effect and keeps its assigned class. Mutation proofs: disabling the mismatch refusal permits both owner probes (the schedule without its key; the prepare with no use_limit and evidence naming consequential_read) and fails the probe and refusal witnesses; accepting any class of the declared set as the label fails the refusal witness; dropping external_commitment from commit or from compensate fails the set, signing and approval-duty witnesses; disabling the phaseless-operation refusal lets payment.schedule with a phase and a read label permit, failing the phase witness; refusing the undeclared preflight fails the preflight witnesses and nine payments PEP compound-action tests (check_transfer refused); admitting an undeclared effect-bearing phase lets prepare decide, failing the compound phase witness; disabling the per-phase load restriction fails both load witnesses; restoring the uniform-across-phases rule refuses the shipped statement at load with that rule's finding. No phase on an operation every declaration of which names one is refused phase_invalid, with or without further classes, so a phaseless request never decides under its label alone. Mutation: admitting it lets payment.execute labeled consequential_read permit, failing the absent-phase witness."
+   "notes": "#1994 (D1175): the PDP computes the class set from its own operation declarations (additional_action_classes in the statement): payments:remittance.send declares irreversible_action beside its assigned external_commitment, and the commit phase of payments:payment.execute and the compensate phase of payments:payment.reverse declare external_commitment beside their assigned irreversible_action. Mutation proofs: resolving the set to the assigned class alone fails all five remittance witnesses; applying approval or work-item attribution to the assigned class alone fails each one's witness; letting a no-freshness posture relieve the whole set (with the consequential-class guard read from the assigned class) permits the hour-old read and fails the exemption witness. Owner review (hold at 3e8ed1ff): the earlier union of the PEP's label with the declaration's classes did not only add duties. A read label on a declared write fed the single-use default, the reversible-write key window and the claim domain, so a mislabeled payments:payment.schedule permitted without its scheduling key and a mislabeled payment.execute prepare without use_limit 1 while its evidence listed consequential_write. A label other than the class the PDP's declaration assigns the operation and phase is refused before evaluation (action_class_missing, no Decision Evidence), so the set is the declaration's and every single-class site reads the declared class; the loader admits further classes only among the high-consequence classes, per declared phase. A phase on an operation declared without one, and an effect-bearing phase (or no phase) of an operation declaring further classes on another phase, are refused phase_invalid; an undeclared preflight releases no effect and keeps its assigned class. Mutation proofs: disabling the mismatch refusal permits both owner probes (the schedule without its key; the prepare with no use_limit and evidence naming consequential_read) and fails the probe and refusal witnesses; accepting any class of the declared set as the label fails the refusal witness; dropping external_commitment from commit or from compensate fails the set, signing and approval-duty witnesses; disabling the phaseless-operation refusal lets payment.schedule with a phase and a read label permit, failing the phase witness; refusing the undeclared preflight fails the preflight witnesses and nine payments PEP compound-action tests (check_transfer refused); admitting an undeclared effect-bearing phase lets prepare decide, failing the compound phase witness; disabling the per-phase load restriction fails both load witnesses; restoring the uniform-across-phases rule refuses the shipped statement at load with that rule's finding. No phase on an operation every declaration of which names one is refused phase_invalid, with or without further classes, so a phaseless request never decides under its label alone. Mutation: admitting it lets payment.execute labeled consequential_read permit, failing the absent-phase witness. #1994 owner re-review: an array label can no longer pass the agreement check by coercion and drop the declared write controls (the scheduling key, single use)."
   },
   {
    "id": "runtime.classification.multi-predicate-bounds",
@@ -42302,9 +42314,57 @@
      "name": "the assigned class and the declared class agree, or the PDP refuses before evaluation (@spec runtime#classification, #1994 owner review probes) > keeps the prepare write's single-use control: the declared write permits with use_limit 1 and one class, and a read label is refused rather than permitted without it",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > records the refusal of an array label that would stringify to the declared class as a PDP-signed Refusal Record action_class_missing, with no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > refuses an empty-string class as no class, with no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > refuses a non-string class on an operation this PDP declares nothing for, with no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > the remote PDP refuses an array label before evaluation as action_class_missing, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the declared write class, issuing no unkeyed scheduling permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > refuses an array label that would stringify to the prepare class, issuing no permit without single use",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > over the remote channel, refuses a non-string class instead of issuing an unkeyed scheduling permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-multi-class.test.ts",
+     "name": "a class label establishes a class only as a string, refused before evaluation otherwise (@spec runtime#classification, authzen#pdp-consistency-checks, #1994 owner re-review) > with the Decision Evidence emitter configured, refuses a non-string class as input before evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails both action-class witnesses and the GAP 2 witness; restoring the emitter's consequential_read default fails the emitter witness. The posture's old default is unreachable behind the check, so it is not separately mutated. #1994 owner review: a carried class other than the one the PDP's declaration assigns has no class established either. Mutation: disabling that refusal fails both carried-class witnesses (the in-process request permits, the remote one decides), the multi-class refusal witness and both owner probes; accepting any class of the declared set fails the multi-class refusal witness."
+   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails both action-class witnesses and the GAP 2 witness; restoring the emitter's consequential_read default fails the emitter witness. The posture's old default is unreachable behind the check, so it is not separately mutated. #1994 owner review: a carried class other than the one the PDP's declaration assigns has no class established either. Mutation: disabling that refusal fails both carried-class witnesses (the in-process request permits, the remote one decides), the multi-class refusal witness and both owner probes; accepting any class of the declared set fails the multi-class refusal witness. #1994 owner re-review: only a non-empty string establishes a class; a JSON array that would stringify to the declared class, or an empty string, is refused action_class_missing before evaluation, including where nothing is declared. Mutation-proved: restoring the undefined-only check with String() coercion fails all eight non-string witnesses (the owner's four probes permit or throw); admitting an empty string fails the empty-string witness (evaluated and denied, not refused)."
   },
   {
    "id": "authzen.pdp-request.consistency-state-active-and-pdp-precedence",
@@ -53234,9 +53294,21 @@
      "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > action_class_missing is the PDP's alone, and a PEP-side store never signs it (#956)",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > records the refusal of an array label that would stringify to the declared class as a PDP-signed Refusal Record action_class_missing, with no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "a non-string class label establishes no class (@spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #1994 owner re-review) > the remote PDP refuses an array label before evaluation as action_class_missing, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#956, D814. The PDP recorder takes the reason by type; the evidence store's closed sets hold it at runtime. Mutation: removing action_class_missing from the store's PDP set, or admitting it to the PEP set, fails the closed-set witness. #1994 owner review: re-quoted for the carried-class case. Mutation: disabling the refusal of a carried class other than the declared one fails the carried-class witness."
+   "notes": "#956, D814. The PDP recorder takes the reason by type; the evidence store's closed sets hold it at runtime. Mutation: removing action_class_missing from the store's PDP set, or admitting it to the PEP set, fails the closed-set witness. #1994 owner review: re-quoted for the carried-class case. Mutation: disabling the refusal of a carried class other than the declared one fails the carried-class witness. #1994 owner re-review: a non-string label is no class; its Refusal Record carries action_class_missing, no class, and verifies under the PDP's key, in process and over the remote channel."
   },
   {
    "id": "evidence.refusal.pep-compensation-link-unavailable",
