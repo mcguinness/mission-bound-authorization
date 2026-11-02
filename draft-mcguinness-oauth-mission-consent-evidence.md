@@ -485,11 +485,11 @@ A Consent Disclosure object has these members:
   `admin_console`) and `rendered_at`.
 
 `approver_actions`:
-: OPTIONAL. An array describing explicit approver interactions required
-  by policy, such as checking a high-risk notice or confirming an
-  expansion delta. SHOULD be present when `material_notices` carries a
-  notice of a high-risk class ({{material-notices}}), then carrying
-  one acknowledgment action per such notice.
+: REQUIRED when a high-risk condition is present, carrying the
+  acknowledgment actions {{material-notices}} requires; OPTIONAL
+  otherwise. An array describing explicit approver interactions
+  required by policy, such as checking a high-risk notice or
+  confirming an expansion delta.
 
 A Consent Disclosure object MUST NOT omit material authority. If the
 Authority Set includes any of the following, the disclosure MUST
@@ -533,7 +533,8 @@ author.
 ## Material Notice Requirements {#material-notices}
 
 A material notice SHOULD be included for each of these conditions when
-present in the proposed Authority Set or Mission context:
+present in the proposed Authority Set or Mission context, and MUST be
+for a high-risk class (below):
 
 - delegation to another actor or child Mission;
 - authority that crosses an organizational or issuer boundary;
@@ -558,15 +559,24 @@ Four conditions are the high-risk notice classes:
 - privileged administration; and
 - a consumption bound.
 
-For each material notice of a high-risk class, `approver_actions`
-({{consent-disclosure}}) SHOULD carry an explicit acknowledgment
-action identifying that notice. The Mission Issuer SHOULD NOT record
-an `approved` decision unless the Approver completed every
-acknowledgment the disclosure carries. Where the rendered disclosure
-carries acknowledgment actions, the Mission Issuer MUST record each
-completion in the evidence's `acknowledgments` member
-({{consent-evidence}}), so completion is auditable and not only the
-commitment.
+For each high-risk condition present, the disclosure MUST include its
+material notice, and `approver_actions` ({{consent-disclosure}}) MUST
+carry an explicit acknowledgment action identifying that notice. The
+acknowledgment follows the condition, so omitting the notice does not
+remove it. The Mission Issuer MUST NOT record an `approved` decision
+until the Approver has completed every high-risk acknowledgment, and
+SHOULD NOT record one unless the Approver completed every other
+acknowledgment the disclosure carries. An incomplete acknowledgment
+never prevents recording a `declined` or `narrowed` decision. Where
+the rendered disclosure carries acknowledgment actions, the Mission
+Issuer MUST record each completion in the evidence's
+`acknowledgments` member ({{consent-evidence}}), so completion is
+auditable and not only the commitment.
+
+These duties apply at the human approval events this profile binds,
+the approval of a standing consent included ({{binding-to-mission}}).
+A Mission instance activated by policy under a standing consent has
+no disclosure, and so no acknowledgment, of its own.
 
 The acknowledgment is per notice: the disclosure commits the
 acknowledgment actions it carries, and a single blanket confirmation
@@ -1299,9 +1309,8 @@ MUST:
   narrowed decisions where the deployment supports approval revision
   ({{I-D.draft-mcguinness-oauth-mission-approval-revision}});
 - bind approved Mission records to `consent_rendering_hash`;
-- for the high-risk classes, include their material notices with the
-  per-notice acknowledgment those classes require, recording each
-  acknowledgment completion ({{material-notices}});
+- meet the high-risk notice and acknowledgment requirements of
+  {{material-notices}};
 - record the interrogation it offers ({{interrogation}});
 - process a client-supplied `mission_shaping_evidence_hash` as
   {{shaping-evidence-hash-parameter}} specifies; and
@@ -1851,6 +1860,14 @@ encoding difference to resolve before interoperating.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Material Notice Requirements makes the high-risk notices and their
+  acknowledgments mandatory: each high-risk condition present gets its
+  notice and an acknowledgment action, and `approved` waits for every
+  high-risk acknowledgment, while other acknowledgments stay a SHOULD
+  and a declined or narrowed decision is never blocked. The
+  `approver_actions` member and the conformance floor reference it
+  (#1945).
 
 - Consent Disclosure states that re-verifying the submission's evidence
   renews the disclosure, since `submission_provenance_hash` commits
