@@ -76,8 +76,15 @@ interface DecisionShape {
   audience?: string;
 }
 
-/** A retained Decision Evidence record, signed by the trusted PDP key unless `key` says otherwise. */
-async function decisionRecord(d: DecisionShape, key = pdpKeys.privateKey): Promise<Record<string, unknown>> {
+/** A record signed in the PEP's role with the PEP's own trusted key: a valid signature, the wrong signer for a decision. */
+const AS_PEP = { key: pepKeys.privateKey, kid: "hist-pep", emitter: { id: PEP_ID, role: "pep" } };
+
+/** A retained Decision Evidence record, signed by the trusted PDP key unless `key` (or `as`) says otherwise. */
+async function decisionRecord(
+  d: DecisionShape,
+  key = pdpKeys.privateKey,
+  as?: { key: typeof pdpKeys.privateKey; kid: string; emitter: { id: string; role: string } },
+): Promise<Record<string, unknown>> {
   const unsigned = {
     evidence_id: `evd_${d.evaluation_id}`,
     evaluation_id: d.evaluation_id,
@@ -91,10 +98,13 @@ async function decisionRecord(d: DecisionShape, key = pdpKeys.privateKey): Promi
     class_source: "deployment",
     decision: d.decision ?? "permit",
     sequence: 0,
-    emitter: { id: PDP_ID, role: "pdp" },
+    emitter: as?.emitter ?? { id: PDP_ID, role: "pdp" },
     evaluated_at: NOW.toISOString(),
   };
-  return { ...unsigned, evidence_envelope: await signEvidenceEnvelope(unsigned, DECISION_EVIDENCE_MEDIA_TYPE, { kid: "hist-pdp", key }) };
+  return {
+    ...unsigned,
+    evidence_envelope: await signEvidenceEnvelope(unsigned, DECISION_EVIDENCE_MEDIA_TYPE, { kid: as?.kid ?? "hist-pdp", key: as?.key ?? key }),
+  };
 }
 
 interface ExecutionShape {
@@ -283,6 +293,28 @@ describe("the History Context evaluates policy-selected predicates against verif
     ];
     const decision = await evaluate(request(), options(historyBinding(records)));
     expect(decision.decision).toBe(false);
+    expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("never counts another Mission's history: a store holding only another Mission's completed write fails closed", async () => {
+    const records = [
+      await decisionRecord({ evaluation_id: "x1", action_class: "consequential_write", mission: "msn_other" }),
+      await executionRecord({ evaluation_id: "x1", outcome: "completed", mission: "msn_other" }),
+    ];
+    const decision = await evaluate(request(), options(historyBinding(records)));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+  });
+
+  it("does not take a permit signed in the PEP's role as Decision Evidence, although its key verifies for that role", async () => {
+    const records = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }, undefined, AS_PEP),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
+    ];
+    const decision = await evaluate(request(), options(historyBinding(records)));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
   });
 
