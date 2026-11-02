@@ -324,6 +324,49 @@ describe("the payments resource declares its contract versions (@spec runtime#re
     }
   });
 
+  /**
+   * Each parameter form's canonical digest over fixed inputs, recorded per
+   * contract version. Normalization (each member's encoding, the canonical
+   * object the digest is computed over) is contract material, so a change to
+   * it changes these: it needs a new contract version with its own entry
+   * here, never an edit of a published version's.
+   */
+  const NORMAL_FORM_DIGESTS: Record<string, Record<string, string>> = {
+    "2026-10-27": {
+      invoice: "sha-256:u_Ts2Z1zkNdll-qmricNSCXuAetq5psUkOeCKH3uQS8",
+      list: "sha-256:GujuA1Uzv_MUN7wzxQtOyG6iA6FX1Jon_6YpeDFNObs",
+      reversal: "sha-256:w2ZqvQP0H3xLDCWwInxrbcxX5mDPInzeIg5wmbimnG8",
+    },
+  };
+
+  it("each parameter form normalizes fixed inputs to the digest recorded for the current version", () => {
+    const vendor = { id: "acme", name: "Acme", status: "approved", version: 3 };
+    const invoice = { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable", version: 2 };
+    const normalized = {
+      invoice: parameterDigest(
+        buildEffectiveParams({ action: "payments:payment.schedule", invoice, vendor, resource: CANONICAL_RESOURCE, recipients: ["ap@acme.example", "ar@acme.example"] }),
+      ),
+      list: parameterDigest(
+        buildListEffectiveParams({
+          action: "payments:invoice.list",
+          resource: CANONICAL_RESOURCE,
+          vendor_scope: ["acme", "globex"],
+          vendor_scope_source: "entry",
+          members: [{ id: "inv-1", issued_at: "2026-08-15T09:30:00Z", tenant: "payments-demo", data_classification: "internal" }],
+        }),
+      ),
+      reversal: parameterDigest(
+        buildReversalParams({
+          action: "payments:payment.reverse",
+          wire: { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD" },
+          resource: CANONICAL_RESOURCE,
+          reverses: "op-1",
+        }),
+      ),
+    };
+    expect(normalized).toEqual(NORMAL_FORM_DIGESTS[current?.version as string]);
+  });
+
   it("the declared resource_match values are exactly those the matcher enforces", () => {
     const declaredMatches = (current?.document as { resource_match: string[] }).resource_match;
     const candidates = ["exact", "prefix", "suffix", "regex", "glob", "template", "wildcard"];
@@ -552,8 +595,10 @@ describe("the declared constraint inputs the payments resource reads (@spec runt
     const pepPast = await build("remote", windowed, RESOURCE_CONTRACTS, { now: at(t + 120_000), pdpNow: at(t) });
     try {
       const res = await read(pepPast, windowed);
+      // The PEP's own credential-bound check refuses it, with a Refusal Record.
       expect(res.ok, JSON.stringify(res)).toBe(false);
       expect(pepPast.decided).toHaveLength(0);
+      expect(pepPast.records().filter((e) => e.kind === "refusal")).toHaveLength(1);
     } finally {
       await pepPast.close();
     }
