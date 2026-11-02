@@ -58,4 +58,19 @@ describe("a step several runtime class predicates apply to meets each class's mi
     expect(derived.reversibility).toBe("irreversible_action");
     expect(derived.adopted).toBe(false);
   });
+
+  it("keeps each high class against every other high class's minimum, in all six pairings: no high class ranks below another", () => {
+    const high = [
+      "irreversible_action",
+      "external_commitment",
+      "privileged_administration",
+    ] as const;
+    for (const proposed of high) {
+      for (const floor of high) {
+        expect(enforceReversibilityFloor(proposed, floor), `${proposed} over ${floor}`).toBe(
+          proposed,
+        );
+      }
+    }
+  });
 });
