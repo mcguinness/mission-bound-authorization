@@ -4300,6 +4300,15 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#1735, D1153, D1164): an action that
+  satisfies more than one class predicate takes the requirements of
+  every class whose predicate it satisfies, and classification under
+  one class waives none of them. Comparable bounds resolve to the
+  tighter; otherwise each applies, and an action that cannot satisfy
+  every applicable requirement is refused. The External commitment
+  examples add payment and sending mail, and the egress PEP is stated
+  once, for any external-communication action.
+
 - Changes a requirement (#854, D814): the record retention floor is the
   Mission's retention period as its Mission Substrate Binding declares
   it, realized in the OAuth binding as the audit horizon (the Mission

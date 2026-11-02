@@ -1088,6 +1088,11 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- Reversibility Classes ({{reversibility}}): a step whose operation
+  satisfies more than one runtime class predicate meets the minimum
+  each of those classes maps to, and the three highest classes meet
+  one another's minimum (#1735).
+
 - Record Integrity and Retention ({{evidence-integrity}}): the
   imported sequence indicator is per emitter for each Mission, as the
   runtime profile scopes it. No requirement changed (#821).
