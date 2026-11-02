@@ -38,7 +38,8 @@ import type { ActObject } from "@mission/actor-chain";
 import {
   type AudienceContext,
   type AudienceValidation,
-  executionLeaseMaxSeconds,
+  applicableActionClasses,
+  executionLeaseMaxSecondsOver,
   executionLeaseMs,
   loadRuntimePosture,
   REVERSIBLE_WRITE_CLASS,
@@ -2252,9 +2253,16 @@ export class McpPaymentsServer {
       leaseStartMs +
       executionLeaseMs({
         nowMs: leaseStartMs,
-        publishedMaxSeconds: executionLeaseMaxSeconds(
+        // @spec runtime#classification (#1994): the tightest lease any class
+        // that applies to the operation publishes.
+        publishedMaxSeconds: executionLeaseMaxSecondsOver(
           this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
-          profile?.actionClass,
+          applicableActionClasses(
+            this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
+            profile?.actionClass,
+            profile?.action ?? tool,
+            profile?.phase,
+          ),
         ),
         permitValidUntilMs:
           typeof attempt.permitValidUntil === "string" ? Date.parse(attempt.permitValidUntil) : undefined,
@@ -2309,7 +2317,15 @@ export class McpPaymentsServer {
     // effect (#821 review). A write that fails prevents the effect: the
     // action is refused and nothing executes.
     let attemptRecord: ExecutionAttemptRecord | undefined;
-    if (PRE_EFFECT_ATTEMPT_CLASSES.has(profile?.actionClass ?? "")) {
+    // @spec runtime#classification (#1994): a duty any applicable class carries.
+    if (
+      applicableActionClasses(
+        this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
+        profile?.actionClass,
+        profile?.action ?? tool,
+        profile?.phase,
+      ).some((c) => PRE_EFFECT_ATTEMPT_CLASSES.has(c))
+    ) {
       try {
         if (!this.deps.writeReservations || !attempt.decisionEvidence) throw new Error("no pre-effect attempt record");
         attemptRecord = this.deps.writeReservations.recordAttempt({

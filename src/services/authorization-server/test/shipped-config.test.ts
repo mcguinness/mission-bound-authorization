@@ -52,7 +52,7 @@ import {
   validateAuthoritySourceCatalog,
   validateMissionIntent,
 } from "../src/index.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "@mission/pdp/test-support";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "@mission/pdp/test-support";
 import type { EvaluationRequest } from "@mission/pdp";
 import { withCredential } from "../../pdp/test/with-credential.js";
 import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
@@ -176,6 +176,9 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
         stalenessBound,
         relationForAction,
         resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+        // #1994: no operation declarations: a payments operation is decided
+        // under its assigned class alone, with no phase required.
+        operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
       },
     );
     expect(decision.decision).toBe(false);

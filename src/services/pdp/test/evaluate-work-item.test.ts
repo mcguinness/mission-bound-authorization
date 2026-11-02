@@ -46,7 +46,7 @@ import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-vi
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { decisionCacheKey } from "../src/projections.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { readWorkItemAttribution, WORK_ITEM_ATTRIBUTION_EXTENSION } from "../src/work-item.js";
 import { CLAIM_OWNER, freshKey } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
@@ -117,6 +117,9 @@ function options(over: Partial<EvaluateOptions> = {}): EvaluateOptions {
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     stateSourcePlacement: "pep",
     evidence: EMITTER,
+    // #1994: no operation declarations: a payments operation is decided
+    // under its assigned class alone, with no phase required.
+    operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
     ...over,
   };
 }

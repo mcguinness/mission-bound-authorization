@@ -40,7 +40,7 @@ import { decisionCacheKey } from "../src/projections.js";
 import { EXECUTION_EVIDENCE_MEDIA_TYPE, type EvidenceKeyResolver, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
 
@@ -204,6 +204,9 @@ function options(claims: IdempotencyClaimDomain, c: Clock, over: Partial<Evaluat
     // file's subject is another input, and the claimed path has its own
     // witnesses (evaluate-evaluation-context.test.ts).
     evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+    // #1994: no operation declarations: a payments operation is decided
+    // under its assigned class alone, with no phase required.
+    operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
     ...over,
   };
 }

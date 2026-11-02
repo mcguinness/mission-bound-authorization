@@ -35,7 +35,7 @@ import {
   stalenessBound,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
 
@@ -95,6 +95,9 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       // a fresh, correctly-bound approval, must not rescue a missing entry.
       requiresActionApproval: () => true,
       maxApprovalAgeSeconds: 300,
+      // #1994: no operation declarations: a payments operation is decided
+      // under its assigned class alone, with no phase required.
+      operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
     };
     const withoutApproval = await evaluate(outOfAuthorityReq, opts);
 
@@ -357,6 +360,9 @@ describe("a permit expires no later than the state view it was decided against (
     stateSourcePlacement: "pep" as const,
     // @spec runtime#idempotency (#917): the irreversible-action permit is claimed first.
     claims: openTestClaims({ now: () => now }),
+    // #1994: no operation declarations: a payments operation is decided
+    // under its assigned class alone, with no phase required.
+    operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
   });
 
   it("caps valid_until at the state observation plus the class staleness bound", async () => {
@@ -420,6 +426,9 @@ describe("compound-action phase carriers on the decision (@spec authzen#context-
     // file's subject is another input, and the claimed path has its own
     // witnesses (evaluate-evaluation-context.test.ts).
     evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+    // #1994: no operation declarations: a payments operation is decided
+    // under its assigned class alone, with no phase required.
+    operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
   });
 
   it("echoes the validated request phase as the permit's conditions.action_phase", async () => {

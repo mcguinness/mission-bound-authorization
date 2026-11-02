@@ -32,7 +32,7 @@ import { describe, expect, it } from "vitest";
 import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/evaluate.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -99,6 +99,9 @@ const opts = (v: MissionView) => ({
   // file's subject is another input, and the claimed path has its own
   // witnesses (evaluate-evaluation-context.test.ts).
   evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+  // #1994: no operation declarations: a payments operation is decided
+  // under its assigned class alone, with no phase required.
+  operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
 });
 
 describe("discharged entries are excluded from the PDP's authority input", () => {
@@ -115,7 +118,10 @@ describe("discharged entries are excluded from the PDP's authority input", () =>
 
   it("tells approved-then-discharged apart from never-approved", async () => {
     const v = view({ version: 2, discharged: { entry_digests: [writeDigest] } });
-    const never = await evaluate(req("payments:remittance.send"), opts(v));
+    // A never-approved action of the request's own class: remittance.send would
+    // also take the irreversible class its declaration names (#1994), whose
+    // freshness gate this file's stub request does not meet.
+    const never = await evaluate(req("payments:vendor.read"), opts(v));
     expect(never.decision).toBe(false);
     expect(never.context.denial_reason).toBe("out_of_authority");
   });
