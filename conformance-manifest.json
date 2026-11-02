@@ -52969,9 +52969,15 @@
      "name": "a contract's evaluation-context descriptor is the one its crossings are captured, decided and released under (@spec runtime#resource-contract, runtime#evaluation-context-binding, authzen#context-evaluation-binding, #249, D1155) > past the superseded version's retained_until, a crossing pinned to it is refused before any decision request, resource_contract_unresolvable, with no effect",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot crossing 2026-10-27's retention boundary without a restart: permitted before it, refused after it with no effect (@spec runtime#resource-contract, resource-access#resource-contract, #249, D1185) > permits the read under the retained value before the boundary, then refuses the same credential after it, before any decision and with no effect",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal. #1693 (D879): a reversal under an entry pinned to 2026-10-24, whose retained v14 profile omits the reversal, signs one Refusal Record resource_contract_unresolvable naming payments:payment.reverse, with no decision request, no suppressed Execution Evidence and no reversal entry. Mutation P1 fails it. D1155: a crossing pinned to a superseded version past its retained_until is refused before any decision request with a Refusal Record resource_contract_unresolvable and no effect. Proved by mutation: resolving past the retention performs it."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal. #1693 (D879): a reversal under an entry pinned to 2026-10-24, whose retained v14 profile omits the reversal, signs one Refusal Record resource_contract_unresolvable naming payments:payment.reverse, with no decision request, no suppressed Execution Evidence and no reversal entry. Mutation P1 fails it. D1155: a crossing pinned to a superseded version past its retained_until is refused before any decision request with a Refusal Record resource_contract_unresolvable and no effect. Proved by mutation: resolving past the retention performs it. D1185: past a superseded version's retention, a joined credential naming it is refused before any decision request with resource_contract_unresolvable and no effect, including in a running pilot crossing the retention boundary without a restart."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -73416,9 +73422,21 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot past 2026-10-27's retention: the shipped mapping loads, and its .2026-10-27 value authorizes nothing (@spec resource-access#resource-contract, runtime#resource-contract, #249, D1185) > refuses at use, with no effect, a credential under the lapsed value against the Mission pinned to 2026-10-27",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-contract.test.ts",
+     "name": "MAS pilot crossing 2026-10-27's retention boundary without a restart: permitted before it, refused after it with no effect (@spec runtime#resource-contract, resource-access#resource-contract, #249, D1185) > permits the read under the retained value before the boundary, then refuses the same credential after it, before any decision and with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply. #1693 (D879): the payments resource no longer performs v14's reversal, so an entry pinned to 2026-10-24 authorizes no reversal: refused resource_contract_unresolvable before any decision request, with zero effects, though the same entry still performs v14's other operations. Mutation P1 (v14 mapped to the live table) performs the reversal and fails it."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply. #1693 (D879): the payments resource no longer performs v14's reversal, so an entry pinned to 2026-10-24 authorizes no reversal: refused resource_contract_unresolvable before any decision request, with zero effects, though the same entry still performs v14's other operations. Mutation P1 (v14 mapped to the live table) performs the reversal and fails it. D1185: a reference to a version superseded past its retention authorizes nothing at use, judged against the current clock: a joined credential under the lapsed .2026-10-27 scope value is refused, before any decision and with no effect, in a pilot composed after the retention ended, and in a running pilot that permitted it just before the boundary and refuses the same credential just after it, never restarted. The mapping naming it still loads (the load check is independent of the clock). Proved by mutation: resolving a superseded version past its retention lets both reads through."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
