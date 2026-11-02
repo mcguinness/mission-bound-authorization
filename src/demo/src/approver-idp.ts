@@ -28,7 +28,9 @@
  * Approvers. The demo request intake (`request-intake.ts`) is one: it logs an
  * originator (Alice) in here, with the same password and one-time code, and
  * takes the originator and the channel facts from the ID Token this provider
- * issues for that login, its `acr`, `amr` and `auth_time` included.
+ * issues for that login, its `acr`, `amr` and `auth_time` included. `amr`
+ * (OpenID Connect Core 1.0 Section 2) is issued only where the caller asks
+ * for it (`idTokenAmr`): the factors the login verified, `pwd` and then `otp`.
  */
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -168,6 +170,8 @@ export async function startApproverIdp(opts: {
   accounts: readonly { sub: string; username: string }[];
   /** Further relying parties, each registered like the authorization server under its own client ID. */
   clients?: readonly IdpClientRegistration[];
+  /** Issue `amr`, the factors each login verified, in every ID Token. Default false. */
+  idTokenAmr?: boolean;
   host?: string;
   port?: number;
 }): Promise<ApproverIdp> {
@@ -224,6 +228,10 @@ export async function startApproverIdp(opts: {
     jwks: { keys: [signingKey as never] },
     acrValues: [PASSWORD_ONLY_ACR, MULTI_FACTOR_ACR],
     scopes: ["openid"],
+    // The provider's default claims, with `amr` under `openid` where asked for.
+    ...(opts.idTokenAmr
+      ? { claims: { acr: null, sid: null, auth_time: null, iss: null, amr: null, openid: ["sub", "amr"] } }
+      : {}),
     responseTypes: ["code"],
     pkce: { required: () => true },
     features: { devInteractions: { enabled: false } },

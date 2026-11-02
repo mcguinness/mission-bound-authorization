@@ -6,9 +6,9 @@
  * within a millisecond) behave as on the real clock. Install it before the
  * modules that read the time at load (`vi.hoisted`), and restore it after.
  */
-export function installControlledClock(atMs: number): { restore: () => void } {
+export function installControlledClock(atMs: number): { restore: () => void; advance: (ms: number) => void } {
   const RealDate = globalThis.Date;
-  const offset = atMs - RealDate.now();
+  let offset = atMs - RealDate.now();
   class ControlledDate extends RealDate {
     constructor(...args: unknown[]) {
       if (args.length === 0) super(RealDate.now() + offset);
@@ -22,6 +22,10 @@ export function installControlledClock(atMs: number): { restore: () => void } {
   return {
     restore: () => {
       globalThis.Date = RealDate;
+    },
+    /** Move the controlled instant forward by `ms` (#939 slice 2b-1: a login before a capture, a capture past its maximum age). */
+    advance: (ms: number) => {
+      offset += ms;
     },
   };
 }
