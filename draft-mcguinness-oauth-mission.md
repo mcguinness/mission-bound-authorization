@@ -4677,7 +4677,8 @@ from a party the deployment's policy authorizes (so a Mission can be
 stopped even when no refresh token is held).
 
 The wire shape of that revocation is out of scope for this document. A
-deployment-defined authenticated surface satisfies this requirement;
+deployment-defined surface that authenticates the revoking party
+independent of possession of any token satisfies this requirement;
 Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
 defines an interoperable `revoke` operation.
 
