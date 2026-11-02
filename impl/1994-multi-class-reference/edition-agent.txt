@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-02T18:54:58Z
-Source repository commit: cfe3831506cd8e14bda37a6f4d4decd77aee4524
+Generated: 2026-11-02T19:40:09Z
+Source repository commit: d49e5ae5d097dd8207b95abc127670748e645b4d
 Member count: 9
 
 Reading order:
@@ -4808,17 +4808,16 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-attesters-00, 28 September 2026,
+              client-attesters-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-attesters-00>.
+              oauth-client-attesters-01>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-id-continuation-assertion]
               McGuinness, K. and A. Parecki, "Identity Continuation
@@ -14939,12 +14938,11 @@ Table of Contents
               oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [OpenID.Core]
               OpenID Foundation, "OpenID Connect Core 1.0 incorporating
@@ -15187,9 +15185,9 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
               Work in Progress, Internet-Draft, draft-mcguinness-oauth-
-              client-attesters-00, 28 September 2026,
+              client-attesters-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-attesters-00>.
+              oauth-client-attesters-01>.
 
    [I-D.draft-mcguinness-oauth-mission-approval]
               McGuinness, K., "Mission Deferred Approval for OAuth 2.0",
@@ -21521,7 +21519,10 @@ Table of Contents
    the three highest classes are not ordered among themselves.  An
    action is at or above a class when a class that applies to it is that
    class or ranks above it, and raising, lowering, and a stricter class
-   refer to this order.
+   refer to this order.  A minimum classification is met only by an
+   action at or above it, so a minimum of one of the three highest
+   classes is met only where that class applies.  Audit-only, a
+   freshness posture (Section 2.5), is outside this order.
 
    Classification remains deployment-scoped: each deployment applies the
    predicates to its own actions and systems.  The predicates make the
@@ -24257,12 +24258,11 @@ Table of Contents
               oauth-actor-receipts-01>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -24493,7 +24493,9 @@ Appendix D.  Document History
       place is treated under every class the operation can reach.
       Trifecta containment's external-communication leg reaches every
       action that satisfies the external-communication or External
-      commitment predicate, whatever its class (#1994).
+      commitment predicate, whatever its class.  A minimum class is met
+      only by an action at or above it, and Audit-only is outside the
+      order (#1994).
 
    *  Changes a requirement (#1735, D1153, D1164): an action that
       satisfies more than one class predicate takes the requirements of
@@ -25226,8 +25228,8 @@ Table of Contents
       The PDP computes and records it directly; no decision-API wire
       echo is required.
 
-   action_class:  REQUIRED.  A string.  The runtime action class the PDP
-      applied to the action: one of consequential_read,
+   action_class:  REQUIRED.  A string.  The runtime action class
+      assigned to the action: one of consequential_read,
       consequential_write, irreversible_action, external_commitment, or
       privileged_administration, naming the classes of
       [I-D.draft-mcguinness-mission-runtime].  Every decision this
@@ -27747,7 +27749,7 @@ Appendix A.  Document History
 
    *  Decision Evidence: action_classes records every class whose
       requirements the PDP applied, when more than one applies;
-      action_class stays the assigned class (#1994).
+      action_class is defined as the assigned class (#1994).
 
    *  Refusal Record: action_class_missing records a PDP refusal of a
       mediated request with no action class established, where the
@@ -31399,12 +31401,11 @@ Table of Contents
               draft-mcguinness-mission-substrate.html>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
@@ -33692,12 +33693,11 @@ Table of Contents
               draft-mcguinness-mission-security-model.html>.
 
    [I-D.draft-mcguinness-oauth-client-instance-id]
-              McGuinness, K., "Client Instance Identification for
-              Attestation-Based Client Authentication", Work in
-              Progress, Internet-Draft, draft-mcguinness-oauth-client-
-              instance-id-00, 28 September 2026,
+              McGuinness, K., "OAuth 2.0 Client Instance Identifiers",
+              Work in Progress, Internet-Draft, draft-mcguinness-oauth-
+              client-instance-id-01, 2 November 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-client-instance-id-00>.
+              oauth-client-instance-id-01>.
 
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",

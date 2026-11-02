@@ -6093,7 +6093,7 @@ client endorses under <span>[<a href="#I-D.draft-mcguinness-oauth-client-atteste
 the delegate named by the outermost <code>act</code> can be an actor that an
 authenticated instance represents. Instance evidence does not
 establish that actor
-(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00#section-5" class="relref">Section 5</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), so
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01#section-5" class="relref">Section 5</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), so
 the AS establishes the delegate's actor identity, and that actor's
 trusted association with the instance, separately.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
 <p id="section-8.3-2">Because a delegated token is sender-constrained to the delegate's own
@@ -6113,12 +6113,12 @@ and whether instance attribution is required.<a href="#section-8.3-3" class="pil
 <li class="normal" id="section-8.3-4.1">
             <p id="section-8.3-4.1.1">When issuing context under this composition, the AS <span class="bcp14">MUST</span> use the
 presenting instance validated under
-<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00#section-5" class="relref">Section 5</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>,
+<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01#section-5" class="relref">Section 5</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>,
 establish its trusted association with the separately authenticated
 delegate, and bind the output token to an instance-unique key whose
 possession it verified in that exchange. Context is mapped from that
 validated instance into the output audience's Consumer Scope under
-<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00#section-7.1" class="relref">Section 7.1</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>. The
+<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01#section-7.1" class="relref">Section 7.1</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>. The
 AS <span class="bcp14">MUST NOT</span> use context copied or remapped from an input token as a
 substitute for the presenting instance's evidence. For example, when
 instance B is authorized to continue work from instance A, output
@@ -6141,7 +6141,7 @@ association with the delegate and output key cannot be established.
             <p id="section-8.3-4.4.1">If the exchange issues a refresh token, and so establishes a
 redeemable grant lineage (<a href="#grant-binding-related" class="auto internal xref">Section 6.4.2</a>), the
 grant-continuity rules of
-<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00#section-5.1" class="relref">Section 5.1</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span> apply
+<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01#section-5.1" class="relref">Section 5.1</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span> apply
 alongside <a href="#grant-binding" class="auto internal xref">Section 6.4</a>; instance continuity alone does not
 authorize replacement of the recorded instance or key rebinding.<a href="#section-8.3-4.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -6149,7 +6149,7 @@ authorize replacement of the recorded instance or key rebinding.<a href="#sectio
             <p id="section-8.3-4.5.1">Consumers establish presenter attribution under Sections 7.3 and 7.5
 of <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>. A consumer
 requiring attribution rejects unestablished associations under
-<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00#section-7.6" class="relref">Section 7.6</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>.<a href="#section-8.3-4.5.1" class="pilcrow">¶</a></p>
+<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01#section-7.6" class="relref">Section 7.6</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>.<a href="#section-8.3-4.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.3-4.6">
             <p id="section-8.3-4.6.1">This composition does not add provenance to <code>client_instance</code>: a
@@ -7486,7 +7486,7 @@ exchange rows of the third table.<a href="#section-11-4" class="pilcrow">¶</a><
 <p id="section-11-9">In these tables, which evidence types are required follows
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>, and
 <code>invalid_client_attestation</code> is the error code that
-<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00#section-5.2" class="relref">Section 5.2</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>
+<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01#section-5.2" class="relref">Section 5.2</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>
 specifies.<a href="#section-11-9" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -9495,7 +9495,7 @@ member's registration in its own IANA considerations.<a href="#section-20.9-9" c
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-client-instance-id">[I-D.draft-mcguinness-oauth-client-instance-id]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Client Instance Identification for Attestation-Based Client Authentication"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Instance Identifiers"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-instance-id-01</span>, <time datetime="2026-11-02" class="refDate">2 November 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-01</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="OpenID.Core">[OpenID.Core]</dt>
         <dd>
@@ -9696,7 +9696,7 @@ member's registration in its own IANA considerations.<a href="#section-20.9-9" c
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-client-attesters">[I-D.draft-mcguinness-oauth-client-attesters]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Attester Endorsement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-attesters-00</span>, <time datetime="2026-09-28" class="refDate">28 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-00" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-00</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"OAuth 2.0 Client Attester Endorsement"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-client-attesters-01</span>, <time datetime="2026-11-02" class="refDate">2 November 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-01" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-attesters-01</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-approval">[I-D.draft-mcguinness-oauth-mission-approval]</dt>
         <dd>

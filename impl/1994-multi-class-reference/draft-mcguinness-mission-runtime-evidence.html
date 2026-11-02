@@ -1769,8 +1769,8 @@ records it directly; no decision-API wire echo is required.<a href="#section-4.1
 <dt id="section-4.1-1.19">
 <code>action_class</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.1-1.20">
-            <p id="section-4.1-1.20.1"><span class="bcp14">REQUIRED</span>. A string. The runtime action class the PDP applied to the
-action: one of <code>consequential_read</code>, <code>consequential_write</code>,
+            <p id="section-4.1-1.20.1"><span class="bcp14">REQUIRED</span>. A string. The runtime action class assigned to the action:
+one of <code>consequential_read</code>, <code>consequential_write</code>,
 <code>irreversible_action</code>, <code>external_commitment</code>, or
 <code>privileged_administration</code>, naming the classes of
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. Every decision this
@@ -4953,7 +4953,7 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <li class="normal" id="appendix-A-2.1">
           <p id="appendix-A-2.1.1">Decision Evidence: <code>action_classes</code> records every class whose
 requirements the PDP applied, when more than one applies;
-<code>action_class</code> stays the assigned class (#1994).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+<code>action_class</code> is defined as the assigned class (#1994).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Refusal Record: <code>action_class_missing</code> records a PDP refusal of a
