@@ -7,6 +7,7 @@
 // library's guards, not intake isolation or authenticated origin (D1119 Q6).
 
 import { createHash, generateKeyPairSync } from "node:crypto";
+import { intentHash } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import {
   createRequestIntake,
@@ -47,7 +48,7 @@ function signRequest(captureId: string, overrides: Partial<SignRequest> = {}): S
     workflow: V.capture.workflow,
     audience: V.sign.audience,
     intent: V.sign.intent,
-    presenter: V.sign.presenter,
+    presenter: V.capture.presenter,
     ...overrides,
   };
 }
@@ -180,7 +181,7 @@ describe("the intake computes intent_hash itself (@spec request-provenance#signi
     }
     const presenterExtra = {
       ...signRequest(receipt.captureId),
-      presenter: { ...V.sign.presenter, originator: injected.originator },
+      presenter: { ...V.capture.presenter, originator: injected.originator },
     } as SignRequest;
     expect(await refusal(a.sign(presenterExtra))).toBe("invalid_sign_request");
 
@@ -268,5 +269,114 @@ describe("intake configuration and capture input (@spec request-provenance#captu
     }
     const short = intake({ randomBytes: (size) => Buffer.alloc(size - 1) });
     expect(() => short.capture(vectorCapture())).toThrow(RequestProvenanceError);
+  });
+});
+
+/** The refusal code a synchronous call throws. */
+function syncRefusal(f: () => unknown): string {
+  try {
+    f();
+  } catch (e) {
+    expect(e).toBeInstanceOf(RequestProvenanceError);
+    return (e as RequestProvenanceError).code;
+  }
+  throw new Error("no refusal");
+}
+
+/**
+ * @spec request-provenance#assertion, request-provenance#signing (#1971 review):
+ * the presenter is the workflow's authenticated presenter, captured and
+ * retained with the request; signing emits that presenter, and a presenter in
+ * a signing request is only a cross-reference to it.
+ */
+describe("the presenter is bound at capture (@spec request-provenance#assertion, request-provenance#signing, #939)", () => {
+  const captured = V.capture.presenter;
+
+  it("emits the captured presenter whether or not the signing request names it", async () => {
+    const a = intake();
+    const { captureId } = a.capture(vectorCapture());
+    const unnamed = await a.sign(signRequest(captureId, { presenter: undefined }));
+    const named = await a.sign(signRequest(captureId));
+    for (const signed of [unnamed, named])
+      expect(decodeJws(signed.entry.assertion).claims.presenter).toEqual(captured);
+  });
+
+  it.each([
+    ["a changed client", { ...captured, client_id: "other-agent" }],
+    [
+      "a changed confirmation key",
+      { ...captured, cnf: { jkt: "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs" } },
+    ],
+    ["the confirmation binding removed", { client_id: captured.client_id }],
+  ])(
+    "refuses a signing request naming %s, after the same capture and workflow signed for the captured presenter",
+    async (_case, presenter) => {
+      const a = intake();
+      const { captureId } = a.capture(vectorCapture());
+      await a.sign(signRequest(captureId));
+      expect(await refusal(a.sign(signRequest(captureId, { presenter })))).toBe(
+        "presenter_mismatch",
+      );
+    },
+  );
+
+  it.each([
+    ["an undefined thumbprint", { client_id: "ap-agent", cnf: { jkt: undefined } }],
+    [
+      "an undefined thumbprint beside a valid one",
+      {
+        client_id: "ap-agent",
+        cnf: { jkt: undefined, "x5t#S256": "bwcK0esc3ACC3DB2Y5_lESsXE8o9ltc05O89jdN-dg2" },
+      },
+    ],
+    ["an empty confirmation object", { client_id: "ap-agent", cnf: {} }],
+    ["an empty thumbprint", { client_id: "ap-agent", cnf: { jkt: "" } }],
+    ["a confirmation that is not an object", { client_id: "ap-agent", cnf: "jkt" }],
+  ])(
+    "refuses at capture a presenter with %s, where the vector's presenter is accepted",
+    (_case, presenter) => {
+      const a = intake();
+      expect(() => a.capture(vectorCapture())).not.toThrow();
+      expect(syncRefusal(() => a.capture(vectorCapture({ presenter: presenter as never })))).toBe(
+        "invalid_capture",
+      );
+    },
+  );
+});
+
+/**
+ * @spec request-provenance#signing (#1971 review): the candidate Intent is
+ * validated before it is copied, and an accepted Intent is preserved exactly,
+ * so `intent_hash` is computed over the Intent as given.
+ */
+describe("the Intent is validated before it is copied, and preserved exactly (@spec request-provenance#signing, #939)", () => {
+  const sparse: unknown[] = [];
+  sparse[1] = "https://erp.example.com";
+
+  it.each([
+    ["a non-finite number", { ...V.sign.intent, amount: JSON.parse("1e400") }],
+    ["NaN", { ...V.sign.intent, amount: Number.NaN }],
+    ["an undefined member", { ...V.sign.intent, note: undefined }],
+    ["a Date", { ...V.sign.intent, not_before: new Date(0) }],
+    ["a sparse array", { ...V.sign.intent, target_resources: sparse }],
+  ])("refuses an Intent carrying %s and signs nothing", async (_case, intent) => {
+    const a = intake();
+    const { captureId } = a.capture(vectorCapture());
+    expect(await refusal(a.sign(signRequest(captureId, { intent: intent as never })))).toBe(
+      "invalid_sign_request",
+    );
+  });
+
+  it("signs an exact-JSON Intent, nested values and a member named __proto__ included, over which intent_hash is unchanged", async () => {
+    const intent = JSON.parse(
+      '{"goal":"Pay the open Acme invoices.","limits":{"amount":"125.00","count":3,"ratio":0.5,"flags":[true,false,null]},"__proto__":{"x":1}}',
+    ) as JsonObject;
+    const a = intake();
+    const { captureId } = a.capture(vectorCapture());
+    const signed = await a.sign(signRequest(captureId, { intent }));
+    expect(signed.intentHash).toBe(intentHash(V.sign.audience, intent));
+    expect(decodeJws(signed.entry.assertion).claims.intent_hash).toBe(
+      intentHash(V.sign.audience, intent),
+    );
   });
 });

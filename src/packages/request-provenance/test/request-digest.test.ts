@@ -110,7 +110,7 @@ describe("request digest construction (@spec request-provenance#request-digest, 
       workflow: assertionVector.sign.workflow,
       audience: assertionVector.sign.audience,
       intent: assertionVector.sign.intent,
-      presenter: assertionVector.sign.presenter,
+      presenter: assertionVector.capture.presenter,
     });
     const payload = JSON.parse(
       Buffer.from(signed.entry.assertion.split(".")[1] as string, "base64url").toString("utf8"),

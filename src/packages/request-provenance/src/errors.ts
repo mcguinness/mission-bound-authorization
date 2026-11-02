@@ -15,6 +15,8 @@ export type RequestProvenanceErrorCode =
   | "unknown_capture"
   /** The capture record belongs to another workflow. */
   | "workflow_mismatch"
+  /** A signing request names a presenter other than the one captured for the workflow. */
+  | "presenter_mismatch"
   /** The capture is older than the intake's maximum capture age. */
   | "capture_too_old"
   /** The clock reads earlier than the capture time. */

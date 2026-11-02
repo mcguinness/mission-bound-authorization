@@ -6,8 +6,9 @@
  * from a retained, workflow-bound capture.
  *
  * `capture` runs before any shaping. It takes the exact instruction bytes,
- * their media type, and the origin facts the intake itself established
- * (originator and channel), bound to one workflow. It generates a fresh
+ * their media type, the origin facts the intake itself established
+ * (originator and channel), and the workflow's authenticated presenter,
+ * bound to one workflow. It generates a fresh
  * 256-bit secret and a random `capture_id`, computes the request digest,
  * records `captured_at`, and retains the capture record. The secret, the
  * instruction and its media type never leave the record: no return value,
@@ -15,9 +16,12 @@
  *
  * `sign` issues an assertion only from a retained capture of the same
  * workflow. It computes `intent_hash` itself over the candidate Intent for the
- * AS that `aud` names, and takes the request digest, originator and channel
- * only from the capture record; its input has no member for any of them, and
- * a request carrying one is refused. Every call mints a fresh `jti`.
+ * AS that `aud` names, and takes the request digest, originator, channel and
+ * presenter only from the capture record; its input has no member for the
+ * first three, and a request carrying one is refused. A `presenter` in the
+ * signing request is a checked cross-reference: one that differs from the
+ * captured presenter is refused, and none is ever signed. Every call mints a
+ * fresh `jti`.
  *
  * What a signature certifies is only what the draft says signing binds: the
  * captured request's origin, bound to one AS, one exact Intent and one
@@ -25,14 +29,17 @@
  * faithfully, that consent is sufficient, that admission should succeed, or
  * any authority.
  *
- * The capture store is in memory and belongs to one intake instance. Intake
+ * The capture store is in memory, belongs to one intake instance, and prunes
+ * nothing: it is this library slice's store, not a deployed one. A deployed
+ * intake service needs an enforceable retention policy for capture records
+ * and issued `jti` values (#939, D1119). Intake
  * isolation (that a shaper can neither create or alter capture records nor
  * ask for a signature over a request the intake did not capture) is a
  * property of the deployment around this library, not of the library alone.
  */
 
 import { KeyObject, randomBytes as nodeRandomBytes, type webcrypto } from "node:crypto";
-import { intentHash, type JsonValue } from "@mission/core";
+import { canonicalize, intentHash, type JsonValue } from "@mission/core";
 import { SignJWT } from "jose";
 import { CAPTURE_SECRET_BYTES, isEncodableMediaType, requestDigest } from "./digest.js";
 import { RequestProvenanceError } from "./errors.js";
@@ -98,6 +105,8 @@ export interface CaptureRequest {
   mediaType: string;
   originator: Originator;
   channel: Channel;
+  /** The presenter the intake authenticated for this workflow; the only presenter it signs. */
+  presenter: Presenter;
 }
 
 /** What `capture` returns: no secret, no instruction, no media type. */
@@ -118,8 +127,12 @@ export interface SignRequest {
   audience: string;
   /** The candidate Mission Intent, over which the intake computes `intent_hash`. */
   intent: JsonObject;
-  /** The presenter the intake authenticated for this workflow. */
-  presenter: Presenter;
+  /**
+   * A cross-reference only: where present, it must equal the presenter
+   * captured for the workflow, or the request is refused. The assertion
+   * always carries the captured presenter.
+   */
+  presenter?: Presenter;
 }
 
 export interface ProvenanceEntry {
@@ -165,6 +178,8 @@ interface CaptureRecord {
   readonly mediaType: string;
   readonly originator: Originator;
   readonly channel: Channel;
+  /** The workflow's authenticated presenter, captured with the request. */
+  readonly presenter: Presenter;
   readonly capturedAt: number;
   readonly secret: Buffer;
   readonly requestDigest: string;
@@ -172,7 +187,14 @@ interface CaptureRecord {
   readonly issued: string[];
 }
 
-const CAPTURE_MEMBERS = new Set(["workflow", "instruction", "mediaType", "originator", "channel"]);
+const CAPTURE_MEMBERS = new Set([
+  "workflow",
+  "instruction",
+  "mediaType",
+  "originator",
+  "channel",
+  "presenter",
+]);
 const SIGN_MEMBERS = new Set(["captureId", "workflow", "audience", "intent", "presenter"]);
 const ORIGINATOR_MEMBERS = new Set(["iss", "sub"]);
 const CHANNEL_MEMBERS = new Set(["type", "acr", "amr", "auth_time"]);
@@ -255,39 +277,76 @@ function readChannel(v: unknown): Channel {
   return channel;
 }
 
-function readPresenter(v: unknown): Presenter {
+/** Confirmation members whose value is a key thumbprint string. */
+const THUMBPRINT_CNF_MEMBERS = ["jkt", "x5t#S256"];
+
+function readPresenter(v: unknown, code: "invalid_capture" | "invalid_sign_request"): Presenter {
   if (!isPlainObject(v)) {
-    throw new RequestProvenanceError("invalid_sign_request", "presenter must be an object");
+    throw new RequestProvenanceError(code, "presenter must be an object");
   }
-  closed(v, PRESENTER_MEMBERS, "presenter", "invalid_sign_request");
+  closed(v, PRESENTER_MEMBERS, "presenter", code);
   if (!nonEmptyString(v.client_id)) {
-    throw new RequestProvenanceError("invalid_sign_request", "presenter needs a string client_id");
+    throw new RequestProvenanceError(code, "presenter needs a string client_id");
   }
   const presenter: Presenter = { client_id: v.client_id };
-  if (v.cnf !== undefined) {
-    if (!isPlainObject(v.cnf) || Object.keys(v.cnf).length === 0) {
+  if (Object.hasOwn(v, "cnf")) {
+    // Validated before it is copied, and checked again as copied: a member
+    // JSON cannot carry exactly (`{jkt: undefined}`) refuses, never vanishes.
+    const cnf = exactJson(v.cnf, "presenter cnf", code);
+    if (!isPlainObject(cnf) || Object.keys(cnf).length === 0) {
       throw new RequestProvenanceError(
-        "invalid_sign_request",
+        code,
         "presenter cnf must be a non-empty confirmation-method object",
       );
     }
-    presenter.cnf = jsonCopy(v.cnf, "presenter cnf") as JsonObject;
+    for (const member of THUMBPRINT_CNF_MEMBERS) {
+      if (Object.hasOwn(cnf, member) && !nonEmptyString(cnf[member])) {
+        throw new RequestProvenanceError(
+          code,
+          `presenter cnf ${member} must be a non-empty string`,
+        );
+      }
+    }
+    presenter.cnf = cnf as JsonObject;
   }
   return presenter;
 }
 
-/** A deep copy through JSON, refusing anything JSON cannot carry exactly. */
-function jsonCopy(v: unknown, what: string): JsonValue {
-  let text: string | undefined;
-  try {
-    text = JSON.stringify(v);
-  } catch {
-    text = undefined;
+/**
+ * An exact deep copy of a JSON value, validated before anything is copied:
+ * a non-finite number, `undefined`, a function, a symbol, a bigint, a sparse
+ * array, a symbol-keyed member, or an object that is not plain is refused,
+ * never converted. Every accepted value is preserved as given.
+ */
+function exactJson(
+  v: unknown,
+  what: string,
+  code: "invalid_capture" | "invalid_sign_request",
+): JsonValue {
+  const refuse = (why: string): never => {
+    throw new RequestProvenanceError(code, `${what} is not exact JSON: ${why}`);
+  };
+  if (v === null || typeof v === "boolean" || typeof v === "string") return v;
+  if (typeof v === "number") return Number.isFinite(v) ? v : refuse("a non-finite number");
+  if (Array.isArray(v)) {
+    const out: JsonValue[] = [];
+    for (let i = 0; i < v.length; i += 1) {
+      if (!Object.hasOwn(v, i)) refuse("a sparse array");
+      out.push(exactJson(v[i], what, code));
+    }
+    return out;
   }
-  if (text === undefined) {
-    throw new RequestProvenanceError("invalid_sign_request", `${what} is not JSON`);
+  if (isPlainObject(v)) {
+    if (Object.getOwnPropertySymbols(v).length > 0) refuse("a symbol-keyed member");
+    const entries: [string, JsonValue][] = [];
+    for (const [key, value] of Object.entries(v)) {
+      if (value === undefined) refuse(`member ${key} is undefined`);
+      entries.push([key, exactJson(value, what, code)]);
+    }
+    // fromEntries defines own properties, so a member named __proto__ stays a member.
+    return Object.fromEntries(entries) as JsonObject;
   }
-  return JSON.parse(text) as JsonValue;
+  return refuse(`a ${typeof v}`);
 }
 
 function readPositiveInteger(v: unknown, what: string): number {
@@ -404,6 +463,7 @@ class Intake implements RequestIntake {
     }
     const originator = readOriginator(request.originator);
     const channel = readChannel(request.channel);
+    const presenter = readPresenter(request.presenter, "invalid_capture");
     // Copy the bytes so a later change to the caller's buffer cannot alter the record.
     const instruction = Buffer.from(request.instruction);
     const capturedAt = this.#seconds();
@@ -423,6 +483,7 @@ class Intake implements RequestIntake {
       mediaType: request.mediaType,
       originator,
       channel,
+      presenter,
       capturedAt,
       secret,
       requestDigest: digest,
@@ -456,8 +517,8 @@ class Intake implements RequestIntake {
         "intent must be a Mission Intent object",
       );
     }
-    const presenter = readPresenter(request.presenter);
-    const intent = jsonCopy(request.intent, "intent");
+    // Validated before copying; an accepted Intent is preserved exactly.
+    const intent = exactJson(request.intent, "intent", "invalid_sign_request");
 
     const record = this.#captures.get(request.captureId);
     if (record === undefined) {
@@ -471,6 +532,20 @@ class Intake implements RequestIntake {
         "workflow_mismatch",
         "the capture record belongs to another workflow",
       );
+    }
+    // The presenter is the one captured for the workflow. A presenter in the
+    // request is a cross-reference: it must equal that one exactly.
+    if (request.presenter !== undefined) {
+      const named = readPresenter(request.presenter, "invalid_sign_request");
+      if (
+        canonicalize(named as unknown as JsonValue) !==
+        canonicalize(record.presenter as unknown as JsonValue)
+      ) {
+        throw new RequestProvenanceError(
+          "presenter_mismatch",
+          "the signing request names a presenter other than the one captured for the workflow",
+        );
+      }
     }
     const iat = this.#seconds();
     if (iat < record.capturedAt) {
@@ -502,9 +577,9 @@ class Intake implements RequestIntake {
       exp,
       jti,
       intent_hash: hash,
-      presenter: presenter as unknown as JsonObject,
+      presenter: exactJson(record.presenter, "presenter", "invalid_sign_request"),
       originator: { ...record.originator },
-      channel: jsonCopy(record.channel, "channel"),
+      channel: exactJson(record.channel, "channel", "invalid_sign_request"),
       captured_at: record.capturedAt,
       request_digest: record.requestDigest,
     };

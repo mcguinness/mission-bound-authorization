@@ -119,7 +119,7 @@ describe("the assertion commits to no request content (@spec request-provenance#
       workflow: V.capture.workflow,
       audience: V.sign.audience,
       intent: V.sign.intent,
-      presenter: V.sign.presenter,
+      presenter: V.capture.presenter,
     });
     const { header, claims } = decodeJws(signed.entry.assertion);
     expect(Object.keys(claims).sort()).toEqual([...ASSERTION_CLAIMS].sort());
@@ -133,7 +133,7 @@ describe("the assertion commits to no request content (@spec request-provenance#
         workflow: "another-workflow",
         audience: V.sign.audience,
         intent: V.sign.intent,
-        presenter: V.sign.presenter,
+        presenter: V.capture.presenter,
       });
     } catch (e) {
       expect(e).toBeInstanceOf(RequestProvenanceError);
@@ -169,7 +169,7 @@ describe("the assertion commits to no request content (@spec request-provenance#
         workflow: V.sign.workflow,
         audience: V.sign.audience,
         intent: V.sign.intent,
-        presenter: V.sign.presenter,
+        presenter: V.capture.presenter,
       });
       return { receipt, ...decodeJws(signed.entry.assertion) };
     };
@@ -201,7 +201,7 @@ describe("the assertion commits to no request content (@spec request-provenance#
         workflow: V.sign.workflow,
         audience: V.sign.audience,
         intent,
-        presenter: V.sign.presenter,
+        presenter: V.capture.presenter,
       });
       return decodeJws(signed.entry.assertion);
     };
@@ -225,7 +225,7 @@ describe("a dictionary probe over a low-entropy instruction (@spec request-prove
       workflow: V.capture.workflow,
       audience: V.sign.audience,
       intent: V.sign.intent,
-      presenter: V.sign.presenter,
+      presenter: V.capture.presenter,
     });
     const { claims } = decodeJws(signed.entry.assertion);
     const members = Object.entries(claimsWithout(claims, "intent_hash"));
@@ -267,7 +267,7 @@ describe("a dictionary probe over a low-entropy instruction (@spec request-prove
       workflow: V.capture.workflow,
       audience: V.sign.audience,
       intent: { goal: INSTRUCTION, ...predictable },
-      presenter: V.sign.presenter,
+      presenter: V.capture.presenter,
     });
     const { claims } = decodeJws(signed.entry.assertion);
     const confirmed = CANDIDATES.filter(
@@ -290,7 +290,7 @@ describe("capture_id (@spec request-provenance#assertion, #939)", () => {
           workflow: V.capture.workflow,
           audience: V.sign.audience,
           intent: V.sign.intent,
-          presenter: V.sign.presenter,
+          presenter: V.capture.presenter,
         });
         expect(decodeJws(signed.entry.assertion).claims.capture_id).toBe(receipt.captureId);
         ids.push(receipt.captureId);

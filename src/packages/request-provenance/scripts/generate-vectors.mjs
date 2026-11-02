@@ -212,6 +212,10 @@ const capture = {
   captured_at: CAPTURED_AT,
   secret_hex: SECRET_A.toString("hex"),
   capture_id: CAPTURE_ID_BYTES.toString("base64url"),
+  presenter: {
+    client_id: "ap-agent",
+    cnf: { jkt: "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
+  },
 };
 const sign = {
   workflow: capture.workflow,
@@ -220,10 +224,6 @@ const sign = {
     goal: "Pay the open Acme invoices due this week.",
     target_resources: ["https://erp.example.com"],
     expires_at: "2026-10-10T23:59:59Z",
-  },
-  presenter: {
-    client_id: "ap-agent",
-    cnf: { jkt: "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   },
   iat: IAT,
   jti: JTI_BYTES.toString("base64url"),
@@ -238,7 +238,7 @@ const claims = {
   exp: IAT + LIFETIME,
   jti: sign.jti,
   intent_hash: intentHash(AUD, sign.intent),
-  presenter: sign.presenter,
+  presenter: capture.presenter,
   originator: capture.originator,
   channel: capture.channel,
   captured_at: CAPTURED_AT,
@@ -289,7 +289,7 @@ const verifierContext = {
     ],
   },
   intent: sign.intent,
-  presenter: sign.presenter,
+  presenter: capture.presenter,
 };
 
 const assertionFile = {
@@ -530,8 +530,8 @@ add({
   id: "neg-presenter-no-client-id",
   description: "presenter lacks client_id",
   step: 5,
-  construction: { claims_set: { presenter: { cnf: sign.presenter.cnf } } },
-  token: await es256(header, { ...claims, presenter: { cnf: sign.presenter.cnf } }),
+  construction: { claims_set: { presenter: { cnf: capture.presenter.cnf } } },
+  token: await es256(header, { ...claims, presenter: { cnf: capture.presenter.cnf } }),
   expected: REFUSE,
   producer: producerClaims,
   verifier: PENDING,

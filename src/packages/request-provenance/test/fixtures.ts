@@ -50,12 +50,12 @@ export interface AssertionVector {
     captured_at: number;
     secret_hex: string;
     capture_id: string;
+    presenter: Presenter;
   };
   sign: {
     workflow: string;
     audience: string;
     intent: JsonObject;
-    presenter: Presenter;
     iat: number;
     jti: string;
   };
@@ -95,6 +95,7 @@ export function vectorCapture(overrides: Partial<CaptureRequest> = {}): CaptureR
     mediaType: V.capture.media_type,
     originator: V.capture.originator,
     channel: V.capture.channel,
+    presenter: V.capture.presenter,
     ...overrides,
   };
 }

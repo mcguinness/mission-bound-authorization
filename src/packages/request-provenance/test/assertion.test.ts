@@ -28,7 +28,7 @@ function signRequest(captureId: string, overrides: Partial<SignRequest> = {}): S
     workflow: V.sign.workflow,
     audience: V.sign.audience,
     intent: V.sign.intent,
-    presenter: V.sign.presenter,
+    presenter: V.capture.presenter,
     ...overrides,
   };
 }
@@ -117,7 +117,7 @@ describe("the provenance assertion (@spec request-provenance#assertion, request-
     }
     expect(claims.exp).toBe((claims.iat as number) + 300);
     expect(claims.captured_at as number).toBeLessThanOrEqual(claims.iat as number);
-    expect(claims.presenter).toEqual(V.sign.presenter);
+    expect(claims.presenter).toEqual(V.capture.presenter);
     expect(claims.originator).toEqual(V.capture.originator);
     expect(claims.channel).toEqual(V.capture.channel);
     expect(claims.request_digest).toMatch(/^hmac-sha-256:[A-Za-z0-9_-]{43}$/);
