@@ -220,8 +220,13 @@ describe("Signals consumer reliance (@spec control-plane#state-surfaces, signals
 
   it("reports the issuer's observation time and reliance bound at every read, and gives no lease past the bound", async () => {
     const committed = "2026-11-01T00:00:00.000Z";
-    const r = receiver();
-    const short = receiver({ maxStaleSeconds: 60 });
+    // Both receivers subscribe at the commit (#1896, D1117): the stream's
+    // silence, which runs from the subscription until a liveness event,
+    // reaches maxStaleSeconds no earlier than this bound does, so only the
+    // bound decides each read below.
+    const subscribed = { now: () => new Date(committed) };
+    const r = receiver(subscribed);
+    const short = receiver({ ...subscribed, maxStaleSeconds: 60 });
     try {
       const event = await set("msn_a", 1, "active", committed);
       await r.verifyAndApply(event);

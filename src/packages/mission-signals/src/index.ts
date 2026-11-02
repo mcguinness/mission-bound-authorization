@@ -37,7 +37,11 @@
  * (#1896, D1100): it records the last verified liveness event, takes the
  * agreed heartbeat interval, and applies the staleness rule and its latch as
  * a condition on {@link MissionSignalReceiver.lease} in addition to the
- * per-Mission reliance bound (#1747), never extending that bound.
+ * per-Mission reliance bound (#1747), never extending that bound. Its store
+ * records the stream id, the subscription (its first open, from which
+ * silence runs until a liveness event arrives) and the agreement; another
+ * stream id does not open it, and a changed agreement is a break that
+ * latches every Mission held across it (D1117).
  * Delivery durability (#641) is implemented: the emitter journals one durable
  * job per (event, consumer) in its own outbox store, redelivers byte-identical
  * SETs under a bounded backoff until the hand-off is acknowledged, and offers
@@ -431,7 +435,9 @@ export interface ReceiverOptions {
    * lease until Mission Status re-establishes it. The stream-liveness rule
    * (#1896, D1100) is a further condition under that bound: the same value
    * is the silence after which a stream that is not verified live leaves its
-   * push-derived state stale.
+   * push-derived state stale. It is part of the stream agreement the store
+   * records (D1117): a receiver that opens the store with another value
+   * treats the change as a break in the stream's liveness.
    */
   maxStaleSeconds?: number;
   /**
@@ -441,21 +447,27 @@ export interface ReceiverOptions {
    * is verified live for this long after a verified verification or
    * heartbeat event. It has no default: a stream whose interval this
    * receiver does not know is never verified live, so its staleness
-   * fallback runs from `maxStaleSeconds` alone.
+   * fallback runs from `maxStaleSeconds` alone. The store records it with
+   * the stream (D1117): a receiver that opens the store with another value,
+   * or with none where one was recorded, treats the change as a break in
+   * the stream's liveness.
    */
   heartbeatIntervalSeconds?: number;
   /**
    * The SSF stream id: the `sub_id` of the stream's verification and Stream
    * Updated events (SSF 1.0 Sections 8.1.4.1 and 8.1.5). The audience when
-   * absent, as the emitter names a stream with no configured id.
+   * absent, as the emitter names a stream with no configured id. The store
+   * records it on its first open and serves that one stream for the issuer
+   * and audience (D1117): a receiver that names another stream id over it
+   * does not open ({@link SignalReceiverStreamError}).
    */
   streamId?: string;
   /**
-   * The receiver's clock, which times the receipt of the stream's SETs. Tests
-   * inject it. A liveness event counts from the earlier of its receipt and
-   * its `iat`, so an issuer whose clock runs more than `maxStaleSeconds`
-   * behind this one leaves the stream always stale: reliance on push-derived
-   * state then fails closed.
+   * The receiver's clock, which times the subscription (the store's first
+   * open) and the receipt of the stream's SETs. Tests inject it. A liveness
+   * event counts from the earlier of its receipt and its `iat`, so an issuer
+   * whose clock runs more than `maxStaleSeconds` behind this one leaves the
+   * stream always stale: reliance on push-derived state then fails closed.
    */
   now?: () => Date;
   /**
@@ -514,16 +526,21 @@ const RECEIVER_MISSION_COLUMNS_SINCE = [
  * the SET that established the row, byte for byte. The seen-`jti` table is
  * bounded and is the only thing ever evicted.
  *
- * @spec signals#consumer-behavior (#1896, D1100): one stream row per
- * (issuer, audience), times in milliseconds on the receiver's clock:
- * `first_seen_at`, the receipt of the stream's first verified SET, from
- * which silence is measured until a liveness event arrives;
- * `last_liveness_at`, the latest verified verification or heartbeat event;
- * `stale_generation`, raised each time a liveness event ends a stale
- * period; and `stream_status`, the last Stream Updated status. A Mission
- * row's `liveness_generation` is the stream generation its push-derived
- * state was established under, so a row below the stream's generation was
- * held across a stale period: the latch.
+ * @spec signals#consumer-behavior (#1896, D1100, D1117): one stream row per
+ * (issuer, audience), written when the store is first opened, times in
+ * milliseconds on the receiver's clock: `stream_id`, the one stream the row
+ * describes; `subscribed_at`, that first open, the subscription, from which
+ * silence is measured until a liveness event arrives; the agreement,
+ * `heartbeat_interval_seconds` (null when this receiver does not know it)
+ * and `max_stale_seconds`; `last_liveness_at`, the latest verified
+ * verification or heartbeat event; `stale_generation`, raised each time a
+ * liveness event ends a stale period and each time the agreement changes;
+ * `stale_held`, set when the stream went stale under an agreement since
+ * replaced, so it stays stale until a liveness event arrives; and
+ * `stream_status`, the last Stream Updated status. A Mission row's
+ * `liveness_generation` is the stream generation its push-derived state
+ * was established under, so a row below the stream's generation was held
+ * across a stale period or an agreement change: the latch.
  */
 const RECEIVER_SCHEMA = `
 CREATE TABLE IF NOT EXISTS signal_receiver_missions (
@@ -549,9 +566,13 @@ CREATE TABLE IF NOT EXISTS signal_receiver_missions (
 CREATE TABLE IF NOT EXISTS signal_receiver_stream (
   issuer TEXT NOT NULL,
   audience TEXT NOT NULL,
-  first_seen_at INTEGER NOT NULL,
+  stream_id TEXT NOT NULL,
+  subscribed_at INTEGER NOT NULL,
+  heartbeat_interval_seconds INTEGER,
+  max_stale_seconds INTEGER NOT NULL,
   last_liveness_at INTEGER,
   stale_generation INTEGER NOT NULL,
+  stale_held INTEGER NOT NULL,
   stream_status TEXT,
   PRIMARY KEY (issuer, audience)
 ) STRICT;
@@ -660,12 +681,22 @@ interface ReceiverMissionRow {
   liveness_generation: number | null;
 }
 
-/** @spec signals#consumer-behavior (#1896): the receiver's record of its stream. */
+/** @spec signals#consumer-behavior (#1896, D1117): the receiver's record of its stream. */
 interface ReceiverStreamRow {
-  first_seen_at: number;
+  stream_id: string;
+  subscribed_at: number;
+  heartbeat_interval_seconds: number | null;
+  max_stale_seconds: number;
   last_liveness_at: number | null;
   stale_generation: number;
+  stale_held: number;
   stream_status: string | null;
+}
+
+/** @spec signals#consumer-behavior (#1896, D1117): the stream timing a receiver holds. */
+interface StreamTiming {
+  heartbeatIntervalSeconds: number | undefined;
+  maxStaleSeconds: number;
 }
 
 /**
@@ -675,7 +706,11 @@ interface ReceiverStreamRow {
 export interface StreamLiveness {
   /** A verified verification or heartbeat event arrived within the agreed heartbeat interval; never true without one. */
   verifiedLive: boolean;
-  /** Not verified live, and silent for longer than `maxStaleSeconds` since the last liveness event (or the stream's first SET). */
+  /**
+   * Not verified live, and silent for longer than `maxStaleSeconds` since the
+   * last liveness event, or since the subscription when none has arrived; or
+   * gone stale under an agreement since replaced, with no liveness event since.
+   */
   stale: boolean;
   /** The stream's latest verified liveness event, when one has arrived. */
   lastLivenessAt?: Date;
@@ -688,6 +723,14 @@ export interface StreamLiveness {
  * not acknowledged and its redelivery is processed afresh.
  */
 export class SignalReceiverStorageError extends Error {}
+
+/**
+ * @spec signals#consumer-behavior (#1896, D1117): the store already records
+ * another stream for this issuer and audience. The receiver does not open,
+ * and the store is left as it was: the recorded stream's liveness record and
+ * cached state are never read as this stream's.
+ */
+export class SignalReceiverStreamError extends Error {}
 
 /**
  * @spec signals#set-protection @spec signals#consumer-behavior
@@ -804,6 +847,15 @@ export class MissionSignalReceiver {
     this.db = openStore(RECEIVER_SCHEMA, opts.store);
     try {
       this.addMissingMissionColumns();
+      // @spec signals#consumer-behavior (#1896, D1117): one stream per issuer
+      // and audience. Checked before anything is written, so a refused open
+      // leaves the store as it was.
+      const recorded = this.streamRow();
+      if (recorded !== undefined && recorded.stream_id !== this.streamId) {
+        throw new SignalReceiverStreamError(
+          `the store records stream ${JSON.stringify(recorded.stream_id)} for this issuer and audience, not ${JSON.stringify(this.streamId)}`,
+        );
+      }
       if (witnessFile !== undefined) {
         this.admit(witnessFile);
       } else if (this.sequenceRow() !== undefined) {
@@ -814,12 +866,69 @@ export class MissionSignalReceiver {
           "this receiver's store has a recovery witness, so it opens only with that witness",
         );
       }
+      this.openStream();
     } catch (e) {
       this.witnessLock?.close();
       this.witnessLock = undefined;
       this.db.close();
       throw e;
     }
+  }
+
+  /**
+   * @spec signals#consumer-behavior (#1896, D1117): the stream's record when
+   * the receiver opens, written in one witnessed transaction when it changes.
+   *
+   * - The store's first open is the subscription: the record is created with
+   *   this receiver's stream id, the receipt clock as `subscribed_at`, and
+   *   the agreement. Until a liveness event arrives, silence runs from that
+   *   instant, and a later open never moves it.
+   * - An agreement that differs from the recorded one, the heartbeat
+   *   interval (known or not) or `maxStaleSeconds`, is a break, whether it
+   *   changed while the receiver ran on another handle or while it was down:
+   *   the stale generation is raised, so every Mission held across the change
+   *   stays latched until Mission Status re-establishes it. A stream already
+   *   stale under the recorded agreement when the receiver opens stays stale
+   *   (`stale_held`) until a liveness event arrives: re-evaluating its
+   *   silence under the new agreement never ends a stale period. Neither
+   *   moves the liveness record, so no grace period starts at the change.
+   */
+  private openStream(): void {
+    const recorded = this.streamRow();
+    const interval = this.heartbeatIntervalSeconds ?? null;
+    if (
+      recorded !== undefined &&
+      recorded.heartbeat_interval_seconds === interval &&
+      recorded.max_stale_seconds === this.maxStaleSeconds
+    ) {
+      return;
+    }
+    const now = this.nowFn().getTime();
+    withTransaction(this.db, () => {
+      this.witnessWrite();
+      if (recorded === undefined) {
+        this.db
+          .prepare(
+            `INSERT INTO signal_receiver_stream
+               (issuer, audience, stream_id, subscribed_at, heartbeat_interval_seconds,
+                max_stale_seconds, stale_generation, stale_held)
+             VALUES (?, ?, ?, ?, ?, ?, 0, 0)`,
+          )
+          .run(this.opts.issuer, this.audience, this.streamId, now, interval, this.maxStaleSeconds);
+        return;
+      }
+      const staleBefore = this.liveness(recorded, now, {
+        heartbeatIntervalSeconds: recorded.heartbeat_interval_seconds ?? undefined,
+        maxStaleSeconds: recorded.max_stale_seconds,
+      }).stale;
+      this.db
+        .prepare(
+          `UPDATE signal_receiver_stream SET heartbeat_interval_seconds = ?, max_stale_seconds = ?,
+             stale_generation = stale_generation + 1, stale_held = ?
+           WHERE issuer = ? AND audience = ?`,
+        )
+        .run(interval, this.maxStaleSeconds, staleBefore ? 1 : 0, this.opts.issuer, this.audience);
+    });
   }
 
   /**
@@ -1069,47 +1178,51 @@ export class MissionSignalReceiver {
   private streamRow(): ReceiverStreamRow | undefined {
     return this.db
       .prepare(
-        `SELECT first_seen_at, last_liveness_at, stale_generation, stream_status
+        `SELECT stream_id, subscribed_at, heartbeat_interval_seconds, max_stale_seconds,
+                last_liveness_at, stale_generation, stale_held, stream_status
          FROM signal_receiver_stream WHERE issuer = ? AND audience = ?`,
       )
       .get(this.opts.issuer, this.audience) as ReceiverStreamRow | undefined;
   }
 
   /**
-   * @spec signals#consumer-behavior (#1896): the stream's record, written on
-   * the receipt of its first verified SET, of any kind, inside that SET's
-   * transaction. Silence is measured from that receipt until a liveness
-   * event arrives.
+   * The stream's record, which the receiver wrote when it opened
+   * ({@link openStream}); a store that lost it under a running receiver
+   * records nothing more.
    */
-  private ensureStream(receivedAt: number): ReceiverStreamRow {
-    this.db
-      .prepare(
-        `INSERT INTO signal_receiver_stream (issuer, audience, first_seen_at, stale_generation)
-         VALUES (?, ?, ?, 0) ON CONFLICT (issuer, audience) DO NOTHING`,
-      )
-      .run(this.opts.issuer, this.audience, receivedAt);
-    return this.streamRow() as ReceiverStreamRow;
+  private requireStream(): ReceiverStreamRow {
+    const stream = this.streamRow();
+    if (stream === undefined) throw new Error("the receiver's stream record is missing");
+    return stream;
   }
 
   /**
-   * @spec signals#consumer-behavior (#1896, D1100): whether the stream is
-   * verified live, and whether it is stale, at `at` (milliseconds). Verified
-   * live: a verified verification or heartbeat event arrived no more than
-   * the agreed heartbeat interval before `at`; never, when the interval is
-   * unknown or no such event has arrived. Stale: not verified live, and
-   * silent for longer than `maxStaleSeconds`, measured from the last
-   * liveness event, or from the stream's first SET when none has arrived.
+   * @spec signals#consumer-behavior (#1896, D1100, D1117): whether the stream
+   * is verified live, and whether it is stale, at `at` (milliseconds), under
+   * `timing` (this receiver's agreement unless given). Verified live: a
+   * verified verification or heartbeat event arrived no more than the agreed
+   * heartbeat interval before `at`; never, when the interval is unknown or
+   * no such event has arrived. Stale: not verified live, and silent for
+   * longer than `maxStaleSeconds`, measured from the last liveness event, or
+   * from the subscription when none has arrived. A stream that went stale
+   * under an agreement since replaced is stale until a liveness event
+   * arrives, whatever its silence under the new one.
    */
   private liveness(
     stream: ReceiverStreamRow,
     at: number,
+    timing: StreamTiming = {
+      heartbeatIntervalSeconds: this.heartbeatIntervalSeconds,
+      maxStaleSeconds: this.maxStaleSeconds,
+    },
   ): { verifiedLive: boolean; stale: boolean } {
-    const silence = at - (stream.last_liveness_at ?? stream.first_seen_at);
+    if (stream.stale_held !== 0) return { verifiedLive: false, stale: true };
+    const silence = at - (stream.last_liveness_at ?? stream.subscribed_at);
     const verifiedLive =
       stream.last_liveness_at !== null &&
-      this.heartbeatIntervalSeconds !== undefined &&
-      silence <= this.heartbeatIntervalSeconds * 1000;
-    return { verifiedLive, stale: !verifiedLive && silence > this.maxStaleSeconds * 1000 };
+      timing.heartbeatIntervalSeconds !== undefined &&
+      silence <= timing.heartbeatIntervalSeconds * 1000;
+    return { verifiedLive, stale: !verifiedLive && silence > timing.maxStaleSeconds * 1000 };
   }
 
   /** Record a verified SET's `jti`, keeping the newest `seenCapacity` for this receiver. */
@@ -1209,7 +1322,7 @@ export class MissionSignalReceiver {
   private applyInTx(jti: string, parsed: ParsedEvent, setJwt: string): ApplyResult {
     this.witnessWrite();
     this.recordSeen(jti);
-    const stream = this.ensureStream(this.nowFn().getTime());
+    const stream = this.requireStream();
 
     const {
       missionId,
@@ -1351,12 +1464,14 @@ export class MissionSignalReceiver {
    * stream-control SET, with its `jti`, in one transaction.
    *
    * A verification event, requested or a heartbeat, is the stream's
-   * liveness event. If the stream was stale when it arrived, the stream's
+   * liveness event. If the stream was stale when it arrived, including a
+   * stream that went stale under an agreement since replaced, the stream's
    * generation is raised first, so every Mission whose push-derived state
    * was held across the stale period stays latched: the liveness event does
-   * not re-establish it. The liveness time is the earlier of the receipt and
-   * the SET's `iat`, since the event attests delivery only up to when the
-   * issuer sent it, and it never moves back.
+   * not re-establish it. The liveness event ends that stale period. The
+   * liveness time is the earlier of the receipt and the SET's `iat`, since
+   * the event attests delivery only up to when the issuer sent it, and it
+   * never moves back.
    *
    * A Stream Updated event records the stream's status and nothing else: it
    * is not a liveness event. Neither kind touches any Mission's state,
@@ -1366,7 +1481,7 @@ export class MissionSignalReceiver {
     this.witnessWrite();
     this.recordSeen(jti);
     const receivedAt = this.nowFn().getTime();
-    const stream = this.ensureStream(receivedAt);
+    const stream = this.requireStream();
     if (control.kind === "stream-updated") {
       this.db
         .prepare(
@@ -1381,7 +1496,7 @@ export class MissionSignalReceiver {
     const attested = Math.min(receivedAt, control.issuedAtMs);
     this.db
       .prepare(
-        `UPDATE signal_receiver_stream SET last_liveness_at = ?, stale_generation = ?
+        `UPDATE signal_receiver_stream SET last_liveness_at = ?, stale_generation = ?, stale_held = 0
          WHERE issuer = ? AND audience = ?`,
       )
       .run(
@@ -1394,13 +1509,13 @@ export class MissionSignalReceiver {
   }
 
   /**
-   * @spec signals#consumer-behavior (#1896, D1100): the stream's liveness at
-   * `at` (RFC 3339). Before the stream's first verified SET it is neither
-   * verified live nor stale: nothing has been established over it.
+   * @spec signals#consumer-behavior (#1896, D1100, D1117): the stream's
+   * liveness at `at` (RFC 3339). Until a liveness event arrives, the silence
+   * runs from the subscription, the store's first open.
    */
   streamLiveness(at: string): StreamLiveness {
     const stream = this.streamRow();
-    if (stream === undefined) return { verifiedLive: false, stale: false };
+    if (stream === undefined) return { verifiedLive: false, stale: true };
     const { verifiedLive, stale } = this.liveness(stream, Date.parse(at));
     return {
       verifiedLive,
