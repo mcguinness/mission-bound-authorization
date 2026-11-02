@@ -50,7 +50,7 @@ import {
 } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
 import { AAT_PRESENTATION_META_KEY, readAatPresentation } from "./aat-presentation.js";
-import { accessTokenHash, DpopReplayUnavailableError } from "./dpop.js";
+import { accessTokenHash, DpopProofError, DpopReplayUnavailableError } from "./dpop.js";
 import { IntrospectionUnavailableError } from "./introspection.js";
 import { originalArgumentsFrom, snapshotArguments } from "./invocation-arguments.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
@@ -560,7 +560,11 @@ async function authenticate(
       res.end(JSON.stringify({ error: "temporarily_unavailable", error_description: "token introspection unavailable" }));
       return undefined;
     }
-    unauthorized(res, "DPoP proof-of-possession failed");
+    // @spec #1970: 401 invalid_token either way. The description names the
+    // proof only when the proof itself failed; any other refusal (signature,
+    // audience, issuer, a transaction credential's retained operation) is
+    // described neutrally, and no internal refusal reason is exposed.
+    unauthorized(res, e instanceof DpopProofError ? "DPoP proof-of-possession failed" : "the presented credential is not valid");
     return undefined;
   }
 

@@ -206,8 +206,8 @@ This document is optional. A deployment that records nothing beyond the
 Mission Record's accountable `approval_basis.consent_principal` is fully
 conformant to its Mission binding and unaffected by this document,
 except that a deployment activating Missions under a standing-consent
-basis meets the Approval Basis Contract ({{approval-basis-contract}}),
-which records nothing. A profile can require the record; {{triggers}}
+basis whose defining profile adopts the Approval Basis Contract meets
+that Contract ({{approval-basis-contract}}), which records nothing. A profile can require the record; {{triggers}}
 defines the conditions under which one does.
 
 The record is independent of the approval ceremony. It applies alike to
@@ -241,8 +241,9 @@ the issuance profile's commitment mechanisms and classified under the
 species of that profile's commitment taxonomy, whose section this
 document imports normatively ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Commitment Mechanisms"): `approval_policy.digest`,
-`approval_context_commitment`, and `submission_evidence_commitment` are
-envelope anchors, and the record digest ({{envelope}}) is a
+`approval_context_commitment`, `submission_evidence_commitment`, and an
+activation policy reference's `digest` ({{activation-policy-commitment}})
+are envelope anchors, and the record digest ({{envelope}}) is a
 canonical-object digest. That construction instantiates the default
 commitment construction of {{I-D.draft-mcguinness-mission-substrate}},
 which is informative here.
@@ -1268,12 +1269,16 @@ deployment's policy:
 
 # Approval Basis Contract {#approval-basis-contract}
 
-This section is the contract every standing-consent approval basis
-meets: the bases themselves, their instances, the activation policy
-commitment, standing-consent recency, and policy adjudication. A
-profile that defines a standing-consent basis for the issuance profile
-({{I-D.draft-mcguinness-oauth-mission}}) conforms to it, and so does an
-issuer that activates a Mission under such a basis ({{conformance}}).
+This section is a contract for standing-consent approval bases: the
+bases themselves, their instances, the activation policy commitment,
+standing-consent recency, and policy adjudication. A profile that
+defines a standing-consent basis for the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) and adopts this Contract
+conforms to it, and so does an issuer that activates a Mission under
+such a basis ({{conformance}}). The issuance profile's own requirements
+on every standing-consent basis ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission-Creating Paths") apply whether or not a profile adopts
+this Contract.
 It is adoptable on its own: it neither requires nor implies recording
 an Approval Governance Record, and none of its requirements depends on
 one.
@@ -1950,9 +1955,9 @@ A Recording Issuer MUST:
 - retain the record and the referenced policy for the Mission's
   audit horizon ({{I-D.draft-mcguinness-oauth-mission}}).
 
-A profile that defines a standing-consent basis, and an issuer that
-activates a Mission under one, conform to the Approval Basis Contract
-({{approval-basis-contract}}). That conformance is independent of the
+A profile that defines a standing-consent basis and adopts the Approval
+Basis Contract, and an issuer that activates a Mission under such a
+basis, conform to that Contract ({{approval-basis-contract}}). That conformance is independent of the
 Recording Issuer and Relying Auditor roles: it neither requires nor
 implies recording an Approval Governance Record.
 
@@ -2476,6 +2481,16 @@ disclosed mismatch is definitive.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Approval Basis Contract binds a profile that adopts it, and an
+  issuer activating under such a profile's basis, rather than every
+  standing-consent basis: the OAuth binding states its own requirements
+  for every basis and cites this document informatively. The
+  Contract's requirements are unchanged, and Template, Progressive,
+  Child Delegation and `governed_policy` still adopt it. The activation
+  policy reference's `digest`, which the OAuth binding no longer lists
+  among its anchors, is classified here as an envelope anchor, with its
+  construction unchanged (#1967).
 
 - The digest classification imports the OAuth binding's Commitment
   Mechanisms section normatively, in place of the substrate's default

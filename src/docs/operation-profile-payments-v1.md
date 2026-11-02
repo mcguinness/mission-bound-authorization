@@ -493,7 +493,8 @@ change between decision and commit is a mismatch.
 
 Under a Mission bound to a standing-payment budget (#813, #816; the
 `standing-payment-dispatch` capability and the `budget_metering`
-declaration, both disabled and unclaimed), an invoice-scoped decision
+declaration, enabled and claimed only by the shared demo composition with
+the AS), an invoice-scoped decision
 request also carries `action.properties.parameters`: the effective
 parameters object above without `capability_snapshot`, the exact object
 `parameter_digest` is computed over. The PDP recomputes the digest over
@@ -751,7 +752,8 @@ Residuals:
 
 Under a Mission bound to a standing-payment budget (the
 `standing-payment-dispatch` capability and the `budget_metering`
-declaration, both disabled and unclaimed), the PDP meters
+declaration, enabled and claimed only by the shared demo composition with
+the AS), the PDP meters
 `payments:payment.execute` at its `commit` crossing, `execute_wire_transfer`:
 
 - **No actual measure.** The payment class defines no actual measure. What
