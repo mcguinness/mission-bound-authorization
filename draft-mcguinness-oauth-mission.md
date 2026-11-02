@@ -299,14 +299,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-continuation:
-    title: "Mission Continuation for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-continuation.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-management:
     title: "Mission Management for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
@@ -2657,8 +2649,8 @@ either:
 - the authorization code issued at approval and, where its
   redemption emits one, the refresh-token family that follows it; or
 - another profile-defined reusable grant, such as a refresh-token
-  family a continuation transport establishes later for the same
-  Mission ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
+  family a Token Exchange establishes later for the same Mission
+  ({{grant-binding-related}}).
 
 ### Establishing and Resolving a Binding {#grant-binding-resolution}
 
@@ -2691,16 +2683,15 @@ grant the client presents:
 - the Mission-bound `subject_token` on Token Exchange (a delegate is
   identified by its client authentication, {{delegated-exchange}}); or
 - a profile-defined grant, through the authenticated `mission`
-  reference it carries, such as the Template profile's handoff grant
-  ({{I-D.draft-mcguinness-oauth-mission-template}}).
+  reference it carries.
 
 It then applies the gating of {{issuance-gating}}.
 
 A Mission MAY carry zero or more grant bindings. Beyond any
 authorization-code lineage established at approval, a refresh-token
-family a continuation transport establishes later (above) is a
-further binding, or the Mission's first where it has none, rooted in
-the Mission its own `subject_token` resolved to.
+family a Token Exchange establishes later (above) is a further
+binding, or the Mission's first where it has none, rooted in the
+Mission its own `subject_token` resolved to.
 
 The AS MUST resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
@@ -2712,10 +2703,7 @@ Where a profile-defined operation lets a client present a Mission
 Identifier alongside a credential, the identifier is a
 non-authoritative cross-check: the AS MUST verify it against the
 Mission the credential resolves to and refuse a mismatch with the
-`invalid_grant` error code. The `predecessor` parameter of
-{{I-D.draft-mcguinness-oauth-mission-expansion}} is an example: it
-selects the Mission a successor is created from and does not reassign
-an existing binding.
+`invalid_grant` error code.
 
 Because the grant, not the identifier, determines the Mission, a
 client does not supply `mission_id` to obtain a derivation, and an AS
@@ -2726,48 +2714,42 @@ MUST NOT derive Mission-bound authority from a client-supplied
 
 The grant binding relates to other mechanisms as follows:
 
-- **Token Exchange.** A Token Exchange derivation ({{RFC8693}}) that
-  returns only an access token establishes no new grant lineage:
-  ordinary in-Mission delegation ({{delegation}}) and self-exchange
-  down-scoping ({{self-exchange}}) both work this way, and the issued
-  token is a derived token ({{mission-claim}}) whose `mission` claim
-  identifies the one Mission its `subject_token` resolved to. Where
-  the `subject_token` was issued under a grant lineage, the issued
-  token retains that grant provenance, and a later redemption of a
-  designation derived from it validates all applicable backing-grant
-  state ({{delegated-exchange}}). A Token
-  Exchange that instead establishes a redeemable grant
-  lineage, such as the continuation profile's
-  delegation-family-creating exchange
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
-  new grant binding, rooted in that same Mission. Three Token
-  Exchanges are covered by the two items below instead: cross-domain
-  projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor.
-- **Cross-domain projection.** A cross-domain projection
-  ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
-  no destination-side grant binding. A Resource AS consumes the
-  cross-domain grant, and the local access token it mints there is a
-  derived token: it identifies the one originating Mission
-  (`mission.id`, `mission.issuer`) but is not backed by a persistent
-  local lineage. A Resource AS holds a destination-side grant binding
-  only where it separately establishes a redeemable grant lineage
-  mapped to the Mission, such as a refresh-token family.
-- **Child Missions and successors.** A Child Mission
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an
-  expansion successor
-  ({{I-D.draft-mcguinness-oauth-mission-expansion}}) are new
-  Missions. Any grant binding or derived token they carry is their
-  own under the same rules, not an extension of the origin Mission's
-  binding. They relate to their origin only by lineage (the
-  child's `parent` member, the successor's `predecessor` member).
-
-A decision-time runtime join, such as the Mission Join of
-{{I-D.draft-mcguinness-mission-authority-server}}, in which a policy
-decision point joins an ordinary OAuth credential to a Mission per
-request, is not a Mission grant binding: it does not make the joined
-OAuth grant Mission-bound, and it rests on its own authenticated inputs
-and evidence, never on a Mission grant binding.
+- **Issuance under an existing binding.** A Token Exchange derivation
+  ({{RFC8693}}) that returns only an access token establishes no new
+  grant lineage: ordinary in-Mission delegation ({{delegation}}) and
+  self-exchange down-scoping ({{self-exchange}}) both work this way,
+  and the issued token is a derived token ({{mission-claim}}) whose
+  `mission` claim identifies the one Mission its `subject_token`
+  resolved to. Where the `subject_token` was issued under a grant
+  lineage, the issued token retains that grant provenance, and a later
+  redemption of a designation derived from it validates all applicable
+  backing-grant state ({{delegated-exchange}}). A Token Exchange that
+  creates another Mission, or that returns a grant for a Resource AS
+  to consume, falls under the third or fourth item instead.
+- **Establishing a new binding.** A Token Exchange that establishes a
+  redeemable grant lineage, such as by issuing a refresh token,
+  creates a new grant binding, rooted in the Mission its
+  `subject_token` resolved to.
+- **Creating another Mission.** Missions created from an existing
+  Mission's authority are new Missions. Any grant binding or derived
+  token they carry is their own under the same rules, not an extension
+  of the origin Mission's binding. They relate to their origin only by
+  lineage, a record member their specification defines
+  ({{mission-record}}).
+- **Transient exchange artifacts.** A grant the Mission `issuer`
+  returns for a Resource AS to consume establishes no
+  destination-side grant binding. The Resource AS consumes it, and
+  the local access token it mints there is a derived token: it
+  identifies the one originating Mission (`mission.id`,
+  `mission.issuer`) but is not backed by a persistent local lineage. A
+  Resource AS holds a destination-side grant binding only where it
+  separately establishes a redeemable grant lineage mapped to the
+  Mission, such as a refresh-token family.
+- **Runtime joins.** A decision-time runtime join, in which a policy
+  decision point joins an ordinary OAuth credential to a Mission per
+  request, is not a Mission grant binding: it does not make the joined
+  OAuth grant Mission-bound, and it rests on its own authenticated
+  inputs and evidence, never on a Mission grant binding.
 
 ### Mission State Across Bindings {#grant-binding-state}
 
