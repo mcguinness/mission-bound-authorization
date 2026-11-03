@@ -326,6 +326,16 @@ describe("work_item_prerequisite_completed joins the request to a verified permi
     const established = await evaluate(request(), options(historyBinding(both)));
     expect(established.decision, JSON.stringify(established.context)).toBe(true);
     expect(historyOf(established)).toEqual(SATISFIED);
+    // A backup whose completion is undetermined (an authorized digest without its effective counterpart) cannot be ruled in or out.
+    const undeterminedDigest = `sha-256:${Buffer.alloc(32, 7).toString("base64url")}`;
+    const undetermined = [
+      await permit({ evaluation_id: "b1", overrides: { parameter_digest: undeterminedDigest } }),
+      await execution({ evaluation_id: "b1", overrides: { authorized_parameter_digest: undeterminedDigest } }),
+    ];
+    const open = await evaluate(request(), options(historyBinding(undetermined)));
+    expect(open.decision).toBe(false);
+    expect(open.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(open)).toEqual(UNAVAILABLE);
   });
 
   it("keeps the History reader's rules: a failed, suppressed or unauthorized backup never satisfies, and a malformed work item or result_summary leaves the history unestablished", async () => {

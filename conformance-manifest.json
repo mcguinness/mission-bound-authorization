@@ -111569,7 +111569,7 @@
    "id": "harness.work-item-prerequisite.work-item-join",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "work-item-prerequisite",
-   "text": "the permit and the execution each carry the request's work item as `work_item`",
+   "text": "the permit and the witness each carry the request's work item as `work_item`",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -111580,7 +111580,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the predicate counts only a permit and a linked execution that each carry, as work_item, the work item of the request being decided: another work item's backup, a permit decided for another work item, and an execution attributed to none do not satisfy"
+    "normative": "the predicate counts only a permit and its completion witness that each carry, as work_item, the work item of the request being decided: another work item's backup, a permit decided for another work item, and a witness attributed to no work item do not satisfy"
    },
    "level": "unit",
    "coverage": "tested",
@@ -111604,7 +111604,7 @@
    "id": "harness.work-item-prerequisite.target-and-revision-join",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "work-item-prerequisite",
-   "text": "the execution records the request's operation target and revision as the target and revision its effect acted on",
+   "text": "the witness records the request's operation target and revision as the target and revision its effect acted on",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -111615,7 +111615,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the predicate is satisfied only by an execution whose recorded acted-on target and revision equal the request's operation target and the revision the PEP captured for it: a backup of another target, or of an earlier revision of the same target, does not satisfy"
+    "normative": "the predicate is satisfied only by a completion witness whose recorded acted-on target and revision equal the request's operation target and the revision the PEP captured for it: a backup of another target, or of an earlier revision of the same target, does not satisfy"
    },
    "level": "unit",
    "coverage": "tested",
@@ -111645,7 +111645,7 @@
    "id": "harness.work-item-prerequisite.authorized-completion",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "work-item-prerequisite",
-   "text": "a linked Execution Evidence record with `outcome` `completed` that is not an unauthorized execution",
+   "text": "a Decision Evidence record with `decision` `permit` that has a completion witness",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -111656,7 +111656,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "only a linked completed execution that is not an unauthorized execution satisfies the predicate: a failed or suppressed execution of the prerequisite, or a completed one whose effective digest differs from its authorized digest, does not",
+    "normative": "only a permit with a completion witness, as the AuthZEN History Context defines it, satisfies the predicate: a failed or suppressed execution of the prerequisite, or a completed one whose effective digest differs from its authorized digest, is no witness",
     "local": "the reference reads the History Context's verified, linked records (#2015): the unauthorized execution is flagged through onUnauthorizedExecution, and a malformed member of a record leaves the whole history unestablished"
    },
    "level": "unit",
@@ -111782,7 +111782,7 @@
    "id": "harness.work-item-prerequisite.unreadable-completion",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "work-item-prerequisite",
-   "text": "A matching completion that lacks either fact leaves the predicate not establishable unless another completion satisfies it.",
+   "text": "When no witness satisfies the predicate, it is not establishable if a permit for the named operation and work item has a witness that lacks either fact or has an undetermined completion.",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -111793,7 +111793,8 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a matching completion with no readable acted-on target or revision leaves the predicate unavailable, unless another matching completion satisfies it, which establishes it satisfied"
+    "normative": "with no satisfying witness, a witness for the named operation and work item without a readable acted-on target or revision, or such a permit with an undetermined completion, leaves the predicate unavailable; one satisfying witness establishes it",
+    "local": "the reference is stricter for an undetermined completion: a completed record missing an effective digest its authorized digest requires leaves the whole history unestablished (#2017), so every selected predicate is unavailable"
    },
    "level": "unit",
    "coverage": "tested",
@@ -111805,7 +111806,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Mutation-proved (#815): skipping an unreadable completion as if it did not match records not_satisfied (U-unreadable); treating an unreadable completion as decisive records unavailable beside a satisfying one (U-existential)."
+   "notes": "Mutation-proved (#815): skipping an unreadable witness as if it did not match records not_satisfied (U-unreadable); treating an unreadable witness as decisive records unavailable beside a satisfying one (U-existential); dropping the reader's missing-effective-digest check lets a backup with an undetermined completion satisfy (U-undetermined)."
   },
   {
    "id": "harness.work-item-prerequisite.drift-refused-at-use",
