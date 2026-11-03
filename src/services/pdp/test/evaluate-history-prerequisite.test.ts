@@ -73,7 +73,8 @@ const VALID_UNTIL = "2026-09-14T12:01:00Z";
 
 interface DecisionShape {
   evaluation_id: string;
-  action?: string;
+  /** The operation decided; `null` signs a record whose `action` names none. */
+  action?: string | null;
   action_class?: string;
   action_classes?: string[];
   work_item?: unknown;
@@ -90,7 +91,7 @@ async function permit(d: DecisionShape): Promise<Record<string, unknown>> {
     ...(d.work_item === undefined ? { work_item: W1 } : d.work_item === null ? {} : { work_item: d.work_item }),
     subject: { id: "alice" },
     resource: { type: "database", id: "orders" },
-    action: { name: d.action ?? BACKUP },
+    action: d.action === null ? {} : { name: d.action ?? BACKUP },
     audience: AUDIENCE,
     action_class: actionClass,
     ...(d.action_classes !== undefined ? { action_classes: d.action_classes } : {}),
@@ -262,6 +263,11 @@ describe("work_item_prerequisite_completed joins the request to a verified permi
     const none = await evaluate(request(), options(historyBinding(unattributed)));
     expect(none.decision).toBe(false);
     expect(historyOf(none)).toEqual(NOT_SATISFIED);
+    // A permit decided for another work item does not count, whatever its execution carries.
+    const split = [await permit({ evaluation_id: "b1", work_item: W2 }), await execution({ evaluation_id: "b1", work_item: W1 })];
+    const permitOther = await evaluate(request(), options(historyBinding(split)));
+    expect(permitOther.decision).toBe(false);
+    expect(historyOf(permitOther)).toEqual(NOT_SATISFIED);
     // Control: the same backup satisfies the work item it was attributed to.
     const forW2 = await evaluate(request({ workItem: W2 }), options(historyBinding(other)));
     expect(forW2.decision, JSON.stringify(forW2.context)).toBe(true);
@@ -325,12 +331,17 @@ describe("work_item_prerequisite_completed joins the request to a verified permi
     const refused = await evaluate(request(), options(historyBinding(suppressed)));
     expect(refused.decision).toBe(false);
     expect(historyOf(refused)).toEqual(NOT_SATISFIED);
+    // Each malformed record sits beside a satisfying backup: it leaves the whole history unestablished, never uncounted.
+    const satisfying = [await permit({ evaluation_id: "b2", sequence: 1 }), await execution({ evaluation_id: "b2" })];
+    const control = await evaluate(request(), options(historyBinding([await permit({ evaluation_id: "b1" }), ...satisfying])));
+    expect(control.decision, JSON.stringify(control.context)).toBe(true);
     for (const [label, records] of [
+      ["permit without an action name", [await permit({ evaluation_id: "b1", action: null }), await execution({ evaluation_id: "b1" })]],
       ["malformed permit work item", [await permit({ evaluation_id: "b1", work_item: { issuer: HARNESS } }), await execution({ evaluation_id: "b1" })]],
       ["malformed execution work item", [await permit({ evaluation_id: "b1" }), await execution({ evaluation_id: "b1", work_item: "work-1" })]],
       ["result_summary not an object", [await permit({ evaluation_id: "b1" }), await execution({ evaluation_id: "b1", result_summary: "r1" })]],
     ] as const) {
-      const decision = await evaluate(request(), options(historyBinding(records)));
+      const decision = await evaluate(request(), options(historyBinding([...records, ...satisfying])));
       expect(decision.decision, label).toBe(false);
       expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
       expect(historyOf(decision), label).toEqual(UNAVAILABLE);
