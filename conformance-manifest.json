@@ -44453,12 +44453,36 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when a Decision Evidence stream does not start at its origin: 0 for the reference emitter, or the origin the binding declares",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > accepts two completed uses of an unrestricted permit, but not of a single-use permit, in either record order; a malformed use_limit fails closed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts no completed execution whose effective digest differs from its authorized one, in either family: it is flagged as an unauthorized execution and the permit stays not_satisfied",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > leaves completion unestablishable when a completed execution lacks the effective digest its authorized digest requires, in either family",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
      "name": "the remote PDP binds the history PDP-side (@spec authzen#context-history, #2015) > denies history_not_satisfied over the decision channel under its own binding, and permits once the retained history satisfies it",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "Mutation-proved (#2015): removing the deny step permits every unsatisfied or unestablishable case (M9); counting a non-completed execution (M10), skipping signature verification (M1), the audience link (M2), the Mission scope (M11) or the Decision Evidence signer role (M12), or failing open on an unestablishable history (M3), each permits its case. Cold-read fixes (#2017), each permitting its case when disabled: accepting a sequence gap, a reused position or a negative one; keeping the first of two differing records under one evaluation_id or execution_id; skipping a malformed action_classes, action_class or decision; accepting a link with no audience, or with authorized digests other than the permit's; awaiting the read with no bound; resolving a key without its role; dropping the Execution Evidence role check; linking an execution to a deny; and skipping a record of no known kind. Every case asserts history_not_satisfied: reporting an unestablishable history as resource_policy fails the signature and another-Mission cases."
+   "notes": "Mutation-proved (#2015): removing the deny step permits every unsatisfied or unestablishable case (M9); counting a non-completed execution (M10), skipping signature verification (M1), the audience link (M2), the Mission scope (M11) or the Decision Evidence signer role (M12), or failing open on an unestablishable history (M3), each permits its case. Cold-read fixes (#2017), each permitting its case when disabled: accepting a sequence gap, a reused position or a negative one; keeping the first of two differing records under one evaluation_id or execution_id; skipping a malformed action_classes, action_class or decision; accepting a link with no audience, or with authorized digests other than the permit's; awaiting the read with no bound; resolving a key without its role; dropping the Execution Evidence role check; linking an execution to a deny; and skipping a record of no known kind. Owner review (#2017): reading a stream from its lowest position rather than its origin, or ignoring a declared origin; dropping the use_limit count on a single-use permit's second completion, or accepting a malformed use_limit; counting an execution whose effective digest differs from its authorized one; and accepting a completed execution without a required effective digest, in either family: each permits its case. Every case asserts history_not_satisfied: reporting an unestablishable history as resource_policy fails the signature and another-Mission cases."
   },
   {
    "id": "authzen.context-history.record-predicates-and-outcomes",
@@ -44505,9 +44529,21 @@
      "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts no completed execution whose effective digest differs from its authorized one, in either family: it is flagged as an unauthorized execution and the permit stays not_satisfied",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a single-use permit's completed use although a later replay was suppressed permit_consumed, in either record order",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Mutation-proved (#2015): omitting mission_history from Decision Evidence fails every recording assertion (M8)."
+   "notes": "Mutation-proved (#2015): omitting mission_history from Decision Evidence fails every recording assertion (M8), including the owner-review witnesses (#2017) that record not_satisfied for a permit whose only completion was unauthorized and satisfied for a single-use permit beside a suppressed replay."
   },
   {
    "id": "authzen.context-history.action-class-completed-applied-class",
