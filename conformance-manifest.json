@@ -44393,12 +44393,6 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-history.test.ts",
-     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when one permit has more than one disposition: a completed and a failed execution, in either order",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-history.test.ts",
      "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when Decision Evidence records with different content share an evaluation_id, in either order",
      "level": "endpoint",
      "surface": "decision-request"
@@ -44464,7 +44458,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "Mutation-proved (#2015): removing the deny step permits every unsatisfied or unestablishable case (M9); counting a non-completed execution (M10), skipping signature verification (M1), the audience link (M2), the Mission scope (M11) or the Decision Evidence signer role (M12), or failing open on an unestablishable history (M3), each permits its case. Cold-read fixes (#2017), each permitting its case when disabled: accepting a sequence gap, a reused position or a negative one; keeping the first of two differing records under one evaluation_id or execution_id; ignoring a second disposition; skipping a malformed action_classes, action_class or decision; accepting a link with no audience, or with authorized digests other than the permit's; awaiting the read with no bound; resolving a key without its role; dropping the Execution Evidence role check; linking an execution to a deny; and skipping a record of no known kind. Every case asserts history_not_satisfied: reporting an unestablishable history as resource_policy fails the signature and another-Mission cases."
+   "notes": "Mutation-proved (#2015): removing the deny step permits every unsatisfied or unestablishable case (M9); counting a non-completed execution (M10), skipping signature verification (M1), the audience link (M2), the Mission scope (M11) or the Decision Evidence signer role (M12), or failing open on an unestablishable history (M3), each permits its case. Cold-read fixes (#2017), each permitting its case when disabled: accepting a sequence gap, a reused position or a negative one; keeping the first of two differing records under one evaluation_id or execution_id; skipping a malformed action_classes, action_class or decision; accepting a link with no audience, or with authorized digests other than the permit's; awaiting the read with no bound; resolving a key without its role; dropping the Execution Evidence role check; linking an execution to a deny; and skipping a record of no known kind. Every case asserts history_not_satisfied: reporting an unestablishable history as resource_policy fails the signature and another-Mission cases."
   },
   {
    "id": "authzen.context-history.record-predicates-and-outcomes",

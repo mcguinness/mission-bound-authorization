@@ -156,6 +156,8 @@ interface VerifiedDecision {
   action_class: string;
   /** Present only when the record carries it, then an array of strings holding `action_class`. */
   action_classes: string[] | undefined;
+  /** `conditions.use_limit` where the permit carries one: how many times its `evaluation_id` may be consumed. */
+  use_limit: number | undefined;
   /** The record's emitter: with the Mission, its stream. */
   emitter: { id: string; role: string };
   sequence: number;
@@ -242,15 +244,15 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * a record is of no known kind, a signer is not trusted for the record's
  * kind, a signature or the payload binding does not verify (a record signed
  * by a key the resolver no longer publishes among them), a record names
- * another Mission, two
- * records conflict (Decision Evidence of one `evaluation_id`, or Execution
- * Evidence of one `execution_id`, with different content, or one permit with
- * more than one disposition), a Decision Evidence stream does not start at its
- * origin or has a gap or a reused `sequence` position, a record lacks its
- * REQUIRED `audience`, or an
- * Execution Evidence record links to no verified permit of the same Mission
- * and audience or carries authorized digests other than that permit's. A
- * record delivered more than once with the same content counts once.
+ * another Mission, two records conflict (Decision Evidence of one
+ * `evaluation_id`, or Execution Evidence of one `execution_id`, with
+ * different content), a permit has more completed executions than its
+ * `use_limit`, a Decision Evidence stream does not start at its origin or
+ * has a gap or a reused `sequence` position, a record lacks its REQUIRED
+ * `audience`, or an Execution Evidence record links to no verified permit of
+ * the same Mission and audience or carries authorized digests other than
+ * that permit's. A record delivered more than once with the same content
+ * counts once.
  */
 async function verifiedHistory(
   binding: HistoryBinding,
@@ -312,6 +314,14 @@ async function verifiedHistory(
       const parameterDigest = optionalString(record.parameter_digest);
       const contextDigest = optionalString(record.evaluation_context_digest);
       if (parameterDigest === null || contextDigest === null) return undefined;
+      // @spec runtime-evidence#decision-evidence-object `conditions`,
+      // authzen#decision-conditions `use_limit`: where present, an object, and
+      // its consumption bound a positive integer. Absent, the permit carries
+      // no use limit.
+      const conditions = record.conditions;
+      if (conditions !== undefined && objectOf(conditions) === undefined) return undefined;
+      const useLimit = objectOf(conditions)?.use_limit;
+      if (useLimit !== undefined && (typeof useLimit !== "number" || !Number.isSafeInteger(useLimit) || useLimit < 1)) return undefined;
       const content = signedContent(record);
       const prior = decisions.get(record.evaluation_id);
       if (prior !== undefined) {
@@ -326,6 +336,7 @@ async function verifiedHistory(
         evaluation_context_digest: contextDigest,
         action_class: actionClass,
         action_classes: actionClasses as string[] | undefined,
+        use_limit: useLimit,
         emitter: { id: emitter.id as string, role: emitter.role },
         sequence,
         content,
@@ -393,17 +404,25 @@ async function verifiedHistory(
   // `parameter_digest`, "MUST equal it", and is absent otherwise, and its
   // `authorized_evaluation_context_digest` likewise against the permit's
   // `evaluation_context_digest`: a record that deviates is not linked to what
-  // the permit authorized. One permit's executions agree on its disposition:
-  // a `completed` record beside a `failed` one leaves what happened
-  // unestablished.
-  const dispositions = new Map<string, unknown>();
+  // the permit authorized.
+  //
+  // A permit may be used more than once, each use its own execution with its
+  // own `execution_id` and final outcome, so a failed use or a suppressed
+  // replay beside a completed one is no conflict. A single-use permit is
+  // different: the runtime's Single-Use Identifiers rule refuses a second
+  // presentation of a consumed identifier, so more completed executions than
+  // the permit's `use_limit` contradict its own condition, and the records
+  // cannot say which completion was the authorized one.
+  const completions = new Map<string, number>();
   for (const execution of executions.values()) {
     const linked = decisions.get(execution.evaluation_id);
     if (!linked || linked.decision !== "permit" || linked.audience !== execution.audience) return undefined;
     if (execution.authorized_parameter_digest !== linked.parameter_digest) return undefined;
     if (execution.authorized_evaluation_context_digest !== linked.evaluation_context_digest) return undefined;
-    if (dispositions.has(execution.evaluation_id) && dispositions.get(execution.evaluation_id) !== execution.outcome) return undefined;
-    dispositions.set(execution.evaluation_id, execution.outcome);
+    if (execution.outcome !== "completed") continue;
+    const count = (completions.get(execution.evaluation_id) ?? 0) + 1;
+    if (linked.use_limit !== undefined && count > linked.use_limit) return undefined;
+    completions.set(execution.evaluation_id, count);
   }
   return { decisions: [...decisions.values()], executions: [...executions.values()] };
 }

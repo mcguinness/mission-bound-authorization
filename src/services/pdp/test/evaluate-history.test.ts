@@ -168,6 +168,9 @@ async function executionRecord(
 
 const WRITE_COMPLETED: HistoryPredicate = { predicate: "action_class_completed", action_class: "consequential_write" };
 
+/** A single-use permit's decision conditions, valid one minute past the fixed clock. */
+const SINGLE_USE = { use_limit: 1, valid_until: "2026-09-14T12:01:00Z" };
+
 /** A history binding whose policy selects `selected` for the read, over `records` (or a reader that fails). */
 function historyBinding(
   records: ReadonlyArray<unknown> | "unavailable",
@@ -367,16 +370,50 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(historyOf(conflicting)?.[0]?.outcome).toBe("unavailable");
   });
 
-  it("fails closed when one permit has more than one disposition: a completed and a failed execution, in either order", async () => {
-    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
-    const completed = await executionRecord({ evaluation_id: "w1", outcome: "completed", sequence: 0 });
-    const failed = await executionRecord({ evaluation_id: "w1", outcome: "failed", sequence: 1 });
-    for (const records of [[w1, completed, failed], [w1, failed, completed]]) {
+  it("counts a single-use permit's completed use although a later replay was suppressed permit_consumed, in either record order", async () => {
+    // From the owner's review probe "suppressed replay does not undo an authorized completion" (#2017).
+    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { conditions: SINGLE_USE } });
+    const completed = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_use", sequence: 0 });
+    const replay = await executionRecord({ evaluation_id: "w1", outcome: "suppressed", execution_id: "exe_w1_replay", sequence: 1, overrides: { error: "permit_consumed" } });
+    for (const records of [[w1, completed, replay], [w1, replay, completed]]) {
       const decision = await evaluate(request(), options(historyBinding(records)));
-      expect(decision.decision).toBe(false);
-      expect(decision.context.denial_reason).toBe("history_not_satisfied");
-      expect(historyOf(decision)?.[0]?.outcome).toBe("unavailable");
+      expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+      expect(historyOf(decision)).toEqual([{ predicate: "action_class_completed", action_class: "consequential_write", outcome: "satisfied" }]);
     }
+  });
+
+  it("counts a multi-use permit's completed use beside a failed one, in either record order", async () => {
+    // From the owner's review probe "distinct multi-use failed and completed executions satisfy the per-permit predicate" (#2017).
+    const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
+    const failed = await executionRecord({ evaluation_id: "w1", outcome: "failed", execution_id: "exe_w1_first", sequence: 0, overrides: { error: "urn:example:execution-failed" } });
+    const completed = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_second", sequence: 1 });
+    for (const records of [[w1, failed, completed], [w1, completed, failed]]) {
+      const decision = await evaluate(request(), options(historyBinding(records)));
+      expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+      expect(historyOf(decision)).toEqual([{ predicate: "action_class_completed", action_class: "consequential_write", outcome: "satisfied" }]);
+    }
+  });
+
+  it("accepts two completed uses of an unrestricted permit, but not of a single-use permit, in either record order; a malformed use_limit fails closed", async () => {
+    const first = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_first", sequence: 0 });
+    const second = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_second", sequence: 1 });
+    const unrestricted = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
+    const singleUse = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { conditions: SINGLE_USE } });
+    for (const [a, b] of [[first, second], [second, first]]) {
+      const twice = await evaluate(request(), options(historyBinding([unrestricted, a, b])));
+      expect(twice.decision, JSON.stringify(twice.context)).toBe(true);
+      expect(historyOf(twice)?.[0]?.outcome).toBe("satisfied");
+      // A single-use identifier consumed twice: which completion was the authorized one is not established.
+      const overUsed = await evaluate(request(), options(historyBinding([singleUse, a, b])));
+      expect(overUsed.decision).toBe(false);
+      expect(overUsed.context.denial_reason).toBe("history_not_satisfied");
+      expect(historyOf(overUsed)?.[0]?.outcome).toBe("unavailable");
+    }
+    const malformed = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { conditions: { ...SINGLE_USE, use_limit: "1" } } });
+    const unreadable = await evaluate(request(), options(historyBinding([malformed, first])));
+    expect(unreadable.decision).toBe(false);
+    expect(unreadable.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(unreadable)?.[0]?.outcome).toBe("unavailable");
   });
 
   it("fails closed when Decision Evidence records with different content share an evaluation_id, in either order", async () => {
