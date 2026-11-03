@@ -668,7 +668,7 @@ Missions approved through the real flow (PAR, the Approver's upstream login,
 the token endpoint, DPoP-bound) and requests over HTTP MCP with DPoP. One
 controlled clock is kept in both processes, and Resource policy is stubbed:
 these witnesses bear on the state source, and the co-located target's
-witnesses above carry Resource policy. Witnessed at `a681b003`; seven guards
+witnesses above carry Resource policy. Witnessed at `a244464c`; seven guards
 were disabled one at a time, each failing its witness.
 
 | #1101 acceptance | Witness | Bound or gap |
