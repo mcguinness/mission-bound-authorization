@@ -8,17 +8,19 @@
  * decision requires `work_item_prerequisite_completed`, which the PDP
  * evaluates over the evidence this PEP retained: its verified Decision
  * Evidence and its own Execution Evidence, whose `result_summary` records the
- * target and revision each effect acted on. Execution Reverification then
- * re-reads the revision before the delete is released.
+ * operation target each effect was released for and the revision the
+ * database reported when it ran. Execution Reverification then re-reads the
+ * revision before the delete is released.
  *
  * Test-only operation set, never shipped and unreachable from the demo: a
  * simulated revisioned database (`RevisionedDatabase`) with backup, export
  * and delete operations, placed in this PEP's injectable Operation Profile as
  * record crossings, under a test-only Evaluation-Context Binding declaration
  * whose one fact is the database revision (`revision` granularity, the
- * `verified` property). The decision point is a real co-resident one with the
- * history binding, its reader over this PEP's real evidence store. The
- * executor below is the test's resource adapter: it drives the PEP's own
+ * `verified` property). The decision point is a real ephemeral in-process one
+ * (`createEphemeralDecisionPoint`) with the history binding, its reader over
+ * this PEP's real evidence store. The executor below is the test's resource
+ * adapter: it drives the PEP's own
  * admission, release-time reverification, single-use consumption and
  * disposition in the order the server's write path does, and performs the
  * effect on the simulated database. The delete is a plain effect, never a
@@ -247,7 +249,7 @@ interface Fixture {
   flags: UnauthorizedExecutionFlag[];
 }
 
-function fixture(): Fixture {
+function fixture(o: { operations?: Record<string, ActionMapping> } = {}): Fixture {
   const db = new RevisionedDatabase("orders", "ledger");
   // The PEP's evidence store and key resolver exist only once the decision
   // point does; the history binding reads them through these holders.
@@ -300,7 +302,7 @@ function fixture(): Fixture {
     modelId: "unit-test-model",
     loadView,
     instanceEpoch: "epoch-815-prereq",
-    operationProfile: () => DATABASE_OPERATIONS,
+    operationProfile: () => ({ ...DATABASE_OPERATIONS, ...o.operations }),
     revisionedRecords: () => db,
     evaluationContextBinding: () => CONTEXT_BINDING,
     workItemAttachers: ATTRIBUTION.attachers,
@@ -320,9 +322,9 @@ interface Performed {
  * database between the decision and the effect); the whole use table again
  * immediately before release, the context re-read included; single-use
  * consumption; the effect; and the completed disposition, carrying the
- * context reverification re-established before the effect and, in
- * `result_summary`, the target and the revision the effect reports it acted
- * on.
+ * context reverification re-established before the effect and the revision
+ * the database reported when the effect ran, which the PEP records in
+ * `result_summary` beside the operation target it released the effect for.
  */
 async function perform(
   f: Fixture,
@@ -333,7 +335,7 @@ async function perform(
 ): Promise<Performed> {
   const args: Record<string, unknown> = {
     database_id: databaseId,
-    ...(tool === "delete_database" ? { idempotency_key: `idem_${randomUUID()}` } : {}),
+    ...(tool.startsWith("delete_database") ? { idempotency_key: `idem_${randomUUID()}` } : {}),
     ...hooks.extraArgs,
   };
   const res = await f.pep.enforce(tool, args, token(), undefined, attached(workItem));
@@ -362,10 +364,15 @@ async function perform(
       return { outcome: "suppressed", reason: "permit_consumed", res };
     }
   }
-  const acted = tool === "delete_database" ? f.db.delete(databaseId) : tool === "backup_database" ? f.db.backup(databaseId) : f.db.export(databaseId);
+  // The effect acts on the database its argument names, as a resource adapter does.
+  const acted = tool.startsWith("delete_database")
+    ? f.db.delete(databaseId)
+    : tool === "backup_database"
+      ? f.db.backup(databaseId)
+      : f.db.export(databaseId);
   const recorded = await f.pep.completeExecution(attempt, {
     ...(contextDigest !== undefined ? { effectiveEvaluationContextDigest: contextDigest } : {}),
-    resultSummary: { operation_target: attempt.operationTarget, revision: acted.revision },
+    actedOnRevision: acted.revision,
   });
   if (!recorded.recorded) throw new Error(`no completed disposition: ${recorded.gap}`);
   return { outcome: "completed", res };
@@ -464,6 +471,27 @@ describe("a database is deleted only after a completed backup for the same work 
     expect(deleteHistory(f)).toEqual(NOT_SATISFIED);
     expect(f.db.exists("orders")).toBe(true);
     expect(f.db.revisionOf("orders")).toBe("r2");
+    expect(deleteExecutions(f)).toEqual([]);
+  });
+
+  it("refuses a record crossing whose contract binds another argument than the record's, before any decision and with no deletion", async () => {
+    // A misdeclared entry: the record is read by `database_id`, the target from `other_id`.
+    const f = fixture({
+      operations: {
+        delete_database_misbound: {
+          ...(DATABASE_OPERATIONS.delete_database as ActionMapping),
+          target: { template: `${DB}/databases/{other_id}` },
+        },
+      },
+    });
+    // The ledger's backup at r1 exists; orders, also at r1, has none.
+    expect((await perform(f, "backup_database", "ledger", W1)).outcome).toBe("completed");
+    const requestsBefore = f.requests.length;
+    const del = await perform(f, "delete_database_misbound", "orders", W1, { extraArgs: { other_id: "ledger" } });
+    expect(del.outcome).toBe("refused");
+    expect(del.reason).toBe("operation_target_unresolvable");
+    expect(f.requests).toHaveLength(requestsBefore);
+    expect(f.db.exists("orders")).toBe(true);
     expect(deleteExecutions(f)).toEqual([]);
   });
 

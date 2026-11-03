@@ -279,6 +279,27 @@ describe("work_item_prerequisite_completed joins the request to a verified permi
     expect(forW2.decision, JSON.stringify(forW2.context)).toBe(true);
   });
 
+  it("joins the qualified work item: the same id under another issuer, on the permit or on the execution, does not satisfy", async () => {
+    const sameIdOtherIssuer = { issuer: "https://other-harness.example.com", id: W1.id };
+    const onPermit = [await permit({ evaluation_id: "b1", work_item: sameIdOtherIssuer }), await execution({ evaluation_id: "b1" })];
+    const byPermit = await evaluate(request(), options(historyBinding(onPermit)));
+    expect(byPermit.decision).toBe(false);
+    expect(byPermit.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(byPermit)).toEqual(NOT_SATISFIED);
+    const onExecution = [await permit({ evaluation_id: "b1" }), await execution({ evaluation_id: "b1", work_item: sameIdOtherIssuer })];
+    const byExecution = await evaluate(request(), options(historyBinding(onExecution)));
+    expect(byExecution.decision).toBe(false);
+    expect(byExecution.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(byExecution)).toEqual(NOT_SATISFIED);
+    // Control: the backup attributed to that other harness's item satisfies a request for that item.
+    const theirs = [
+      await permit({ evaluation_id: "b1", work_item: sameIdOtherIssuer }),
+      await execution({ evaluation_id: "b1", work_item: sameIdOtherIssuer }),
+    ];
+    const forTheirs = await evaluate(request({ workItem: sameIdOtherIssuer }), options(historyBinding(theirs)));
+    expect(forTheirs.decision, JSON.stringify(forTheirs.context)).toBe(true);
+  });
+
   it("joins the target and the revision the execution acted on: another database, or another revision of this one, does not satisfy", async () => {
     const otherTarget = [await permit({ evaluation_id: "b1" }), await execution({ evaluation_id: "b1", result_summary: { operation_target: LEDGER, revision: "r1" } })];
     const decision = await evaluate(request(), options(historyBinding(otherTarget)));

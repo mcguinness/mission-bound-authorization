@@ -22,6 +22,7 @@ import {
   type ConstraintFacts,
   type CredentialAuthorityEntry,
   collectionMemberConstraintFacts,
+  contractArgument,
   coveringCredentialEntries,
   credentialEntriesFromAuthority,
   entryMatchesTarget,
@@ -428,7 +429,9 @@ export interface ActionMapping {
    * @spec runtime#evaluation-context-binding, harness#work-item-prerequisite
    * (#815): the crossing acts on one revisioned record of
    * {@link PepDeps.revisionedRecords}, of `type`, named by the validated
-   * argument `argument`. The PEP reads the record from that source before the
+   * argument `argument`, the one argument the entry's argument-derived
+   * operation contract binds; an entry whose contract binds another argument,
+   * or none, is refused. The PEP reads the record from that source before the
    * decision request, refuses one that does not resolve, carries its current
    * revision as `resource.properties.revision`, and, where the crossing is
    * covered, captures its declared facts from the record alone. No shipped
@@ -2887,9 +2890,16 @@ export class Pep {
       // deployment-defined `resource.properties.revision`, the same
       // observation a covered crossing's context commits ("authoritative facts
       // remain available to the PDP wherever policy needs their values").
+      // The record is the object the operation target names: the entry's
+      // contract must be argument-derived and bind the very argument the
+      // record is read by, so the target the request carries and the record
+      // whose revision it carries cannot name different objects. An entry
+      // whose template binds another argument, or a service-level contract,
+      // is refused before any decision request.
       const named = args[mapping.record.argument];
       const source = this.deps.revisionedRecords?.();
-      const record = typeof named === "string" && source ? source.read(mapping.record.type, named) : undefined;
+      const bound = contractArgument(mapping.target) === mapping.record.argument;
+      const record = bound && typeof named === "string" && source ? source.read(mapping.record.type, named) : undefined;
       if (!record || record.type !== mapping.record.type || record.id !== named || typeof record.revision !== "string" || record.revision.length === 0) {
         return await this.refuse(boundary, token, "operation_target_unresolvable", mapping.action, view);
       }
@@ -4136,12 +4146,13 @@ export class Pep {
       effectiveEvaluationContextDigest?: string;
       /**
        * @spec runtime-evidence#execution-evidence-object `result_summary`,
-       * harness#work-item-prerequisite (#815): minimal result metadata of
-       * the effect, recorded as given. A record crossing's executor records
-       * here the target and revision its effect acted on, as the resource
-       * reported them when it acted, never a request value.
+       * harness#work-item-prerequisite (#815): the revision the resource
+       * reported when the effect ran, from the executor that performed it,
+       * never an agent argument. Given, the record carries `result_summary`
+       * with `operation_target`, the operation target this attempt released
+       * the effect for, and `revision`, this value.
        */
-      resultSummary?: Record<string, JsonValue>;
+      actedOnRevision?: string;
     } = {},
   ): Promise<SuppressOutcome> {
     return this.recordDisposition(attempt, {
@@ -4150,7 +4161,7 @@ export class Pep {
       ...(opts.effectiveEvaluationContextDigest !== undefined
         ? { effectiveEvaluationContextDigest: opts.effectiveEvaluationContextDigest }
         : {}),
-      ...(opts.resultSummary !== undefined ? { resultSummary: opts.resultSummary } : {}),
+      ...(opts.actedOnRevision !== undefined ? { actedOnRevision: opts.actedOnRevision } : {}),
     });
   }
 
@@ -4167,7 +4178,7 @@ export class Pep {
           outcome: "completed";
           effectiveParameterDigest?: string;
           effectiveEvaluationContextDigest?: string;
-          resultSummary?: Record<string, JsonValue>;
+          actedOnRevision?: string;
         },
     opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
   ): Promise<SuppressOutcome> {
@@ -4239,8 +4250,11 @@ export class Pep {
         : {}),
       outcome: disposition.outcome,
       ...(disposition.outcome === "suppressed" ? { error: disposition.error } : {}),
-      ...(disposition.outcome === "completed" && disposition.resultSummary !== undefined
-        ? { result_summary: disposition.resultSummary }
+      // @spec harness#work-item-prerequisite (#815): the target this attempt
+      // released the effect for, and the revision the executor reports the
+      // resource held when the effect ran.
+      ...(disposition.outcome === "completed" && disposition.actedOnRevision !== undefined
+        ? { result_summary: { operation_target: attempt.operationTarget, revision: disposition.actedOnRevision } }
         : {}),
       ...(obligationOutcomes ? { obligation_outcomes: obligationOutcomes } : {}),
       ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),

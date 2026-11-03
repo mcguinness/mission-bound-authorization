@@ -359,6 +359,7 @@ export {
 export {
   type ArgumentDerivedContract,
   carriesHttpUserinfo,
+  contractArgument,
   contractCanEstablish,
   ENFORCED_RESOURCE_MATCHES,
   entryMatchesTarget,
