@@ -209,7 +209,7 @@ describe("the revocation proof is done only when the run showed its contrast", (
   it("is not done, and reads nothing, when the operator session has expired and the revoke is refused", async () => {
     const read = reads({ msn_story: { ok: true }, msn_reconciliation: { ok: true } });
     const verdict = await proveRevocation({ revoke: { error: "unauthorized" }, missions, missionId: "msn_story", read });
-    expect(verdict).toMatchObject({ done: false });
+    expect(verdict).toEqual({ done: false, problem: "the revoke was refused (unauthorized)" });
     expect(read).not.toHaveBeenCalled();
   });
 
