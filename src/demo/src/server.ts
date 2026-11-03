@@ -387,7 +387,7 @@ export function adjudicateMissionApproval<I>(
     return { status: 200, body: { approved: true, missionId: adopted.missionId, authority: adopted.authority } };
   };
   rec.inflight = run().finally(() => {
-    rec.inflight = undefined;
+    delete rec.inflight;
   });
   return rec.inflight;
 }
