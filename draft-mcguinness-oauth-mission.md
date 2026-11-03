@@ -992,36 +992,25 @@ approved Authority Set (`authority_hash`), so a narrowed approved
 Authority Set can be audited against the proposal that sought it.
 
 The following is an example of an authority proposal submitted
-alongside the example Intent of {{mission-intent}}:
+alongside the example Intent of {{mission-intent}}, the
+`payment_initiation` entry of {{Section 2 of RFC9396}}:
 
 ~~~ json
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.*"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 ~~~
 
-Under a declared `narrowing` capability, Authority Set derivation
-narrows `invoices.*` to `invoices.read`. It keeps the proposed Q3
-issuance window and write ceiling, which the Intent's task bounds
-support, and carries the proposed `delegation` policy through
-unchanged. The result is the example Authority Set of
-{{authorization-derivation}}.
+The type's fields define no subset relation, and the AS declares no
+`narrowing` capability for it, so Authority Set derivation retains the
+proposed entry unchanged ({{transformation-capabilities}}). The result
+is the example Authority Set of {{authorization-derivation}}.
 
 ### Mission-Governed Resources and Clients {#mission-governed}
 
@@ -1342,32 +1331,20 @@ matches the words, not as a machine enforcement mechanism.
 
 ## Authority Set Example {#authority-set-example}
 
-The following is an example of an Authority Set. The read entry is
-delegable to depth 2 and bounded to a Q3 issuance window by the
-`resource_issued_after` and `resource_issued_before` Common
-Constraints ({{I-D.draft-mcguinness-oauth-mission-resource-access}});
-the write entry carries no `delegation` and so is non-delegable,
-because `delegation` is per entry:
+The following is an example of an Authority Set: the proposed
+`payment_initiation` entry, retained unchanged
+({{proposal-derivation}}). The type defines no delegation policy, so
+the entry is non-delegable ({{delegation-constraints}}):
 
 ~~~ json
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 ~~~
 
