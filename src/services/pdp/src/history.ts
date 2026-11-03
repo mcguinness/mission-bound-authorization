@@ -150,15 +150,51 @@ export interface HistoryBinding {
    */
   sequenceOrigin?: (emitter: { id: string; role: string }) => number | undefined;
   /**
-   * The deployment's sink for unauthorized executions: called for each
-   * `completed` or `failed` execution a read returns whose effective digest
-   * differs from its authorized digest. It fires on every gated decision that
-   * reads the record, so the sink deduplicates on `execution_id`. A sink that
-   * throws ends the evaluation with no decision, as a Resource policy that
-   * cannot answer does. No Decision Evidence or response member carries the
-   * flag.
+   * REQUIRED. The deployment's sink for unauthorized executions: called for
+   * each `completed` or `failed` execution a read returns whose effective
+   * digest differs from its authorized digest. A consumer "MUST flag" such a
+   * record, so a binding without a sink is refused where it is bound
+   * ({@link assertHistoryBinding}), never run with the duty silently
+   * skipped. It fires on every gated decision that reads the record, so the
+   * sink deduplicates on `execution_id`. A sink that throws ends the
+   * evaluation with no decision, as a Resource policy that cannot answer
+   * does. No Decision Evidence or response member carries the flag.
    */
-  onUnauthorizedExecution?: (flag: UnauthorizedExecutionFlag) => void;
+  onUnauthorizedExecution: (flag: UnauthorizedExecutionFlag) => void;
+}
+
+/** A history binding refused where it is bound: the decision point, server or evaluation never runs with it. */
+export class HistoryBindingConfigError extends Error {
+  constructor(why: string) {
+    super(`history binding refused: ${why}`);
+    this.name = "HistoryBindingConfigError";
+  }
+}
+
+/**
+ * @spec authzen#context-history (#2015, #2017): checks a history binding
+ * where it is bound (`createDecisionPoint`, `createEphemeralDecisionPoint`,
+ * `createPdpHttpServer`, and `evaluate` for options assembled outside them),
+ * so a binding that could not select, read, verify or report is refused
+ * before any decision rather than discovered during one. The reporting sink
+ * is REQUIRED: Runtime Evidence's consumer "MUST flag" an unauthorized
+ * execution, and a binding without one would drop that duty silently.
+ */
+export function assertHistoryBinding(binding: unknown): asserts binding is HistoryBinding {
+  const b = binding !== null && typeof binding === "object" && !Array.isArray(binding) ? (binding as Record<string, unknown>) : undefined;
+  if (b === undefined) throw new HistoryBindingConfigError("not an object");
+  if (typeof b.policy !== "function") throw new HistoryBindingConfigError("no history policy");
+  const reader = b.reader as { records?: unknown } | null | undefined;
+  if (reader === null || typeof reader !== "object" || typeof reader.records !== "function") {
+    throw new HistoryBindingConfigError("no retained-evidence reader");
+  }
+  if (typeof b.resolveKey !== "function") throw new HistoryBindingConfigError("no key resolver");
+  if (typeof b.onUnauthorizedExecution !== "function") {
+    throw new HistoryBindingConfigError("no onUnauthorizedExecution sink: an unauthorized execution must be flagged, never skipped");
+  }
+  if (b.sequenceOrigin !== undefined && typeof b.sequenceOrigin !== "function") {
+    throw new HistoryBindingConfigError("sequenceOrigin is not a function");
+  }
 }
 
 /** The runtime action classes `action_class_completed` may name: Decision Evidence's `action_class` value space. */
@@ -517,7 +553,7 @@ async function verifiedHistory(
       deviations.push("evaluation_context");
     }
     if (deviations.length > 0 && (execution.outcome === "completed" || execution.outcome === "failed")) {
-      binding.onUnauthorizedExecution?.({
+      binding.onUnauthorizedExecution({
         mission: { id: mission.id, issuer: mission.issuer },
         execution_id: execution.execution_id,
         evaluation_id: execution.evaluation_id,

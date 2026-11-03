@@ -28,7 +28,7 @@
  */
 
 import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
-import type { HistoryBinding } from "./history.js";
+import { assertHistoryBinding, type HistoryBinding } from "./history.js";
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
 import { contractCanEstablish, type EvaluationContextBindingDeclarations, type OperationContract } from "@mission/core";
@@ -269,6 +269,9 @@ function sendRefusal(
  * decision work.
  */
 export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promise<PdpHttpServerHandle> {
+  // @spec authzen#context-history (#2017): refused where it is bound, before
+  // the server listens.
+  if (config.history !== undefined) assertHistoryBinding(config.history);
   const evaluateImpl = config.evaluateFn ?? evaluate;
   const replayWindowMs = (config.replayWindowSeconds ?? 30) * 1000;
   const maxBodyBytes = config.maxBodyBytes ?? 65536;

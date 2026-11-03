@@ -24,6 +24,8 @@ import { evaluateRemote } from "../src/client.js";
 import type { Fga } from "../src/fga.js";
 import {
   createDecisionEvidenceEmitter,
+  createDecisionPoint,
+  createEphemeralDecisionPoint,
   DECISION_EVIDENCE_MEDIA_TYPE,
   type DecisionEvidenceObject,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
@@ -32,6 +34,7 @@ import {
   type EvaluationRequest,
   type EvidenceKeyResolver,
   type HistoryBinding,
+  HistoryBindingConfigError,
   type HistoryPredicate,
   type HistorySelectionInput,
   type MissionView,
@@ -222,7 +225,17 @@ function historyBinding(
       },
     },
     resolveKey,
+    onUnauthorizedExecution: (flag) => reported.push(flag),
   };
+}
+
+/** Where the default test binding reports unauthorized executions; `flagging` gives a test its own sink. */
+const reported: UnauthorizedExecutionFlag[] = [];
+
+/** `binding` without its reporting sink: what a deployment that skipped the duty would bind. */
+function withoutSink(binding: HistoryBinding): HistoryBinding {
+  const { onUnauthorizedExecution: _sink, ...rest } = binding;
+  return rest as HistoryBinding;
 }
 
 const view: MissionView = {
@@ -301,6 +314,55 @@ describe("the History Context evaluates policy-selected predicates against verif
     const decision = await evaluate(request(), options(binding));
     expect(decision.context.denial_reason).toBe("history_not_satisfied");
     expect(inputs).toEqual([{ action: READ, operationTarget: RESOURCE, audience: RESOURCE, mission: { id: MISSION, issuer: ISSUER } }]);
+  });
+
+  it("refuses a history binding without an onUnauthorizedExecution sink, or otherwise unusable, where it is bound, before any read", async () => {
+    // From the owner's re-review probe "no sink must not silently lose a verified unauthorized execution" (#2017):
+    // the binding is refused before evaluation, rather than the decision failing closed during it.
+    const records = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { parameter_digest: DIGEST_A } }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "bad", overrides: { authorized_parameter_digest: DIGEST_A, effective_parameter_digest: DIGEST_B } }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "good", sequence: 1, overrides: { authorized_parameter_digest: DIGEST_A, effective_parameter_digest: DIGEST_A } }),
+    ];
+    const seen: Array<{ id: string; issuer: string }> = [];
+    const sinkless = withoutSink(historyBinding(records, [WRITE_COMPLETED], seen));
+    expect(sinkless.onUnauthorizedExecution).toBeUndefined();
+    await expect(evaluate(request(), options(sinkless))).rejects.toThrow(HistoryBindingConfigError);
+    expect(seen).toHaveLength(0);
+    expect(() => createDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, history: sinkless })).toThrow(HistoryBindingConfigError);
+    expect(() => createEphemeralDecisionPoint({ emitterId: RESOURCE, audience: RESOURCE, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, history: sinkless })).toThrow(
+      HistoryBindingConfigError,
+    );
+    // Control: with its sink, the same binding is accepted, the deviation is reported, and the authorized completion satisfies.
+    const flags: UnauthorizedExecutionFlag[] = [];
+    const decision = await evaluate(request(), options(flagging(historyBinding(records), flags)));
+    expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+    expect(flags.map((f) => f.execution_id)).toEqual(["bad"]);
+    // Any other unusable binding is refused the same way, when the decision point is created.
+    const whole = historyBinding(records);
+    for (const [label, broken] of [
+      ["no policy", { ...whole, policy: undefined }],
+      ["reader without records", { ...whole, reader: {} }],
+      ["no key resolver", { ...whole, resolveKey: undefined }],
+      ["sequenceOrigin not a function", { ...whole, sequenceOrigin: 0 }],
+    ] as const) {
+      expect(() => createDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, history: broken as unknown as HistoryBinding }), label).toThrow(
+        HistoryBindingConfigError,
+      );
+    }
+  });
+
+  it("ends the evaluation with no decision when the reporting sink throws, rather than losing the flag", async () => {
+    // From the owner's re-review probe "reporting sink failures propagate instead of losing the flag" (#2017).
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { parameter_digest: DIGEST_A } });
+    const bad = await executionRecord({ evaluation_id: "w1", outcome: "completed", overrides: { authorized_parameter_digest: DIGEST_A, effective_parameter_digest: DIGEST_B } });
+    const failing: HistoryBinding = {
+      ...historyBinding([permit, bad]),
+      onUnauthorizedExecution: () => {
+        throw new Error("sink unavailable");
+      },
+    };
+    await expect(evaluate(request(), options(failing))).rejects.toThrow("sink unavailable");
   });
 
   it("denies history_not_satisfied, recording not_satisfied, when no permit of the class is retained", async () => {
@@ -503,6 +565,7 @@ describe("the History Context evaluates policy-selected predicates against verif
         },
       },
       resolveKey,
+      onUnauthorizedExecution: (flag) => reported.push(flag),
       readTimeoutMs,
     });
     // Control: the same history, answered within the bound, satisfies the predicate.
@@ -955,6 +1018,7 @@ describe("the remote PDP binds the history PDP-side (@spec authzen#context-histo
       policy: (input) => (input.action === READ ? [WRITE_COMPLETED] : []),
       reader: { records: async () => records },
       resolveKey,
+      onUnauthorizedExecution: (flag) => reported.push(flag),
     };
     const callerOptions = { ...options(undefined) } as Partial<EvaluateOptions>;
     delete callerOptions.evidence;
@@ -975,5 +1039,19 @@ describe("the remote PDP binds the history PDP-side (@spec authzen#context-histo
     records = [await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }), await executionRecord({ evaluation_id: "w1", outcome: "completed" })];
     const permitted = await ask(request());
     expect(permitted.decision, JSON.stringify(permitted.context)).toBe(true);
+  });
+
+  it("refuses to start with a history binding that has no onUnauthorizedExecution sink", async () => {
+    const callerOptions = { ...options(undefined) } as Partial<EvaluateOptions>;
+    await expect(
+      createPdpHttpServer({
+        peps: new Map([[PEP_ID, { secret: "history-shared-secret", scopes: [RESOURCE] }]]),
+        getOptions: () => callerOptions as never,
+        evaluateFn: evaluate,
+        resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+        evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+        history: withoutSink(historyBinding([])),
+      }),
+    ).rejects.toThrow(HistoryBindingConfigError);
   });
 });

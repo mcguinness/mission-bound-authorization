@@ -132,6 +132,7 @@ import { type MissionStateObservation, parseStateObservation, rfc3339Ms, verifyS
 import { ownReadCeiling } from "./own-read-ceiling.js";
 import { parseWorkItem } from "./work-item.js";
 import {
+  assertHistoryBinding,
   type HistoryBinding,
   type HistoryPredicate,
   type HistoryPredicateResult,
@@ -1222,6 +1223,9 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (!isResourcePolicy(opts.resourcePolicy)) {
     throw new ResourcePolicyConfigError("no Resource policy is bound to this decision");
   }
+  // @spec authzen#context-history (#2017): a history binding assembled
+  // outside a decision point is checked here, before any evaluation work.
+  if (opts.history !== undefined) assertHistoryBinding(opts.history);
   // @spec authzen#pdp-request consistency check 11, authzen#context-operation-target,
   // resource-access#resource-matching (#1276, D457): every action this PDP
   // evaluates is evaluated against `mission_resource_access` authority, so the
