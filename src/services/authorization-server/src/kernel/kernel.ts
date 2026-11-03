@@ -2314,6 +2314,13 @@ export class MissionKernel {
     // so a later drawdown draws them with it rather than with a later mapping.
     const ceilingAudiences = ceiling ? this.mappedEntryAudiences(ceiling.authority_ceiling) : undefined;
     if (ceiling && ceilingAudiences) ceiling.ceiling_audiences = ceilingAudiences;
+    // @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+    // (#2040, D1260 ruling 3): the per-child figure this approval rendered for
+    // each delegable ceiling entry with no child_creation_policy, from the
+    // same read as the Mission's own entries (the page's ceiling block), is
+    // retained with the ceiling, so the authority a later drawdown adds takes
+    // it rather than the figure current at the drawdown.
+    if (ceiling) ceiling.ceiling_child_derivation_maxima = this.establishedChildMaxima(ceiling.authority_ceiling);
     // @spec mission#record-principal-members — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.

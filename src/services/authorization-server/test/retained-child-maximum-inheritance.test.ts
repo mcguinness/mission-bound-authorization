@@ -14,6 +14,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { adjudicateDrawdown, assembledCeilingOffer, createCeilingDrawdownInCallerTx } from "../src/kernel/progressive.js";
+import { figureMaximum } from "../src/kernel/standing-consent-limit.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -23,9 +24,11 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
  * figure that authority retains, even where it widens or regroups an entry.
  * An entry is bounded by each earlier entry whose authority it may carry,
  * stays unknown where any of them is unknown, and only authority no earlier
- * entry holds takes the figure current at its creation. Each case restarts
- * the file-backed kernel under the same `policy_version` with the deployment
- * ceiling raised from 3 to 10, on a fixed clock.
+ * entry holds takes the figure the consent admitting it rendered and
+ * retained (#2040): an Expansion decision's, or a Progressive ceiling
+ * consent's for a drawdown. Each case restarts the file-backed kernel under
+ * the same `policy_version` with the deployment ceiling raised from 3 to 10,
+ * on a fixed clock.
  */
 
 const ISS = "https://as.test";
@@ -137,7 +140,11 @@ const drawdown = (k: MissionKernel, predecessor: MissionRecord, groups: string[]
   );
 };
 
-/** An Expansion of `predecessor` to `groups`, approved by a human. */
+/**
+ * An Expansion of `predecessor` to `groups`, approved by a human whose
+ * decision, at this kernel's instant, rendered and retained the deployment's
+ * per-child figure for the authority it adds (#2040).
+ */
 const expand = (k: MissionKernel, predecessor: MissionRecord, groups: string[][]): MissionRecord =>
   createExpansion(k, {
     predecessorId: predecessor.id,
@@ -146,6 +153,7 @@ const expand = (k: MissionKernel, predecessor: MissionRecord, groups: string[][]
     approver: { iss: ISS, sub: "bob" },
     approvalEventId: crypto.randomUUID(),
     approvedUntil: EXP,
+    decidedChildMaximum: figureMaximum(k.resolveDerivationLimit(undefined)),
   }).successor;
 
 /** A policy-created child of `parent` drawing on `actions`. */
@@ -173,6 +181,15 @@ const refusedChild = (k: MissionKernel, parent: MissionRecord, actions?: string[
 /** Simulates a parent stored before the figure was retained. */
 const asLegacy = (k: MissionKernel, record: MissionRecord): void => {
   k.db.prepare("UPDATE missions SET child_derivation_maxima_json = NULL WHERE id = ?").run(record.id);
+};
+
+/** Sets the per-child figures a record's stored ceiling retains; `undefined` removes them, as a ceiling consented before #2040. */
+const setCeilingFigures = (k: MissionKernel, record: MissionRecord, figures: unknown): void => {
+  const row = k.db.prepare("SELECT ceiling_json FROM missions WHERE id = ?").get(record.id) as { ceiling_json: string };
+  const ceiling = JSON.parse(row.ceiling_json) as Record<string, unknown>;
+  if (figures === undefined) delete ceiling.ceiling_child_derivation_maxima;
+  else ceiling.ceiling_child_derivation_maxima = figures;
+  k.db.prepare("UPDATE missions SET ceiling_json = ? WHERE id = ?").run(JSON.stringify(ceiling), record.id);
 };
 
 describe("a successor that widens or regroups an entry keeps every carried per-child bound (#2026 review F1, D1249; @spec derivation-limits#effective-limit)", () => {
@@ -214,30 +231,46 @@ describe("a successor that widens or regroups an entry keeps every carried per-c
     expect(refused.message).toMatch(/is not retained, and the entry carries no child_creation_policy/);
   });
 
-  it("an entry mixing carried and new authority is also bounded by the creation-time figure: [res.read] approved at 10 and widened by a drawdown at 3 retains 3, and its child records 3 after the ceiling is raised to 20", () => {
+  it("an entry mixing carried and drawn authority takes no figure current at the drawdown: [res.read] approved with its ceiling at 10 and widened by a drawdown at 3 retains 10, its child records 3 under the stricter ceiling and 10 after it is raised to 20 (#2040)", () => {
     const open = store();
     let k = open(10);
     const parent = approve(k, [["res.read"]], true);
     expect(parent.child_derivation_maxima).toEqual([{ finite: 10 }]);
+    expect(parent.ceiling_child_derivation_maxima).toEqual([{ finite: 10 }]);
     k.close();
     k = open(3);
     const successor = drawdown(k, parent, [["res.read", "res.list"]]);
-    expect(successor.child_derivation_maxima).toEqual([{ finite: 3 }]);
+    expect(successor.child_derivation_maxima).toEqual([{ finite: 10 }]);
+    expect(child(k, successor, ["res.list"]).derivation_limit).toBe(3);
     k.close();
     k = open(20);
-    expect(child(k, successor, ["res.list"]).derivation_limit).toBe(3);
+    expect(child(k, successor, ["res.list"]).derivation_limit).toBe(10);
   });
 
-  it("genuinely new authority takes the creation-time figure: a drawn entry no earlier entry overlaps retains the ceiling current at the drawdown, while the carried entry keeps 3 (control)", () => {
+  it("an entry mixing carried and drawn authority is bounded by the ceiling consent's retained figure where it is the stricter: a ceiling retaining 2 bounds a widened entry carrying 10 (#2040)", () => {
+    const open = store();
+    let k = open(10);
+    const parent = approve(k, [["res.read"]], true);
+    setCeilingFigures(k, parent, [{ finite: 2 }]);
+    k.close();
+    k = open(20);
+    const successor = drawdown(k, parent, [["res.read", "res.list"]]);
+    expect(successor.child_derivation_maxima).toEqual([{ finite: 2 }]);
+    expect(child(k, successor, ["res.list"]).derivation_limit).toBe(2);
+  });
+
+  it("authority a drawdown adds takes the figure its ceiling consent rendered, never the one current at the drawdown: a drawn entry no earlier entry overlaps retains 3 after a restart at 10, as the carried entry does (control)", () => {
     const open = store();
     let k = open(3);
     const parent = approve(k, [["res.read"]], true);
+    expect(parent.ceiling_child_derivation_maxima).toEqual([{ finite: 3 }]);
     k.close();
     k = open(10);
     const successor = drawdown(k, parent, [["res.read"], ["res.list"]]);
-    expect(successor.child_derivation_maxima).toEqual([{ finite: 3 }, { finite: 10 }]);
+    expect(successor.child_derivation_maxima).toEqual([{ finite: 3 }, { finite: 3 }]);
+    expect(successor.ceiling_child_derivation_maxima).toEqual([{ finite: 3 }]);
     expect(child(k, successor, ["res.read"]).derivation_limit).toBe(3);
-    expect(child(k, successor, ["res.list"]).derivation_limit).toBe(10);
+    expect(child(k, successor, ["res.list"]).derivation_limit).toBe(3);
   });
 
   it("malformed or misaligned retained state retains no figure: a child is refused policy_denied, committing nothing", () => {
@@ -285,12 +318,13 @@ describe("a successor that widens or regroups an entry keeps every carried per-c
   it("several sources: an Expansion merging entries that retain 3 and 10 keeps the strictest, 3", () => {
     const open = store();
     let k = open(3);
-    const parent = approve(k, [["res.read"]], true);
+    const parent = approve(k, [["res.read"]]);
     k.close();
     k = open(10);
-    const drawn = drawdown(k, parent, [["res.read"], ["res.list"]]);
-    expect(drawn.child_derivation_maxima).toEqual([{ finite: 3 }, { finite: 10 }]);
-    const merged = expand(k, drawn, [["res.read", "res.list"]]);
+    // The Expansion's decision at 10 retains 10 for the entry it adds.
+    const added = expand(k, parent, [["res.read"], ["res.list"]]);
+    expect(added.child_derivation_maxima).toEqual([{ finite: 3 }, { finite: 10 }]);
+    const merged = expand(k, added, [["res.read", "res.list"]]);
     expect(merged.child_derivation_maxima).toEqual([{ finite: 3 }]);
     expect(child(k, merged, ["res.list"]).derivation_limit).toBe(3);
   });
@@ -298,11 +332,11 @@ describe("a successor that widens or regroups an entry keeps every carried per-c
   it("several sources, one unknown: an Expansion merging an unknown entry with one that retains 10 is unknown, and its child is refused policy_denied, committing nothing", () => {
     const open = store();
     let k = open(3);
-    const parent = approve(k, [["res.read"]], true);
+    const parent = approve(k, [["res.read"]]);
     asLegacy(k, parent);
     k.close();
     k = open(10);
-    const drawn = drawdown(k, parent, [["res.read"], ["res.list"]]);
+    const drawn = expand(k, parent, [["res.read"], ["res.list"]]);
     expect(drawn.child_derivation_maxima).toEqual([null, { finite: 10 }]);
     expect(child(k, drawn, ["res.list"]).derivation_limit).toBe(10);
     expect(refusedChild(k, drawn, ["res.read"]).reason).toBe("policy_denied");

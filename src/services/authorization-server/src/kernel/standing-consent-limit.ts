@@ -134,7 +134,7 @@ export function takesDeploymentFigure(entry: AuthorityEntry): boolean {
 }
 
 /** The maximum the deployment's per-child figure states: a finite value, or none. */
-function figureMaximum(deploymentFigure: number | null): StandingConsentMaximum {
+export function figureMaximum(deploymentFigure: number | null): StandingConsentMaximum {
   return deploymentFigure === null ? NO_FINITE_MAXIMUM : { finite: deploymentFigure };
 }
 
@@ -223,33 +223,111 @@ export function mayCarryAuthorityOf(entry: AuthorityEntry, source: AuthorityEntr
  *   fresh human approval;
  * - otherwise it keeps the strictest of its sources' figures;
  * - where it falls within no single source whole, part of its authority may
- *   be new, so `added`, the figure this creation establishes, bounds it too
- *   where the creating path has one;
+ *   be new, so the figure `added` resolves for it bounds it too, where the
+ *   creating path adds authority, and an unknown one makes it unknown;
  * - an entry with no source carries no earlier per-child commitment: it
- *   takes `added` where the creating path has one, and is unknown otherwise.
- * `added` is a provisional, creation-time figure (D1249 ruling 1): reference
- * behavior for authority whose consent rendered no per-child figure, not
- * conformance evidence, and it never loosens or replaces a known or unknown
- * inherited bound. The current deployment policy is never read for carried
- * authority.
+ *   takes the figure `added` resolves for it where the creating path adds
+ *   authority, and is unknown otherwise.
+ * `added` is the figure the human consent that admits the added authority
+ * rendered and retained ({@link AddedChildMaximum}, #2040), never one read at
+ * this creation: it never loosens or replaces a known or unknown inherited
+ * bound. The current deployment policy is never read here.
  */
 export function inheritedChildMaxima(
   entries: readonly AuthorityEntry[],
   references: readonly ChildMaximumReference[],
-  added?: { readonly deploymentFigure: number | null },
+  added?: AddedChildMaximum,
 ): RetainedChildMaximum[] {
   return entries.map((entry) => {
     if (!takesDeploymentFigure(entry)) return null;
     const sources = references.filter((r) => grantsChildren(r.entry) && mayCarryAuthorityOf(entry, r.entry));
-    if (sources.length === 0) return added ? figureMaximum(added.deploymentFigure) : null;
-    const maxima: StandingConsentMaximum[] = [];
-    for (const r of sources) {
-      if (!takesDeploymentFigure(r.entry) || !r.maximum) return null;
-      maxima.push(r.maximum);
-    }
-    if (added && !sources.some((r) => within(entry, r.entry))) maxima.push(figureMaximum(added.deploymentFigure));
-    return strictestMaximum(maxima);
+    if (sources.length === 0) return added ? (addedMaximum(entry, added) ?? null) : null;
+    const carried = strictestOfSources(sources);
+    if (!carried) return null;
+    if (!added || sources.some((r) => within(entry, r.entry))) return carried;
+    const extra = addedMaximum(entry, added);
+    return extra ? strictestMaximum([carried, extra]) : null;
   });
+}
+
+/**
+ * @spec derivation-limits#effective-limit, derivation-limits#approval-rendering
+ * (#2040, D1260 ruling 3): the per-child figure for authority a creating path
+ * adds, as the human consent that admits it rendered and retained it:
+ * - `retained`: the one figure a fresh human approval of that authority
+ *   rendered and retained with its decision (an Expansion deferral's);
+ * - `references`: the figures a standing consent retained for each entry of
+ *   the authority it admits (a Mission Template's ceiling, a Progressive
+ *   ceiling): the added authority takes the strictest figure of the consented
+ *   entries it may carry authority of, and is unknown where any of them is
+ *   unknown, commits a `child_creation_policy`, or where none grants children;
+ * - `unknown`: the consent that admits it retains no figure (it was approved
+ *   before the figure was retained), so no child is created under it until a
+ *   fresh human approval retains one. Nothing is inferred from the current
+ *   deployment policy, a `policy_version` or a Mission's `derivation_limit`.
+ */
+export type AddedChildMaximum =
+  | { readonly retained: StandingConsentMaximum }
+  | { readonly references: readonly ChildMaximumReference[] }
+  | { readonly unknown: true };
+
+/** The strictest figure several sources retain, or undefined where any is unknown or commits a policy. */
+function strictestOfSources(sources: readonly ChildMaximumReference[]): StandingConsentMaximum | undefined {
+  const maxima: StandingConsentMaximum[] = [];
+  for (const r of sources) {
+    if (!takesDeploymentFigure(r.entry) || !r.maximum) return undefined;
+    maxima.push(r.maximum);
+  }
+  return strictestMaximum(maxima);
+}
+
+/** The figure `added` resolves for an entry, or undefined where it is unknown. */
+function addedMaximum(entry: AuthorityEntry, added: AddedChildMaximum): StandingConsentMaximum | undefined {
+  if ("retained" in added) return added.retained;
+  if ("unknown" in added) return undefined;
+  const sources = added.references.filter((r) => grantsChildren(r.entry) && mayCarryAuthorityOf(entry, r.entry));
+  return sources.length === 0 ? undefined : strictestOfSources(sources);
+}
+
+/**
+ * @spec derivation-limits#effective-limit (#2026, #2040): a stored list of
+ * retained per-child figures, or undefined where it is not a list whose every
+ * element is `null`, `{ finite: null }` or `{ finite: n }` with `n` an integer
+ * of at least 1. Unreadable state retains no figure, so a child under an entry
+ * that takes one is refused, never read as no finite maximum.
+ */
+export function parseRetainedChildMaxima(value: unknown): RetainedChildMaximum[] | undefined {
+  const element = (m: unknown): boolean => {
+    if (m === null) return true;
+    if (typeof m !== "object" || Array.isArray(m) || Object.keys(m as object).length !== 1 || !Object.hasOwn(m as object, "finite")) {
+      return false;
+    }
+    const finite = (m as { finite: unknown }).finite;
+    return finite === null || (typeof finite === "number" && Number.isInteger(finite) && finite >= 1);
+  };
+  return Array.isArray(value) && value.every(element) ? (value as RetainedChildMaximum[]) : undefined;
+}
+
+/** {@link parseRetainedChildMaxima} over stored JSON text: undefined where none is stored or it cannot be read. */
+export function retainedChildMaximaOf(text: unknown): RetainedChildMaximum[] | undefined {
+  if (typeof text !== "string" || text === "") return undefined;
+  try {
+    return parseRetainedChildMaxima(JSON.parse(text));
+  } catch {
+    return undefined;
+  }
+}
+
+/** One retained figure as stored JSON text, or undefined where it cannot be read. */
+export function retainedFigureOf(text: unknown): StandingConsentMaximum | undefined {
+  if (typeof text !== "string" || text === "") return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  return parseRetainedChildMaxima([parsed])?.[0] ?? undefined;
 }
 
 /**
@@ -294,6 +372,97 @@ export function standingConsentLines(
 /** @spec child-delegation#subtree-rendering — no lineage-keyed budget is deployed in this reference. */
 export const SUBTREE_AGGREGATE_STATEMENT =
   "No finite aggregate bound on this entry's subtree is enforced: no limit applies to children created over the Mission's lifetime.";
+
+/**
+ * @spec derivation-limits#effective-limit (#2026, D1249 ruling 4; #2040): the
+ * statement for a delegable entry whose per-child figure is unknown, because
+ * authority it carries was approved before the figure was retained.
+ */
+export const UNRETAINED_PER_CHILD_STATEMENT =
+  "No child Mission is created under this entry: part of its authority was approved before its per-child derivation limit was retained, and only a fresh approval of that authority retains one.";
+
+/**
+ * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+ * (#1119): why a delegable entry's per-child figure cannot be disclosed, or
+ * the empty string when it can. An approval cannot consent to a child grant
+ * whose rule and maximum it could not show, so the decision refuses while any
+ * is undisclosable; once the policy is held again, a fresh approval discloses it.
+ */
+export function undisclosableReason(committed: CommittedPerChildMaximum): string {
+  return committed.source === "unheld"
+    ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} version ${committed.policy.version} is not one this issuer holds at its committed digest. This approval is refused until it can be shown.`
+    : committed.source === "unusable"
+      ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}. This approval is refused until it states a usable one.`
+      : "";
+}
+
+/** One delegable entry's disclosure: its label and lines, and why its per-child figure cannot be shown, where it cannot. */
+export interface ChildGrantDisclosure {
+  label: string;
+  lines: string[];
+  undisclosed?: string;
+}
+
+/**
+ * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering,
+ * derivation-limits#effective-limit (#1119, D327, #2026, #2040): the
+ * disclosure every human approval renders for each entry of `entries` that
+ * grants policy-created children: the subtree figures, the per-child rule and
+ * maximum, and the aggregate statement. One reader for every approval
+ * surface (the Mission approval page and its ceiling consent, the Expansion
+ * deferral page and its re-consent, the Mission Template consent), so each
+ * computes the figure the same way:
+ * - an entry committing a `child_creation_policy` shows the maximum its held
+ *   snapshot states, or why it cannot be shown;
+ * - any other delegable entry shows `figures[i]`, the figure the approval
+ *   retains for it (index-aligned with `entries`), or, where that figure is
+ *   unknown (`null`), that no child is created under it.
+ * Where the deployment does not implement Derivation Limits (#2018) no
+ * per-child line is rendered, and the subtree lines remain.
+ */
+export function childGrantDisclosures(
+  entries: readonly AuthorityEntry[],
+  opts: {
+    derivationLimits?: boolean;
+    figures: readonly RetainedChildMaximum[];
+    held: (ref: ActivationPolicyRef) => ActivationPolicySnapshot | undefined;
+    asyncDelegation: boolean;
+  },
+): ChildGrantDisclosure[] {
+  const out: ChildGrantDisclosure[] = [];
+  entries.forEach((entry, i) => {
+    const grant = entry.delegation?.children as
+      | { max_children?: number; max_child_depth?: number; child_creation_policy?: ActivationPolicyRef }
+      | undefined;
+    if (!grant) return;
+    const committed = committedPerChildMaximum(grant, opts.held);
+    const figure = opts.figures[i];
+    const undisclosed = undisclosableReason(committed);
+    const perChild =
+      opts.derivationLimits === false
+        ? []
+        : committed.source === "policy"
+          ? standingConsentLines(committed.maximum, "child Mission", { asyncDelegation: opts.asyncDelegation })
+          : committed.source === "deployment"
+            ? figure
+              ? standingConsentLines(figure, "child Mission", { asyncDelegation: opts.asyncDelegation })
+              : [UNRETAINED_PER_CHILD_STATEMENT]
+            : [undisclosed];
+    out.push({
+      label: `${entry.resource}: ${entry.actions.join(", ")}`,
+      lines: [
+        grant.max_children === undefined
+          ? "Concurrent children: no limit is set on concurrently non-terminal child Missions."
+          : `Concurrent children: at most ${grant.max_children} concurrently non-terminal child Missions (a limit on children at one time, not on children created over the Mission's lifetime).`,
+        `Child depth: at most ${grant.max_child_depth ?? 1}${grant.max_child_depth === undefined ? " (the default)" : ""}.`,
+        ...perChild,
+        SUBTREE_AGGREGATE_STATEMENT,
+      ],
+      ...(undisclosed ? { undisclosed: `${entry.resource}: ${undisclosed}` } : {}),
+    });
+  });
+  return out;
+}
 
 /** @spec progressive#derivation-limits — the inheritance a ceiling consent discloses. */
 export function progressiveInheritanceLine(limit: number | null): string {
