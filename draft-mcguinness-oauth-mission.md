@@ -3603,9 +3603,9 @@ and whether instance attribution is required.
 
 What may be delegated, how far, and to whom is governed per Authority
 Set entry by a type-defined delegation policy ({{other-types}}). For
-`mission_resource_access`, the policy is the `delegation` member,
-whose concrete depth and matcher conditions the Mission Resource
-Access Profile defines
+example, the `mission_resource_access` policy is the entry's
+`delegation` member, whose depth and delegate conditions the Mission
+Resource Access Profile defines
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 Because the policy lives in the entry, `authority_hash` commits it
@@ -3614,10 +3614,10 @@ with the rest of the Authority Set.
 **Delegation depth.** The delegation depth of a token is the number
 of delegations between the approved agent and the token's current
 actor: the agent's own non-delegated token is depth 0, the first
-delegate is depth 1, and each further delegate adds 1. The depth
-checked against `max_depth` is that of the token being issued,
-computed after appending the new outermost actor, not the depth of
-the delegating token.
+delegate is depth 1, and each further delegate adds 1. The depth a
+policy's depth limit is checked against is that of the token being
+issued, computed after appending the new outermost actor, not the
+depth of the delegating token.
 
 **Depth accounting.** The AS MUST establish delegation depth from
 accounting it maintains for the tokens it issues under the Mission
@@ -3653,7 +3653,7 @@ token's `authorization_details` only if both of the following hold:
    the default.
 2. That policy, evaluated at depth `d`, permits this delegate. The AS
    applies the policy's own eligibility test at every exchange; where
-   the policy leaves a matcher unstated, the AS's
+   the policy leaves an eligibility condition unstated, the AS's
    delegation-authorization policy decides, and absence is never a
    blanket grant.
 
@@ -3675,10 +3675,14 @@ already-narrowed `authorization_details` and enforces those as usual
 
 ## Delegated Token Example {#worked-example-delegated-token}
 
-In this example, the Mission's Authority Set has two entries on the ERP:
-`invoices.read`, delegable to `ai_agent` actors through depth 2; and
-`journal-entries.write`, which carries no `delegation` member and is
-therefore non-delegable. The approved agent `s6BhdRkqt3` designates
+The payment entry of the other examples defines no delegation policy
+and is non-delegable, so this example uses a Mission whose entries
+have the `mission_resource_access` type
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Its
+Authority Set has two entries on an ERP: `invoices.read`, delegable to
+`ai_agent` actors through depth 2; and `journal-entries.write`, which
+carries no `delegation` member and is therefore non-delegable. The
+approved agent `s6BhdRkqt3` designates
 sub-agent `tool-runner-7`, an `ai_agent`, which redeems the
 designation at depth 1. The read entry
 is permitted (depth 1 <= 2, `ai_agent` allowed) and the write entry
@@ -5390,11 +5394,11 @@ chain, a compromised actor can act only within its narrowed
 `authorization_details`, for the lifetime of the token it holds. The
 following limit this exposure:
 
-- The per-entry delegation constraints (delegability, `max_depth`, and
-  `allowed_delegates`, {{delegation-constraints}}) bound it at approval
-  time. The `max_depth` constraint bounds the length of a delegation
-  chain, not its breadth: only `allowed_delegates` bounds fan-out to
-  many distinct depth-1 delegates.
+- The per-entry delegation policies ({{delegation-constraints}}) bound
+  it at approval time. A depth limit bounds the length of a delegation
+  chain, not its breadth: only a delegate-eligibility condition bounds
+  fan-out to many distinct depth-1 delegates (for
+  `mission_resource_access`, `max_depth` and `allowed_delegates`).
 - Binding each delegated token to the delegate's own key
   ({{delegated-exchange}}) confines a compromised delegate to its own
   credential.
