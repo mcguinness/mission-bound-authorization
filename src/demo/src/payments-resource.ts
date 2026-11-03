@@ -27,6 +27,7 @@ import {
   createDecisionChannel,
   createPdpRefusalRecorder,
   evidenceKeyConsumer,
+  type DecisionFn,
   type IdempotencyClaimDomain,
   loadRuntimePosture,
   openIdempotencyClaimDomain,
@@ -63,6 +64,7 @@ import {
   type LoadedView,
   McpPaymentsServer,
   type MissionReference,
+  type MissionViewSource,
   OutcomeReconciler,
   PaymentsStore,
   paymentsBoundaryContext,
@@ -147,8 +149,24 @@ export interface PaymentsResourceContext {
   };
   /** The PEP's Mission view read. */
   loadView: (ref: MissionReference) => LoadedView | undefined;
-  /** Each Mission's budget binding, derived on the PDP side. */
-  budgetBindings: NonNullable<Parameters<typeof createDecisionPoint>[0]["budgetBindings"]>;
+  /**
+   * The remote read the PEP awaits at the start of each enforcement, where
+   * Mission state is reached over a network (#1101); `loadView` then answers
+   * from it. Absent: `loadView` reads in process.
+   */
+  viewSource?: MissionViewSource;
+  /**
+   * Wraps the decision the PEP calls: where the PDP owns the state source,
+   * its own read for every decision (`ownReadDecide`, #1101). Absent: the
+   * decision channel's own.
+   */
+  decide?: (inner: DecisionFn) => DecisionFn;
+  /**
+   * Each Mission's budget binding, derived on the PDP side. Absent: the
+   * decision point has no source, so a view carrying a binding is one it
+   * cannot derive, never metered.
+   */
+  budgetBindings?: NonNullable<Parameters<typeof createDecisionPoint>[0]["budgetBindings"]>;
   /** Serve the HTTP MCP transport at the declared resource audience (D315). */
   serveAudience: boolean;
   /** What a failed audience startup releases besides the resource side, in this order around it. */
@@ -336,7 +354,7 @@ export async function assemblePaymentsResource(ctx: PaymentsResourceContext): Pr
     // (#813, #816, decision d): each Mission's budget binding, as the
     // composition derives it on the PDP side. The PEP's view is never
     // consulted for it.
-    budgetBindings: ctx.budgetBindings,
+    ...(ctx.budgetBindings ? { budgetBindings: ctx.budgetBindings } : {}),
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
     // @spec authzen#pdp-request consistency check 11 (#1276, D457): a request
     // refused before evaluation (`operation_target_invalid`) is recorded as a
@@ -589,11 +607,12 @@ export async function assemblePaymentsResource(ctx: PaymentsResourceContext): Pr
     // committed wire's own ledger record for the parameters it offsets.
     committedEffects: connectors,
     boundary,
-    decide: decisionChannel.decide,
+    decide: ctx.decide ? ctx.decide(decisionChannel.decide) : decisionChannel.decide,
     claims: decisionChannel.claims,
     fga,
     modelId,
     loadView,
+    ...(ctx.viewSource ? { viewSource: ctx.viewSource } : {}),
     instanceEpoch: "demo-epoch",
     revokedInstances,
     observe: (e) => observer?.(e),
