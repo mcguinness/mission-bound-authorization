@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         2 November 2026
-Expires: 6 May 2027
+Intended status: Standards Track                         3 November 2026
+Expires: 7 May 2027
 
 
                       Mission Approval Governance
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 6 May 2027.
+   This Internet-Draft will expire on 7 May 2027.
 
 Copyright Notice
 
@@ -300,8 +300,8 @@ Table of Contents
       the Mission's own approval_event_id.
 
       *  It never changes kind, which follows the basis
-         ([I-D.draft-mcguinness-oauth-mission], Section "Standing-
-         Consent Bases").
+         ([I-D.draft-mcguinness-oauth-mission], Section "Principals and
+         Approval Basis"; Section 12.5).
 
       *  This document aligns the record's accountable assertion, where
          it carries one, with that kind: a governed decision still names
@@ -598,8 +598,9 @@ Table of Contents
 
    The following is an example of an Approval Governance Record.  Its
    Mission, msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj, is not the issuance
-   profile's Worked Example Mission, but it shares that Mission's Intent
-   and Authority Set, and so its anchors.
+   profile's example Mission ([I-D.draft-mcguinness-oauth-mission],
+   Section "Mission Record Example"), but it shares that Mission's
+   Intent and Authority Set, and so its anchors.
 
    {
      "approval_event_id": "ape_hON9D0svLKQAMyy-uug",
@@ -935,9 +936,7 @@ Table of Contents
    approval_basis.approved_at equals the accountable policy assertion's
    authority.approved_at (Section 13.2).  This document's ceiling
    therefore bounds that basis, alongside any standing-consent recency
-   ceiling the deployment declares
-   ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
-   Recency").
+   ceiling the deployment declares (Section 12.4).
 
    The two recency paths are analogous, each bounding staleness against
    a retained human-approval instant, but they gate different things:
@@ -1099,8 +1098,7 @@ Table of Contents
        reference digest (Section 12.3).
 
    4.  Obtain the inputs the deciding policy or evaluator evaluated, as
-       the issuer recorded them ([I-D.draft-mcguinness-oauth-mission],
-       Section "Principals and Approval Basis").  These include each
+       the issuer recorded them (Section 12.5).  These include each
        model output in full, with its verdict and any narrowing, which
        the matching service assertion records only by identifier.
        Confirm that each input carries this record's approval_event_id,
@@ -1427,7 +1425,11 @@ Table of Contents
    *  The ceilings and the skew allowance belong to the versioned policy
       that policy_version identifies, or to a separately versioned
       declaration retained with it, so an auditor can reproduce the
-      eligibility decision.
+      eligibility decision.  A deployment declaring ceilings therefore
+      depends on versioned derivation-policy identification, which makes
+      policy_version required in its Mission Records
+      ([I-D.draft-mcguinness-oauth-mission], Section "Provenance and
+      Expiry").
 
 12.5.  Policy Adjudication
 
@@ -1502,8 +1504,7 @@ Table of Contents
    consent_principal:  The human who approved the exact root version.
 
    approved_at:  The instant of that approval, verified against
-      retained, authenticated state as the issuance profile requires of
-      every standing-consent basis.
+      retained, authenticated state (Section 12.1).
 
    root_commitment:  The root's approval_policy.digest; the record's own
       approval_policy is that root.
@@ -1582,9 +1583,8 @@ Table of Contents
 
    A model's output enters only as a recorded input at step 6: it can
    refuse an activation or narrow the authority activated, and never
-   supplies authority or decides the approval
-   ([I-D.draft-mcguinness-oauth-mission], Section "Principals and
-   Approval Basis").
+   supplies authority or decides the approval (Section 12.5;
+   [I-D.draft-mcguinness-oauth-mission], Section "Derivation Modes").
 
    Withdrawing the standing consent stops every later activation under
    it (step 1).  A Mission already activated keeps its ordinary
@@ -1596,11 +1596,11 @@ Table of Contents
    Mission Record of msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT, activated
    under governed_policy.  Alice approved the policy q3-close-agent
    version 3 at 2026-10-30T16:00:00Z.  The client s6BhdRkqt3 later
-   proposed the issuance profile's Worked Example task, and the policy
-   activated it at 2026-11-02T08:00:00Z with no fresh human decision.
-   The Mission shares the Worked Example Mission's Intent and Authority
-   Set, and so its anchors.  The policy digest stands for a policy
-   snapshot this example does not display.
+   proposed the task of the issuance profile's Mission Record Example,
+   and the policy activated it at 2026-11-02T08:00:00Z with no fresh
+   human decision.  The Mission shares that example Mission's Intent and
+   Authority Set, and so its anchors.  The policy digest stands for a
+   policy snapshot this example does not display.
 
    {
      "id": "msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT",
@@ -1852,6 +1852,12 @@ Table of Contents
      +--------------------------------+-----------------------------+
 
               Table 2: Approval Context Manifest v1 members
+
+   policy_version is always present because this profile depends on
+   versioned derivation-policy identification, which makes the member
+   required in the Mission Record of a deployment that uses it
+   ([I-D.draft-mcguinness-oauth-mission], Section "Provenance and
+   Expiry").
 
    The presence of every conditional member MUST be a deterministic
    function of the Mission Record alone, never of which companion
@@ -2208,8 +2214,10 @@ Table of Contents
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission.html>.
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-02, 2 November 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-02>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -2336,11 +2344,11 @@ Appendix A.  Approval Context Commitment Test Vectors
    canonical form.
 
    Vector 2 below reuses, byte-exact, the always-present manifest
-   members from the issuance profile's own canonical Worked Example
-   Mission Record ([I-D.draft-mcguinness-oauth-mission]), including its
-   proposal_hash, per that document's rule that an extending example
-   must either reproduce the recorded objects byte-exactly or state its
-   divergence.
+   members from the issuance profile's own canonical example Mission
+   Record ([I-D.draft-mcguinness-oauth-mission], Section "Mission Record
+   Example"), including its proposal_hash, per that document's rule that
+   an extending example must either reproduce the recorded objects byte-
+   exactly or state its divergence.
 
    Vectors 1, 3, and 4 are hypothetical variants of that same Mission
    (same id, intent_hash, and authority_hash) that diverge in exactly
@@ -2716,6 +2724,13 @@ Appendix C.  Document History
       Mission Substrate Requirements becomes an informative reference.
       The four classifications and every construction rule are unchanged
       (#1944).
+
+   *  The OAuth binding is cited at its posted -02, and every import is
+      checked against it.  Citations of sections that -02 moved here
+      point to this document's policy adjudication, Standing-Consent
+      Bases and Standing-Consent Recency. policy_version, optional in
+      -02, is stated as the dependency that the binding's own rule makes
+      required for this profile's adopters (#1944).
 
    *  The record's mission binding and the Approval Context Manifest
       take the Mission Record's integrity anchors recorded or implied,
