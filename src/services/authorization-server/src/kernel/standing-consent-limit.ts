@@ -102,7 +102,7 @@ export function committedPerChildMaximum(
 
 /**
  * @spec derivation-limits#effective-limit, derivation-limits#approval-rendering,
- * child-delegation#derivation-budget (#2026, D1249) — the per-child maximum a
+ * child-delegation#derivation-budget (#2026, D1249): the per-child maximum a
  * Mission Record retains for one entry of its Authority Set
  * (`MissionRecord.child_derivation_maxima`, index-aligned with it):
  * - a {@link StandingConsentMaximum}: the figure the human approval behind the
