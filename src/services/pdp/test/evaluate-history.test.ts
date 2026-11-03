@@ -39,6 +39,7 @@ import {
   relationForAction,
   signEvidenceEnvelope,
   stalenessBound,
+  type UnauthorizedExecutionFlag,
 } from "../src/index.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
 import {
@@ -167,6 +168,19 @@ async function executionRecord(
 }
 
 const WRITE_COMPLETED: HistoryPredicate = { predicate: "action_class_completed", action_class: "consequential_write" };
+
+/** Digests in the canonical `sha-256:` form: a permit's parameter digest, another, and its context digest. */
+const DIGEST_A = `sha-256:${Buffer.alloc(32, 1).toString("base64url")}`;
+const DIGEST_B = `sha-256:${Buffer.alloc(32, 2).toString("base64url")}`;
+const DIGEST_C = `sha-256:${Buffer.alloc(32, 3).toString("base64url")}`;
+
+/** An execution's authorized digests, mirroring a permit bound to DIGEST_A and DIGEST_C. */
+const AUTHORIZED = { authorized_parameter_digest: DIGEST_A, authorized_evaluation_context_digest: DIGEST_C };
+
+/** `binding` with a sink collecting every unauthorized-execution flag into `flags`. */
+function flagging(binding: HistoryBinding, flags: UnauthorizedExecutionFlag[]): HistoryBinding {
+  return { ...binding, onUnauthorizedExecution: (flag) => flags.push(flag) };
+}
 
 /** A single-use permit's decision conditions, valid one minute past the fixed clock. */
 const SINGLE_USE = { use_limit: 1, valid_until: "2026-09-14T12:01:00Z" };
@@ -566,6 +580,68 @@ describe("the History Context evaluates policy-selected predicates against verif
       expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
       expect(historyOf(decision)?.[0]?.outcome, label).toBe("unavailable");
     }
+  });
+
+  it("counts a completed execution whose effective digests equal its authorized digests in both families", async () => {
+    // From the owner's review probe "equal effective digests preserve the positive completion" (#2017), with both families.
+    const flags: UnauthorizedExecutionFlag[] = [];
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { parameter_digest: DIGEST_A, evaluation_context_digest: DIGEST_C } });
+    const matching = await executionRecord({ evaluation_id: "w1", outcome: "completed", overrides: { ...AUTHORIZED, effective_parameter_digest: DIGEST_A, effective_evaluation_context_digest: DIGEST_C } });
+    const decision = await evaluate(request(), options(flagging(historyBinding([permit, matching]), flags)));
+    expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+    expect(historyOf(decision)?.[0]?.outcome).toBe("satisfied");
+    expect(flags).toEqual([]);
+  });
+
+  it("counts no completed execution whose effective digest differs from its authorized one, in either family: it is flagged as an unauthorized execution and the permit stays not_satisfied", async () => {
+    // From the owner's review probes "unauthorized effective_parameter_digest / effective_evaluation_context_digest cannot satisfy completion" (#2017).
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { parameter_digest: DIGEST_A, evaluation_context_digest: DIGEST_C } });
+    const matching = { ...AUTHORIZED, effective_parameter_digest: DIGEST_A, effective_evaluation_context_digest: DIGEST_C };
+    for (const [family, deviation] of [
+      ["parameter", { effective_parameter_digest: DIGEST_B }],
+      ["evaluation_context", { effective_evaluation_context_digest: DIGEST_B }],
+    ] as const) {
+      const flags: UnauthorizedExecutionFlag[] = [];
+      const unauthorized = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_deviated", overrides: { ...matching, ...deviation } });
+      const decision = await evaluate(request(), options(flagging(historyBinding([permit, unauthorized]), flags)));
+      expect(decision.decision, family).toBe(false);
+      expect(decision.context.denial_reason, family).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, family).toBe("not_satisfied");
+      const flag = { mission: { id: MISSION, issuer: ISSUER }, execution_id: "exe_w1_deviated", evaluation_id: "w1", outcome: "completed", deviations: [family] };
+      expect(flags, family).toEqual([flag]);
+      // A further, authorized completion of the same unrestricted permit satisfies it; the deviation stays flagged.
+      const authorized = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_authorized", sequence: 1, overrides: matching });
+      const later = await evaluate(request(), options(flagging(historyBinding([permit, unauthorized, authorized]), flags)));
+      expect(later.decision, family).toBe(true);
+      expect(flags, family).toEqual([flag, flag]);
+    }
+    // A failed execution that deviated is flagged too, and is no completion either way.
+    const flags: UnauthorizedExecutionFlag[] = [];
+    const failed = await executionRecord({ evaluation_id: "w1", outcome: "failed", execution_id: "exe_w1_failed", overrides: { ...matching, effective_parameter_digest: DIGEST_B, error: "urn:example:execution-failed" } });
+    const authorized = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_authorized", sequence: 1, overrides: matching });
+    const decision = await evaluate(request(), options(flagging(historyBinding([permit, failed, authorized]), flags)));
+    expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+    expect(flags).toEqual([{ mission: { id: MISSION, issuer: ISSUER }, execution_id: "exe_w1_failed", evaluation_id: "w1", outcome: "failed", deviations: ["parameter"] }]);
+  });
+
+  it("leaves completion unestablishable when a completed execution lacks the effective digest its authorized digest requires, in either family", async () => {
+    // From the owner's review probe "missing effective digest cannot establish completed execution" (#2017), with both families.
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { parameter_digest: DIGEST_A, evaluation_context_digest: DIGEST_C } });
+    for (const [family, effective] of [
+      ["parameter", { effective_evaluation_context_digest: DIGEST_C }],
+      ["evaluation_context", { effective_parameter_digest: DIGEST_A }],
+    ] as const) {
+      const missing = await executionRecord({ evaluation_id: "w1", outcome: "completed", overrides: { ...AUTHORIZED, ...effective } });
+      const decision = await evaluate(request(), options(historyBinding([permit, missing])));
+      expect(decision.decision, family).toBe(false);
+      expect(decision.context.denial_reason, family).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, family).toBe("unavailable");
+    }
+    // Control: a suppressed execution may lack it, where the PEP could not establish what it would have run.
+    const suppressed = await executionRecord({ evaluation_id: "w1", outcome: "suppressed", overrides: { ...AUTHORIZED, error: "target_drift" } });
+    const control = await evaluate(request(), options(historyBinding([permit, suppressed])));
+    expect(control.decision).toBe(false);
+    expect(historyOf(control)?.[0]?.outcome).toBe("not_satisfied");
   });
 
   it("fails closed when the store returns a record of another Mission", async () => {

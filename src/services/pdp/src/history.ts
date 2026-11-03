@@ -87,6 +87,23 @@ export interface HistoryEvidenceReader {
   records(mission: { id: string; issuer: string }, options?: { signal: AbortSignal }): Promise<ReadonlyArray<unknown>>;
 }
 
+/**
+ * @spec runtime-evidence#execution-evidence-object `effective_parameter_digest`,
+ * `effective_evaluation_context_digest`: an execution whose effective digest
+ * differs from its authorized digest, which a consumer "MUST flag" as an
+ * unauthorized execution. The record stays valid evidence; this PDP never
+ * counts it as a completion. Raised through
+ * {@link HistoryBinding.onUnauthorizedExecution}, never on the wire.
+ */
+export interface UnauthorizedExecutionFlag {
+  mission: { id: string; issuer: string };
+  execution_id: string;
+  evaluation_id: string;
+  outcome: "completed" | "failed";
+  /** The digest families whose effective value differs from the authorized one. */
+  deviations: Array<"parameter" | "evaluation_context">;
+}
+
 /** The default bound on one history read, in milliseconds. */
 export const DEFAULT_HISTORY_READ_TIMEOUT_MS = 5000;
 
@@ -132,6 +149,16 @@ export interface HistoryBinding {
    * not established.
    */
   sequenceOrigin?: (emitter: { id: string; role: string }) => number | undefined;
+  /**
+   * The deployment's sink for unauthorized executions: called for each
+   * `completed` or `failed` execution a read returns whose effective digest
+   * differs from its authorized digest. It fires on every gated decision that
+   * reads the record, so the sink deduplicates on `execution_id`. A sink that
+   * throws ends the evaluation with no decision, as a Resource policy that
+   * cannot answer does. No Decision Evidence or response member carries the
+   * flag.
+   */
+  onUnauthorizedExecution?: (flag: UnauthorizedExecutionFlag) => void;
 }
 
 /** The runtime action classes `action_class_completed` may name: Decision Evidence's `action_class` value space. */
@@ -173,7 +200,15 @@ interface VerifiedExecution {
   /** The linked permit's digests as this record mirrors them, where it carries them. */
   authorized_parameter_digest: string | undefined;
   authorized_evaluation_context_digest: string | undefined;
+  /** The digests over what was actually attempted, where the record carries them. */
+  effective_parameter_digest: string | undefined;
+  effective_evaluation_context_digest: string | undefined;
   outcome: unknown;
+  /**
+   * An authorized completion: `completed`, with each effective digest equal
+   * to its authorized digest. Set once the record's link is validated.
+   */
+  completion: boolean;
   content: string;
 }
 
@@ -251,8 +286,10 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * has a gap or a reused `sequence` position, a record lacks its REQUIRED
  * `audience`, or an Execution Evidence record links to no verified permit of
  * the same Mission and audience or carries authorized digests other than
- * that permit's. A record delivered more than once with the same content
- * counts once.
+ * that permit's, or a `completed` execution lacks an effective digest its
+ * authorized digest requires. A record delivered more than once with the
+ * same content counts once. An execution whose effective digest differs from
+ * its authorized digest is kept, flagged, and never a completion.
  */
 async function verifiedHistory(
   binding: HistoryBinding,
@@ -356,7 +393,16 @@ async function verifiedHistory(
       const audience = requiredAudience(record.audience);
       const authorizedParameterDigest = optionalString(record.authorized_parameter_digest);
       const authorizedContextDigest = optionalString(record.authorized_evaluation_context_digest);
-      if (authorizedParameterDigest === null || authorizedContextDigest === null) return undefined;
+      const effectiveParameterDigest = optionalString(record.effective_parameter_digest);
+      const effectiveContextDigest = optionalString(record.effective_evaluation_context_digest);
+      if (
+        authorizedParameterDigest === null ||
+        authorizedContextDigest === null ||
+        effectiveParameterDigest === null ||
+        effectiveContextDigest === null
+      ) {
+        return undefined;
+      }
       const content = signedContent(record);
       const prior = executions.get(executionId);
       if (prior !== undefined) {
@@ -369,7 +415,10 @@ async function verifiedHistory(
         audience,
         authorized_parameter_digest: authorizedParameterDigest,
         authorized_evaluation_context_digest: authorizedContextDigest,
+        effective_parameter_digest: effectiveParameterDigest,
+        effective_evaluation_context_digest: effectiveContextDigest,
         outcome: record.outcome,
+        completion: false,
         content,
       });
     }
@@ -419,6 +468,43 @@ async function verifiedHistory(
     if (!linked || linked.decision !== "permit" || linked.audience !== execution.audience) return undefined;
     if (execution.authorized_parameter_digest !== linked.parameter_digest) return undefined;
     if (execution.authorized_evaluation_context_digest !== linked.evaluation_context_digest) return undefined;
+    // @spec runtime-evidence#execution-evidence-object: each effective digest
+    // is REQUIRED where its authorized digest is present, except on a
+    // `suppressed` record that could not establish it. A `completed` record
+    // without one cannot show what ran, so its completion is not established.
+    if (execution.outcome === "completed") {
+      if (execution.authorized_parameter_digest !== undefined && execution.effective_parameter_digest === undefined) return undefined;
+      if (execution.authorized_evaluation_context_digest !== undefined && execution.effective_evaluation_context_digest === undefined) return undefined;
+    }
+    // An effective digest unequal to its authorized digest, on a `completed`
+    // or `failed` record, is an unauthorized execution: valid evidence the
+    // consumer "MUST flag", never a completion of what the permit
+    // authorized. Absence is neither equality nor deviation.
+    const deviations: UnauthorizedExecutionFlag["deviations"] = [];
+    if (
+      execution.authorized_parameter_digest !== undefined &&
+      execution.effective_parameter_digest !== undefined &&
+      execution.effective_parameter_digest !== execution.authorized_parameter_digest
+    ) {
+      deviations.push("parameter");
+    }
+    if (
+      execution.authorized_evaluation_context_digest !== undefined &&
+      execution.effective_evaluation_context_digest !== undefined &&
+      execution.effective_evaluation_context_digest !== execution.authorized_evaluation_context_digest
+    ) {
+      deviations.push("evaluation_context");
+    }
+    if (deviations.length > 0 && (execution.outcome === "completed" || execution.outcome === "failed")) {
+      binding.onUnauthorizedExecution?.({
+        mission: { id: mission.id, issuer: mission.issuer },
+        execution_id: execution.execution_id,
+        evaluation_id: execution.evaluation_id,
+        outcome: execution.outcome,
+        deviations,
+      });
+    }
+    execution.completion = execution.outcome === "completed" && deviations.length === 0;
     if (execution.outcome !== "completed") continue;
     const count = (completions.get(execution.evaluation_id) ?? 0) + 1;
     if (linked.use_limit !== undefined && count > linked.use_limit) return undefined;
@@ -457,9 +543,10 @@ export async function evaluateHistory(
     if (typeof actionClass !== "string" || !RUNTIME_ACTION_CLASSES.has(actionClass)) return recordedEntry(p, "unavailable");
     const permits = history.decisions.filter((d) => d.decision === "permit" && classApplied(d, actionClass));
     if (permits.length === 0) return recordedEntry(p, "not_satisfied");
-    const completed = permits.every((d) =>
-      history.executions.some((e) => e.evaluation_id === d.evaluation_id && e.outcome === "completed"),
-    );
+    // Per permit: at least one authorized completion. A failed use, a
+    // suppressed replay or an unauthorized execution of the same permit
+    // neither counts nor erases one.
+    const completed = permits.every((d) => history.executions.some((e) => e.evaluation_id === d.evaluation_id && e.completion));
     return recordedEntry(p, completed ? "satisfied" : "not_satisfied");
   });
 }
