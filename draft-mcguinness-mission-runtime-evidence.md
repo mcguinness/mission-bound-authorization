@@ -594,7 +594,12 @@ canonicalization, and integrity envelope a deployment emits.
   The sequence is scoped to the emitter identified by `emitter`: each
   emitter maintains its own monotonically increasing per-Mission
   sequence, and a verifier detects gaps and orders records within
-  (Mission, emitter). It does not reconstruct Mission-wide decision
+  (Mission, emitter). An emitter MUST allocate its first position for
+  a Mission as 0 and each later position as one greater than the last,
+  across every record type it emits for that Mission. A position
+  allocated to a record that is never emitted, such as one whose
+  signing failed, is a gap a verifier cannot tell from a missing
+  record. The sequence does not reconstruct Mission-wide decision
   order across emitters: cross-emitter ordering is best-effort,
   established, where the deployment's evidence supports it, from the
   correlation members (`evaluation_id`, `mission.id`, `hop_reference`)
@@ -1205,10 +1210,18 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 `execution_id`:
 : REQUIRED. A string. Unique execution identifier, stable across
   delivery retries of this record: exactly one Execution Evidence
-  Object exists per final disposition of a permit, and delivery of
-  that record is at-least-once, so a consumer MUST deduplicate on
-  `execution_id` rather than assume single delivery. ABNF:
+  Object exists per execution, and delivery of that record is
+  at-least-once, so a consumer MUST deduplicate on `execution_id`
+  rather than assume single delivery. ABNF:
   `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
+
+  An execution is the final disposition of one presentation of a
+  permit. A multi-use permit has one record per use, and its uses may
+  differ in `outcome`; a presentation the PEP refuses, such as a
+  consumed single-use permit presented again (`permit_consumed`), is a
+  `suppressed` execution of its own. A single-use permit has no second
+  completion: a second `completed` record under it records an
+  unauthorized execution.
 
 `evaluation_id`:
 : REQUIRED. A string. Correlates this record with the linked Decision
@@ -2376,6 +2389,30 @@ within the deployment's reconciliation window) as undetermined-outcome
 or, per deployment policy, as action-attempted; it MUST NOT treat it as
 proof of action.
 
+## History Completeness {#history-completeness}
+
+A record shows what it states; no set of records shows that no other
+record exists. An emitter's `sequence` ({{decision-evidence-object}})
+lets a verifier detect a missing record before the last record it
+holds from that emitter, including a missing first record. It does not
+reveal records after the last one held, or an emitter none of whose
+records are held. An emitter's stream is every record it emits for
+the Mission, Refusal Records among them, so a gap check covers the
+whole stream rather than one record type.
+
+A consumer that decides on history, such as a PDP evaluating a history
+predicate ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"History"), therefore relies on its evidence store returning the
+complete, current Mission history. The effect of an omission depends
+on the record omitted. An omitted Execution Evidence record removes a
+completion, and the step that depends on it is denied. An omitted
+Decision Evidence record removes a permit: for a predicate over every
+permit to which a class applied, omitting a permit that never
+completed satisfies a predicate the complete history leaves
+unsatisfied. The countermeasures are those the runtime profile names
+for its history input: record integrity and the audit profile's
+transparency mechanisms ({{I-D.draft-mcguinness-mission-audit}}).
+
 ## Evidence integrity and signing keys {#evidence-integrity-signing-keys}
 
 The `evidence_envelope` binds each record to the emitting PDP or PEP.
@@ -2716,6 +2753,16 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Decision Evidence, Execution Evidence and Security Considerations:
+  an emitter's per-Mission `sequence` starts at 0 and steps by one
+  across every record type, and a position allocated to a record never
+  emitted is a gap; exactly one Execution Evidence Object exists per
+  execution, one per use of a multi-use permit and one per refused
+  presentation, and a second completion of a single-use permit records
+  an unauthorized execution; History Completeness states what sequence
+  checks cannot detect and how an omitted record affects a history
+  read (#2029).
 
 - Decision Evidence: `action_classes` records every class whose
   requirements the PDP applied, when more than one applies;

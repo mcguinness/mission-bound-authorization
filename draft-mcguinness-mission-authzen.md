@@ -1259,9 +1259,11 @@ This document defines one predicate type that policy MAY name,
 `action_class_completed`. It is satisfied when the PDP's evidence store
 holds, for the established Mission, at least one Decision Evidence
 record with `decision` `permit` to which the named class applied, and
-every such record has a linked Execution Evidence record
-({{I-D.draft-mcguinness-mission-runtime-evidence}}) whose `outcome` is
-`completed`. The named class applied to a record when its
+every such permit has a completion witness: a linked Execution
+Evidence record ({{I-D.draft-mcguinness-mission-runtime-evidence}})
+whose `outcome` is `completed` and whose effective parameter and
+evaluation-context digests equal its authorized ones. The named class
+applied to a record when its
 `action_classes` member lists that class or, in a record without
 `action_classes`, its `action_class` is that class, so an execution
 the class applied to counts whichever class was assigned. The
@@ -1278,6 +1280,22 @@ delete step's precondition this way:
   "action_class": "consequential_write"
 }
 ~~~
+
+The predicate is per permit: a permit has a completion witness when
+any of its executions is one, so a `failed` use of a multi-use permit,
+or a replay suppressed as `permit_consumed`, does not remove it. A
+predicate that requires every use of a permit to complete is a
+different predicate type. A `completed` record whose effective digest
+differs from its authorized digest records an unauthorized execution
+({{I-D.draft-mcguinness-mission-runtime-evidence}}): it remains valid
+evidence, and it is not a completion witness. A `completed` record
+that carries an authorized digest without its effective counterpart is
+not a completion witness either, and where its permit has no
+completion witness it leaves the predicate not establishable. The
+evaluation relies on the evidence store returning the complete,
+current Mission history; sequence checks detect gaps only within the
+records returned ({{I-D.draft-mcguinness-mission-runtime-evidence}},
+Section "History Completeness").
 
 An extension predicate type MUST be either a collision-resistant name
 or a name coordinated within this document family, under the same rule
@@ -3211,6 +3229,14 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- History Context: `action_class_completed` requires a completion
+  witness for every permit, a linked `completed` Execution Evidence
+  record whose effective digests equal its authorized ones; an
+  unauthorized execution is not one, a `completed` record missing an
+  effective digest leaves the predicate not establishable, a later
+  failed use or suppressed replay does not remove a witness, and the
+  evaluation relies on a complete history read (#2029).
 
 - Changes a requirement (#1994): a mediated request carried with an
   action class other than the one the PDP's trusted declaration assigns
