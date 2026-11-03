@@ -13511,9 +13511,57 @@
      "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > with Derivation Limits turned off after the template's consent (#2018 review F1; @spec derivation-limits#effective-limit) > a finite per-instance maximum the consent committed outlives the restart: with the capability on the instance records it, and after a restart with it off the next Dispatch is refused dispatch_policy_changed, committing nothing, while the earlier instance keeps its limit",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > removing the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum; a smaller request still stands and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > raising the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum, whatever it requests",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a changed policy_version alone leaves the retained figure usable: with the ceiling removed or raised under a new version, a later child still records the rendered maximum",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a stricter deployment ceiling after a restart narrows a later child below the rendered maximum, and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > only a fresh human approval replaces the rendered maximum: after the ceiling is raised under the same policy_version and a restart, the earlier parent's children stay at 3, while a parent freshly approved under the raised ceiling admits children at its figure",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a child's own children are created under the same consent: a child created after the ceiling is removed keeps the root's rendered figure, and so does its own child",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a retained finite figure outlives a restart with Derivation Limits off: the next child is refused policy_denied, committing nothing, while the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > with the deployment ceiling replaced after the template's consent (#2026 audit; @spec derivation-limits#effective-limit) > the per-instance maximum its Dispatch Policy commits binds whatever the deployment ceiling becomes: removed or raised under the same policy_version, or under a changed one, across a restart, an instance records at most 3, and the earlier instance keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. Not witnessed: the precondition that the maximum is rendered at the standing consent (the reference has no standing-consent rendering surface; see the rendering rows), and the clause that only a fresh human approval of the standing consent lifts the maximum. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling. #2018 review (F1): turning the derivation-limits capability off does not leave the limit absent for a Mission created under a consent committing a finite maximum. After a restart from the kernel file with the capability off, the next child or dispatched instance is refused (policy_denied, dispatch_policy_changed) and nothing is committed, while the Mission created before keeps its limit. Proved by mutation: restoring the defect, a finite maximum recorded as no limit, fails both witnesses, and removing either path's refusal fails its witness. This adds no witness of the fresh-approval clause, which stays unwitnessed."
+   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. #2026 (D1249): the Child Delegation basis for an entry with no child_creation_policy, whose per-child figure is the deployment's ceiling as the parent's approval rendered it, is witnessed too. The approval retains the rendered figure with the Mission Record (child_derivation_maxima); after a restart with the deployment ceiling removed or raised, under the same policy_version or a changed one, a later child, and a child's own child, still records at most it; a stricter ceiling narrows it; and with Derivation Limits off a retained finite figure refuses the next child, committing nothing. The fresh-approval clause is witnessed for this basis as far as the reference reaches: no change of policy replaces the figure, and a parent freshly approved under a raised ceiling admits children at the new figure. The reference has no in-place re-approval of an existing parent's consent, so its fresh approval is a new parent's. The Template audit (#2026, D1249 ruling 7): replacing the deployment ceiling under the same or a changed policy_version across a restart leaves an instance at its Dispatch Policy's maximum, so dispatch needed no change. Proved by mutation: reading the current ceiling instead of the retained figure fails the removal, raise, changed-version, fresh-approval, grandchild and Derivation-Limits-off witnesses; the approval retaining no finite figure fails the same set; a child retaining the figure current at its own creation instead of its parent's fails the grandchild witness; dropping the narrowing by the current ceiling fails the narrowing witness; and a per-instance limit falling back to the deployment ceiling fails the Template audit witness. Still not witnessed: the precondition that the maximum is rendered at the standing consent (see the rendering rows), and the fresh-approval clause for the Template and Progressive ceiling bases. An entry whose consent renders no per-child figure (a template or governed instance's, or one an Expansion or a ceiling drawdown adds) retains the deployment's figure at its own creation; that is a local choice, not a rendered maximum, and no row claims it. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling. #2018 review (F1): turning the derivation-limits capability off does not leave the limit absent for a Mission created under a consent committing a finite maximum. After a restart from the kernel file with the capability off, the next child or dispatched instance is refused (policy_denied, dispatch_policy_changed) and nothing is committed, while the Mission created before keeps its limit. Proved by mutation: restoring the defect, a finite maximum recorded as no limit, fails both witnesses, and removing either path's refusal fails its witness."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -82665,8 +82713,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or the policy the Parent Mission's policy_version identifies, with the child's own count; after the deployment raises or removes its per-child policy ceiling, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
-    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; an entry without a snapshot takes the current policy's ceiling when the parent was approved under it, and is refused policy_denied otherwise, since the reference retains no earlier policy version to read the figure from"
+    "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or, for an entry without one, the figure the Parent Mission's approval rendered and retained, with the child's own count; after the deployment raises or removes its per-child policy ceiling, under the same or another policy_version, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
+    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; for an entry without a snapshot it reads the figure the parent's approval rendered and retained with the Mission Record (child_derivation_maxima: { finite: n }, or { finite: null } for no finite maximum), never the current deployment policy. A parent stored before the figure was retained creates no child under such an entry (policy_denied, nothing committed) until a fresh human approval of a new parent retains one; nothing is backfilled from configuration, the parent's own derivation_limit or its policy_version"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -82697,12 +82745,54 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > an entry with no snapshot under a parent approved under another policy version is refused policy_denied, since its rendered figure cannot be read",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > the approval retains the figure it renders: the deployment's ceiling for an entry with no child_creation_policy, an explicit no-finite-maximum where the deployment sets none, and no figure for an entry committing a child_creation_policy",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > removing the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum; a smaller request still stands and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > raising the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum, whatever it requests",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a changed policy_version alone leaves the retained figure usable: with the ceiling removed or raised under a new version, a later child still records the rendered maximum",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a stricter deployment ceiling after a restart narrows a later child below the rendered maximum, and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > an explicitly retained no-finite-maximum creates children after a restart, bounded only by the current ceiling and request (positive control for the legacy refusal)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a parent stored before the figure was retained creates no child under an entry with no child_creation_policy: refused policy_denied, committing nothing and leaving its stored approval unchanged, however the current policy matches its policy_version and derivation_limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > an entry committing a child_creation_policy is unaffected by the deployment ceiling: removed or raised under the same policy_version after a restart, its snapshot's figure still binds (control)",
      "level": "unit",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1119 (D327, D577). Every clause witnessed. At the endpoint, children created through PAR, the approval page and the RFC 8693 exchange, under a deployment ceiling of 100 and a committed figure of 3, record 3, 3 and 2 for no request, 50 and 2, each with its own count (child-derivation-limit-endpoint.test.ts). That witness needed a projection fix in the same PR: a token projected from an entry committing a child_creation_policy had lost its children grant, so every such child creation was refused not_strict_subset; proved by reverting the fix (the endpoint and projection witnesses fail). At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
+   "notes": "#1119 (D327, D577). Every clause witnessed. At the endpoint, children created through PAR, the approval page and the RFC 8693 exchange, under a deployment ceiling of 100 and a committed figure of 3, record 3, 3 and 2 for no request, 50 and 2, each with its own count (child-derivation-limit-endpoint.test.ts). That witness needed a projection fix in the same PR: a token projected from an entry committing a child_creation_policy had lost its children grant, so every such child creation was refused not_strict_subset; proved by reverting the fix (the endpoint and projection witnesses fail). At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest. #2026 (D1249) replaced the policy_version route: for an entry with no child_creation_policy the parent's approval retains the figure it rendered, and a child reads that, never the current policy. With the ceiling removed or raised, under the same policy_version or a changed one, across a restart, a later child stays at or below the figure; a stricter ceiling narrows it; a retained no-finite-maximum still admits children; an entry committing a child_creation_policy is unaffected; and a parent stored before the figure was retained creates no child under the entry (policy_denied, nothing committed, the stored approval unchanged). Existing children keep their limits, and a parent freshly approved under the current policy creates children again (witnessed, a local migration behavior no row claims). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals. #2026 mutations: reading the current ceiling instead of the retained figure fails the removal, raise and changed-version witnesses; the approval retaining no finite figure fails those and the retention witness; removing the legacy refusal, or reading unknown legacy state as no finite maximum, fails the legacy witness; reading a retained no-finite-maximum as unknown fails the explicit no-finite-maximum witness; dropping the narrowing by the current ceiling fails the narrowing witness."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
