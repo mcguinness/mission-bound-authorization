@@ -1,7 +1,10 @@
 import { activationPolicyDigest, authorityHash, canonicalize, intentHash, type JsonValue } from "@mission/core";
 import { DERIVATION_POLICY, pinnedToCurrentContract, TOPOLOGY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { withTransaction } from "@mission/store";
 import {
   type AuthorityEntry,
@@ -1228,8 +1231,12 @@ describe("per-child derivation limit from the committed policy state (@spec chil
    * A kernel at `deploymentCeiling` whose policy carries one delegable entry
    * per element of `snapshots` (RA, then RB), each committing that snapshot as
    * its child_creation_policy (undefined: none), and an approved parent.
+   * With `store`, the kernel is file-backed, and `reopenDisabled` closes it
+   * and reopens the same file and options with Derivation Limits off, as a
+   * restart with the capability disabled (#2018); `k` and `child` then use
+   * the reopened kernel.
    */
-  function limitLineage(deploymentCeiling: number | null, snapshots: Array<Snapshot | undefined>) {
+  function limitLineage(deploymentCeiling: number | null, snapshots: Array<Snapshot | undefined>, store?: { file: string }) {
     const registry: Record<string, Snapshot> = {};
     const ceiling = snapshots.map((snapshot, i) => {
       const children: Record<string, unknown> = { max_children: 5, allowed_child_actors: [{ sub_profile: "ai_agent" }] };
@@ -1246,7 +1253,7 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       };
     });
     const policy = { policy_version: "limit-policy", ceiling, derivation_limit_ceiling: deploymentCeiling };
-    const k = new MissionKernel({
+    const opts: ConstructorParameters<typeof MissionKernel>[0] = {
       issuer: ISS,
       policy: policy as never,
       authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["parent-agent"], ["bob"]),
@@ -1255,7 +1262,9 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       now,
       actorProfiles: aiAgents("limit-child"),
       activationPolicies: registry,
-    });
+      ...(store ? { store } : {}),
+    };
+    let k = new MissionKernel(opts);
     const parent = k.approve({
       intent: validateMissionIntent(
         JSON.stringify({ goal: "root", target_resources: ceiling.map((e) => e.resource), expires_at: PARENT_EXP }),
@@ -1278,7 +1287,19 @@ describe("per-child derivation limit from the committed policy state (@spec chil
         ),
         childActor: { sub: "limit-child", sub_profile: "ai_agent" },
       }).child;
-    return { k, parent, child };
+    const reopenDisabled = (): MissionKernel => {
+      k.close();
+      k = new MissionKernel({ ...opts, derivationLimits: false });
+      return k;
+    };
+    return {
+      get k() {
+        return k;
+      },
+      parent,
+      child,
+      reopenDisabled,
+    };
   }
 
   it("a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own", () => {
@@ -1342,6 +1363,56 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       expect((e as Error).message).toMatch(/policy_version older-policy is not the policy this issuer holds/);
     }
     expect(k.allMissions().length).toBe(before);
+  });
+
+  describe("with Derivation Limits turned off after the parent's approval (#2018 review F1; @spec derivation-limits#effective-limit)", () => {
+    let dir: string;
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "child-limit-off-"));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    it("a finite per-child maximum the parent committed outlives the restart: with the capability on the child records it, and after a restart with it off the next child is refused policy_denied, committing nothing, while the earlier child keeps its limit", () => {
+      const lineage = limitLineage(null, [stating({ derivation_limit_ceiling: 3 })], { file: join(dir, "kernel.sqlite") });
+      const first = lineage.child();
+      expect(first.derivation_limit).toBe(3);
+      const k = lineage.reopenDisabled();
+      try {
+        const before = k.allMissions().length;
+        const parentCount = k.get(lineage.parent.id)?.derivation_count;
+        try {
+          lineage.child();
+          expect.unreachable();
+        } catch (e) {
+          expect(e).toBeInstanceOf(ChildDelegationError);
+          expect((e as ChildDelegationError).reason).toBe("policy_denied");
+          expect((e as Error).message).toMatch(/committed a per-Mission derivation limit of at most 3/);
+        }
+        expect(k.allMissions()).toHaveLength(before);
+        expect(k.get(lineage.parent.id)?.derivation_count).toBe(parentCount);
+        // The Mission created before the restart keeps its own finite limit.
+        expect(k.get(first.id)?.derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("a per-child figure guaranteeing no finite maximum still creates a child after the restart, recording no limit (positive control)", () => {
+      for (const [i, snapshot] of [stating({ derivation_limit_ceiling: null }), stating({})].entries()) {
+        const lineage = limitLineage(null, [snapshot], { file: join(dir, `kernel-${i}.sqlite`) });
+        expect(lineage.child().derivation_limit).toBeNull();
+        const k = lineage.reopenDisabled();
+        try {
+          const before = k.allMissions().length;
+          expect(lineage.child().derivation_limit).toBeNull();
+          expect(k.allMissions()).toHaveLength(before + 1);
+        } finally {
+          k.close();
+        }
+      }
+    });
   });
 });
 

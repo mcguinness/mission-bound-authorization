@@ -619,9 +619,10 @@ CI runs the same two walkthroughs in process:
 The launcher passes `ISSUANCE_ONLY_CAPABILITIES` (`demo/src/issuance-only.ts`)
 as `buildAuthorizationServer`'s `capabilities` option
 (`services/authorization-server/src/adapters/capabilities.ts`). The issuance
-profile is always on. Of the optional capabilities, only the lifecycle
-endpoint's `revoke` is enabled. Every other one is off, and a request for it
-gets the standard refusal its path already uses. With no `capabilities` set,
+profile is always on. Of the optional capabilities, the lifecycle endpoint's
+`revoke` is enabled, and Introspection, Revocation propagation and Derivation
+Limits, each a capability since #2018, stay on as before. Every other one is
+off, and a request for it gets the standard refusal its path already uses. With no `capabilities` set,
 the assembly is the full reference provider: every capability except the
 opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`: `device-authorization`,
 `delegation`, `deferred-approval` and `standing-payment-dispatch`), which are
@@ -651,7 +652,9 @@ launcher refuses every excluded path (#873)` unless the row says otherwise.
 |---|---|---|---|
 | PAR, authorization code with PKCE, DPoP-bound JWT access tokens | On | | `the issuance-only walkthrough (#873)`, both tests |
 | Refresh, scope projection | On | | the same |
-| Introspection (`/introspect`) | On | plain-rs calls it only with `--introspection` | `the issuance-only walkthrough (#873) > JWT plus introspection: the same path, and after revocation the next call is refused invalid_token` |
+| Introspection (`introspection`: `/introspect` and its metadata) | On | plain-rs calls it only with `--introspection`. Off, the route is not served (404), neither member is advertised, and construction refuses a configured introspection principal | `the issuance-only walkthrough (#873) > JWT plus introspection: the same path, and after revocation the next call is refused invalid_token`; the switch itself, `services/authorization-server/test/introspection-capability.test.ts` |
+| Revocation propagation (`revocation-propagation`: `mission_max_stale_seconds`) | On | The bound the 300-second access-token lifetime is sized to. Off, the member is not advertised | `the metadata advertises only the enabled surface`; the switch itself, `services/authorization-server/test/revocation-propagation-capability.test.ts` |
+| Derivation Limits (`derivation-limits`: `requested_derivation_limit` and `derivation_limit`) | On | Off, intake refuses `requested_derivation_limit` 400 `invalid_request` (Closed top levels), no Mission establishes a limit, and no approval page renders one. Turning it off removes no earlier commitment: a Mission keeps its own limit, still enforced, and a child or dispatched instance under a standing consent that committed a finite maximum is refused, since only a fresh human approval replaces that maximum | the switch itself, `services/authorization-server/test/derivation-limits-capability.test.ts`; the restart with it off, `services/authorization-server/test/child-delegation.test.ts` and `services/authorization-server/test/template.test.ts`, each under `with Derivation Limits turned off after ...` |
 | Lifecycle `revoke` | On | | the same two walkthrough tests, step 6 |
 | Lifecycle `suspend`, `resume`, `complete` | Off | 400 `invalid_request`; the Mission stays `active` | `the lifecycle suspend, resume and complete operations are refused invalid_request and the Mission stays active` |
 | Async-delegation exchange (`request_refresh_token`) | Off | 400 `unsupported_grant_type` | `async-delegation token exchange (request_refresh_token) is refused unsupported_grant_type` |

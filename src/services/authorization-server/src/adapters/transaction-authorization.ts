@@ -918,7 +918,9 @@ async function completionChecks(
   // workflow admitted before the store recorded versions (no
   // `profileVersion`) completes only under the binding the deployment
   // declares for its `(iss, type)`, never under today's version; with none,
-  // its original binding is unknowable and the refusal is terminal.
+  // its original binding is unknowable and the refusal is terminal. An entry
+  // refused for carrying no reference the operation now requires says so;
+  // every other refusal here keeps the one description (D1078).
   const entry = wf.challenge.authorization_details[0] as JsonValue;
   const pinnedOperation =
     wf.profileVersion === undefined
@@ -931,7 +933,10 @@ async function completionChecks(
     return {
       ok: false,
       error: "access_denied",
-      description: "the Operation Profile version this workflow was admitted under no longer resolves it",
+      description:
+        !pinnedOperation.ok && pinnedOperation.missingReference
+          ? pinnedOperation.reason
+          : "the Operation Profile version this workflow was admitted under no longer resolves it",
     };
   }
 

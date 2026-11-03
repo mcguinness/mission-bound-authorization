@@ -125,7 +125,7 @@ function requiring(actions: readonly string[], base: ResourceContractDeclaration
   );
 }
 
-const MISSING = { ok: false, reason: "the resource requires a resource_contract reference for this operation" };
+const MISSING = { ok: false, reason: "the resource requires a resource_contract reference for this operation", missingReference: true };
 const CURRENT = VERSIONS.find((v) => v.state === "current");
 /** The newest supported older version naming another Operation Profile than the current one (2026-10-27 names the live v16, #249, D1155). */
 const OLDER = VERSIONS.find((v) => v.state === "superseded" && v.operation_profile !== CURRENT?.operation_profile);

@@ -81,6 +81,7 @@ import {
   resolveDerivationLimit,
   resolveEffectiveExpiry,
 } from "./derive.js";
+import { type StandingConsentMaximum, withinStandingConsentMaximum } from "./standing-consent-limit.js";
 import {
   assertDischargeAuthoritiesResolvable,
   conditionCanonicalBytes,
@@ -823,6 +824,16 @@ export interface KernelOptions {
   capabilityResolver?: CapabilitySourceResolver;
   issuer: string;
   policy: DerivationPolicy;
+  /**
+   * @spec derivation-limits#conformance, mission#submission-via-par (#2018):
+   * whether this AS implements Mission Derivation Limits. Default true. False:
+   * intake refuses a `requested_derivation_limit` Intent member
+   * `invalid_request` as a member no implemented profile defines, every
+   * creation path establishes no `derivation_limit`, and a record carrying
+   * either member is refused at commit. Construction refuses a policy that
+   * sets `derivation_limit_ceiling`.
+   */
+  derivationLimits?: boolean;
   statusKey: CryptoKey;
   statusKid: string;
   /**
@@ -1302,6 +1313,14 @@ export class MissionKernel {
   private readonly sourceResolver: AuthoritySourceResolver;
 
   constructor(private readonly opts: KernelOptions) {
+    // @spec derivation-limits#effective-limit (#2018): a policy ceiling is a
+    // Derivation Limits setting, so a deployment that does not implement the
+    // profile and sets one is misconfigured, refused here rather than ignored.
+    if (opts.derivationLimits === false && (opts.policy.derivation_limit_ceiling ?? null) !== null) {
+      throw new Error(
+        "the derivation policy sets derivation_limit_ceiling, but this deployment does not implement Derivation Limits (the derivation-limits capability is off)",
+      );
+    }
     // @spec mission#authority-sources — the catalog's own invariants are
     // enforced HERE, not only over the shipped file: a duplicate root id, or
     // two declarations that select the same (client, Subject), would make
@@ -1469,7 +1488,12 @@ export class MissionKernel {
   }
 
   validateIntent(raw: string, opts: Pick<IntentIntakeOptions, "admitMaxBudget"> = {}): MissionIntent {
-    return validateMissionIntent(raw, { ...opts, now: this.now() });
+    return validateMissionIntent(raw, { ...opts, now: this.now(), derivationLimits: this.derivationLimitsEnabled() });
+  }
+
+  /** @spec derivation-limits#conformance (#2018): whether this AS implements Mission Derivation Limits. */
+  derivationLimitsEnabled(): boolean {
+    return this.opts.derivationLimits !== false;
   }
 
   /**
@@ -1489,6 +1513,7 @@ export class MissionKernel {
     return validateMissionIntentSubmission(raw, bounds, {
       ...opts,
       now: this.now(),
+      derivationLimits: this.derivationLimitsEnabled(),
       ...(this.opts.submissionEvidenceTypes ? { evidenceTypes: this.opts.submissionEvidenceTypes } : {}),
     });
   }
@@ -1630,7 +1655,46 @@ export class MissionKernel {
    * value copied verbatim.
    */
   resolveDerivationLimit(requested: number | null | undefined): number | null {
+    // @spec derivation-limits#introduction (#2018): an AS that does not
+    // implement Derivation Limits establishes no derivation limit.
+    if (!this.derivationLimitsEnabled()) return null;
     return resolveDerivationLimit(requested, this.opts.policy.derivation_limit_ceiling);
+  }
+
+  /**
+   * @spec derivation-limits#effective-limit (#1119, D327, #2018): the
+   * `derivation_limit` a Mission created under a standing consent records:
+   * its own resolved limit, never above a finite committed maximum. Where
+   * this AS does not implement Derivation Limits, none for a consent that
+   * guarantees no finite maximum. A finite committed maximum is never turned
+   * into no limit: only a fresh human approval replaces it, so turning the
+   * capability off does not remove it. Each creating path refuses such a
+   * creation first ({@link MissionKernel.standingConsentMaximumRefusal});
+   * reaching here with one is a defect, refused.
+   */
+  standingConsentDerivationLimit(requested: number | null | undefined, maximum: StandingConsentMaximum): number | null {
+    if (!this.derivationLimitsEnabled()) {
+      if (maximum.finite !== null) {
+        throw new Error(
+          `a standing consent committed a finite derivation_limit maximum of ${maximum.finite}, which this deployment cannot record: Derivation Limits is off`,
+        );
+      }
+      return null;
+    }
+    return withinStandingConsentMaximum(this.resolveDerivationLimit(requested), maximum);
+  }
+
+  /**
+   * @spec derivation-limits#effective-limit (#2018): whether a Mission can be
+   * created under a standing consent committing `maximum`. Where this AS does
+   * not implement Derivation Limits it cannot establish the limit a finite
+   * committed maximum requires, and recording none would lift a bound only a
+   * fresh human approval replaces, so the creation is refused: the returned
+   * reason, or undefined where the creation can proceed.
+   */
+  standingConsentMaximumRefusal(maximum: StandingConsentMaximum): string | undefined {
+    if (this.derivationLimitsEnabled() || maximum.finite === null) return undefined;
+    return `the standing consent committed a per-Mission derivation limit of at most ${maximum.finite}, which this deployment cannot establish because it does not implement Derivation Limits; disabling the capability does not remove the commitment, which only a fresh human approval replaces`;
   }
 
   /**
@@ -2273,10 +2337,7 @@ export class MissionKernel {
       // @spec mission#derivation-issuance-policy — the immutable EFFECTIVE
       // ceiling: min(deployment policy, the client's requested_derivation_limit),
       // never the requested value copied verbatim.
-      derivation_limit: resolveDerivationLimit(
-        input.intent.requested_derivation_limit,
-        this.opts.policy.derivation_limit_ceiling,
-      ),
+      derivation_limit: this.resolveDerivationLimit(input.intent.requested_derivation_limit),
       derivation_count: 0,
       // @spec mission#approval-event (step 7) (#916): bound at the commit, never after.
       grant_id: input.grantId ?? null,
@@ -2497,6 +2558,21 @@ export class MissionKernel {
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
     if (record.issuer !== this.opts.issuer) throw new Error("record issuer does not own this kernel");
+    // @spec derivation-limits#introduction (#2018): every creator funnels
+    // through here, so where this AS does not implement Derivation Limits no
+    // record commits its members, whatever path built it.
+    if (!this.derivationLimitsEnabled()) {
+      if (record.derivation_limit !== null) {
+        throw new Error(
+          `mission ${record.id} would establish derivation_limit ${record.derivation_limit}, but this deployment does not implement Derivation Limits`,
+        );
+      }
+      if (Object.hasOwn(record.intent, "requested_derivation_limit")) {
+        throw new Error(
+          `mission ${record.id} would commit requested_derivation_limit, but this deployment does not implement Derivation Limits`,
+        );
+      }
+    }
     // @spec resource-access#delegate-eligibility: provenance a creating surface
     // records is index-aligned with the Authority Set it commits; a misaligned
     // array is a creation defect, refused rather than stored.

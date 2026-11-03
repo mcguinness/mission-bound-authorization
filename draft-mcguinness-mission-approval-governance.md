@@ -35,12 +35,13 @@ normative:
   RFC8785:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
-    date: 2026
+    date: 2026-11-02
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-02
 
 informative:
   I-D.draft-mcguinness-mission-substrate:
@@ -322,8 +323,8 @@ Approval Basis"):
   `approval_event_id`.
 
   - It never changes `kind`, which follows the basis
-    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-    Bases").
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+    Approval Basis"; {{policy-adjudication}}).
   - This document aligns the record's accountable assertion, where it
     carries one, with that `kind`: a governed decision still names its
     mechanism, and the record supplies the fuller assertion set behind
@@ -621,7 +622,8 @@ tooling is advisory and carries no semantics in this record.
 
 The following is an example of an Approval Governance Record. Its
 Mission, `msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj`, is not the issuance
-profile's Worked Example Mission, but it shares that Mission's Intent
+profile's example Mission ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Record Example"), but it shares that Mission's Intent
 and Authority Set, and so its anchors.
 
 ~~~ json
@@ -952,8 +954,7 @@ Under `governed_policy` the two instants coincide:
 `authority.approved_at` ({{governed-policy-record}}). This document's
 ceiling therefore bounds that basis, alongside any standing-consent
 recency ceiling the deployment declares
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-Recency").
+({{standing-consent-recency}}).
 
 The two recency paths are analogous, each bounding staleness against a
 retained human-approval instant, but they gate different things:
@@ -1105,11 +1106,10 @@ re-checked ({{conformance}}). The re-check has these steps:
    retained snapshot of that evaluator and recompute its activation
    policy reference digest ({{activation-policy-commitment}}).
 4. Obtain the inputs the deciding policy or evaluator evaluated, as the
-   issuer recorded them ({{I-D.draft-mcguinness-oauth-mission}}, Section
-   "Principals and Approval Basis"). These include each model output in
-   full, with its verdict and any narrowing, which the matching
-   `service` assertion records only by identifier. Confirm that each
-   input carries this record's `approval_event_id`, the Mission's
+   issuer recorded them ({{policy-adjudication}}). These include each
+   model output in full, with its verdict and any narrowing, which the
+   matching `service` assertion records only by identifier. Confirm that
+   each input carries this record's `approval_event_id`, the Mission's
    `intent_hash`, and the `authority_hash` of the set recorded as
    evaluated, and that each contributing `service` assertion corresponds
    to one of them.
@@ -1414,7 +1414,11 @@ older than the ceiling. Where ceilings are declared:
 - The ceilings and the skew allowance belong to the versioned
   policy that `policy_version` identifies, or to a separately
   versioned declaration retained with it, so an auditor can
-  reproduce the eligibility decision.
+  reproduce the eligibility decision. A deployment declaring ceilings
+  therefore depends on versioned derivation-policy identification,
+  which makes `policy_version` required in its Mission Records
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Provenance and
+  Expiry").
 
 ## Policy Adjudication {#policy-adjudication}
 
@@ -1490,8 +1494,7 @@ members ({{I-D.draft-mcguinness-oauth-mission}}), each REQUIRED:
 
 `approved_at`:
 : The instant of that approval, verified against retained,
-  authenticated state as the issuance profile requires of every
-  standing-consent basis.
+  authenticated state ({{standing-consent-bases}}).
 
 `root_commitment`:
 : The root's `approval_policy.digest`; the record's own
@@ -1567,9 +1570,8 @@ A failure at any step creates no Mission and issues no credential.
 
 A model's output enters only as a recorded input at step 6: it can
 refuse an activation or narrow the authority activated, and never
-supplies authority or decides the approval
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
-Approval Basis").
+supplies authority or decides the approval ({{policy-adjudication}};
+{{I-D.draft-mcguinness-oauth-mission}}, Section "Derivation Modes").
 
 Withdrawing the standing consent stops every later activation under
 it (step 1). A Mission already activated keeps its ordinary
@@ -1581,11 +1583,11 @@ The following example shows an excerpt, other members omitted, of the
 Mission Record of `msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT`, activated
 under `governed_policy`. Alice approved the policy `q3-close-agent`
 version 3 at 2026-10-30T16:00:00Z. The client `s6BhdRkqt3` later
-proposed the issuance profile's Worked Example task, and the policy
-activated it at 2026-11-02T08:00:00Z with no fresh human decision. The
-Mission shares the Worked Example Mission's Intent and Authority Set,
-and so its anchors. The policy digest stands for a policy snapshot this
-example does not display.
+proposed the task of the issuance profile's Mission Record Example, and
+the policy activated it at 2026-11-02T08:00:00Z with no fresh human
+decision. The Mission shares that example Mission's Intent and Authority
+Set, and so its anchors. The policy digest stands for a policy snapshot
+this example does not display.
 
 ~~~ json
 {
@@ -1812,6 +1814,12 @@ A conditional member is present if and only if its condition holds:
 | `approval_event_id` | always |
 | `submission_evidence_commitment` | when the Mission Record carries `submission_evidence` |
 {: title="Approval Context Manifest v1 members"}
+
+`policy_version` is always present because this profile depends on
+versioned derivation-policy identification, which makes the member
+required in the Mission Record of a deployment that uses it
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Provenance and
+Expiry").
 
 The presence of every conditional member MUST be a deterministic
 function of the Mission Record alone, never of which companion
@@ -2130,11 +2138,11 @@ layout line breaks, adding no characters, to recover the single-line
 canonical form.
 
 Vector 2 below reuses, byte-exact, the always-present manifest
-members from the issuance profile's own canonical Worked Example
-Mission Record ({{I-D.draft-mcguinness-oauth-mission}}), including
-its `proposal_hash`, per that document's rule that an extending
-example must either reproduce the recorded objects byte-exactly or
-state its divergence.
+members from the issuance profile's own canonical example Mission Record
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record
+Example"), including its `proposal_hash`, per that document's rule that
+an extending example must either reproduce the recorded objects
+byte-exactly or state its divergence.
 
 Vectors 1, 3, and 4 are hypothetical variants
 of that same Mission (same `id`, `intent_hash`, and `authority_hash`)
@@ -2497,6 +2505,13 @@ disclosed mismatch is definitive.
   commitment construction, which that section instantiates; Mission
   Substrate Requirements becomes an informative reference. The four
   classifications and every construction rule are unchanged (#1944).
+
+- The OAuth binding is cited at its posted `-02`, and every import is
+  checked against it. Citations of sections that `-02` moved here point
+  to this document's policy adjudication, Standing-Consent Bases and
+  Standing-Consent Recency. `policy_version`, optional in `-02`, is
+  stated as the dependency that the binding's own rule makes required
+  for this profile's adopters (#1944).
 
 - The record's `mission` binding and the Approval Context Manifest
   take the Mission Record's integrity anchors recorded or implied,

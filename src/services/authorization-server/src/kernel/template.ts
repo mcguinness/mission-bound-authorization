@@ -72,7 +72,6 @@ import { newMissionId } from "./mission-id.js";
 import {
   STANDING_CONSENT_LIMIT_MEMBER,
   standingConsentMaximumOf,
-  withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
 import {
   assertStandingPaymentCeiling,
@@ -982,6 +981,17 @@ export function dispatchFromTemplate(
       `template ${template.id} dispatch policy ${template.dispatch_policy.id} states no usable ${STANDING_CONSENT_LIMIT_MEMBER}; re-consent the template`,
     );
   }
+  // @spec derivation-limits#effective-limit (#2018): a finite per-instance
+  // maximum the template's consent committed stays in force where this AS no
+  // longer implements Derivation Limits. The Dispatch is refused, as for a
+  // maximum that cannot be read, rather than recorded with no limit.
+  const unestablishable = kernel.standingConsentMaximumRefusal(dispatchMaximum);
+  if (unestablishable) {
+    throw new DispatchError(
+      "dispatch_policy_changed",
+      `template ${template.id} dispatch policy ${template.dispatch_policy.id}: ${unestablishable}`,
+    );
+  }
   // @spec mission-template#prohibited-classes (#813): under the
   // `standing-payment-dispatch` capability, a template whose verified
   // Dispatch Policy states standing-payment terms dispatches through the
@@ -1265,10 +1275,8 @@ export function dispatchFromTemplate(
     // D327): established afresh for this instance, never above the maximum
     // the committed Dispatch Policy states, and never absent where it is
     // finite, whatever the deployment's ceiling has since become.
-    derivation_limit: withinStandingConsentMaximum(
-      kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
-      dispatchMaximum,
-    ),
+    // None where this AS does not implement Derivation Limits (#2018).
+    derivation_limit: kernel.standingConsentDerivationLimit(input.intent.requested_derivation_limit, dispatchMaximum),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

@@ -3602,7 +3602,7 @@ describe("a missing contract reference where the challenged operation requires o
     expect(control.issued?.status, JSON.stringify(control.issued?.body)).toBe(200);
   });
 
-  it("refuses access_denied at completion, minting nothing, an unpinned remittance admitted and approved before the operation required a reference, and leaves the workflow pending", async () => {
+  it("refuses access_denied at completion, minting nothing, an unpinned remittance admitted and approved before the operation required a reference, stating that the operation requires one, and leaves the workflow pending", async () => {
     const m = await preCutoverMission();
     const txn = "txn_missing_reference_completion";
     const { admitted, issued, decided, workflows, handle } = await remitThrough(preCutover(), m, txn, shipped());
@@ -3610,6 +3610,9 @@ describe("a missing contract reference where the challenged operation requires o
     expect(ars.getTask(taskFor(txn))?.state).toBe("approved");
     expect(issued?.status).toBe(400);
     expect((issued?.body as { error?: string }).error).toBe("access_denied");
+    expect((issued?.body as { error_description?: string }).error_description).toBe(
+      "the resource requires a resource_contract reference for this operation",
+    );
     expect((issued?.body as { access_token?: string }).access_token).toBeUndefined();
     expect(decided).toEqual([]);
     expect(workflows.get(handle as string)?.state).toBe("pending");
@@ -3635,6 +3638,10 @@ describe("a missing contract reference where the challenged operation requires o
     expect(ars.getTask(taskFor(txn))?.state).toBe("approved");
     expect(issued?.status).toBe(400);
     expect((issued?.body as { error?: string }).error).toBe("access_denied");
+    // Every other completion refusal keeps the one description (D1078).
+    expect((issued?.body as { error_description?: string }).error_description).toBe(
+      "the Operation Profile version this workflow was admitted under no longer resolves it",
+    );
     expect((issued?.body as { access_token?: string }).access_token).toBeUndefined();
     expect(decided).toEqual([]);
     expect(workflows.get(handle as string)?.state).toBe("pending");
