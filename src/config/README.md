@@ -390,8 +390,28 @@ Submission Evidence type (`@spec request-provenance#trust-configuration`,
 `services/authorization-server/src/kernel/request-provenance.ts`.
 
 `enabled` says whether the AS accepts the type. The shipped file sets it to
-`false` and authorizes no signer. `@mission/demo-data` validates the file
-at load, like every file here, and no service consults it.
+`false` and authorizes no signer, so no composition enables the type from
+it. `@mission/demo-data` validates the file at load, like every file here.
+
+**The as-native opt-in** (#939 slice 2b-2, D1221). `pnpm as-native` with
+`MISSION_REQUEST_INTAKE=1` starts the demo request intake
+(`demo/src/request-intake.ts`) and enables the type on its AS in one step,
+from this file's declared bounds: for that launch the AS trusts exactly the
+intake's one signer, and the intake signs with an assertion lifetime of
+`max_assertion_lifetime_seconds` and a maximum capture age of
+`max_capture_age_seconds`, so the two halves share one bound. The file
+itself stays disabled. The type is accepted, not required of any client.
+Any other value of the variable refuses startup by name. With
+`MISSION_KERNEL_STORE` also set, the AS refuses to start, since the type's
+replay history and acceptance records are in memory only and would not
+survive a restart (D1119 Q5, #1963). `server.ts` never enables the type.
+
+**Loopback cookies.** The launcher runs the intake and the reference IdP on
+`127.0.0.1`, each on a port of its own. Cookies are scoped by host, not by
+port (RFC 6265 Section 8.5), so each receives the other's cookies, the
+intake's `HttpOnly`, `SameSite=Strict` session cookie included, and a page
+served on any port of that host is the intake's own site. A deployment
+gives each party its own host.
 
 The deployment's declared bounds, each a positive whole number of seconds
 no larger than its cap:
