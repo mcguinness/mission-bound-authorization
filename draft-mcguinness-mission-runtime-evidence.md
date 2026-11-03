@@ -1219,9 +1219,11 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   permit. A multi-use permit has one record per use, and its uses may
   differ in `outcome`; a presentation the PEP refuses, such as a
   consumed single-use permit presented again (`permit_consumed`), is a
-  `suppressed` execution of its own. A single-use permit has no second
-  completion: a second `completed` record under it records an
-  unauthorized execution.
+  `suppressed` execution of its own. A single-use permit has one
+  authorized completion, the one that took its single use: any other
+  `completed` record under it records an unauthorized execution,
+  whatever its digests, and the records themselves do not show which
+  completion took the use.
 
 `evaluation_id`:
 : REQUIRED. A string. Correlates this record with the linked Decision
@@ -2765,8 +2767,9 @@ evidence representation their shared envelope carries (using the
 
 - Execution Evidence and Security Considerations: one record exists
   per execution, so a multi-use permit has one per use and a refused
-  presentation its own; a second completion of a single-use permit is
-  an unauthorized execution; History Completeness states what sequence
+  presentation its own; a single-use permit's completion other than
+  the one that took its use is an unauthorized execution; History
+  Completeness states what sequence
   checks cannot detect and how an omitted record affects a history
   read (#2029).
 
