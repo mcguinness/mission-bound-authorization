@@ -624,6 +624,51 @@ but never required. Attribution says which work item an action was
 requested for. It proves neither that the action serves the item's
 purpose nor isolation between items in one process.
 
+### Work-Item Prerequisite {#work-item-prerequisite}
+
+`work_item_prerequisite_completed` is a history predicate type
+({{I-D.draft-mcguinness-mission-authzen}}, Section "History Context").
+It requires that a named operation completed for the same work item,
+operation target, and revision as the action being decided. Policy
+names the operation with two members: `action`, its identifier, and
+`action_class`, a runtime action class name. A predicate without
+either member cannot be established.
+
+The predicate is satisfied when the PDP's evidence store holds, for
+the established Mission, a Decision Evidence record with `decision`
+`permit` and a linked Execution Evidence record with `outcome`
+`completed` that is not an unauthorized execution
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), where:
+
+- the permit's `action` names the predicate's `action`, and the
+  predicate's class applied to the permit as it does for
+  `action_class_completed`; class membership alone does not show that
+  the named operation ran;
+- the permit and the execution each carry the request's work item as
+  `work_item`; and
+- the execution records the request's operation target and revision
+  as the target and revision its effect acted on.
+
+The request's revision is a `revision`-granularity fact that the PEP
+captures for the operation target from the resource's authoritative
+interface ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"Evaluation-Context Binding") and supplies as a policy-evaluable
+attribute. A request without a work item or a revision cannot
+establish the predicate.
+
+The executing PEP or executor records the target and revision acted
+on as deployment-defined members of the Execution Evidence's
+`result_summary`, from what the resource reported when the effect
+ran, never from the request or an agent argument. A matching
+completion that lacks either fact leaves the predicate not
+establishable unless another completion satisfies it.
+
+A prerequisite completed at an earlier revision does not satisfy a
+request at a later one. Where Evaluation-Context Binding covers the
+operation being decided, a revision that changes after the decision
+is refused before any effect at execution. That reverification is the
+`verified` property; the predicate adds no atomic check-and-effect.
+
 # Resume Checks {#resume-checks}
 
 Before resuming governed work, a Mission-aware harness MUST establish
@@ -1896,6 +1941,13 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Work-Item Prerequisite: `work_item_prerequisite_completed`, a history
+  predicate requiring that a policy-named operation and class completed
+  for the same work item, operation target, and revision as the action
+  being decided, through a linked permit and an authorized completion
+  whose `result_summary` records the target and revision acted on
+  (#815).
 
 - Decision-API Composition: the PDP requires taint context on every action
   to which the External commitment class applies, not only one whose
