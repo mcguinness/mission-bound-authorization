@@ -284,7 +284,11 @@ Not exercised by this composition:
   `runtime.decision-inputs.history-fail-closed`. Todo:
   `runtime.decision-inputs.history-no-expand-authority`. This composition
   binds no history policy, so it selects no predicate and does not claim
-  the capability; #815's destructive-operation witness binds one.
+  the capability. #815's destructive-operation witness binds one only in a
+  test-only composition (`src/services/mcp-payments/test/work-item-prerequisite.test.ts`),
+  where `work_item_prerequisite_completed` gates a test-only database
+  delete; its ten rows are gated on `harness.work-item-prerequisite`, also
+  unclaimed.
 - `mas.join-assertion` (13 rows, all `todo`): the composition has no Join
   Assertion endpoint or consumer, so the capability is unclaimed (#972).
 - `runtime.compromise-resistant` (1 tested, 3 partial, 7 todo) and
