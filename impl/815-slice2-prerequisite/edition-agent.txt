@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-03T16:13:17Z
-Source repository commit: 37b259c57fc3babae2207c77845522ced0c86ee1
+Generated: 2026-11-03T17:25:25Z
+Source repository commit: b27be767197e8323fe43db06123ca05435444a5f
 Member count: 9
 
 Reading order:
@@ -31775,7 +31775,7 @@ Table of Contents
    It requires that a named operation completed for the same work item,
    operation target, and revision as the action being decided.  Policy
    names the operation with two members: action, its identifier, and
-   action_class, a runtime action class name.  A predicate without
+   action_class, a runtime action class name.  A predicate missing
    either member cannot be established.
 
    The predicate is satisfied when the PDP's evidence store holds, for
@@ -31789,32 +31789,36 @@ Table of Contents
       action_class_completed; class membership alone does not show that
       the named operation ran;
 
-   *  the permit and the witness each carry the request's work item as
-      work_item; and
+   *  the permit and the witness each carry the request's qualified
+      work-item identifier as their work_item; and
 
-   *  the witness records the request's operation target and revision as
-      the target and revision its effect acted on.
+   *  the witness's result_summary carries the request's operation
+      target as operation_target and the request's revision as revision.
 
+   The request's operation target is its operation_target
+   ([I-D.draft-mcguinness-mission-authzen], Section "Operation Target").
    The request's revision is a revision-granularity fact that the PEP
-   captures for the operation target from the resource's authoritative
-   interface ([I-D.draft-mcguinness-mission-runtime], Section 
-   "Evaluation-Context Binding") and supplies as a policy-evaluable
-   attribute.  A request without a work item or a revision cannot
-   establish the predicate.
+   captures for that target from the resource's authoritative interface
+   ([I-D.draft-mcguinness-mission-runtime], Section "Evaluation-Context
+   Binding") and carries as the resource property revision
+   (resource.properties.revision).  A request without a work item or a
+   revision cannot establish the predicate.
 
-   The executing PEP or executor records the target and revision acted
-   on as deployment-defined members of the Execution Evidence's
-   result_summary, from what the resource reported when the effect ran,
-   never from the request or an agent argument.  When no witness
-   satisfies the predicate, it is not establishable if a permit for the
-   named operation and work item has a witness that lacks either fact or
-   has an undetermined completion.
+   The executing PEP or executor records in result_summary, as
+   operation_target, the operation target the effect was released for
+   and, as revision, the revision the resource reported when the effect
+   ran, never an agent argument.  When no witness satisfies the
+   predicate, it is not establishable if a permit matching the
+   operation, class, and work item has an undetermined completion, or
+   has a witness carrying that work item that lacks operation_target or
+   revision.
 
    A prerequisite completed at an earlier revision does not satisfy a
    request at a later one.  Where Evaluation-Context Binding covers the
-   operation being decided, a revision that changes after the decision
-   is refused before any effect at execution.  That reverification is
-   the verified property; the predicate adds no atomic check-and-effect.
+   operation being decided, a revision that differs when the PEP re-
+   reads it before release is refused before any effect.  That
+   reverification is the verified property; the predicate adds no atomic
+   check-and-effect.
 
 7.  Resume Checks
 
@@ -33253,10 +33257,12 @@ Appendix B.  Document History
 
    *  Work-Item Prerequisite: work_item_prerequisite_completed, a
       history predicate requiring that a policy-named operation and
-      class completed for the same work item, operation target, and
-      revision as the action being decided, through a permit's
-      completion witness whose result_summary records the target and
-      revision acted on (#815).
+      class completed for the same qualified work item, operation
+      target, and revision as the action being decided, through a
+      permit's completion witness whose result_summary carries the
+      operation_target the effect was released for and the revision the
+      resource reported; the request carries its revision as
+      resource.properties.revision (#815).
 
    *  Decision-API Composition: the PDP requires taint context on every
       action to which the External commitment class applies, not only

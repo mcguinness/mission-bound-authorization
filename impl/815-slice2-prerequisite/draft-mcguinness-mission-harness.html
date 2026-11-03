@@ -1992,7 +1992,7 @@ purpose nor isolation between items in one process.<a href="#section-6.2-7" clas
 It requires that a named operation completed for the same work item,
 operation target, and revision as the action being decided. Policy
 names the operation with two members: <code>action</code>, its identifier, and
-<code>action_class</code>, a runtime action class name. A predicate without
+<code>action_class</code>, a runtime action class name. A predicate missing
 either member cannot be established.<a href="#section-6.2.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.2.1-2">The predicate is satisfied when the PDP's evidence store holds, for
 the established Mission, a Decision Evidence record with <code>decision</code>
@@ -2007,32 +2007,37 @@ predicate's class applied to the permit as it does for
 the named operation ran;<a href="#section-6.2.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.2.1-3.2">
-              <p id="section-6.2.1-3.2.1">the permit and the witness each carry the request's work item as
-<code>work_item</code>; and<a href="#section-6.2.1-3.2.1" class="pilcrow">¶</a></p>
+              <p id="section-6.2.1-3.2.1">the permit and the witness each carry the request's qualified
+work-item identifier as their <code>work_item</code>; and<a href="#section-6.2.1-3.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.2.1-3.3">
-              <p id="section-6.2.1-3.3.1">the witness records the request's operation target and revision as
-the target and revision its effect acted on.<a href="#section-6.2.1-3.3.1" class="pilcrow">¶</a></p>
+              <p id="section-6.2.1-3.3.1">the witness's <code>result_summary</code> carries the request's operation
+target as <code>operation_target</code> and the request's revision as
+<code>revision</code>.<a href="#section-6.2.1-3.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-6.2.1-4">The request's revision is a <code>revision</code>-granularity fact that the PEP
-captures for the operation target from the resource's authoritative
-interface (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
-"Evaluation-Context Binding") and supplies as a policy-evaluable
-attribute. A request without a work item or a revision cannot
-establish the predicate.<a href="#section-6.2.1-4" class="pilcrow">¶</a></p>
-<p id="section-6.2.1-5">The executing PEP or executor records the target and revision acted
-on as deployment-defined members of the Execution Evidence's
-<code>result_summary</code>, from what the resource reported when the effect
-ran, never from the request or an agent argument. When no witness
-satisfies the predicate, it is not establishable if a permit for the
-named operation and work item has a witness that lacks either fact or
-has an undetermined completion.<a href="#section-6.2.1-5" class="pilcrow">¶</a></p>
+<p id="section-6.2.1-4">The request's operation target is its <code>operation_target</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, Section "Operation
+Target"). The request's revision is a <code>revision</code>-granularity fact
+that the PEP captures for that target from the resource's
+authoritative interface (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+Section "Evaluation-Context Binding") and carries as the resource
+property <code>revision</code> (<code>resource.properties.revision</code>). A request
+without a work item or a revision cannot establish the predicate.<a href="#section-6.2.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.2.1-5">The executing PEP or executor records in <code>result_summary</code>, as
+<code>operation_target</code>, the operation target the effect was released for
+and, as <code>revision</code>, the revision the resource reported when the effect
+ran, never an agent argument. When no witness satisfies the
+predicate, it is not establishable if a permit matching the
+operation, class, and work item has an undetermined completion, or has
+a witness carrying that work item that lacks <code>operation_target</code> or
+<code>revision</code>.<a href="#section-6.2.1-5" class="pilcrow">¶</a></p>
 <p id="section-6.2.1-6">A prerequisite completed at an earlier revision does not satisfy a
 request at a later one. Where Evaluation-Context Binding covers the
-operation being decided, a revision that changes after the decision
-is refused before any effect at execution. That reverification is the
-<code>verified</code> property; the predicate adds no atomic check-and-effect.<a href="#section-6.2.1-6" class="pilcrow">¶</a></p>
+operation being decided, a revision that differs when the PEP re-reads
+it before release is refused before any effect. That reverification
+is the <code>verified</code> property; the predicate adds no atomic
+check-and-effect.<a href="#section-6.2.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3934,9 +3939,11 @@ exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <li class="normal" id="appendix-B-2.1">
           <p id="appendix-B-2.1.1">Work-Item Prerequisite: <code>work_item_prerequisite_completed</code>, a history
 predicate requiring that a policy-named operation and class completed
-for the same work item, operation target, and revision as the action
-being decided, through a permit's completion witness whose
-<code>result_summary</code> records the target and revision acted on (#815).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+for the same qualified work item, operation target, and revision as
+the action being decided, through a permit's completion witness whose
+<code>result_summary</code> carries the <code>operation_target</code> the effect was
+released for and the <code>revision</code> the resource reported; the request
+carries its revision as <code>resource.properties.revision</code> (#815).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
           <p id="appendix-B-2.2.1">Decision-API Composition: the PDP requires taint context on every action
