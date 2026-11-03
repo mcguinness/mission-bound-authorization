@@ -602,6 +602,19 @@ describe("the separated AS-native configuration: a source that establishes nothi
     });
   });
 
+  it("an issuer answering unavailable or rate_limited establishes no state: state_unavailable before any decision", async () => {
+    for (const [status, error] of [
+      [503, "unavailable"],
+      [429, "rate_limited"],
+    ] as const) {
+      const via = await statusProxy({ answer: () => ({ status, contentType: "application/json", body: JSON.stringify({ error }) }) });
+      await withComposition({ statusEndpoint: via }, async (alt) => {
+        const issued = await issue([READ]);
+        expectRefusedBeforeDecision(alt, missionIdOf(issued), await callTool(issued, "get_invoice", { invoice_id: "inv-1" }));
+      });
+    }
+  });
+
   it("a malformed answer establishes no state: state_unavailable before any decision", async () => {
     const via = await statusProxy({ answer: () => ({ status: 200, contentType: "application/mission-status-response+jwt", body: "not.a.status" }) });
     await withComposition({ statusEndpoint: via }, async (alt) => {
