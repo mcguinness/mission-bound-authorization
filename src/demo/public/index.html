@@ -78,6 +78,9 @@
   .inline > span { margin: 0 !important; white-space: nowrap; }
   .inline select { width: auto; min-width: 18rem; }
 
+  .expired { padding: .7rem 1.5rem; background: var(--refuse-soft); color: var(--refuse); font-weight: 600; text-align: center; }
+  .expired[hidden] { display: none; }
+
   /* ---------- layout ---------- */
   .shell { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 1.5rem; max-width: 92rem; margin: 0 auto; padding: 1.5rem; }
   @media (max-width: 1100px) { .shell { grid-template-columns: minmax(0, 1fr); } }
@@ -249,6 +252,7 @@
   </div>
 </header>
 
+<div class="expired" id="expired" hidden>The operator session has ended. Restart the demo server and open the new operator link it prints.</div>
 <div class="shell">
   <main>
     <section class="strip-wrap" aria-label="The agent's Missions">
@@ -388,6 +392,16 @@
   const api = (p, init) => fetch(p, { credentials: "include", ...init }).then(async (r) => ({ status: r.status, ...(await r.json()) }));
   const get = (p) => fetch(p, { credentials: "include" }).then((r) => r.json());
   const post = (p, body, csrf) => api(p, { method: "POST", headers: { "content-type": "application/json", ...(csrf ? { "x-csrf": S.csrf } : {}) }, body: JSON.stringify(body ?? {}) });
+  // Re-render only when the markup changes, and keep open disclosures open,
+  // so the two-second refresh never collapses a panel someone is reading.
+  function setHTML(el, html) {
+    if (el._html === html) return;
+    const open = new Set([...el.querySelectorAll("details[open][data-key]")].map((d) => d.dataset.key));
+    el.innerHTML = html;
+    el._html = html;
+    for (const d of el.querySelectorAll("details[data-key]")) if (open.has(d.dataset.key)) d.open = true;
+  }
+  let feedSeq = 0;
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
   // ---------------------------------------------------------------------------
@@ -480,7 +494,7 @@
   // Decisions feed.
   // ---------------------------------------------------------------------------
   function push(ev) {
-    S.feed.unshift({ at: clock(), ...ev, fresh: true });
+    S.feed.unshift({ id: ++feedSeq, at: clock(), ...ev, fresh: true });
     S.feed = S.feed.slice(0, 80);
     renderFeed();
     setTimeout(() => { for (const e of S.feed) e.fresh = false; renderFeed(); }, 1400);
@@ -507,15 +521,15 @@
     push({ kind, verdict, what: (heading ? `${esc(heading)}: ` : "") + what, why, ctx: `Under “${esc(goalOf(r.missionId))}” <code>${esc(shortId(r.missionId))}</code>`, wire: r });
   }
   function renderFeed() {
-    $("feed").innerHTML = S.feed.length
+    setHTML($("feed"), S.feed.length
       ? S.feed.map((e) => `<li class="ev ${e.kind}${e.fresh ? " fresh" : ""}">
           <div class="ev-top"><span class="verdict">${esc(e.verdict)}</span><span class="ev-time num">${esc(e.at)}</span></div>
           <div class="ev-what">${e.what}</div>
           ${e.why ? `<div class="ev-why">${e.why}</div>` : ""}
           ${e.ctx ? `<div class="ev-ctx">${e.ctx}</div>` : ""}
-          ${e.wire ? `<details class="wire"><summary>Response</summary><pre class="json">${esc(JSON.stringify(e.wire, null, 2))}</pre></details>` : ""}
+          ${e.wire ? `<details class="wire" data-key="feed:${e.id}"><summary>Response</summary><pre class="json">${esc(JSON.stringify(e.wire, null, 2))}</pre></details>` : ""}
         </li>`).join("")
-      : '<li class="empty">No decisions yet.</li>';
+      : '<li class="empty">No decisions yet.</li>');
   }
 
   // ---------------------------------------------------------------------------
@@ -529,7 +543,7 @@
   function renderMissions() {
     const list = orderedMissions();
     $("missionCount").textContent = list.length ? `${list.filter((m) => m.state === "active").length} active of ${list.length}` : "";
-    $("missions").innerHTML = list.map((m) => {
+    setHTML($("missions"), list.map((m) => {
       const ended = m.state !== "active";
       const auth = ended ? (m.authority || []) : (m.effective || []);
       const acting = m.id === S.activeId && !ended;
@@ -541,15 +555,16 @@
         ${auth.map((e) => entryLine(e, ended)).join("")}
         <div class="mc-clock">
           <div><span>Mission</span><b class="num">${ended ? "Ended" : esc(relDays(m.expires_at))}</b></div>
-          <div><span>Access token</span><b class="num" ${ended ? "" : `data-exp="${esc(m.token?.expires_at || "")}"`}>${ended ? "Not renewable" : esc(countdown(m.token?.expires_at))}</b></div>
+          <div><span>Access token</span><b class="num" ${ended ? "" : `data-exp="${esc(m.token?.expires_at || "")}"`}>${ended ? "Not renewable" : ""}</b></div>
         </div>
-        <details class="wire"><summary>Token claims</summary><pre class="json">${esc(JSON.stringify(m.token?.claims || {}, null, 2))}</pre></details>
+        <details class="wire" data-key="claims:${esc(m.id)}"><summary>Token claims</summary><pre class="json">${esc(JSON.stringify(m.token?.claims || {}, null, 2))}</pre></details>
         ${ended ? `<div class="stamp">${esc(STATE_TEXT(m))}</div>` : ""}
       </article>`;
-    }).join("") || '<p class="empty">The agent holds no Missions.</p>';
+    }).join("") || '<p class="empty">The agent holds no Missions.</p>');
+    tickClocks();
     // Act-under selector: every active Mission, the acting one by default.
     const sel = $("actUnder"), keep = sel.value;
-    sel.innerHTML = list.map((m) => `<option value="${esc(m.id)}">${esc(m.goal)} (${esc(STATE_TEXT(m))})</option>`).join("");
+    setHTML(sel, list.map((m) => `<option value="${esc(m.id)}">${esc(m.goal)} (${esc(STATE_TEXT(m))})</option>`).join(""));
     sel.value = list.some((m) => m.id === keep) ? keep : S.activeId;
   }
   function tickClocks() {
@@ -582,7 +597,7 @@
   function renderQueue() {
     $("queueCount").textContent = S.queue.length ? String(S.queue.length) : "";
     const cue = (btn) => (STORY.state[STORY.beat] === "waiting" ? " cue" : "");
-    $("queue").innerHTML = S.queue.map((t) => {
+    setHTML($("queue"), S.queue.map((t) => {
       const c = t.context || {};
       if (t.type === "mission") {
         const stale = c.floor && c.floor.outcome === "refused";
@@ -595,7 +610,7 @@
           ${c.expires_at ? `<p class="muted">Until ${esc(new Date(c.expires_at).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }))} (${esc(relDays(c.expires_at))}), unless someone ends it first.</p>` : ""}
           <p class="removed"><b>Policy already removed:</b> ${narrowingText(c.diff)}.</p>
           ${floorHtml(c.floor)}
-          ${err ? `<p class="err">The authorization server refused the approval: ${esc(err)}</p>` : ""}
+          ${err ? `<p class="err">${esc(err)}</p>` : ""}
           <div class="btnrow">
             ${stale ? '<button class="btn" data-do="login">Sign in again (simulated)</button>' : ""}
             <button class="btn primary${t.id === STORY.approvalId && !stale ? cue() : ""}" data-do="adjudicate" data-id="${esc(t.id)}" data-decision="approve" ${stale ? "disabled" : ""}>Approve Mission</button>
@@ -613,23 +628,23 @@
           <button class="btn primary${t.id === STORY.jitTaskId ? cue() : ""}" data-do="adjudicate" data-id="${esc(t.id)}" data-decision="approve">Approve action</button>
           <button class="btn" data-do="adjudicate" data-id="${esc(t.id)}" data-decision="deny">Deny</button>
         </div></article>`;
-    }).join("") || '<p class="empty">Nothing waiting for Bob.</p>';
+    }).join("") || '<p class="empty">Nothing waiting for Bob.</p>');
   }
 
   function renderFleet() {
     if (!S.selected && S.fleet.length) S.selected = S.activeId;
-    $("fleet").innerHTML = S.fleet.map((f) => {
+    setHTML($("fleet"), S.fleet.map((f) => {
       const m = missionById(f.id);
       const st = f.state === "terminated" ? title(f.termination?.reason || "ended") : title(f.state);
       return `<tr data-do="select" data-id="${esc(f.id)}" class="${f.id === S.selected ? "sel" : ""}">
         <td><b>${esc(m?.goal || "")}</b><br><span class="muted" style="font-size:.8rem">for ${esc(f.subject)}, approved by ${esc(f.approver)}</span>
           <code class="muted" style="font-size:.75rem;margin-left:.4rem">${esc(shortId(f.id))}</code></td>
         <td><span class="state ${esc(f.state)}">${esc(st)}</span></td></tr>`;
-    }).join("");
+    }).join(""));
   }
   function renderDetail() {
     const m = missionById(S.selected), f = S.fleet.find((x) => x.id === S.selected);
-    if (!f) { $("detail").innerHTML = '<p class="empty">Select a Mission.</p>'; return; }
+    if (!f) { setHTML($("detail"), '<p class="empty">Select a Mission.</p>'); return; }
     const ended = f.state !== "active";
     const cue = S.selected === STORY.missionId && BEATS[STORY.beat]?.key === "revoke" && STORY.state[STORY.beat] === "waiting" ? " cue" : "";
     let answer;
@@ -642,7 +657,7 @@
       answer = `<p class="answer q">Until ${esc(relDays(m?.expires_at || ""))}, it may:</p>${(m?.effective || []).map((e) => entryHtml(e, null)).join("")}
         ${contained ? '<p class="muted">Part of the approved authority is contained.</p>' : ""}`;
     }
-    $("detail").innerHTML = `<h2>What may this task still do?</h2>
+    setHTML($("detail"), `<h2>What may this task still do?</h2>
       <p class="muted" style="margin:0">“${esc(m?.goal || "")}” for ${esc(f.subject)}, approved by ${esc(f.approver)}, version ${esc(f.version)}.</p>
       ${answer}
       <div class="ops">
@@ -651,23 +666,23 @@
         ${f.state === "suspended" ? `<button class="btn" data-do="lifecycle" data-id="${esc(f.id)}" data-op="resume">Resume</button>
           <button class="btn danger" data-do="lifecycle" data-id="${esc(f.id)}" data-op="revoke">Revoke Mission</button>` : ""}
         ${ended && f.state === "terminated" ? '<span class="muted">A terminated Mission cannot be resumed. New work needs a new approval.</span>' : ""}
-      </div>`;
+      </div>`);
   }
   const EVIDENCE_NAME = { "decision-evidence": "Decision", "execution-evidence": "Execution", "refusal-record": "Refusal" };
   function renderReceipt() {
     const tl = S.timeline;
-    if (!S.selected) { $("receipt").innerHTML = ""; return; }
+    if (!S.selected) { setHTML($("receipt"), ""); return; }
     const cue = BEATS[STORY.beat]?.key === "receipt" && STORY.state[STORY.beat] === "waiting" ? " cue" : "";
     const rows = (tl || []).map((r) => `<li class="rc ${r.verified ? "ok" : "bad"}">
         <span class="rc-v">${r.verified ? "Verified" : "Failed"}</span>
         <span>${esc(EVIDENCE_NAME[r.evidence_type] || r.evidence_type)}</span>
         <code title="${esc(r.digest)} from ${esc(r.producer)}">${esc(r.digest)}</code>
         ${r.detail ? `<span class="rc-d">${esc(r.detail)}</span>` : ""}</li>`).join("");
-    $("receipt").innerHTML = `<h2>Signed record <span class="muted" style="font-weight:400;font-size:.85rem">${tl ? `${tl.filter((r) => r.verified).length} of ${tl.length} verified` : ""}</span></h2>
+    setHTML($("receipt"), `<h2>Signed record <span class="muted" style="font-weight:400;font-size:.85rem">${tl ? `${tl.filter((r) => r.verified).length} of ${tl.length} verified` : ""}</span></h2>
       <p class="muted" style="margin:0">Each entry was signed by the component that produced it and registered in a transparency log. The console checks every one, on every load.</p>
       <ol class="receipt">${rows || '<li class="empty">No evidence for this Mission yet.</li>'}</ol>
       <div class="tamper"><button class="btn${cue}" data-do="tamper" ${tl && tl.some((r) => r.evidence_type === "execution-evidence" && r.verified) ? "" : "disabled"}>Alter one stored record</button>
-        <span class="muted">Demo: rewrites one stored execution record (its outcome, completed to failed) behind the log's back.</span></div>`;
+        <span class="muted">Demo: rewrites one stored execution record (its outcome, completed to failed) behind the log's back.</span></div>`);
   }
 
   // ---------------------------------------------------------------------------
@@ -676,6 +691,9 @@
   // ---------------------------------------------------------------------------
   async function refresh() {
     const [ms, queue, login] = await Promise.all([get("/agent/missions"), get("/bff/approver/queue"), get("/bff/approver/login")]);
+    // The operator session is bounded (30 minutes from server start); say so
+    // rather than let the approval and operator views go quietly stale.
+    $("expired").hidden = queue?.error !== "unauthorized";
     if (Array.isArray(ms.missions)) { S.missions = ms.missions; S.activeId = ms.active; }
     if (Array.isArray(queue)) S.queue = queue;
     if (login && login.sub) S.login = login;
@@ -789,14 +807,26 @@
     await refresh();
   }
   async function adjudicate(id, decision) {
+    const isMission = S.queue.find((t) => t.id === id)?.type === "mission";
     const r = await post("/bff/approver/adjudicate", { taskId: id, decision }, true);
     S.approvalErrors = S.approvalErrors || {};
-    if (r.error) { S.approvalErrors[id] = r.error; note("Refused", "The authorization server refused the approval", esc(r.error)); await refresh(); return; }
+    if (r.error) {
+      // 409: the console's own floor check, before the interaction is touched;
+      // otherwise the authorization server's answer.
+      const msg = r.status === 409 ? `Sign in again first. ${r.error}` : `The authorization server refused the approval: ${r.error}`;
+      S.approvalErrors[id] = msg;
+      note("Refused", r.status === 409 ? "Approval needs a fresh sign-in" : "The authorization server refused the approval", esc(r.error));
+      await refresh();
+      return;
+    }
     delete S.approvalErrors[id];
     if (r.missionId) {
       if (id === STORY.approvalId) adoptApproved(r.missionId);
       else note("Approved", "Bob approved a Mission", "", `<code>${esc(shortId(r.missionId))}</code>`);
       if (S.pendingJit) { S.pendingJit = null; $("retryBtn").disabled = true; }
+    } else if (isMission) {
+      note("Denied", "Bob denied the Mission", "Nothing was issued.");
+      if (id === STORY.approvalId) STORY.approvalId = "";
     } else {
       note(r.approved ? "Approved" : "Denied", r.approved ? "Bob approved the action" : "Bob denied the action", r.approved ? "The agent can now redeem it, once, for these parameters." : "");
     }
@@ -853,7 +883,7 @@
   }
   async function signIn() {
     const r = await post("/bff/approver/login", {}, true);
-    if (r.sub) { S.login = r; note("Signed in", "Bob signed in again", "Simulated MFA sign-in recorded for the approval surface."); }
+    if (r.sub) { S.login = r; S.approvalErrors = {}; note("Signed in", "Bob signed in again", "Simulated MFA sign-in recorded for the approval surface."); }
     await refresh();
   }
 
