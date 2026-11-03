@@ -315,7 +315,7 @@ export function templateConsentDisclosure(
     asyncDelegation: opts.asyncDelegation,
   });
   const undisclosed = opts.derivationLimits === false ? undefined : childGrants.find((g) => g.undisclosed)?.undisclosed;
-  if (undisclosed) return { refusal: `${undisclosed} This consent is refused.` };
+  if (undisclosed) return { refusal: undisclosed };
   return {
     disclosure: {
       ceiling: body.ceiling,

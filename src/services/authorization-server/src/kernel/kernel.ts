@@ -1687,7 +1687,10 @@ export class MissionKernel {
    * Derivation Limits), the figure the approval page renders
    * (`approvalDerivationRendering`, from the same read). A decision is bound
    * to its rendering's derivation policy content (#1446, D583), so the figure
-   * a direct approval retains is the one its Approver was shown.
+   * a direct approval retains is the one its Approver was shown. @spec
+   * derivation-limits#approval-rendering (#2040): the same read gives the
+   * figure a ceiling consent, an Expansion decision and the template
+   * consent stand-in retain for the consents they render.
    */
   establishedChildMaxima(entries: readonly AuthorityEntry[]): RetainedChildMaximum[] {
     return renderedChildMaxima(entries, this.resolveDerivationLimit(undefined));

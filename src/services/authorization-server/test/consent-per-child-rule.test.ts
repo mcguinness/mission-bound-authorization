@@ -313,6 +313,20 @@ describe("an Expansion deferral retains the per-child figure its decision render
     expect(child(k, successor, ["res.read"]).derivation_limit).toBe(3);
   });
 
+  it("a deferral approved before the figure was retained that widens a carried entry leaves the widened entry unknown, never at the carried figure: [res.read] widened to one entry [res.read, res.list] retains no figure, and a child under it is refused policy_denied, committing nothing", () => {
+    const open = store();
+    let k = open(3);
+    const parent = approve(k, [["res.read"]]);
+    const code = approvedDeferral(k, parent, [["res.read", "res.list"]]);
+    k.db.prepare("UPDATE expansion_deferrals SET decision_child_maximum_json = NULL WHERE deferral_code = ?").run(code);
+    k.close();
+    k = open(10);
+    const successor = complete(k, code);
+    expect(successor.child_derivation_maxima).toEqual([null]);
+    expect(refusedChild(k, successor, ["res.read"]).reason).toBe("policy_denied");
+    expect(refusedChild(k, successor, ["res.list"]).reason).toBe("policy_denied");
+  });
+
   it("a fresh approval recovers it: beside a deferral approved before the figure was retained, a fresh deferral of the same Mission approved after a restart at 10 retains 10 for the authority it adds, and its child is created", () => {
     const open = store();
     let k = open(3);
