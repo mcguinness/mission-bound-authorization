@@ -1259,9 +1259,13 @@ This document defines one predicate type that policy MAY name,
 `action_class_completed`. It is satisfied when the PDP's evidence store
 holds, for the established Mission, at least one Decision Evidence
 record with `decision` `permit` to which the named class applied, and
-every such record has a linked Execution Evidence record
-({{I-D.draft-mcguinness-mission-runtime-evidence}}) whose `outcome` is
-`completed`. The named class applied to a record when its
+every such permit has a completion witness: a linked Execution
+Evidence record ({{I-D.draft-mcguinness-mission-runtime-evidence}})
+whose `outcome` is `completed` and in which each authorized digest
+present (`authorized_parameter_digest`,
+`authorized_evaluation_context_digest`) has an equal effective
+counterpart (`effective_parameter_digest`,
+`effective_evaluation_context_digest`). The named class applied to a record when its
 `action_classes` member lists that class or, in a record without
 `action_classes`, its `action_class` is that class, so an execution
 the class applied to counts whichever class was assigned. The
@@ -1278,6 +1282,39 @@ delete step's precondition this way:
   "action_class": "consequential_write"
 }
 ~~~
+
+The predicate is per permit: a permit has a completion witness when
+any of its executions is one, so a `failed` use of a multi-use permit,
+or a replay suppressed as `permit_consumed`, does not remove it. A
+predicate that requires every use of a permit to complete is a
+different predicate type.
+
+A single-use permit has one authorized completion
+({{I-D.draft-mcguinness-mission-runtime-evidence}}): only the
+completion that took its single use can be its witness, and any other
+`completed` record under it creates none, whatever its digests. The
+order in which records reach the evidence store does not establish
+which completion took the use, nor do the records' `sequence` or
+timestamps. Where no trusted source, such as the PEP's
+consumed-identifier store, establishes it, a single-use permit with
+more than one `completed` record has a witness only when each of them
+would be one on its own, and its completion is undetermined when only
+some would.
+
+A `completed` record whose effective digest differs from its
+authorized digest records an unauthorized execution
+({{I-D.draft-mcguinness-mission-runtime-evidence}}): it remains valid
+evidence, and it is not a completion witness. A `completed` record
+that carries an authorized digest without its effective counterpart is
+not a completion witness either, and a permit with such a record and
+no witness has an undetermined completion. The predicate is not
+satisfied when some permit has neither a witness nor an undetermined
+completion, and is otherwise not establishable while any permit's
+completion is undetermined. The evaluation relies on the evidence
+store returning the complete, current Mission history; sequence checks
+detect gaps only within the records returned
+({{I-D.draft-mcguinness-mission-runtime-evidence}}, Section "History
+Completeness").
 
 An extension predicate type MUST be either a collision-resistant name
 or a name coordinated within this document family, under the same rule
@@ -3222,7 +3259,13 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   a class that applies to the action calls for them, and
   `action_class_completed` counts a permit when the named class is in
   its `action_classes`, or is its `action_class` where the record
-  carries no `action_classes` (#1994).
+  carries no `action_classes` (#1994). Every such permit needs a
+  completion witness, a linked `completed` record whose effective
+  digests equal the authorized ones; a digest deviation is none, a
+  failed use or suppressed replay removes none, a single-use permit's
+  completion other than the one that took its use creates none, a
+  missing effective digest leaves completion undetermined, and the
+  evaluation relies on a complete history read (#2029).
 
 - Credential Decision Context: requiring a credential's whole authority
   description to be evaluable is this profile's credential validation

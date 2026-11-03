@@ -11,20 +11,20 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "0c57b29d73c99de4e933aca72fac401b72aa12d4",
-    "content_sha256": "12c57cd9885ea4623ae1fcf5810c832abd5ddf0a8bb8d1ec66f05ac222c0400d"
+    "revision": "604492561e93b21e31aa7139c06d6b670eff60b0",
+    "content_sha256": "927cd9750d2d50410d05c3fb02c428ffc147d9501493cad1795819a23a9d9c0d"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "41b65f55a3d275b7fe878e22476f9c0bcc7e1419",
-    "content_sha256": "67147ad7cb47679d722c5d794bb31d5c5002552d5b87cc6fb41daa14bf97c1ea"
+    "revision": "604492561e93b21e31aa7139c06d6b670eff60b0",
+    "content_sha256": "77e3ab33edb21e3870cb28700434b4795aab34cbb183e8600306e2da68cc727b"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "a96a6d7bb9afd6891db9591835bcb25b462784e0",
-    "content_sha256": "275e69961fef3a7a62d5c744344a95ba49ff12e204abd3c7244d294b4ec56bf4"
+    "revision": "0c6e50212de7a5078b5598d241a77dc61c54dc6d",
+    "content_sha256": "6f4951f567f9451fc1e49af90cb77f2661a2f77d78896f446a92410535015ff1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "aa284101326ff8dce48925418b3c8c6f858ea264",
@@ -44727,6 +44727,126 @@
    "notes": "Mutation-proved (#2015), on conformant records only: reading action_class alone permits with a further class's execution pending (M6, the membership witness); reading action_class in place of a present action_classes denies a completed record listing the class (M7, the fallback witness's first case; on conformant records it coincides with M6); never consulting action_class where action_classes is absent permits beside a pending single-class permit (the fallback witness's second case). Counting action_class beside a present action_classes that omits it is unreachable: such a record is non-conforming and leaves the history unestablishable (the malformed-member witness under authzen.context-history.deny-when-unsatisfied-or-unestablishable)."
   },
   {
+   "id": "authzen.context-history.action-class-completed-completion-witness",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "It is satisfied when the PDP's evidence store holds, for the established Mission, at least one Decision Evidence record with `decision` `permit` to which the named class applied, and every such permit has a completion witness: a linked Execution Evidence record ({{I-D.draft-mcguinness-mission-runtime-evidence}}) whose `outcome` is `completed` and in which each authorized digest present (`authorized_parameter_digest`, `authorized_evaluation_context_digest`) has an equal effective counterpart (`effective_parameter_digest`, `effective_evaluation_context_digest`).",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "action_class_completed is satisfied only when at least one permit Decision Evidence record the named class applied to exists and every such permit has a linked completed Execution Evidence record in which each authorized digest present has an equal effective counterpart; otherwise it is not_satisfied, or unavailable where some permit's completion is undetermined and no permit is plainly unwitnessed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+  },
+  {
+   "id": "authzen.context-history.action-class-completed-per-permit",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "The predicate is per permit: a permit has a completion witness when any of its executions is one, so a `failed` use of a multi-use permit, or a replay suppressed as `permit_consumed`, does not remove it.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit with a completion witness stays witnessed when another of its executions is also retained (a failed use of a multi-use permit, or a replay suppressed as permit_consumed, under a distinct execution_id): that permit counts as completed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+  },
+  {
+   "id": "authzen.context-history.single-use-witness",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "A single-use permit has one authorized completion ({{I-D.draft-mcguinness-mission-runtime-evidence}}): only the completion that took its single use can be its witness, and any other `completed` record under it creates none, whatever its digests. The order in which records reach the evidence store does not establish which completion took the use, nor do the records' `sequence` or timestamps. Where no trusted source, such as the PEP's consumed-identifier store, establishes it, a single-use permit with more than one `completed` record has a witness only when each of them would be one on its own, and its completion is undetermined when only some would.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a use_limit 1 permit with two completed records and no trusted source naming the one that took the use, one deviating and one matching in either arrival order, the permit's completion is undetermined (the predicate unavailable, denied history_not_satisfied), so the matching completion creates no witness; two matching completions leave the permit witnessed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1257 P1). todo: PR #2017 (#2015) can witness only the branch without a trusted source, since the PEP's record of which execution took the single use (mcp-payments recordRedeemingAttempt) never reaches the PDP's evidence; the witness should present the deviating-then-matching counterexample in both arrival orders."
+  },
+  {
+   "id": "authzen.context-history.unauthorized-execution-not-a-witness",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "A `completed` record whose effective digest differs from its authorized digest records an unauthorized execution ({{I-D.draft-mcguinness-mission-runtime-evidence}}): it remains valid evidence, and it is not a completion witness.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a completed execution whose effective parameter or evaluation-context digest differs from its authorized digest does not satisfy action_class_completed for its permit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+  },
+  {
+   "id": "authzen.context-history.missing-effective-digest-not-establishable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "A `completed` record that carries an authorized digest without its effective counterpart is not a completion witness either, and a permit with such a record and no witness has an undetermined completion. The predicate is not satisfied when some permit has neither a witness nor an undetermined completion, and is otherwise not establishable while any permit's completion is undetermined.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit whose only completed records carry an authorized digest without its effective counterpart makes the predicate unavailable (denied history_not_satisfied), unless another permit has neither a witness nor such a record, which makes it not_satisfied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+  },
+  {
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
@@ -53120,6 +53240,71 @@
    "notes": "Partial: the counter is the PDP emitter's own (#741), and monotonicity per (Mission, emitter) is asserted at the emission path, end to end through the real call sites, and across a restart that reopens the PDP's claim file at the decision endpoint and on the composed stack (#821). Still unasserted: cross-emitter ordering is never reconstructed from sequence alone, and gap detection by a verifier, which have no verifier or second independently running emitter in this deployment to order against."
   },
   {
+   "id": "evidence.decision.sequence-allocation-from-zero",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "An emitter MUST allocate its sequence positions for a Mission in order from 0, skipping none, across every record type it emits for that Mission.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP emitter allocates its positions for a Mission in order from 0, skipping none (first record 0, each later allocation the previous plus one), per (Mission, emitter); a position consumed by a failed signing is never reissued and leaves a gap"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > keeps a distinct counter for each Mission and each emitter, across a restart",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > without a configured source the counter stays in process memory and a new emitter starts at zero",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "the PDP's Decision Evidence sequence at the decision endpoint (@spec runtime#record-integrity, #821) > a PDP restarted on the same claim file continues each Mission's sequence, and no value is issued twice across a failed signing or the restart",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#2029 (D1251: sequence starts at 0 by rule). Partial: the PDP's Decision Evidence positions start at 0 and step by one per (Mission, emitter), in the durable claim-file source and in process memory, and a failed signing leaves a gap rather than a reissued value. Mutation-proved: starting the durable source at 1 (M1) or stepping it by 2 (M2) fails the first and third witnesses, and starting the in-memory source at 1 (M3) fails the second. Unwitnessed: 'across every record type', since the PDP's Refusal Records carry no sequence yet (evidence.refusal.sequence-continues-when-mission-present is todo)."
+  },
+  {
+   "id": "evidence.decision.sequence-allocation-from-zero-pep",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "An emitter MUST allocate its sequence positions for a Mission in order from 0, skipping none, across every record type it emits for that Mission.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PEP or executor emitter allocates its positions for a Mission in order from 0, skipping none, per (Mission, emitter), across its Execution Evidence and Refusal Records"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1251). Twin of evidence.decision.sequence-allocation-from-zero for PEP and executor emitters. todo: the mcp-payments evidence store allocates per (Mission, emitter id, role) from 0, stepping by one, but no test asserts the positions of an Execution Evidence stream."
+  },
+  {
    "id": "evidence.decision.denial-reason-unrecognized-and-split",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "decision-evidence-object",
@@ -54609,7 +54794,7 @@
    "id": "evidence.execution.execution-id-entropy-and-format",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "REQUIRED. A string. Unique execution identifier, stable across delivery retries of this record: exactly one Execution Evidence Object exists per final disposition of a permit, and delivery of that record is at-least-once",
+   "text": "REQUIRED. A string. Unique execution identifier, stable across delivery retries of this record: exactly one Execution Evidence Object exists per execution, and delivery of that record is at-least-once",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -54621,11 +54806,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "execution_id conforms to the ABNF, carries at least 128 bits of entropy, and stays stable across at-least-once delivery retries of the one Execution Evidence Object per final disposition"
+    "normative": "execution_id conforms to the ABNF, carries at least 128 bits of entropy, and stays stable across at-least-once delivery retries of the one Execution Evidence Object per execution"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #2029 (D1251): one record per execution, not per final disposition of a permit."
   },
   {
    "id": "evidence.execution.dedup-on-execution-id",
@@ -54648,6 +54834,52 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.execution.one-record-per-execution",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "A multi-use permit has one record per use, and its uses may differ in `outcome`; a presentation the PEP refuses, such as a consumed single-use permit presented again (`permit_consumed`), is a `suppressed` execution of its own.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a re-presented consumed single-use permit records its own suppressed Execution Evidence with error permit_consumed under a new execution_id beside the completed record, and each use of a multi-use permit records its own Execution Evidence"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1251). todo: 'M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands' (mcp-payments transaction.test.ts) asserts the completed and suppressed records of one evaluation but not their distinct execution_id, and no test drives a multi-use permit through more than one use."
+  },
+  {
+   "id": "evidence.execution.single-use-no-second-completion",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "A single-use permit has one authorized completion, the one that took its single use: any other `completed` record under it records an unauthorized execution, whatever its digests, and the records themselves do not show which completion took the use.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer classifies every completed Execution Evidence record under a use_limit 1 permit other than the one that took its single use as an unauthorized execution, whatever its digests, and does not infer which one took the use from arrival order, sequence or timestamps"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1251: a single-use permit has no second completion; D1257 P1: an unauthorized completion creates no witness). todo: no reference consumer classifies executions per permit; the History Context reader of PR #2017 (#2015) is the first candidate."
   },
   {
    "id": "evidence.execution.audience-mirrors-decision",
