@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-03T02:06:46Z
-Source repository commit: c45e9abfc34f82eb08aed4a9b4a47eae7487c540
+Generated: 2026-11-03T02:11:09Z
+Source repository commit: 01629308dda7b0b184a69e82bced0c0e9482a29c
 Member count: 7
 
 Reading order:
@@ -8847,7 +8847,9 @@ Table of Contents
    transfer at https://example.com/payments (EUR 123.50 to Merchant A,
    with its remittance text) and checking or cancelling that transfer;
    that the AS declares no transformation for the type, so the approved
-   entry is the proposed one unchanged; and that the payments resource
+   entry is the proposed one unchanged; that the entry, which carries
+   locations rather than a resource member, has the payments resource
+   server as its approved audience; and that the payments resource
    server permits an initiation only when its amount, currency, creditor
    and remittance text equal the entry's.  These assumptions belong to
    the examples, not to this document.
