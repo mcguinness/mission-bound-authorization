@@ -22,6 +22,7 @@ import {
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
+import { approvalDerivationRendering } from "../src/adapters/provider.js";
 import { inheritActionApprovalRequirement, presentedTokenChildRefusal } from "../src/kernel/child-delegation.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -762,6 +763,10 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
       // derivation would have retained: both entries derive from a ceiling
       // entry whose `children` names its actors, so each list decides.
       child_actor_provenance: ["list", "list"],
+      // @spec derivation-limits#effective-limit (#2026): the per-child figure
+      // a direct approval would have retained for each entry: this kernel's
+      // policy sets no ceiling, so no finite maximum.
+      child_derivation_maxima: [{ finite: null }, { finite: null }],
       // The anchors and root_commitment are omitted, so each is implied by
       // the object it commits (#1912, #1917).
       subject: { iss: ISS, sub: "alice" },
@@ -1234,12 +1239,26 @@ describe("per-child derivation limit from the committed policy state (@spec chil
    * With `store`, the kernel is file-backed, and `reopenDisabled` closes it
    * and reopens the same file and options with Derivation Limits off, as a
    * restart with the capability disabled (#2018); `k` and `child` then use
-   * the reopened kernel.
+   * the reopened kernel. `reopenWithCeiling` does the same with the
+   * deployment's `derivation_limit_ceiling` replaced, under the same
+   * `policy_version` or the given one, as a restart after an operator edits
+   * the policy (#2026). `approveParent` approves another parent on the
+   * current kernel, and `childOf` creates a child under any parent. With
+   * `grandchildren`, each entry's children may delegate one generation more.
    */
-  function limitLineage(deploymentCeiling: number | null, snapshots: Array<Snapshot | undefined>, store?: { file: string }) {
+  function limitLineage(
+    deploymentCeiling: number | null,
+    snapshots: Array<Snapshot | undefined>,
+    store?: { file: string },
+    grandchildren = false,
+  ) {
     const registry: Record<string, Snapshot> = {};
     const ceiling = snapshots.map((snapshot, i) => {
-      const children: Record<string, unknown> = { max_children: 5, allowed_child_actors: [{ sub_profile: "ai_agent" }] };
+      const children: Record<string, unknown> = {
+        max_children: 5,
+        allowed_child_actors: [{ sub_profile: "ai_agent" }],
+        ...(grandchildren ? { max_child_depth: 2 } : {}),
+      };
       if (snapshot) {
         const id = `urn:policy:child-limit-${i}`;
         registry[id] = snapshot;
@@ -1260,23 +1279,25 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       statusKey: key,
       statusKid: "as-status",
       now,
-      actorProfiles: aiAgents("limit-child"),
+      actorProfiles: aiAgents("limit-child", "limit-grandchild"),
       activationPolicies: registry,
       ...(store ? { store } : {}),
     };
     let k = new MissionKernel(opts);
-    const parent = k.approve({
-      intent: validateMissionIntent(
-        JSON.stringify({ goal: "root", target_resources: ceiling.map((e) => e.resource), expires_at: PARENT_EXP }),
-      ),
-      subject: { iss: ISS, sub: "alice" },
-      approver: { iss: ISS, sub: "bob" },
-      clientId: "parent-agent",
-      approvalEventId: `apev-limit-${seq++}`,
-    });
-    const child = (requested?: number, resources: string[] = [RA]) =>
+    const approveParent = (): MissionRecord =>
+      k.approve({
+        intent: validateMissionIntent(
+          JSON.stringify({ goal: "root", target_resources: ceiling.map((e) => e.resource), expires_at: PARENT_EXP }),
+        ),
+        subject: { iss: ISS, sub: "alice" },
+        approver: { iss: ISS, sub: "bob" },
+        clientId: "parent-agent",
+        approvalEventId: `apev-limit-${seq++}`,
+      });
+    const parent = approveParent();
+    const childOf = (parentId: string, requested?: number, resources: string[] = [RA], actor = "limit-child") =>
       createChildMission(k, {
-        parentId: parent.id,
+        parentId,
         intent: validateMissionIntent(
           JSON.stringify({
             goal: "sub",
@@ -1285,11 +1306,21 @@ describe("per-child derivation limit from the committed policy state (@spec chil
             ...(requested === undefined ? {} : { requested_derivation_limit: requested }),
           }),
         ),
-        childActor: { sub: "limit-child", sub_profile: "ai_agent" },
+        childActor: { sub: actor, sub_profile: "ai_agent" },
       }).child;
+    const child = (requested?: number, resources: string[] = [RA]) => childOf(parent.id, requested, resources);
     const reopenDisabled = (): MissionKernel => {
       k.close();
-      k = new MissionKernel({ ...opts, derivationLimits: false });
+      // A deployment without Derivation Limits sets no ceiling (#2018).
+      k = new MissionKernel({ ...opts, policy: { ...policy, derivation_limit_ceiling: null } as never, derivationLimits: false });
+      return k;
+    };
+    const reopenWithCeiling = (next: number | null, policyVersion?: string): MissionKernel => {
+      k.close();
+      k = new MissionKernel({
+        ...opts,
+        policy: { ...policy, derivation_limit_ceiling: next, ...(policyVersion ? { policy_version: policyVersion } : {}) } as never,
+      });
       return k;
     };
     return {
@@ -1298,7 +1329,10 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       },
       parent,
       child,
+      childOf,
+      approveParent,
       reopenDisabled,
+      reopenWithCeiling,
     };
   }
 
@@ -1348,21 +1382,267 @@ describe("per-child derivation limit from the committed policy state (@spec chil
     }
   });
 
-  it("an entry with no snapshot under a parent approved under another policy version is refused policy_denied, since its rendered figure cannot be read", () => {
-    // Under the policy the parent was approved under, that policy's ceiling is the figure.
-    expect(limitLineage(4, [undefined]).child().derivation_limit).toBe(4);
-    const { k, parent, child } = limitLineage(null, [undefined]);
-    expect(child().derivation_limit).toBeNull();
-    k.db.prepare("UPDATE missions SET policy_version = ? WHERE id = ?").run("older-policy", parent.id);
-    const before = k.allMissions().length;
-    try {
-      child();
-      expect.unreachable();
-    } catch (e) {
-      expect((e as ChildDelegationError).reason).toBe("policy_denied");
-      expect((e as Error).message).toMatch(/policy_version older-policy is not the policy this issuer holds/);
-    }
-    expect(k.allMissions().length).toBe(before);
+  describe("the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit)", () => {
+    let dir: string;
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "child-limit-retained-"));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const onFile = (name = "kernel.sqlite") => ({ file: join(dir, name) });
+    /** The child creation's refusal, or undefined when it created a child. */
+    const refusal = (create: () => unknown): ChildDelegationError | undefined => {
+      try {
+        create();
+      } catch (e) {
+        expect(e).toBeInstanceOf(ChildDelegationError);
+        return e as ChildDelegationError;
+      }
+      return undefined;
+    };
+    /** The stored figures column, read from the row. */
+    const storedFigures = (k: MissionKernel, id: string): unknown =>
+      (k.db.prepare("SELECT child_derivation_maxima_json AS v FROM missions WHERE id = ?").get(id) as { v: unknown }).v;
+    /**
+     * A store written before the figure was retained: the column is dropped
+     * while the kernel is open, so the reopen that follows migrates it back
+     * with no value for any row, as the upgrade of an older store does.
+     */
+    const asLegacyStore = (k: MissionKernel): void => {
+      k.db.exec("ALTER TABLE missions DROP COLUMN child_derivation_maxima_json");
+    };
+
+    it("the approval retains the figure it renders: the deployment's ceiling for an entry with no child_creation_policy, an explicit no-finite-maximum where the deployment sets none, and no figure for an entry committing a child_creation_policy", () => {
+      const lineage = limitLineage(3, [undefined, stating({ derivation_limit_ceiling: 4 })], onFile());
+      expect(lineage.parent.child_derivation_maxima).toEqual([{ finite: 3 }, null]);
+      // The page renders the same figure for the same entry from the same read.
+      const rendered = approvalDerivationRendering({
+        limit: lineage.k.resolveDerivationLimit(undefined),
+        deploymentCeiling: lineage.k.resolveDerivationLimit(undefined),
+        authority: lineage.parent.authority_set,
+        held: () => undefined,
+        asyncDelegation: false,
+        progressive: false,
+      });
+      expect(rendered.children[0]?.lines).toContain(
+        "Each child Mission created under this consent establishes its own derivation limit from its own request, never above 3.",
+      );
+      // Read back from the store after a restart.
+      const k = lineage.reopenWithCeiling(3);
+      try {
+        expect(k.get(lineage.parent.id)?.child_derivation_maxima).toEqual([{ finite: 3 }, null]);
+        expect(JSON.parse(String(storedFigures(k, lineage.parent.id)))).toEqual([{ finite: 3 }, null]);
+      } finally {
+        k.close();
+      }
+      expect(limitLineage(null, [undefined]).parent.child_derivation_maxima).toEqual([{ finite: null }]);
+    });
+
+    it("removing the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum; a smaller request still stands and the earlier child keeps its limit", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      const first = lineage.child();
+      expect(first.derivation_limit).toBe(3);
+      const k = lineage.reopenWithCeiling(null);
+      try {
+        expect(k.policyVersion()).toBe(lineage.parent.policy_version);
+        expect(k.resolveDerivationLimit(undefined)).toBeNull();
+        expect(lineage.child().derivation_limit).toBe(3);
+        expect(lineage.child(10).derivation_limit).toBe(3);
+        expect(lineage.child(2).derivation_limit).toBe(2);
+        expect(k.get(first.id)?.derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("raising the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum, whatever it requests", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      const first = lineage.child();
+      expect(first.derivation_limit).toBe(3);
+      const k = lineage.reopenWithCeiling(10);
+      try {
+        expect(k.policyVersion()).toBe(lineage.parent.policy_version);
+        expect(lineage.child().derivation_limit).toBe(3);
+        expect(lineage.child(8).derivation_limit).toBe(3);
+        expect(k.get(first.id)?.derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("a changed policy_version alone leaves the retained figure usable: with the ceiling removed or raised under a new version, a later child still records the rendered maximum", () => {
+      for (const [i, next] of [null, 10].entries()) {
+        const lineage = limitLineage(3, [undefined], onFile(`kernel-${i}.sqlite`));
+        expect(lineage.child().derivation_limit).toBe(3);
+        const k = lineage.reopenWithCeiling(next, "limit-policy-2");
+        try {
+          expect(k.policyVersion()).not.toBe(lineage.parent.policy_version);
+          expect(lineage.child().derivation_limit, String(next)).toBe(3);
+          expect(lineage.child(50).derivation_limit, String(next)).toBe(3);
+        } finally {
+          k.close();
+        }
+      }
+    });
+
+    it("a stricter deployment ceiling after a restart narrows a later child below the rendered maximum, and the earlier child keeps its limit", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      const first = lineage.child();
+      const k = lineage.reopenWithCeiling(2);
+      try {
+        expect(lineage.child().derivation_limit).toBe(2);
+        expect(lineage.child(1).derivation_limit).toBe(1);
+        expect(lineage.child(5).derivation_limit).toBe(2);
+        expect(k.get(first.id)?.derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("an explicitly retained no-finite-maximum creates children after a restart, bounded only by the current ceiling and request (positive control for the legacy refusal)", () => {
+      const lineage = limitLineage(null, [undefined], onFile());
+      expect(lineage.parent.child_derivation_maxima).toEqual([{ finite: null }]);
+      expect(lineage.child().derivation_limit).toBeNull();
+      lineage.reopenWithCeiling(5);
+      expect(lineage.child().derivation_limit).toBe(5);
+      expect(lineage.child(7).derivation_limit).toBe(5);
+      expect(lineage.child(2).derivation_limit).toBe(2);
+      const k = lineage.reopenWithCeiling(null);
+      try {
+        expect(lineage.child().derivation_limit).toBeNull();
+      } finally {
+        k.close();
+      }
+    });
+
+    it("a parent stored before the figure was retained creates no child under an entry with no child_creation_policy: refused policy_denied, committing nothing and leaving its stored approval unchanged, however the current policy matches its policy_version and derivation_limit", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      expect(lineage.parent.derivation_limit).toBe(3);
+      asLegacyStore(lineage.k);
+      // Reopened under the very policy the parent was approved under: the same
+      // policy_version, and a ceiling equal to the parent's own derivation_limit.
+      const k = lineage.reopenWithCeiling(3);
+      try {
+        const legacy = k.get(lineage.parent.id) as MissionRecord;
+        expect(legacy.child_derivation_maxima).toBeUndefined();
+        expect(legacy.policy_version).toBe(k.policyVersion());
+        const missions = k.allMissions().length;
+        const parentCount = legacy.derivation_count;
+        for (const requested of [undefined, 1, 3]) {
+          const refused = refusal(() => lineage.child(requested));
+          expect(refused?.reason, String(requested)).toBe("policy_denied");
+          expect(refused?.message).toMatch(/is not retained, and the entry carries no child_creation_policy/);
+          expect(refused?.evidence?.decision).toBe("denied");
+        }
+        expect(k.allMissions()).toHaveLength(missions);
+        expect(k.findChildren(lineage.parent.id)).toHaveLength(0);
+        expect(k.get(lineage.parent.id)?.derivation_count).toBe(parentCount);
+        // Nothing is backfilled into the immutable approval.
+        expect(storedFigures(k, lineage.parent.id)).toBeNull();
+        expect(k.get(lineage.parent.id)).toEqual(legacy);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("the legacy refusal leaves existing children and unrelated operations alone: the earlier child keeps its limit, and an entry committing a child_creation_policy still creates children", () => {
+      const lineage = limitLineage(3, [undefined, stating({ derivation_limit_ceiling: 4 })], onFile());
+      const first = lineage.child();
+      expect(first.derivation_limit).toBe(3);
+      asLegacyStore(lineage.k);
+      const k = lineage.reopenWithCeiling(10);
+      try {
+        expect(refusal(() => lineage.child())?.reason).toBe("policy_denied");
+        const kept = k.get(first.id) as MissionRecord;
+        expect(kept.state).toBe("active");
+        expect(kept.derivation_limit).toBe(3);
+        expect(kept.authority_set).toEqual(first.authority_set);
+        expect(k.get(lineage.parent.id)?.state).toBe("active");
+        // The entry committing a child_creation_policy reads its figure from
+        // the snapshot, so it needs no retained figure.
+        expect(lineage.child(undefined, [RB]).derivation_limit).toBe(4);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("a fresh approval of a new parent under the current policy retains the current figure and creates children again, while the legacy parent stays refused", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      asLegacyStore(lineage.k);
+      const k = lineage.reopenWithCeiling(5, "limit-policy-2");
+      try {
+        expect(refusal(() => lineage.child())?.reason).toBe("policy_denied");
+        const fresh = lineage.approveParent();
+        expect(fresh.child_derivation_maxima).toEqual([{ finite: 5 }]);
+        expect(lineage.childOf(fresh.id).derivation_limit).toBe(5);
+        expect(lineage.childOf(fresh.id, 2).derivation_limit).toBe(2);
+        expect(refusal(() => lineage.child())?.reason).toBe("policy_denied");
+      } finally {
+        k.close();
+      }
+    });
+
+    it("only a fresh human approval replaces the rendered maximum: after the ceiling is raised under the same policy_version and a restart, the earlier parent's children stay at 3, while a parent freshly approved under the raised ceiling admits children at its figure", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      expect(lineage.child().derivation_limit).toBe(3);
+      const k = lineage.reopenWithCeiling(5);
+      try {
+        const fresh = lineage.approveParent();
+        expect(fresh.policy_version).toBe(lineage.parent.policy_version);
+        expect(fresh.child_derivation_maxima).toEqual([{ finite: 5 }]);
+        expect(lineage.childOf(fresh.id).derivation_limit).toBe(5);
+        expect(lineage.child().derivation_limit).toBe(3);
+        expect(lineage.child(5).derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("an entry committing a child_creation_policy is unaffected by the deployment ceiling: removed or raised under the same policy_version after a restart, its snapshot's figure still binds (control)", () => {
+      const lineage = limitLineage(5, [stating({ derivation_limit_ceiling: 3 })], onFile());
+      expect(lineage.parent.child_derivation_maxima).toEqual([null]);
+      expect(lineage.child().derivation_limit).toBe(3);
+      lineage.reopenWithCeiling(null);
+      expect(lineage.child().derivation_limit).toBe(3);
+      const k = lineage.reopenWithCeiling(10);
+      try {
+        expect(lineage.child(9).derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("a child's own children are created under the same consent: a child created after the ceiling is removed keeps the root's rendered figure, and so does its own child", () => {
+      const lineage = limitLineage(3, [undefined], onFile(), true);
+      const k = lineage.reopenWithCeiling(null);
+      try {
+        const child = lineage.child();
+        expect(child.derivation_limit).toBe(3);
+        expect(child.child_derivation_maxima).toEqual([{ finite: 3 }]);
+        const grandchild = lineage.childOf(child.id, undefined, [RA], "limit-grandchild");
+        expect(grandchild.parent?.depth).toBe(2);
+        expect(grandchild.derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
+    it("a retained finite figure outlives a restart with Derivation Limits off: the next child is refused policy_denied, committing nothing, while the earlier child keeps its limit", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      const first = lineage.child();
+      const k = lineage.reopenDisabled();
+      try {
+        const missions = k.allMissions().length;
+        const refused = refusal(() => lineage.child());
+        expect(refused?.reason).toBe("policy_denied");
+        expect(refused?.message).toMatch(/committed a per-Mission derivation limit of at most 3/);
+        expect(k.allMissions()).toHaveLength(missions);
+        expect(k.get(first.id)?.derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
   });
 
   describe("with Derivation Limits turned off after the parent's approval (#2018 review F1; @spec derivation-limits#effective-limit)", () => {

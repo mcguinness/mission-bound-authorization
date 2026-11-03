@@ -13511,9 +13511,81 @@
      "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > with Derivation Limits turned off after the template's consent (#2018 review F1; @spec derivation-limits#effective-limit) > a finite per-instance maximum the consent committed outlives the restart: with the capability on the instance records it, and after a restart with it off the next Dispatch is refused dispatch_policy_changed, committing nothing, while the earlier instance keeps its limit",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > removing the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum; a smaller request still stands and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > raising the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum, whatever it requests",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a changed policy_version alone leaves the retained figure usable: with the ceiling removed or raised under a new version, a later child still records the rendered maximum",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a stricter deployment ceiling after a restart narrows a later child below the rendered maximum, and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > only a fresh human approval replaces the rendered maximum: after the ceiling is raised under the same policy_version and a restart, the earlier parent's children stay at 3, while a parent freshly approved under the raised ceiling admits children at its figure",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a child's own children are created under the same consent: a child created after the ceiling is removed keeps the root's rendered figure, and so does its own child",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a retained finite figure outlives a restart with Derivation Limits off: the next child is refused policy_denied, committing nothing, while the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > with the deployment ceiling replaced after the template's consent (#2026 audit; @spec derivation-limits#effective-limit) > the per-instance maximum its Dispatch Policy commits binds whatever the deployment ceiling becomes: removed or raised under the same policy_version, or under a changed one, across a restart, an instance records at most 3, and the earlier instance keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/retained-child-maximum-inheritance.test.ts",
+     "name": "a successor that widens or regroups an entry keeps every carried per-child bound (#2026 review F1, D1249; @spec derivation-limits#effective-limit) > a drawdown that widens a carried entry keeps the rendered maximum: [res.read] approved at 3 and drawn to [res.read, res.list] after a restart at 10 retains 3, and its child records 3",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/retained-child-maximum-inheritance.test.ts",
+     "name": "a successor that widens or regroups an entry keeps every carried per-child bound (#2026 review F1, D1249; @spec derivation-limits#effective-limit) > an Expansion that widens a carried entry keeps the rendered maximum after a restart at a raised ceiling",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/retained-child-maximum-inheritance.test.ts",
+     "name": "a successor that widens or regroups an entry keeps every carried per-child bound (#2026 review F1, D1249; @spec derivation-limits#effective-limit) > partial overlap: an Expansion entry sharing one action with an earlier entry and adding another is bounded by the carried figure, for its new action too",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/retained-child-maximum-inheritance.test.ts",
+     "name": "a successor that widens or regroups an entry keeps every carried per-child bound (#2026 review F1, D1249; @spec derivation-limits#effective-limit) > several sources: an Expansion merging entries that retain 3 and 10 keeps the strictest, 3",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. Not witnessed: the precondition that the maximum is rendered at the standing consent (the reference has no standing-consent rendering surface; see the rendering rows), and the clause that only a fresh human approval of the standing consent lifts the maximum. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling. #2018 review (F1): turning the derivation-limits capability off does not leave the limit absent for a Mission created under a consent committing a finite maximum. After a restart from the kernel file with the capability off, the next child or dispatched instance is refused (policy_denied, dispatch_policy_changed) and nothing is committed, while the Mission created before keeps its limit. Proved by mutation: restoring the defect, a finite maximum recorded as no limit, fails both witnesses, and removing either path's refusal fails its witness. This adds no witness of the fresh-approval clause, which stays unwitnessed."
+   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. #2026 (D1249): the Child Delegation basis for an entry with no child_creation_policy, whose per-child figure is the deployment's ceiling as the parent's approval rendered it, is witnessed too. The approval retains the rendered figure with the Mission Record (child_derivation_maxima); after a restart with the deployment ceiling removed or raised, under the same policy_version or a changed one, a later child, and a child's own child, still records at most it; a stricter ceiling narrows it; and with Derivation Limits off a retained finite figure refuses the next child, committing nothing. The fresh-approval clause is witnessed for this basis as far as the reference reaches: no change of policy replaces the figure, and a parent freshly approved under a raised ceiling admits children at the new figure. The reference has no in-place re-approval of an existing parent's consent, so its fresh approval is a new parent's. The Template audit (#2026, D1249 ruling 7): replacing the deployment ceiling under the same or a changed policy_version across a restart leaves an instance at its Dispatch Policy's maximum, so dispatch needed no change. Proved by mutation: reading the current ceiling instead of the retained figure fails the removal, raise, changed-version, fresh-approval, grandchild and Derivation-Limits-off witnesses; the approval retaining no finite figure fails the same set; a child retaining the figure current at its own creation instead of its parent's fails the grandchild witness; dropping the narrowing by the current ceiling fails the narrowing witness; and a per-instance limit falling back to the deployment ceiling fails the Template audit witness. PR #2037 review F1: a successor that widens or regroups an entry keeps every figure the authority it carries retains. After a restart at a raised ceiling, a drawdown widening [read] to [read, list], an Expansion widening an entry, an Expansion entry partly overlapping an earlier one, and an Expansion merging entries that retain 3 and 10 each keep 3 (the strictest), and their children record at most it. Reverting to whole-entry containment fails all four; so does letting an overlapping entry take the creation-time figure in place of the carried one. Not cited here, and reference behavior rather than conformance evidence (D1249 rulings 1 and 4): an overlapping source in unknown state keeps a widened or merged entry unknown, so its children are refused (skipping the unknown source fails those witnesses); genuinely new authority takes the creation-time figure, which also bounds an entry mixing carried and new authority (dropping that bound fails its witness). Still not witnessed: the precondition that the maximum is rendered at the standing consent (see the rendering rows), and the fresh-approval clause for the Template and Progressive ceiling bases. An entry whose consent renders no per-child figure (a template or governed instance's, or one an Expansion or a ceiling drawdown adds) retains the deployment's figure at its own creation; that is a local choice, not a rendered maximum, and no row claims it. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling. #2018 review (F1): turning the derivation-limits capability off does not leave the limit absent for a Mission created under a consent committing a finite maximum. After a restart from the kernel file with the capability off, the next child or dispatched instance is refused (policy_denied, dispatch_policy_changed) and nothing is committed, while the Mission created before keeps its limit. Proved by mutation: restoring the defect, a finite maximum recorded as no limit, fails both witnesses, and removing either path's refusal fails its witness."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -37717,9 +37789,28 @@
     "normative": "a required history predicate that cannot be established, or an unreachable evidence store, fails the action closed"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No code path: EvaluationRequest's context carries no history-predicate or evidence-store-reachability input of any kind; evaluateInner never reads or checks one. History evaluation ({{input-history}}) is not implemented in this PDP."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store cannot be consulted",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store does not answer within the binding's read bound, and aborts the read",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Witnessed by the History Context (#2015, #2017): an unreachable store and one that does not answer within the binding's read bound, and a predicate that cannot be established (unrecognized), each deny history_not_satisfied with the predicate recorded unavailable. Mutation-proved: denying only a not_satisfied outcome, so an unavailable one passes, permits all three (M3); awaiting the read with no bound permits the late answer."
   },
   {
    "id": "runtime.mission-binding.externally-established-must-verify",
@@ -44271,9 +44362,16 @@
     "normative": "the PDP never accepts a caller-asserted predicate outcome; `context.mission_history` only supplies facts the PDP itself evaluates against the policy-selected predicate"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Re-quoted at #1629 (D744 ruling 7): the request object is named by its full path."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not accept a predicate outcome asserted through context.mission_history: the outcome comes from the evidence, never the request",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): copying an outcome asserted in context.mission_history into the results permits the asserted request (M4). The reference permits no non-default evidence source, so context.mission_history supplies nothing the PDP evaluates."
   },
   {
    "id": "authzen.evidence.mission-history-computed",
@@ -44295,9 +44393,22 @@
     "normative": "Decision Evidence `mission_history` holds the PDP's own evaluated predicates and outcomes, and differs from a supplied `context.mission_history` when that input asserts anything else"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1629 (D744 ruling 7). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not accept a predicate outcome asserted through context.mission_history: the outcome comes from the evidence, never the request",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > permits when a verified consequential_write permit has a linked completed execution, reads only the established Mission's history, and records the outcome",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 7). Witnessed by the History Context (#2015, #2017): the recorded member equals the PDP's own evaluated outcome (satisfied, and not_satisfied against an empty store) and differs from a supplied context.mission_history that asserts satisfied. Mutation-proved: recording the request's asserted results in place of the PDP's fails the asserted-outcome witness; omitting mission_history fails the satisfied witness (M8)."
   },
   {
    "id": "authzen.context-history.unrecognized-predicate-refusal",
@@ -44319,8 +44430,16 @@
     "normative": "a policy-selected history predicate type the PDP does not recognize is refused, treated as not establishable rather than skipped"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): dropping an unrecognized predicate from the selection permits (M5)."
   },
   {
    "id": "authzen.context-history.deny-when-unsatisfied-or-unestablishable",
@@ -44342,8 +44461,172 @@
     "normative": "a required history predicate that is false or cannot be established denies history_not_satisfied"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied, recording not_satisfied, when no permit of the class is retained",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied when a permit of the class has no completed execution: one failed, one with none",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store cannot be consulted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when a retained record does not verify: a permit signed by an untrusted key, or an execution altered after signing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when an execution's link cannot be established: recorded for another audience, or naming no retained permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > never counts another Mission's history: a store holding only another Mission's completed write fails closed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not take a permit signed in the PEP's role as Decision Evidence, although its key verifies for that role",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when the PDP's Decision Evidence stream is incomplete: a sequence gap, a reused position, or no valid position",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a record delivered twice once, and fails closed when one execution_id carries different content",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when Decision Evidence records with different content share an evaluation_id, in either order",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed on a malformed Decision Evidence member rather than leaving the record uncounted",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when a record's audience is absent: an execution without one, a permit and its execution both without one, or a deny without one",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when an execution's authorized digests are not its permit's: a parameter or context digest that differs, is missing, or has no permit digest to mirror",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store does not answer within the binding's read bound, and aborts the read",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when the store returns a record of another Mission",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not take a permit signed with the PEP's key while claiming the pdp role: the resolver binds the key to its role",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not take an execution signed in the PDP's role as Execution Evidence, although its key verifies for that role",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when an execution links to a deny rather than a permit",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when the store returns a record of no known kind, such as a Refusal Record",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed when a Decision Evidence stream does not start at its origin: 0 for the reference emitter, or the origin the binding declares",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > accepts two completed uses of an unrestricted permit, but not of a single-use permit, in either record order; a malformed use_limit fails closed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts no completed execution whose effective digest differs from its authorized one, in either family: it is flagged as an unauthorized execution and the permit stays not_satisfied",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > leaves completion unestablishable when a completed execution lacks the effective digest its authorized digest requires, in either family",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts every attempted use against use_limit: a failed and a completed use exceed use_limit 1 but not use_limit 2, in either record order",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed on a permit without the conditions its applied classes require: none at all, or a high-consequence class without use_limit 1, read across action_classes",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > leaves the history unestablishable when a failed execution lacks the effective digest its authorized digest requires, in either family, and flags nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the remote PDP binds the history PDP-side (@spec authzen#context-history, #2015) > denies history_not_satisfied over the decision channel under its own binding, and permits once the retained history satisfies it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): removing the deny step permits every unsatisfied or unestablishable case (M9); counting a non-completed execution (M10), skipping signature verification (M1), the audience link (M2), the Mission scope (M11) or the Decision Evidence signer role (M12), or failing open on an unestablishable history (M3), each permits its case. Cold-read fixes (#2017), each permitting its case when disabled: accepting a sequence gap, a reused position or a negative one; keeping the first of two differing records under one evaluation_id or execution_id; skipping a malformed action_classes, action_class or decision; accepting a link with no audience, or with authorized digests other than the permit's; awaiting the read with no bound; resolving a key without its role; dropping the Execution Evidence role check; linking an execution to a deny; and skipping a record of no known kind. Owner review (#2017): reading a stream from its lowest position rather than its origin, or ignoring a declared origin; dropping the use_limit count on a single-use permit's second completion, or accepting a malformed use_limit; counting an execution whose effective digest differs from its authorized one; and accepting a completed execution without a required effective digest, in either family: each permits its case. Owner re-review (#2017): counting completed uses only against use_limit, or skipping a failed use the reader lists after a completion; accepting a permit without conditions, a high-consequence permit without use_limit 1 or with another bound, or reading the primary action_class instead of the applied set; and accepting a failed execution without a required effective digest: each permits its case. Every case asserts history_not_satisfied: reporting an unestablishable history as resource_policy fails the signature and another-Mission cases."
   },
   {
    "id": "authzen.context-history.record-predicates-and-outcomes",
@@ -44365,9 +44648,46 @@
     "normative": "every policy-selected history predicate the PDP evaluates, and its outcome, is recorded in Decision Evidence"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#594 wave 3: not unlocked by the 2026-09-04 Decision Evidence batch. The PDP's DecisionEvidenceObject (services/pdp/src/decision-evidence.ts) has no member for evaluated predicates or their outcomes, and predicates appears nowhere under services/pdp/src. The row needs PDP record content, not a test."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > permits when a verified consequential_write permit has a linked completed execution, reads only the established Mission's history, and records the outcome",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied, recording not_satisfied, when no permit of the class is retained",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store cannot be consulted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts no completed execution whose effective digest differs from its authorized one, in either family: it is flagged as an unauthorized execution and the permit stays not_satisfied",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a single-use permit's completed use although a later replay was suppressed permit_consumed, in either record order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): omitting mission_history from Decision Evidence fails every recording assertion (M8), including the owner-review witnesses (#2017) that record not_satisfied for a permit whose only completion was unauthorized and satisfied for a single-use permit beside a suppressed replay."
   },
   {
    "id": "authzen.context-history.action-class-completed-applied-class",
@@ -44389,9 +44709,22 @@
     "normative": "action_class_completed counts a permit Decision Evidence record when the named class is in its action_classes, or is its action_class where the record carries no action_classes, so a pending execution of a further class keeps the predicate unsatisfied"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1994 owner review. No reference implementation of history predicates; the other context-history rows are todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a permit by membership in action_classes, so a pending execution of a further class keeps the predicate unsatisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > falls back to action_class only where action_classes is absent: a listing record counts by membership alone, and a pending single-class permit keeps the predicate unsatisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#2015), on conformant records only: reading action_class alone permits with a further class's execution pending (M6, the membership witness); reading action_class in place of a present action_classes denies a completed record listing the class (M7, the fallback witness's first case; on conformant records it coincides with M6); never consulting action_class where action_classes is absent permits beside a pending single-class permit (the fallback witness's second case). Counting action_class beside a present action_classes that omits it is unreachable: such a record is non-conforming and leaves the history unestablishable (the malformed-member witness under authzen.context-history.deny-when-unsatisfied-or-unestablishable)."
   },
   {
    "id": "authzen.context-history.action-class-completed-completion-witness",
@@ -56394,8 +56727,34 @@
     "normative": "the mission_history extension member is REQUIRED on Decision Evidence whenever policy selected any history predicate for the decision, independent of whether the request itself carried a history member; each predicate outcome is satisfied, not_satisfied, or unavailable"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > records mission_history on a decision denied before the Mission is established, each selected predicate unavailable",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > does not accept a predicate outcome asserted through context.mission_history: the outcome comes from the evidence, never the request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > permits when a verified consequential_write permit has a linked completed execution, reads only the established Mission's history, and records the outcome",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > fails closed, recording unavailable, when the evidence store cannot be consulted",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2015): recording nothing until the Mission is established leaves a decision denied before it without mission_history (M13); omitting the member fails every recording assertion (M8). Outcomes are satisfied, not_satisfied and unavailable."
   },
   {
    "id": "evidence.extensions.hop-reference-required-submembers",
@@ -82897,8 +83256,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or the policy the Parent Mission's policy_version identifies, with the child's own count; after the deployment raises or removes its per-child policy ceiling, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
-    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; an entry without a snapshot takes the current policy's ceiling when the parent was approved under it, and is refused policy_denied otherwise, since the reference retains no earlier policy version to read the figure from"
+    "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or, for an entry without one, the figure the Parent Mission's approval rendered and retained, with the child's own count; after the deployment raises or removes its per-child policy ceiling, under the same or another policy_version, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
+    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; for an entry without a snapshot it reads the figure the parent's approval rendered and retained with the Mission Record (child_derivation_maxima: { finite: n }, or { finite: null } for no finite maximum), never the current deployment policy. A parent stored before the figure was retained creates no child under such an entry (policy_denied, nothing committed) until a fresh human approval of a new parent retains one; nothing is backfilled from configuration, the parent's own derivation_limit or its policy_version"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -82929,12 +83288,54 @@
     },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
-     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > an entry with no snapshot under a parent approved under another policy version is refused policy_denied, since its rendered figure cannot be read",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > the approval retains the figure it renders: the deployment's ceiling for an entry with no child_creation_policy, an explicit no-finite-maximum where the deployment sets none, and no figure for an entry committing a child_creation_policy",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > removing the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum; a smaller request still stands and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > raising the deployment ceiling under the same policy_version leaves a later child, after a restart, at the rendered maximum, whatever it requests",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a changed policy_version alone leaves the retained figure usable: with the ceiling removed or raised under a new version, a later child still records the rendered maximum",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a stricter deployment ceiling after a restart narrows a later child below the rendered maximum, and the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > an explicitly retained no-finite-maximum creates children after a restart, bounded only by the current ceiling and request (positive control for the legacy refusal)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > a parent stored before the figure was retained creates no child under an entry with no child_creation_policy: refused policy_denied, committing nothing and leaving its stored approval unchanged, however the current policy matches its policy_version and derivation_limit",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the per-child figure a parent's approval rendered for an entry with no child_creation_policy is retained with it (#2026, D1249; @spec derivation-limits#effective-limit) > an entry committing a child_creation_policy is unaffected by the deployment ceiling: removed or raised under the same policy_version after a restart, its snapshot's figure still binds (control)",
      "level": "unit",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1119 (D327, D577). Every clause witnessed. At the endpoint, children created through PAR, the approval page and the RFC 8693 exchange, under a deployment ceiling of 100 and a committed figure of 3, record 3, 3 and 2 for no request, 50 and 2, each with its own count (child-derivation-limit-endpoint.test.ts). That witness needed a projection fix in the same PR: a token projected from an entry committing a child_creation_policy had lost its children grant, so every such child creation was refused not_strict_subset; proved by reverting the fix (the endpoint and projection witnesses fail). At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
+   "notes": "#1119 (D327, D577). Every clause witnessed. At the endpoint, children created through PAR, the approval page and the RFC 8693 exchange, under a deployment ceiling of 100 and a committed figure of 3, record 3, 3 and 2 for no request, 50 and 2, each with its own count (child-derivation-limit-endpoint.test.ts). That witness needed a projection fix in the same PR: a token projected from an entry committing a child_creation_policy had lost its children grant, so every such child creation was refused not_strict_subset; proved by reverting the fix (the endpoint and projection witnesses fail). At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest. #2026 (D1249) replaced the policy_version route: for an entry with no child_creation_policy the parent's approval retains the figure it rendered, and a child reads that, never the current policy. With the ceiling removed or raised, under the same policy_version or a changed one, across a restart, a later child stays at or below the figure; a stricter ceiling narrows it; a retained no-finite-maximum still admits children; an entry committing a child_creation_policy is unaffected; and a parent stored before the figure was retained creates no child under the entry (policy_denied, nothing committed, the stored approval unchanged). Existing children keep their limits, and a parent freshly approved under the current policy creates children again (witnessed, a local migration behavior no row claims). An Expansion or drawdown successor that widens or regroups such an entry keeps its parent's figure, or its unknown state, rather than a figure read at its own creation (PR #2037 review F1; witnessed in retained-child-maximum-inheritance.test.ts and cited on derivation-limits.effective.standing-consent-ceiling). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals. #2026 mutations: reading the current ceiling instead of the retained figure fails the removal, raise and changed-version witnesses; the approval retaining no finite figure fails those and the retention witness; removing the legacy refusal, or reading unknown legacy state as no finite maximum, fails the legacy witness; reading a retained no-finite-maximum as unknown fails the explicit no-finite-maximum witness; dropping the narrowing by the current ceiling fails the narrowing witness."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",

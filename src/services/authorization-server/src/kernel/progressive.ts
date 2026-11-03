@@ -57,6 +57,7 @@ import { restrictedSinceAdjudication } from "./expansion.js";
 import { childActorCeilingOrigin, inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { ceilingOrigin, inheritOrigins } from "./eligibility-provenance.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
+import { childMaximumReferences, inheritedChildMaxima } from "./standing-consent-limit.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -1711,6 +1712,18 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     authority_set: authoritySet,
     eligibility_provenance: provenance,
     child_actor_provenance: childActorProvenance,
+    // @spec derivation-limits#effective-limit (#2026, D1249; review F1): a
+    // drawdown is no approval of its own. An entry that may carry authority
+    // of the predecessor's approved entries, widened or regrouped included,
+    // keeps the strictest figure they retain, and stays unknown where any of
+    // them is unknown. Only authority drawn from the ceiling, whose consent
+    // retains no per-child figure, takes the one the deployment states at
+    // this drawdown: provisionally (ruling 1), and never above a carried one.
+    child_derivation_maxima: inheritedChildMaxima(
+      authoritySet,
+      childMaximumReferences(predecessor.authority_set, predecessor.child_derivation_maxima),
+      { deploymentFigure: kernel.resolveDerivationLimit(undefined) },
+    ),
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

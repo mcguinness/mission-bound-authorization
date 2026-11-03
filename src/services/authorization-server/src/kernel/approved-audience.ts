@@ -85,8 +85,12 @@ function authorityOf(entry: AuthorityEntry): CoreAuthorityEntry {
   return authority as CoreAuthorityEntry;
 }
 
-/** Whether `entry` falls within a reference entry (the subset rule, bindings set aside). */
-function within(entry: AuthorityEntry, reference: AuthorityEntry): boolean {
+/**
+ * Whether `entry` falls within a reference entry (the subset rule, bindings set
+ * aside): the relation every per-entry retention a derived record inherits
+ * uses, the per-child derivation maximum included (#2026).
+ */
+export function within(entry: AuthorityEntry, reference: AuthorityEntry): boolean {
   return isSubsetSetIgnoringCapabilitySources([authorityOf(entry)], [authorityOf(reference)]);
 }
 
