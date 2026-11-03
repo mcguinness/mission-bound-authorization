@@ -6518,6 +6518,22 @@ resolve before interoperating.
 
 \[\[ To be removed from the final specification ]]
 
+-03
+
+**Behavior changes**
+
+- The normative-definition rule of Authorization Server Metadata
+  covers every advertised type that has a defining specification, not
+  only `mission_resource_access` (#2009).
+
+**Examples**
+
+- The examples follow one illustrative Mission whose only authority is
+  the `payment_initiation` example of RFC 9396, retained unchanged
+  (#2009). The delegation examples keep a Resource Access entry, since
+  delegation needs a type-defined delegation policy. Truncated tokens
+  and proofs are marked as not verifying.
+
 -02
 
 **Behavior changes**
