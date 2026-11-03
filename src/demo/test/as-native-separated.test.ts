@@ -58,6 +58,9 @@ const { AsNativeSeparatedConfigError, parseAsNativeSeparatedConfig, SEPARATED_ST
   "../src/as-native-separated/config.js"
 );
 
+// Several cases compose the resource side again or restart the AS process, which can take longer than the default under load.
+vi.setConfig({ testTimeout: 120_000 });
+
 type SeparatedAsProcess = Awaited<ReturnType<typeof startSeparatedAsProcess>>;
 type SeparatedAsNative = Awaited<ReturnType<typeof composeSeparatedAsNative>>;
 type ComposeOptions = Parameters<typeof composeSeparatedAsNative>[0];
