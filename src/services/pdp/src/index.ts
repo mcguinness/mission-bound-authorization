@@ -318,3 +318,18 @@ export {
   type WorkItemAttribution,
   type WorkItemRef,
 } from "./work-item.js";
+export {
+  assertHistoryBinding,
+  DEFAULT_HISTORY_READ_TIMEOUT_MS,
+  evaluateHistory,
+  HistoryBindingConfigError,
+  RECOGNIZED_HISTORY_PREDICATES,
+  type HistoryBinding,
+  type HistoryEvidenceReader,
+  type HistoryOutcome,
+  type HistoryPolicy,
+  type HistoryPredicate,
+  type HistoryPredicateResult,
+  type HistorySelectionInput,
+  type UnauthorizedExecutionFlag,
+} from "./history.js";
