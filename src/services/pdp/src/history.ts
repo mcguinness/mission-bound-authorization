@@ -288,8 +288,8 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * by a key the resolver no longer publishes among them), a record names
  * another Mission, two records conflict (Decision Evidence of one
  * `evaluation_id`, or Execution Evidence of one `execution_id`, with
- * different content), a permit has more completed executions than its
- * `use_limit`, a Decision Evidence stream does not start at its origin or
+ * different content), a permit has more attempted (`completed` or `failed`)
+ * executions than its `use_limit`, a Decision Evidence stream does not start at its origin or
  * has a gap or a reused `sequence` position, a record lacks its REQUIRED
  * `audience`, or an Execution Evidence record links to no verified permit of
  * the same Mission and audience or carries authorized digests other than
@@ -472,12 +472,17 @@ async function verifiedHistory(
   //
   // A permit may be used more than once, each use its own execution with its
   // own `execution_id` and final outcome, so a failed use or a suppressed
-  // replay beside a completed one is no conflict. A single-use permit is
-  // different: the runtime's Single-Use Identifiers rule refuses a second
-  // presentation of a consumed identifier, so more completed executions than
-  // the permit's `use_limit` contradict its own condition, and the records
-  // cannot say which completion was the authorized one.
-  const completions = new Map<string, number>();
+  // replay beside a completed one is no conflict. `use_limit` bounds those
+  // uses: it is a consumption bound on `evaluation_id`, consumed before the
+  // effect is released (runtime#idempotency, "Permit replay prevention"), so
+  // every attempted use counts, `completed` or `failed` alike, and a
+  // `suppressed` record (a `permit_consumed` replay among them) attempted
+  // nothing. More attempted uses than the bound contradict the permit's own
+  // condition (runtime#single-use-identifiers), and the records cannot say
+  // which use was the authorized one, so the history is not established.
+  // The count is order-free: the reader's array order is never read as the
+  // order the uses happened in.
+  const uses = new Map<string, number>();
   for (const execution of executions.values()) {
     const linked = decisions.get(execution.evaluation_id);
     if (!linked || linked.decision !== "permit" || linked.audience !== execution.audience) return undefined;
@@ -520,10 +525,10 @@ async function verifiedHistory(
       });
     }
     execution.completion = execution.outcome === "completed" && deviations.length === 0;
-    if (execution.outcome !== "completed") continue;
-    const count = (completions.get(execution.evaluation_id) ?? 0) + 1;
+    if (execution.outcome !== "completed" && execution.outcome !== "failed") continue;
+    const count = (uses.get(execution.evaluation_id) ?? 0) + 1;
     if (linked.use_limit !== undefined && count > linked.use_limit) return undefined;
-    completions.set(execution.evaluation_id, count);
+    uses.set(execution.evaluation_id, count);
   }
   return { decisions: [...decisions.values()], executions: [...executions.values()] };
 }

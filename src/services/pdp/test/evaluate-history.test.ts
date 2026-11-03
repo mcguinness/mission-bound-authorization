@@ -429,6 +429,26 @@ describe("the History Context evaluates policy-selected predicates against verif
     }
   });
 
+  it("counts every attempted use against use_limit: a failed and a completed use exceed use_limit 1 but not use_limit 2, in either record order", async () => {
+    // From the owner's re-review probes "failed plus completed exceeds use_limit 1" and its use_limit 2 control (#2017).
+    const digests = { authorized_parameter_digest: DIGEST_A, effective_parameter_digest: DIGEST_A };
+    const failed = await executionRecord({ evaluation_id: "w1", outcome: "failed", execution_id: "use_0", sequence: 0, overrides: { ...digests, error: "urn:example:execution-failed" } });
+    const done = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "use_1", sequence: 1, overrides: digests });
+    for (const [limit, outcome] of [
+      [1, "unavailable"],
+      [2, "satisfied"],
+    ] as const) {
+      const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { conditions: { ...SINGLE_USE, use_limit: limit }, parameter_digest: DIGEST_A } });
+      for (const records of [[permit, failed, done], [permit, done, failed]]) {
+        const label = `use_limit ${limit}, ${records[1] === failed ? "failed first" : "completed first"}`;
+        const decision = await evaluate(request(), options(historyBinding(records)));
+        expect(decision.decision, label).toBe(outcome === "satisfied");
+        if (outcome !== "satisfied") expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
+        expect(historyOf(decision)?.[0]?.outcome, label).toBe(outcome);
+      }
+    }
+  });
+
   it("accepts two completed uses of an unrestricted permit, but not of a single-use permit, in either record order; a malformed use_limit fails closed", async () => {
     const first = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_first", sequence: 0 });
     const second = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_second", sequence: 1 });
