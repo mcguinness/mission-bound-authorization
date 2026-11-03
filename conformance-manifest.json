@@ -11,16 +11,16 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "0c6e50212de7a5078b5598d241a77dc61c54dc6d",
-    "content_sha256": "f6e188e19d4d74658f8e70e594e621576a45b02aee3cf209598735717fc82e58"
+    "revision": "604492561e93b21e31aa7139c06d6b670eff60b0",
+    "content_sha256": "927cd9750d2d50410d05c3fb02c428ffc147d9501493cad1795819a23a9d9c0d"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "0c6e50212de7a5078b5598d241a77dc61c54dc6d",
-    "content_sha256": "28767dd83a0bd482fc18bcb212140c8a5c88f6b221f5e527c87bc83e7d13c619"
+    "revision": "604492561e93b21e31aa7139c06d6b670eff60b0",
+    "content_sha256": "77e3ab33edb21e3870cb28700434b4795aab34cbb183e8600306e2da68cc727b"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "0c6e50212de7a5078b5598d241a77dc61c54dc6d",
@@ -44410,7 +44410,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "action_class_completed is satisfied only when every permit Decision Evidence record the named class applied to has a linked completed Execution Evidence record in which each authorized digest present has an equal effective counterpart; a permit without one leaves the predicate unsatisfied"
+    "normative": "action_class_completed is satisfied only when at least one permit Decision Evidence record the named class applied to exists and every such permit has a linked completed Execution Evidence record in which each authorized digest present has an equal effective counterpart; otherwise it is not_satisfied, or unavailable where some permit's completion is undetermined and no permit is plainly unwitnessed"
    },
    "level": "unit",
    "coverage": "todo",
@@ -44421,7 +44421,7 @@
    "id": "authzen.context-history.action-class-completed-per-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
-   "text": "The predicate is per permit: a permit has a completion witness when any of its executions is one, so a `failed` use of a multi-use permit, a replay suppressed as `permit_consumed`, or a second completion of a single-use permit does not remove it.",
+   "text": "The predicate is per permit: a permit has a completion witness when any of its executions is one, so a `failed` use of a multi-use permit, or a replay suppressed as `permit_consumed`, does not remove it.",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -44434,12 +44434,36 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a permit with a completion witness stays witnessed when another of its executions is also retained (a failed use, a replay suppressed as permit_consumed, or a second completion of a single-use permit, each under a distinct execution_id): the predicate is satisfied, not not_satisfied or unavailable"
+    "normative": "a permit with a completion witness stays witnessed when another of its executions is also retained (a failed use of a multi-use permit, or a replay suppressed as permit_consumed, under a distinct execution_id): that permit counts as completed"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
    "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+  },
+  {
+   "id": "authzen.context-history.single-use-witness",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "A single-use permit has one authorized completion ({{I-D.draft-mcguinness-mission-runtime-evidence}}): only the completion that took its single use can be its witness, and any other `completed` record under it creates none, whatever its digests. The order in which records reach the evidence store does not establish which completion took the use, nor do the records' `sequence` or timestamps. Where no trusted source, such as the PEP's consumed-identifier store, establishes it, a single-use permit with more than one `completed` record has a witness only when each of them would be one on its own, and its completion is undetermined when only some would.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a use_limit 1 permit with two completed records and no trusted source naming the one that took the use, one deviating and one matching in either arrival order, the permit's completion is undetermined (the predicate unavailable, denied history_not_satisfied), so the matching completion creates no witness; two matching completions leave the permit witnessed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2029 (D1257 P1). todo: PR #2017 (#2015) can witness only the branch without a trusted source, since the PEP's record of which execution took the single use (mcp-payments recordRedeemingAttempt) never reaches the PDP's evidence; the witness should present the deviating-then-matching counterexample in both arrival orders."
   },
   {
    "id": "authzen.context-history.unauthorized-execution-not-a-witness",
@@ -54505,7 +54529,7 @@
    "id": "evidence.execution.single-use-no-second-completion",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "A single-use permit has no second completion: a second `completed` record under it records an unauthorized execution.",
+   "text": "A single-use permit has one authorized completion, the one that took its single use: any other `completed` record under it records an unauthorized execution, whatever its digests, and the records themselves do not show which completion took the use.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -54517,12 +54541,12 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a consumer classifies a second completed Execution Evidence record under a use_limit 1 permit as an unauthorized execution"
+    "normative": "a consumer classifies every completed Execution Evidence record under a use_limit 1 permit other than the one that took its single use as an unauthorized execution, whatever its digests, and does not infer which one took the use from arrival order, sequence or timestamps"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#2029 (D1251: a single-use permit has no second completion). todo: no reference consumer classifies executions per permit; the History Context reader of PR #2017 (#2015) is the first candidate."
+   "notes": "#2029 (D1251: a single-use permit has no second completion; D1257 P1: an unauthorized completion creates no witness). todo: no reference consumer classifies executions per permit; the History Context reader of PR #2017 (#2015) is the first candidate."
   },
   {
    "id": "evidence.execution.audience-mirrors-decision",
