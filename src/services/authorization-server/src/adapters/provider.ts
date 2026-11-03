@@ -471,6 +471,7 @@ import {
   deciding,
   type DeferralBudgetExposure,
   type DeferralContext,
+  deferralChildGrants,
   deferralContext,
   deferralNoticePage,
   deferralPagePath,
@@ -508,14 +509,15 @@ import {
 } from "../kernel/progressive.js";
 import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
 import {
+  childGrantDisclosures,
   committedPerChildMaximum,
   establishedLimitLines,
+  figureMaximum,
   NO_FINITE_MAXIMUM,
   progressiveInheritanceLine,
-  STANDING_CONSENT_LIMIT_MEMBER,
+  renderedChildMaxima,
   standingConsentLines,
   standingConsentMaximumOf,
-  SUBTREE_AGGREGATE_STATEMENT,
 } from "../kernel/standing-consent-limit.js";
 import { ID_JAG_TOKEN_TYPE, IN_PROCESS_NON_ACCEPTANCE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
 import {
@@ -4407,6 +4409,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     return undefined;
   };
 
+  /**
+   * @spec derivation-limits#approval-rendering (#2040): what the deferral
+   * page's per-child disclosure reads beside the review: whether the
+   * deployment implements Derivation Limits, the activation policies it
+   * holds, and whether it supports the async delegation transport.
+   */
+  const deferralChildGrantInputs = () => ({
+    derivationLimits: enabled("derivation-limits"),
+    held: (ref: ActivationPolicyRef) => verifiedActivationPolicy(opts.issuer, kernel.activationPolicies(), ref),
+    asyncDelegation: opts.familyStore !== undefined,
+  });
+
   /** @spec mission-template#template-consent: template proposals and their decisions. */
   const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
   /**
@@ -4426,6 +4440,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       ...(opts.actionApprovalPolicy ? { actionApprovalPolicy: opts.actionApprovalPolicy } : {}),
       ...(authenticated ? { budgetExposure: { port: opts.budgetExposure, unit: exposureUnit } } : {}),
       resourceContracts: kernel.resourceContracts(),
+      // @spec derivation-limits#approval-rendering (#2040): the per-child
+      // figure now, against the one the proposal pinned.
+      perChild: {
+        figure: figureMaximum(kernel.resolveDerivationLimit(undefined)),
+        held: (ref) => verifiedActivationPolicy(opts.issuer, kernel.activationPolicies(), ref),
+      },
     });
   };
   /**
@@ -4931,6 +4951,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // Mission (kernel.establishedChildMaxima, #2026); the decision is bound
       // to this rendering's derivation policy content (#1446), so the
       // retained figure is the one shown.
+      // @spec derivation-limits#approval-rendering, progressive#progressive-authorization
+      // (#2040): the same for each delegable entry of the offered ceiling,
+      // whose figure the ceiling consent retains with the ceiling; the
+      // decision consents exactly this offer (retainRenderedOffer) under the
+      // same derivation policy content.
       const derivation = approvalDerivationRendering({
         derivationLimits: enabled("derivation-limits"),
         limit: kernel.resolveDerivationLimit(intent.requested_derivation_limit),
@@ -4939,6 +4964,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         held: (ref) => verifiedActivationPolicy(opts.issuer, kernel.activationPolicies(), ref),
         asyncDelegation: opts.familyStore !== undefined,
         progressive: opts.progressive !== undefined,
+        ...(ceilingOffer ? { ceiling: ceilingOffer.authority_ceiling } : {}),
       });
       // The decision is bound to this rendering, never to an offer computed
       // afresh. A rendering that withheld the offer leaves the one an earlier
@@ -6395,6 +6421,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
           // @spec mission#transformation-capabilities (D733): retained at consent.
           entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
+          // @spec derivation-limits#approval-rendering (#2040): the per-child
+          // figure the disclosure below returns, retained at this commit.
+          ceilingChildMaxima: (entries) => kernel.establishedChildMaxima(entries),
           // @spec mission-template#prohibited-classes (#813): this stand-in
           // asserts its approver and establishes no human consent at the
           // approval floor, so under the capability it creates no template
@@ -6424,6 +6453,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
                   }),
                 }
               : {}),
+            // @spec derivation-limits#approval-rendering (#2040): each delegable
+            // ceiling entry's per-child rule, at the figure the template retains.
+            ...(() => {
+              const grants = childGrantDisclosures(template.ceiling, {
+                ...(enabled("derivation-limits") ? {} : { derivationLimits: false }),
+                figures: template.ceiling_child_derivation_maxima ?? [],
+                held: (ref) => verifiedActivationPolicy(opts.issuer, kernel.activationPolicies(), ref),
+                asyncDelegation: opts.familyStore !== undefined,
+              });
+              return grants.length ? { child_grants: grants.map(({ label, lines }) => ({ label, lines })) } : {};
+            })(),
           },
         };
       } catch (e) {
@@ -6474,6 +6514,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         const proposal = templateProposals.propose(
           { ...proposed, ceiling },
           pinDispatchPolicy(opts.issuer, opts.dispatchPolicies, proposed.dispatch_policy),
+          // @spec derivation-limits#approval-rendering (#2040): the per-child
+          // figure the consent renders and the template retains, pinned now.
+          figureMaximum(kernel.resolveDerivationLimit(undefined)),
         );
         ctx.status = 201;
         ctx.body = { proposal_id: proposal.id, consent_uri: `${opts.issuer}/templates/proposals/${proposal.id}` };
@@ -6691,6 +6734,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
             // @spec mission#transformation-capabilities (D733): retained at consent.
             entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
+            // @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+            // (#2040): the per-child figure the page rendered for each
+            // delegable ceiling entry, the one the proposal pinned and the
+            // disclosure just re-checked, retained with the template.
+            ceilingChildMaxima: (entries) => renderedChildMaxima(entries, proposal.child_derivation_figure.finite),
             ...standingPaymentConsent(consent),
           },
         );
@@ -6790,6 +6838,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       ctx.body = renderDeferralPage(review, rendered.context, {
         revision,
         bindings,
+        // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+        // (#2040): each delegable entry's per-child rule, at the figure the
+        // rendering commits and the decision retains.
+        childGrants: deferralChildGrants(review, deferralChildGrantInputs()),
         ...(csrf ? { csrf } : {}),
         changed: ctx.query.changed === "1",
         ...(client?.clientName ? { clientName: String(client.clientName) } : {}),
@@ -6940,6 +6992,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (reconsent && !rendered.context.reconsent_offer) {
         refuse(400, "invalid_request", "the rendering offered no ceiling to re-consent");
         return;
+      }
+      // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+      // (#1119, #2040): as at the Mission approval, an approval consents to a
+      // delegable entry's policy-created children only with its per-child
+      // rule disclosed, so one that cannot be (its committed policy is not
+      // held at its digest, or states a malformed maximum) refuses the
+      // decision, recording nothing. Only where the deployment implements
+      // Derivation Limits (#2018).
+      if (enabled("derivation-limits")) {
+        const grants = deferralChildGrants(review, deferralChildGrantInputs());
+        const undisclosed = [...grants.successor, ...(reconsent ? grants.reconsent : [])].find((g) => g.undisclosed)?.undisclosed;
+        if (undisclosed) {
+          refuse(403, "access_denied", undisclosed);
+          return;
+        }
       }
       const approvalEventId = `apev_${code}`;
       try {
@@ -8067,9 +8134,10 @@ async function decide(
   // never saw; a fresh approval discloses it. A retry of a committed decision
   // recovers it instead.
   // Only where the deployment implements Derivation Limits, which owns the
-  // per-child figure (#2018).
+  // per-child figure (#2018). @spec derivation-limits#approval-rendering
+  // (#2040): a consented ceiling's delegable entries the same way.
   if (capabilityEnabled(opts, "derivation-limits") && !opts.kernel.findByApprovalEvent(`apev_${details.uid}`)) {
-    const undisclosed = undisclosedChildGrant(authority, (ref) =>
+    const undisclosed = undisclosedChildGrant([...authority, ...ceilingEntries], (ref) =>
       verifiedActivationPolicy(opts.issuer, opts.kernel.activationPolicies(), ref),
     );
     if (undisclosed) {
@@ -8572,6 +8640,12 @@ interface ApprovalDerivationRendering {
   established: string[];
   /** One block per entry whose policy-created children this approval consents to. */
   children: Array<{ label: string; lines: string[] }>;
+  /**
+   * @spec derivation-limits#approval-rendering (#2040): one block per entry
+   * of the offered ceiling whose policy-created children a ceiling consent
+   * admits under the successors its drawdown policy creates.
+   */
+  ceilingChildren?: Array<{ label: string; lines: string[] }>;
   /** The inheritance a ceiling consent discloses, where the deployment offers one. */
   progressive?: string;
 }
@@ -8590,61 +8664,33 @@ export function approvalDerivationRendering(input: {
   held: Parameters<typeof committedPerChildMaximum>[1];
   asyncDelegation: boolean;
   progressive: boolean;
+  /**
+   * @spec derivation-limits#approval-rendering, progressive#progressive-authorization
+   * (#2040): the authority ceiling this rendering offers, whose delegable
+   * entries' per-child rule a ceiling consent retains (kernel.approve).
+   */
+  ceiling?: readonly AuthorityEntry[];
 }): ApprovalDerivationRendering {
-  const children: ApprovalDerivationRendering["children"] = [];
-  for (const entry of input.authority) {
-    const grant = entry.delegation?.children as
-      | { max_children?: number; max_child_depth?: number; child_creation_policy?: ActivationPolicyRef }
-      | undefined;
-    if (!grant) continue;
-    const committed = committedPerChildMaximum(grant, input.held);
-    const perChild =
-      input.derivationLimits === false
-        ? []
-        : committed.source === "policy"
-        ? standingConsentLines(committed.maximum, "child Mission", { asyncDelegation: input.asyncDelegation })
-        : committed.source === "deployment"
-          ? standingConsentLines(
-              input.deploymentCeiling === null ? NO_FINITE_MAXIMUM : { finite: input.deploymentCeiling },
-              "child Mission",
-              { asyncDelegation: input.asyncDelegation },
-            )
-          : [
-              undisclosableReason(committed),
-            ];
-    children.push({
-      label: `${entry.resource}: ${entry.actions.join(", ")}`,
-      lines: [
-        grant.max_children === undefined
-          ? "Concurrent children: no limit is set on concurrently non-terminal child Missions."
-          : `Concurrent children: at most ${grant.max_children} concurrently non-terminal child Missions (a limit on children at one time, not on children created over the Mission's lifetime).`,
-        `Child depth: at most ${grant.max_child_depth ?? 1}${grant.max_child_depth === undefined ? " (the default)" : ""}.`,
-        ...perChild,
-        SUBTREE_AGGREGATE_STATEMENT,
-      ],
-    });
-  }
-  if (input.derivationLimits === false) return { established: [], children };
+  // @spec derivation-limits#approval-rendering (#2026, #2040): the figure an
+  // entry with no child_creation_policy shows is the deployment's ceiling,
+  // the read the approval retains (kernel.establishedChildMaxima).
+  const shown = (entries: readonly AuthorityEntry[]) =>
+    childGrantDisclosures(entries, {
+      ...(input.derivationLimits === false ? { derivationLimits: false } : {}),
+      figures: renderedChildMaxima(entries, input.deploymentCeiling),
+      held: input.held,
+      asyncDelegation: input.asyncDelegation,
+    }).map(({ label, lines }) => ({ label, lines }));
+  const children = shown(input.authority);
+  const ceilingChildren = input.ceiling ? shown(input.ceiling) : [];
+  const ceiling = ceilingChildren.length ? { ceilingChildren } : {};
+  if (input.derivationLimits === false) return { established: [], children, ...ceiling };
   return {
     established: establishedLimitLines(input.limit, { asyncDelegation: input.asyncDelegation }),
     children,
+    ...ceiling,
     ...(input.progressive ? { progressive: progressiveInheritanceLine(input.limit) } : {}),
   };
-}
-
-/**
- * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
- * (#1119): why a delegable entry's per-child figure cannot be disclosed, or
- * undefined when it can. An approval cannot consent to a child grant whose
- * rule and maximum it could not show, so the decision refuses while any is
- * undisclosable; once the policy is held again, a fresh approval discloses it.
- */
-function undisclosableReason(committed: ReturnType<typeof committedPerChildMaximum>): string {
-  return committed.source === "unheld"
-    ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} version ${committed.policy.version} is not one this issuer holds at its committed digest. This approval is refused until it can be shown.`
-    : committed.source === "unusable"
-      ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}. This approval is refused until it states a usable one.`
-      : "";
 }
 
 /** The first delegable entry whose per-child figure cannot be disclosed, with the reason, or undefined. */
@@ -8652,15 +8698,7 @@ function undisclosedChildGrant(
   authority: readonly AuthorityEntry[],
   held: Parameters<typeof committedPerChildMaximum>[1],
 ): string | undefined {
-  for (const entry of authority) {
-    const grant = entry.delegation?.children as { child_creation_policy?: ActivationPolicyRef } | undefined;
-    if (!grant) continue;
-    const committed = committedPerChildMaximum(grant, held);
-    if (committed.source === "unheld" || committed.source === "unusable") {
-      return `${entry.resource}: ${undisclosableReason(committed)}`;
-    }
-  }
-  return undefined;
+  return childGrantDisclosures(authority, { figures: [], held, asyncDelegation: false }).find((d) => d.undisclosed)?.undisclosed;
 }
 
 /**
@@ -8846,10 +8884,20 @@ ${derivation.children
   const inheritance = derivation?.progressive
     ? `<p class="progressive-inheritance">${escapeHtml(derivation.progressive)}</p>\n`
     : "";
+  // @spec derivation-limits#approval-rendering (#2040): the per-child rule a
+  // ceiling consent retains for each delegable ceiling entry, which the
+  // children of the successors its drawdown policy creates are bounded by.
+  const ceilingChildren = derivation?.ceilingChildren?.length
+    ? `<h3>Child Missions created by policy under the successors this ceiling admits (no approval of their own)</h3>
+${derivation.ceilingChildren
+  .map((c) => `<h4>${escapeHtml(c.label)}</h4>${renderLines(c.lines, "ceiling-child-subtree")}`)
+  .join("\n")}
+`
+    : "";
   const ceilingSection = ceiling
     ? `<h2>Authority ceiling</h2><pre class="authority-ceiling">${escapeHtml(JSON.stringify(ceiling.authority_ceiling, null, 2))}</pre>
 <p class="ceiling-adjudication">${escapeHtml(ceilingAdjudicationLine(ceiling))}</p>
-${inheritance}`
+${ceilingChildren}${inheritance}`
     : inheritance
       ? `<h2>Authority ceiling</h2>${inheritance}`
       : "";

@@ -5,14 +5,18 @@
  * template with the authenticated Approver as its approver of record; the
  * proposal never names one.
  *
- * Both mutable inputs are fixed when the template is proposed. The Dispatch
+ * The mutable inputs are fixed when the template is proposed. The Dispatch
  * Policy is pinned: its digest is minted from the snapshot the issuer then
  * holds. The Template Ceiling is resolved: caller-supplied capability bindings
  * are discarded and the trusted ones resolved, as the template will commit
- * them. The disclosure and the decision both re-check each against the
- * issuer's current state, so a policy edited, or a trusted capability
- * definition changed, after the proposal is neither rendered nor consented
- * to; the proposal is then refused and proposed again.
+ * them. The deployment's per-child derivation figure is pinned (#2040): the
+ * figure every delegable ceiling entry with no `child_creation_policy`
+ * commits for the children of the instances dispatched under it. The
+ * disclosure and the decision both re-check each against the issuer's
+ * current state, so a policy edited, a trusted capability definition
+ * changed, or a per-child figure changed, after the proposal is neither
+ * rendered nor consented to; the proposal is then refused and proposed
+ * again.
  */
 import { randomBytes } from "node:crypto";
 import {
@@ -24,7 +28,14 @@ import {
 } from "@mission/core";
 import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
 import type { CapabilitySourceResolver } from "../kernel/capability-binding.js";
-import { standingConsentLines, standingConsentMaximumOf } from "../kernel/standing-consent-limit.js";
+import {
+  childGrantDisclosures,
+  renderedChildMaxima,
+  type StandingConsentMaximum,
+  standingConsentLines,
+  standingConsentMaximumOf,
+  takesDeploymentFigure,
+} from "../kernel/standing-consent-limit.js";
 import { type StandingPaymentTerms, standingPaymentTermsOf } from "../kernel/standing-payment.js";
 import type { ActionApprovalPolicy } from "@mission/demo-data";
 import {
@@ -49,6 +60,13 @@ export interface TemplateProposal {
   body: TemplateProposalBody;
   /** The Dispatch Policy reference minted when the template was proposed. */
   dispatch_policy: ActivationPolicyRef;
+  /**
+   * @spec derivation-limits#approval-rendering (#2040): the deployment's
+   * per-child derivation figure pinned when the template was proposed: the
+   * figure the consent renders and the template retains for each delegable
+   * ceiling entry with no `child_creation_policy`.
+   */
+  child_derivation_figure: StandingConsentMaximum;
   state: "pending" | "approved" | "denied";
   /** The template an approval created. */
   template_id?: string;
@@ -60,12 +78,17 @@ export class TemplateConsentProposals {
   private readonly proposals = new Map<string, TemplateProposal>();
   constructor(private readonly now: () => number = () => Date.now()) {}
 
-  propose(body: TemplateProposalBody, dispatch_policy: ActivationPolicyRef): TemplateProposal {
+  propose(
+    body: TemplateProposalBody,
+    dispatch_policy: ActivationPolicyRef,
+    child_derivation_figure: StandingConsentMaximum,
+  ): TemplateProposal {
     const id = `${TEMPLATE_CONSENT_PREFIX}${randomBytes(18).toString("base64url")}`;
     const proposal: TemplateProposal = {
       id,
       body,
       dispatch_policy,
+      child_derivation_figure,
       state: "pending",
       expires: this.now() + TEMPLATE_CONSENT_TTL_MS,
     };
@@ -115,6 +138,13 @@ export interface TemplateConsentDisclosure {
   bounds: string[];
   /** The remaining consented terms. */
   terms: string[];
+  /**
+   * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+   * (#2040): for each delegable ceiling entry, the per-child rule and maximum
+   * the children of every dispatched instance are bounded by, beside the
+   * subtree figures; the template retains the figure shown.
+   */
+  child_grants?: Array<{ label: string; lines: string[] }>;
   /** @spec mission-template#prohibited-classes (#813): the standing payment's committed terms, when the template designates one. */
   standing_payment?: string[];
 }
@@ -163,6 +193,16 @@ export function templateConsentDisclosure(
      * deployment adopting that profile, is not rendered.
      */
     derivationLimits?: boolean;
+    /**
+     * @spec derivation-limits#approval-rendering (#2040): the deployment's
+     * per-child derivation figure now, compared with the one the proposal
+     * pinned, and the activation policies this issuer holds, which state the
+     * figure of a ceiling entry committing a `child_creation_policy`.
+     */
+    perChild: {
+      figure: StandingConsentMaximum;
+      held: Parameters<typeof childGrantDisclosures>[1]["held"];
+    };
   },
 ): { disclosure: TemplateConsentDisclosure } | TemplateConsentRefusal {
   const { body } = proposal;
@@ -253,6 +293,29 @@ export function templateConsentDisclosure(
         "The configured contract references of the Template Ceiling changed since this template was proposed, so the ceiling shown would not be the one committed. This consent is refused; propose the template again.",
     };
   }
+  // @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+  // (#2040, D1260 ruling 3): each delegable ceiling entry's per-child rule, at
+  // the figure the proposal pinned, which the decision retains with the
+  // template; a figure changed since the proposal is neither rendered nor
+  // consented to, and a figure that cannot be shown refuses the consent.
+  if (
+    canonicalize(proposal.child_derivation_figure as unknown as JsonValue) !==
+      canonicalize(opts.perChild.figure as unknown as JsonValue) &&
+    body.ceiling.some(takesDeploymentFigure)
+  ) {
+    return {
+      refusal:
+        "The deployment's per-child derivation limit changed since this template was proposed, so the per-child rule shown would not be the one committed. This consent is refused; propose the template again.",
+    };
+  }
+  const childGrants = childGrantDisclosures(body.ceiling, {
+    ...(opts.derivationLimits === false ? { derivationLimits: false } : {}),
+    figures: renderedChildMaxima(body.ceiling, proposal.child_derivation_figure.finite),
+    held: opts.perChild.held,
+    asyncDelegation: opts.asyncDelegation,
+  });
+  const undisclosed = opts.derivationLimits === false ? undefined : childGrants.find((g) => g.undisclosed)?.undisclosed;
+  if (undisclosed) return { refusal: `${undisclosed} This consent is refused.` };
   return {
     disclosure: {
       ceiling: body.ceiling,
@@ -282,6 +345,7 @@ export function templateConsentDisclosure(
         `Template version: ${body.template_version}.`,
       ],
       ...(standing.length > 0 ? { standing_payment: standing } : {}),
+      ...(childGrants.length ? { child_grants: childGrants.map(({ label, lines }) => ({ label, lines })) } : {}),
     },
   };
 }
@@ -445,5 +509,11 @@ ${opts.revision ? `<input type="hidden" name="render_revision" value="${escapeHt
   )}</pre>
 <h2>Dispatch bounds</h2>${renderLines(disclosure.bounds, "dispatch-bounds")}
 <h2>Terms</h2>${renderLines(disclosure.terms, "template-terms")}
-${disclosure.standing_payment ? `<h2>Standing payment</h2>${renderLines(disclosure.standing_payment, "standing-payment")}\n` : ""}${decision}`;
+${
+  disclosure.child_grants?.length
+    ? `<h2>Child Missions created by policy under dispatched instances (no approval of their own)</h2>
+${disclosure.child_grants.map((g) => `<h3>${escapeHtml(g.label)}</h3>${renderLines(g.lines, "template-child-subtree")}`).join("\n")}
+`
+    : ""
+}${disclosure.standing_payment ? `<h2>Standing payment</h2>${renderLines(disclosure.standing_payment, "standing-payment")}\n` : ""}${decision}`;
 }

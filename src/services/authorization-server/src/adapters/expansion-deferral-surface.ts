@@ -23,6 +23,12 @@ import type { CarryoverManifest } from "../kernel/carryover.js";
 import type { DeferralReview, ExpansionDisclosure } from "../kernel/deferred.js";
 import type { MissionKernel } from "../kernel/kernel.js";
 import type { CeilingConsent, EncounterDisclosure } from "../kernel/progressive.js";
+import {
+  type ChildGrantDisclosure,
+  childGrantDisclosures,
+  type RetainedChildMaximum,
+} from "../kernel/standing-consent-limit.js";
+import type { AuthorityEntry } from "../kernel/types.js";
 import { contentDigest, decisionExpiry } from "./approval-render-revision.js";
 
 /** The committed parts of a deferral's approval context; each is compared as one value. */
@@ -42,6 +48,14 @@ export interface DeferralContext {
   review: string | null;
   /** The Carryover Manifest the approval commits, fixed while the deferral is pending. */
   carryover: string | null;
+  /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040): the per-child derivation figures the page shows for the
+   * successor's delegable entries and the re-consent offer's
+   * ({@link DeferralReview.child_derivation}), so a decision approves, and
+   * the deferral retains, the figure rendered.
+   */
+  child_derivation: { successor: RetainedChildMaximum[]; reconsent: RetainedChildMaximum[] | null };
   /**
    * @spec mission-template#instance-composition, metering#capacity-across-missions
    * (#813, #816, D877): for a successor in a standing-payment lineage, the
@@ -121,9 +135,50 @@ export function deferralContext(
         })
       : null,
     carryover: review.carryover ? contentDigest(review.carryover) : null,
+    child_derivation: review.child_derivation,
     ...(budgetExposure ? { budget_exposure: budgetExposure } : {}),
   };
   return { context, commitment: contentDigest(context) };
+}
+
+/**
+ * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+ * (#2040): the disclosure the page renders for each delegable entry, from the
+ * reader every approval surface uses: the successor's entries at the figures
+ * the approval retains, and the re-consent offer's ceiling entries at the
+ * figures a re-consent retains.
+ */
+export function deferralChildGrants(
+  review: DeferralReview,
+  opts: {
+    derivationLimits: boolean;
+    held: Parameters<typeof childGrantDisclosures>[1]["held"];
+    asyncDelegation: boolean;
+  },
+): { successor: ChildGrantDisclosure[]; reconsent: ChildGrantDisclosure[] } {
+  const shown = (entries: readonly AuthorityEntry[], figures: readonly RetainedChildMaximum[]) =>
+    childGrantDisclosures(entries, {
+      ...(opts.derivationLimits ? {} : { derivationLimits: false }),
+      figures,
+      held: opts.held,
+      asyncDelegation: opts.asyncDelegation,
+    });
+  return {
+    successor: shown(review.successor, review.child_derivation.successor),
+    reconsent:
+      review.offer && review.child_derivation.reconsent
+        ? shown(review.offer.authority_ceiling, review.child_derivation.reconsent)
+        : [],
+  };
+}
+
+function childGrantSection(blocks: readonly ChildGrantDisclosure[], heading: string, cls: string): string {
+  if (!blocks.length) return "";
+  return `<h2>${escapeHtml(heading)}</h2>
+${blocks
+  .map((b) => `<h3>${escapeHtml(b.label)}</h3><ul class="${cls}">${b.lines.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>`)
+  .join("\n")}
+`;
 }
 
 function escapeHtml(s: string): string {
@@ -216,7 +271,7 @@ ${entries.length ? `<ul>\n${entries.join("\n")}\n</ul>` : `<p>None.</p>`}
 </section>`;
 }
 
-function ceilingSection(disclosure: ExpansionDisclosure): string {
+function ceilingSection(disclosure: ExpansionDisclosure, reconsentChildren: readonly ChildGrantDisclosure[] = []): string {
   const ceiling = disclosure.ceiling;
   if (!ceiling) return "";
   const offer = ceiling.reconsent_offer
@@ -225,7 +280,7 @@ function ceilingSection(disclosure: ExpansionDisclosure): string {
 <pre class="reconsent-ceiling">${json(ceiling.reconsent_offer.authority_ceiling)}</pre>
 ${ceiling.reconsent_offer.drawdown_policy ? `<p class="reconsent-policy">Drawdown policy <code>${escapeHtml(ceiling.reconsent_offer.drawdown_policy.id)}</code> version <code>${escapeHtml(ceiling.reconsent_offer.drawdown_policy.version)}</code></p>` : ""}
 <p class="reconsent-adjudication">${escapeHtml(ceiling.reconsent_offer.adjudication)}</p>
-</section>`
+${childGrantSection(reconsentChildren, "Child Missions created by policy under the successors a re-consented ceiling admits (no approval of their own)", "reconsent-child-subtree")}</section>`
     : "";
   const r = ceiling.review;
   const list = <T,>(cls: string, label: string, values: T[], show: (v: T) => string) =>
@@ -266,7 +321,15 @@ function budgetExposureSection(context: DeferralContext): string {
 export function renderDeferralPage(
   review: DeferralReview,
   context: DeferralContext,
-  view: { clientName?: string; revision?: string; csrf?: string; changed?: boolean; bindings?: string },
+  view: {
+    clientName?: string;
+    revision?: string;
+    csrf?: string;
+    changed?: boolean;
+    bindings?: string;
+    /** @spec derivation-limits#approval-rendering (#2040): {@link deferralChildGrants}. */
+    childGrants?: { successor: readonly ChildGrantDisclosure[]; reconsent: readonly ChildGrantDisclosure[] };
+  },
 ): string {
   const { disclosure } = review;
   const why = disclosure.drawdown_fallback
@@ -283,11 +346,11 @@ ${why}
 <h2>Subject (the authority is granted for)</h2><p class="deferral-subject"><code>${escapeHtml(review.predecessor.subject.sub)}</code></p>
 <h2>Intent (task context, untrusted)</h2>${suppliedBy(review.clientId)}<pre class="deferral-intent">${json(review.intent)}</pre>
 ${review.proposal ? `<h2>Proposed authority (submitted, untrusted)</h2>${suppliedBy(review.clientId)}<pre class="deferral-proposal">${json(review.proposal)}</pre>\n` : ""}<h2>Successor authority (what approval grants)</h2><pre class="successor-authority">${json(review.successor)}</pre>
-${view.bindings ? `${view.bindings}\n` : ""}<h2>Expiry (when the approved authority ends)</h2><p><time class="successor-expires-at" datetime="${escapeHtml(context.expires_at)}">${escapeHtml(context.expires_at)}</time></p>
+${view.bindings ? `${view.bindings}\n` : ""}${childGrantSection(view.childGrants?.successor ?? [], "Child Missions created by policy under this approval (no approval of their own)", "child-subtree")}<h2>Expiry (when the approved authority ends)</h2><p><time class="successor-expires-at" datetime="${escapeHtml(context.expires_at)}">${escapeHtml(context.expires_at)}</time></p>
 ${encounterSection(disclosure)}
 ${restrictionsSection(disclosure)}
 ${carryoverSection(review.carryover)}
-${budgetExposureSection(context)}${ceilingSection(disclosure)}
+${budgetExposureSection(context)}${ceilingSection(disclosure, view.childGrants?.reconsent)}
 ${view.changed ? `<p class="deferral-changed"><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n` : ""}<form method="post" action="${deferralPagePath(review.deferralCode)}/decide">
 ${view.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(view.revision)}">\n` : ""}${view.csrf ? `<input type="hidden" name="csrf_token" value="${escapeHtml(view.csrf)}">\n` : ""}${reconsent}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
