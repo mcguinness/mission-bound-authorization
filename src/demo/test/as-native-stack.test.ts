@@ -2222,9 +2222,15 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       return listen.apply(this, args as never);
     } as never);
     try {
-      await expect(
-        launchAsNative({ ...launchOptions({ ...env, MISSION_REQUEST_INTAKE: "1" }, files), approverIdpPort: LAUNCH_IDP_PORT }),
-      ).rejects.toThrow(
+      // A target that launches anyway is closed at once, so it holds no port or file for the tests after this one.
+      let refusal: unknown;
+      try {
+        const wrongly = await launchAsNative({ ...launchOptions({ ...env, MISSION_REQUEST_INTAKE: "1" }, files), approverIdpPort: LAUNCH_IDP_PORT });
+        await wrongly.close();
+      } catch (err) {
+        refusal = err;
+      }
+      expect((refusal as Error | undefined)?.message).toBe(
         "mission-request-provenance cannot be enabled on a file-backed kernel store: its replay history and acceptance records are in memory only and do not survive a restart (D1119 Q5, #1963)",
       );
       // The discovery listener, the request intake and the provider were open when the AS refused.
