@@ -4224,8 +4224,8 @@ cacheable assertion.
 ### Introspection Response Examples {#examples}
 
 The following is an example of an introspection response for the
-canonical ERP token ({{mission-claim}}) while the Mission is
-`active`. The issuer AS returns the standard {{RFC7662}} members and
+payment token of {{mission-claim}} while the Mission is `active`. The
+issuer AS returns the standard {{RFC7662}} members and
 the `mission` member to a caller holding the deployment's
 audit-and-correlation disclosure privilege, so `authority_hash` and
 `proposal_hash` appear; the default audience-filtered enforcement
@@ -4235,57 +4235,46 @@ projection omits them.
 {
   "active": true,
   "iss": "https://as.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
-  "aud": "https://erp.example.com",
-  "exp": 1793606705,
+  "sub": "user_5Tn8qW2xK7mR4vBc",
+  "client_id": "pq7Lm2Xz9K",
+  "aud": "https://example.com/payments",
+  "exp": 1793621105,
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+      "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY",
     "proposal_hash":
-      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
+      "sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg",
     "state": "active"
   }
 }
 ~~~
 
-The following is an example of the response, after the Mission is
-revoked, for an unexpired token the AS issued on refresh before the
-revocation ({{composite-active}}):
+The following is an example of the response for the same token, still
+unexpired, after the Mission is revoked ({{composite-active}}):
 
 ~~~ json
 {
   "active": false,
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+      "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
-      "terminated_at": "2026-11-02T08:53:20Z"
+      "terminated_at": "2026-11-02T12:02:00Z"
     }
   }
 }
