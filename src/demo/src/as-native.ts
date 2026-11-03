@@ -24,9 +24,13 @@ import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.
  * which requires the key ring), the evidence keys
  * (`MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`, or
  * `MISSION_EPHEMERAL_EVIDENCE_KEYS`) and the RAS's redemption store
- * (`MISSION_RAS_REDEMPTIONS`, which the key ring requires), and nothing else, so never the test-only
- * ordinary-token minting fixture. A value that is set but unusable refuses
- * startup with an error naming it, before anything connects or listens.
+ * (`MISSION_RAS_REDEMPTIONS`, which the key ring requires), the opt-in demo
+ * request intake (`MISSION_REQUEST_INTAKE=1`, #939 slice 2b-2, D1221: the
+ * intake and the AS's `mission-request-provenance` type together, refused by
+ * the AS beside `MISSION_KERNEL_STORE`, D1119 Q5, #1963), and nothing else,
+ * so never the test-only ordinary-token minting fixture. A value that is set
+ * but unusable refuses startup with an error naming it, before anything
+ * connects or listens.
  */
 export function asNativeLaunchOptions(env: Readonly<Record<string, string | undefined>>): ComposeStackOptions {
   const openfgaUrl = env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url;
@@ -59,6 +63,12 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
   // @spec #1767 (D901): the RAS's single-use claims kept across restarts,
   // required with a key ring.
   const rasRedemptions = rasRedemptionsFromEnv(env);
+  // @spec request-provenance#capture (#939 slice 2b-2, D1221): one opt-in
+  // option configures the demo request intake and the AS's type together.
+  const requestIntake = env.MISSION_REQUEST_INTAKE;
+  if (requestIntake !== undefined && requestIntake !== "" && requestIntake !== "1") {
+    throw new Error(`MISSION_REQUEST_INTAKE must be 1 or unset, not ${requestIntake}`);
+  }
   return {
     openfgaUrl,
     presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
@@ -69,6 +79,7 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
     ...(kernelStore ? { kernelStore } : {}),
     ...(evidenceKeys ? { evidenceKeys } : {}),
     ...(rasRedemptions ? { rasRedemptions } : {}),
+    ...(requestIntake === "1" ? { requestIntake: true } : {}),
     target: "as-native",
   };
 }
@@ -81,7 +92,8 @@ export interface AsNativeLaunch {
   /**
    * Stop the outcome reconciler, close every listener the target opened (the
    * resource endpoint, the AS, the txn-challenge discovery listener, the
-   * upstream Approver login provider and, in remote mode, the PDP hop) and
+   * upstream Approver login provider, the request intake when it runs and,
+   * in remote mode, the PDP hop) and
    * release both single-writer store files, and the kernel's file when the
    * target keeps one.
    * Resolves once every port is free. Idempotent.
@@ -165,6 +177,12 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       `  MAS join route     ${stack.masGovernedChannel ? "mounted" : "not mounted"}`,
       // @spec mission#approval-authentication (#1320, D496)
       `  approver login     ${authServer.approverProvider?.issuer ?? "none"}  (upstream OpenID Provider: password, then a one-time code for mfa)`,
+      // @spec request-provenance#capture (#939 slice 2b-2, D1221)
+      `  request intake     ${
+        authServer.requestIntake
+          ? `${authServer.requestIntake.service.issuer}/login  (mission-request-provenance accepted, not required; originator login at the approver login provider)`
+          : "off"
+      }`,
       `  reconciliation     every ${stack.reconciler.intervalMs / 1000} s (window ${stack.reconciler.windowMs / 1000} s), operator alerts on stderr`,
       "  ready. Ctrl-C to stop.",
     ],

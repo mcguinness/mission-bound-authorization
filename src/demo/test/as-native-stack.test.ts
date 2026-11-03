@@ -2180,6 +2180,73 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     }
   });
 
+  // @spec request-provenance#capture (#939 slice 2b-2, D1221): one opt-in
+  // launch option configures the request intake and the AS together.
+  it("reads MISSION_REQUEST_INTAKE=1 into the requestIntake option, leaves the option absent when unset, refuses any other value by name, and composes the intake with the as-native target only (#939 slice 2b-2, D1221)", async () => {
+    const base = { MISSION_EPHEMERAL_KEYS: "1", MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" };
+    expect(asNativeLaunchOptions({ ...base, MISSION_REQUEST_INTAKE: "1" }).requestIntake).toBe(true);
+    expect(asNativeLaunchOptions(base)).not.toHaveProperty("requestIntake");
+    expect(asNativeLaunchOptions({ ...base, MISSION_REQUEST_INTAKE: "" })).not.toHaveProperty("requestIntake");
+    for (const value of ["0", "true", "yes", " 1"]) {
+      expect(() => asNativeLaunchOptions({ ...base, MISSION_REQUEST_INTAKE: value }), value).toThrow(
+        `MISSION_REQUEST_INTAKE must be 1 or unset, not ${value}`,
+      );
+    }
+    fgaBootstrap.mockClear();
+    const { target: _target, ...shared } = launchOptions({ MISSION_REQUEST_INTAKE: "1" });
+    await expect(composeStack({ ...shared, withAuthServer: true })).rejects.toThrow(
+      /requestIntake composes the demo request intake with the as-native target only \(D1221\)/,
+    );
+    expect(fgaBootstrap).not.toHaveBeenCalled();
+  });
+
+  it("refuses startup with MISSION_REQUEST_INTAKE=1 beside MISSION_KERNEL_STORE with the AS's own refusal, never skipping the type, and keeps no listener it opened, the request intake's and the upstream provider's included (D1119 Q5, #1963, D1221)", async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const dir = mkdtempSync(join(tmpdir(), "as-native-intake-kernel-"));
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const kernelFile = join(dir, "state", "kernel.db");
+    const env = {
+      MISSION_KEY_RING: ring,
+      MISSION_KEY_BINDINGS: await bindingsFor(ring),
+      MISSION_KERNEL_STORE: kernelFile,
+      MISSION_KERNEL_WITNESS: initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness")),
+      MISSION_RAS_REDEMPTIONS: rasStore(),
+    };
+    const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
+    // Every listener this composition opens, whatever its port.
+    const opened = new Set<NetServer>();
+    const listen = NetServer.prototype.listen;
+    const listening = vi.spyOn(NetServer.prototype, "listen").mockImplementation(function (this: NetServer, ...args: unknown[]) {
+      opened.add(this);
+      return listen.apply(this, args as never);
+    } as never);
+    try {
+      await expect(
+        launchAsNative({ ...launchOptions({ ...env, MISSION_REQUEST_INTAKE: "1" }, files), approverIdpPort: LAUNCH_IDP_PORT }),
+      ).rejects.toThrow(
+        "mission-request-provenance cannot be enabled on a file-backed kernel store: its replay history and acceptance records are in memory only and do not survive a restart (D1119 Q5, #1963)",
+      );
+      // The discovery listener, the request intake and the provider were open when the AS refused.
+      expect(opened.size).toBeGreaterThanOrEqual(3);
+      for (const server of opened) expect(server.listening).toBe(false);
+      expect(await accepts(`http://127.0.0.1:${LAUNCH_IDP_PORT}`)).toBe(false);
+    } finally {
+      listening.mockRestore();
+      await Promise.all(
+        [...opened].filter((server) => server.listening).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
+      );
+    }
+    // The refusal is the pairing's alone: the same kernel store starts without the intake.
+    const launched = await launchAsNative(launchOptions(env, files));
+    try {
+      expect(launched.stack.authServer?.requestIntake).toBeUndefined();
+      expect(launched.summary).toContain("  request intake     off");
+    } finally {
+      await launched.close();
+    }
+  });
+
   it("closes every listener it published and releases both store files on shutdown, in co-resident and remote PDP mode", async () => {
     for (const mode of ["co-resident", "remote"] as const) {
       const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };

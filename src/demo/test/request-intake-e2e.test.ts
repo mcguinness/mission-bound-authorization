@@ -61,6 +61,8 @@ import { type ApprovalConsole, recordApproverLogin, resolveMissionApproval } fro
 import { type ApproverAccount, type ApproverIdp, type CompletedLogin, startApproverIdp } from "../src/approver-idp.js";
 import { clientAssertionSigner, submitMissionApproval } from "../src/oauth-client.js";
 import {
+  CAPTURE_PAGE_MEDIA_TYPE,
+  REQUEST_INTAKE_CAPTURE_PATH,
   REQUEST_INTAKE_CLIENT_ID,
   REQUEST_INTAKE_SESSION_COOKIE,
   type RequestIntakeService,
@@ -235,9 +237,14 @@ async function signIn(
     location = res.headers.get("location");
   }
   expect(location && new URL(location).origin).toBe(service.issuer);
+  // The callback opens the session and sends the user agent on to the capture page.
   res = await ua.fetch(location as string);
-  expect(res.status, await res.clone().text()).toBe(200);
+  expect(res.status, await res.clone().text()).toBe(303);
+  expect(res.headers.get("location")).toBe(`${service.issuer}${REQUEST_INTAKE_CAPTURE_PATH}`);
   expect(ua.cookie(service.issuer, REQUEST_INTAKE_SESSION_COOKIE)).toBeTruthy();
+  res = await ua.fetch(res.headers.get("location") as string);
+  expect(res.status, await res.clone().text()).toBe(200);
+  expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
   expect(provider.logins.length).toBe(before + 1);
   return { ua, login: provider.logins.at(-1) as CompletedLogin };
 }
@@ -450,6 +457,37 @@ describe("capture needs the originator's intake session (@spec request-provenanc
     // The session itself still captures.
     await captured(ua);
     expect(intake.counts().captures).toBe(before + 1);
+  });
+
+  it("serves the capture page only in the originator's intake session and with no parameter: HTML whose one script posts to the capture endpoint from this origin (#939 slice 2b-2)", async () => {
+    const page = `${intake.issuer}${REQUEST_INTAKE_CAPTURE_PATH}`;
+    const forged = { cookie: `${REQUEST_INTAKE_SESSION_COOKIE}=${randomBytes(32).toString("base64url")}` };
+    for (const res of [await fetch(page), await fetch(page, { headers: forged })]) {
+      expect(res.status).toBe(401);
+      expect(((await res.json()) as Json).error).toBe("login_required");
+    }
+    const { ua } = await signIn("code");
+    expect((await ua.fetch(`${page}?instruction=x`)).status).toBe(400);
+    const res = await ua.fetch(page);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const csp = res.headers.get("content-security-policy") as string;
+    const nonce = /script-src 'nonce-([A-Za-z0-9_-]+)'/.exec(csp)?.[1];
+    expect(nonce).toBeTruthy();
+    expect(csp).toContain("connect-src 'self'");
+    expect(csp).toContain("form-action 'none'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    const html = await res.text();
+    expect(html).toContain('<form id="capture">');
+    expect(html).toContain(`<script nonce="${nonce}">`);
+    expect(html.match(/<script/g)).toHaveLength(1);
+    expect(html).toContain(`fetch(${JSON.stringify(REQUEST_INTAKE_CAPTURE_PATH)}`);
+    expect(html).toContain(JSON.stringify(CAPTURE_PAGE_MEDIA_TYPE));
+    // The page creates no capture record.
+    const before = intake.counts().captures;
+    await ua.fetch(page);
+    expect(intake.counts().captures).toBe(before);
   });
 
   it.each([
