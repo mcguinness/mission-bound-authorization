@@ -170,6 +170,13 @@ const RUNTIME_ACTION_CLASSES: ReadonlySet<string> = new Set([
   "privileged_administration",
 ]);
 
+/**
+ * @spec runtime#classification (the high-consequence classes),
+ * authzen#decision-conditions `use_limit`: a permit any of these applied to
+ * carries `use_limit: 1`.
+ */
+const HIGH_CONSEQUENCE_CLASSES: ReadonlySet<string> = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
+
 /** The predicate types this PDP recognizes. */
 export const RECOGNIZED_HISTORY_PREDICATES: ReadonlySet<string> = new Set(["action_class_completed"]);
 
@@ -352,13 +359,21 @@ async function verifiedHistory(
       const contextDigest = optionalString(record.evaluation_context_digest);
       if (parameterDigest === null || contextDigest === null) return undefined;
       // @spec runtime-evidence#decision-evidence-object `conditions`,
-      // authzen#decision-conditions `use_limit`: where present, an object, and
-      // its consumption bound a positive integer. Absent, the permit carries
-      // no use limit.
+      // authzen#decision-conditions `use_limit`: `conditions` is REQUIRED on a
+      // permit "for a consequential action", and every class in
+      // `action_class`'s value space is consequential, so a permit without it
+      // is malformed, never unrestricted. Its consumption bound, where
+      // present, is a positive integer, and is exactly 1 where any applied
+      // class is high-consequence: the PDP "MUST set `use_limit: 1`" there,
+      // read across the whole applied class set. Elsewhere it may be absent,
+      // and the permit then carries no use limit.
       const conditions = record.conditions;
       if (conditions !== undefined && objectOf(conditions) === undefined) return undefined;
+      if (decision === "permit" && conditions === undefined) return undefined;
       const useLimit = objectOf(conditions)?.use_limit;
       if (useLimit !== undefined && (typeof useLimit !== "number" || !Number.isSafeInteger(useLimit) || useLimit < 1)) return undefined;
+      const applied = (actionClasses as string[] | undefined) ?? [actionClass];
+      if (decision === "permit" && applied.some((c) => HIGH_CONSEQUENCE_CLASSES.has(c)) && useLimit !== 1) return undefined;
       const content = signedContent(record);
       const prior = decisions.get(record.evaluation_id);
       if (prior !== undefined) {

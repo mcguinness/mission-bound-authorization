@@ -102,7 +102,17 @@ const PEP_KEY_CLAIMING_PDP = { key: pepKeys.privateKey, kid: "hist-pep", emitter
 /** The PDP's own key, signing an Execution Evidence record in its `pdp` role: a valid signature, the wrong signer for an execution. */
 const AS_PDP = { key: pdpKeys.privateKey, kid: "hist-pdp", emitter: { id: PDP_ID, role: "pdp" } };
 
-/** A retained Decision Evidence record, signed by the trusted PDP key unless `key` (or `as`) says otherwise. */
+/** The classes whose permits carry `use_limit: 1` (runtime#classification, authzen#decision-conditions). */
+const HIGH_CONSEQUENCE = ["irreversible_action", "external_commitment", "privileged_administration"];
+
+/** A permit's validity bound, one minute past the fixed clock. */
+const VALID_UNTIL = "2026-09-14T12:01:00Z";
+
+/**
+ * A retained Decision Evidence record, signed by the trusted PDP key unless `key` (or `as`) says otherwise.
+ * A permit carries the `conditions` it requires: `valid_until`, and `use_limit: 1` where a
+ * high-consequence class applies; a lower-consequence permit carries no use limit.
+ */
 async function decisionRecord(
   d: DecisionShape,
   key = pdpKeys.privateKey,
@@ -120,6 +130,14 @@ async function decisionRecord(
     ...(d.action_classes !== undefined ? { action_classes: d.action_classes } : {}),
     class_source: "deployment",
     decision: d.decision ?? "permit",
+    ...((d.decision ?? "permit") === "permit"
+      ? {
+          conditions: {
+            valid_until: VALID_UNTIL,
+            ...((d.action_classes ?? [d.action_class]).some((c) => HIGH_CONSEQUENCE.includes(c)) ? { use_limit: 1 } : {}),
+          },
+        }
+      : {}),
     sequence: d.sequence ?? 0,
     emitter: as?.emitter ?? { id: PDP_ID, role: "pdp" },
     evaluated_at: NOW.toISOString(),
@@ -182,8 +200,11 @@ function flagging(binding: HistoryBinding, flags: UnauthorizedExecutionFlag[]): 
   return { ...binding, onUnauthorizedExecution: (flag) => flags.push(flag) };
 }
 
-/** A single-use permit's decision conditions, valid one minute past the fixed clock. */
-const SINGLE_USE = { use_limit: 1, valid_until: "2026-09-14T12:01:00Z" };
+/** A single-use permit's decision conditions. */
+const SINGLE_USE = { use_limit: 1, valid_until: VALID_UNTIL };
+
+/** The predicate an irreversible step's precondition names. */
+const IRREVERSIBLE_COMPLETED: HistoryPredicate = { predicate: "action_class_completed", action_class: "irreversible_action" };
 
 /** A history binding whose policy selects `selected` for the read, over `records` (or a reader that fails). */
 function historyBinding(
@@ -799,6 +820,49 @@ describe("the History Context evaluates policy-selected predicates against verif
     const satisfied = await evaluate(request(), options(historyBinding([m1, m1Done, w2, w2Done])));
     expect(satisfied.decision, JSON.stringify(satisfied.context)).toBe(true);
     expect(historyOf(satisfied)?.[0]?.outcome).toBe("satisfied");
+  });
+
+  it("fails closed on a permit without the conditions its applied classes require: none at all, or a high-consequence class without use_limit 1, read across action_classes", async () => {
+    const cases: Array<[string, DecisionShape, HistoryPredicate, number]> = [
+      // From the owner's re-review probe "high-consequence permit missing conditions is not unrestricted" (#2017):
+      // the fixture now signs conditions by default, so the probe omits them explicitly.
+      ["irreversible without conditions", { evaluation_id: "w1", action_class: "irreversible_action", overrides: { parameter_digest: DIGEST_A }, omit: ["conditions"] }, IRREVERSIBLE_COMPLETED, 2],
+      ["write without conditions", { evaluation_id: "w1", action_class: "consequential_write", omit: ["conditions"] }, WRITE_COMPLETED, 1],
+      ["irreversible without use_limit", { evaluation_id: "w1", action_class: "irreversible_action", overrides: { conditions: { valid_until: VALID_UNTIL } } }, IRREVERSIBLE_COMPLETED, 1],
+      ["irreversible with use_limit 2", { evaluation_id: "w1", action_class: "irreversible_action", overrides: { conditions: { valid_until: VALID_UNTIL, use_limit: 2 } } }, IRREVERSIBLE_COMPLETED, 1],
+      [
+        "write listing irreversible, without use_limit",
+        { evaluation_id: "w1", action_class: "consequential_write", action_classes: ["consequential_write", "irreversible_action"], overrides: { conditions: { valid_until: VALID_UNTIL } } },
+        WRITE_COMPLETED,
+        1,
+      ],
+    ];
+    for (const [label, shape, predicate, uses] of cases) {
+      const records = [await decisionRecord(shape)];
+      for (let i = 0; i < uses; i++) {
+        const digests = shape.overrides?.parameter_digest ? { authorized_parameter_digest: DIGEST_A, effective_parameter_digest: DIGEST_A } : {};
+        records.push(await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: `use_${i}`, sequence: i, overrides: digests }));
+      }
+      const decision = await evaluate(request(), options(historyBinding(records, [predicate])));
+      expect(decision.decision, label).toBe(false);
+      expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, label).toBe("unavailable");
+    }
+    // Controls: a lower-consequence permit may omit use_limit, a deny carries no conditions,
+    // and a single-use irreversible permit with one completion satisfies.
+    const unrestricted = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { conditions: { valid_until: VALID_UNTIL } }, sequence: 0 }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
+      await decisionRecord({ evaluation_id: "d2", action_class: "consequential_write", decision: "deny", sequence: 1 }),
+    ];
+    const lower = await evaluate(request(), options(historyBinding(unrestricted)));
+    expect(lower.decision, JSON.stringify(lower.context)).toBe(true);
+    const singleUse = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "irreversible_action", overrides: { conditions: SINGLE_USE } }),
+      await executionRecord({ evaluation_id: "w1", outcome: "completed" }),
+    ];
+    const high = await evaluate(request(), options(historyBinding(singleUse, [IRREVERSIBLE_COMPLETED])));
+    expect(high.decision, JSON.stringify(high.context)).toBe(true);
   });
 
   it("fails closed on a malformed Decision Evidence member rather than leaving the record uncounted", async () => {
