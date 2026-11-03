@@ -85,7 +85,10 @@ export const CHILD_EVIDENCE_MEDIA_TYPE = "application/mission-child-evidence+jso
  * `delegation_not_permitted` is the on-switch refusal (a justifying parent entry
  * carries no `delegation.children`); it is DISTINCT from `policy_denied`, the
  * refusal when a carried `child_creation_policy` no longer matches its
- * committed digest.
+ * committed digest, and when the per-child derivation figure the parent's
+ * approval committed cannot be honored: a malformed figure, a finite one this
+ * deployment cannot establish (#2018), or one the parent does not retain
+ * (#2026).
  */
 export type ChildDenialReason =
   | "parent_not_active"
