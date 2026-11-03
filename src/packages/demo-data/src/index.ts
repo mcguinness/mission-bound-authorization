@@ -3897,7 +3897,9 @@ export function loadRequestProvenanceConfig(
 
 /**
  * The validated shipped request-provenance configuration (@see
- * loadRequestProvenanceConfig). Validated at load like every file here; no
- * service consults it, and the shipped file does not enable the type.
+ * loadRequestProvenanceConfig). Validated at load like every file here. The
+ * shipped file does not enable the type; the as-native target's opt-in
+ * request intake (`requestIntake`, #939 slice 2b-2, D1221) reads only its
+ * declared bounds, for the intake and the AS alike.
  */
 export const REQUEST_PROVENANCE_CONFIG: RequestProvenanceConfig = loadRequestProvenanceConfig();
