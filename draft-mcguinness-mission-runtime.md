@@ -4041,8 +4041,10 @@ metering companion apply ({{I-D.draft-mcguinness-mission-metering}}).
 The history input ({{input-history}}) makes prior evidence
 load-bearing for later decisions, so it is attacker-adjacent
 wherever evidence producers are compromised: a forged record is a
-forged precondition, and a suppressed record denies the step that
-depends on it. This is the existing evidence-integrity story, not a
+forged precondition, and an omitted record can deny a step or satisfy
+a predicate the complete history would not
+({{I-D.draft-mcguinness-mission-runtime-evidence}}, Section "History
+Completeness"). This is the existing evidence-integrity story, not a
 new one; the record integrity requirements of {{record-integrity}}
 and the transparency mechanisms of the audit companion
 ({{I-D.draft-mcguinness-mission-audit}}) are the countermeasures,
@@ -4318,6 +4320,9 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The History Input: an omitted record can deny a step or satisfy a
+  predicate the complete history would not, not only deny it (#2029).
 
 - Classes are ordered only in part, and the three highest are not
   ordered among themselves; an invocation the classifier cannot place
