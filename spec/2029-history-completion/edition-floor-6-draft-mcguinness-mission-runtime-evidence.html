@@ -1935,17 +1935,17 @@ that access, does not reconstruct the decision basis.<a href="#section-4.1-1.44.
 <code>sequence</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.1-1.46">
             <p id="section-4.1-1.46.1"><span class="bcp14">REQUIRED</span>. An integer. The per-Mission sequence indicator
-the runtime profile requires, so one emitter's decision stream has a
+the runtime profile requires, so one emitter's record stream has a
 verifiable order and gaps are detectable. <span class="bcp14">MUST</span> be zero or greater.
 The sequence is scoped to the emitter identified by <code>emitter</code>: each
 emitter maintains its own monotonically increasing per-Mission
 sequence, and a verifier detects gaps and orders records within
-(Mission, emitter). An emitter <span class="bcp14">MUST</span> allocate its first position for
-a Mission as 0 and each later position as one greater than the last,
-across every record type it emits for that Mission. A position
-allocated to a record that is never emitted, such as one whose
-signing failed, is a gap a verifier cannot tell from a missing
-record. The sequence does not reconstruct Mission-wide decision
+(Mission, emitter). An emitter <span class="bcp14">MUST</span> allocate its sequence positions
+for a Mission in order from 0, skipping none, across every record
+type it emits for that Mission. A position allocated to a record
+that is never emitted, such as one whose signing failed or one a
+replica reserved and did not use, is a gap a verifier cannot tell
+from a missing record. The sequence does not reconstruct Mission-wide decision
 order across emitters: cross-emitter ordering is best-effort,
 established, where the deployment's evidence supports it, from the
 correlation members (<code>evaluation_id</code>, <code>mission.id</code>, <code>hop_reference</code>)
@@ -4235,24 +4235,26 @@ proof of action.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
         </h3>
 <p id="section-11.2-1">A record shows what it states; no set of records shows that no other
 record exists. An emitter's <code>sequence</code> (<a href="#decision-evidence-object" class="auto internal xref">Section 4</a>)
-lets a verifier detect a missing record before the last record it
-holds from that emitter, including a missing first record. It does not
-reveal records after the last one held, or an emitter none of whose
-records are held. An emitter's stream is every record it emits for
-the Mission, Refusal Records among them, so a gap check covers the
-whole stream rather than one record type.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+lets a verifier detect a gap before the last record it holds from that
+emitter, including at the first position. It does not reveal records
+after the last one held, or an emitter none of whose records are
+held; an emitter reading its own records also knows its last
+allocated position, and so detects a missing tail. An emitter's
+stream is every record it emits for the Mission, Refusal Records among
+them, so a gap check covers the whole stream rather than one record
+type.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <p id="section-11.2-2">A consumer that decides on history, such as a PDP evaluating a history
 predicate (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
 "History"), therefore relies on its evidence store returning the
 complete, current Mission history. The effect of an omission depends
-on the record omitted. An omitted Execution Evidence record removes a
-completion, and the step that depends on it is denied. An omitted
-Decision Evidence record removes a permit: for a predicate over every
-permit to which a class applied, omitting a permit that never
-completed satisfies a predicate the complete history leaves
-unsatisfied. The countermeasures are those the runtime profile names
-for its history input: record integrity and the audit profile's
-transparency mechanisms (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-11.2-2" class="pilcrow">¶</a></p>
+on the record and the predicate. For a predicate that requires a
+completion, an omitted Execution Evidence record can deny the step,
+and an omitted Decision Evidence record of a permit that never
+completed can satisfy the predicate where the complete history leaves
+it unsatisfied. For a predicate that limits prior actions, either
+omission can satisfy it. Record integrity counters a forged record,
+not an omitted one; the audit profile's transparency mechanisms
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) counter omission.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="evidence-integrity-signing-keys">
@@ -4998,20 +5000,20 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Decision Evidence, Execution Evidence and Security Considerations:
-an emitter's per-Mission <code>sequence</code> starts at 0 and steps by one
-across every record type, and a position allocated to a record never
-emitted is a gap; exactly one Execution Evidence Object exists per
-execution, one per use of a multi-use permit and one per refused
-presentation, and a second completion of a single-use permit records
-an unauthorized execution; History Completeness states what sequence
-checks cannot detect and how an omitted record affects a history
-read (#2029).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Decision Evidence: <code>action_classes</code> records every class whose
+requirements the PDP applied, when more than one applies;
+<code>action_class</code> is defined as the assigned class (#1994). An emitter
+allocates <code>sequence</code> positions from 0, skipping none, across every
+record type, and an allocated position never emitted is a gap
+(#2029).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Decision Evidence: <code>action_classes</code> records every class whose
-requirements the PDP applied, when more than one applies;
-<code>action_class</code> is defined as the assigned class (#1994).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">Execution Evidence and Security Considerations: one record exists
+per execution, so a multi-use permit has one per use and a refused
+presentation its own; a second completion of a single-use permit is
+an unauthorized execution; History Completeness states what sequence
+checks cannot detect and how an omitted record affects a history
+read (#2029).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
           <p id="appendix-A-2.3.1">Refusal Record: <code>action_class_missing</code> also records a mediated

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-03T01:59:14Z
-Source repository commit: f3b2c399a426fc7ebfaefa308a94b303a23a2511
+Generated: 2026-11-03T02:15:47Z
+Source repository commit: 9db95882b8d075503b6dca68f7f4ab740bacf89a
 Member count: 9
 
 Reading order:
@@ -23246,10 +23246,12 @@ Table of Contents
    The history input (Section 2.7.10) makes prior evidence load-bearing
    for later decisions, so it is attacker-adjacent wherever evidence
    producers are compromised: a forged record is a forged precondition,
-   and a suppressed record denies the step that depends on it.  This is
-   the existing evidence-integrity story, not a new one; the record
-   integrity requirements of Section 11.3 and the transparency
-   mechanisms of the audit companion
+   and an omitted record can deny a step or satisfy a predicate the
+   complete history would not
+   ([I-D.draft-mcguinness-mission-runtime-evidence], Section "History
+   Completeness").  This is the existing evidence-integrity story, not a
+   new one; the record integrity requirements of Section 11.3 and the
+   transparency mechanisms of the audit companion
    ([I-D.draft-mcguinness-mission-audit]) are the countermeasures, and a
    deployment that makes history load-bearing weighs them as part of the
    decision path, not only as after-the-fact audit.  Shaping Evidence is
@@ -23759,6 +23761,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The History Input: an omitted record can deny a step or satisfy a
+      predicate the complete history would not, not only deny it
+      (#2029).
 
    *  Classes are ordered only in part, and the three highest are not
       ordered among themselves; an invocation the classifier cannot
@@ -24612,22 +24618,22 @@ Table of Contents
       reconstruct the decision basis.
 
    sequence:  REQUIRED.  An integer.  The per-Mission sequence indicator
-      the runtime profile requires, so one emitter's decision stream has
-      a verifiable order and gaps are detectable.  MUST be zero or
+      the runtime profile requires, so one emitter's record stream has a
+      verifiable order and gaps are detectable.  MUST be zero or
       greater.  The sequence is scoped to the emitter identified by
       emitter: each emitter maintains its own monotonically increasing
       per-Mission sequence, and a verifier detects gaps and orders
       records within (Mission, emitter).  An emitter MUST allocate its
-      first position for a Mission as 0 and each later position as one
-      greater than the last, across every record type it emits for that
-      Mission.  A position allocated to a record that is never emitted,
-      such as one whose signing failed, is a gap a verifier cannot tell
-      from a missing record.  The sequence does not reconstruct Mission-
-      wide decision order across emitters: cross-emitter ordering is
-      best-effort, established, where the deployment's evidence supports
-      it, from the correlation members (evaluation_id, mission.id,
-      hop_reference) together with each record's timestamps, not from
-      sequence alone.
+      sequence positions for a Mission in order from 0, skipping none,
+      across every record type it emits for that Mission.  A position
+      allocated to a record that is never emitted, such as one whose
+      signing failed or one a replica reserved and did not use, is a gap
+      a verifier cannot tell from a missing record.  The sequence does
+      not reconstruct Mission-wide decision order across emitters:
+      cross-emitter ordering is best-effort, established, where the
+      deployment's evidence supports it, from the correlation members
+      (evaluation_id, mission.id, hop_reference) together with each
+      record's timestamps, not from sequence alone.
 
    emitter:  REQUIRED.  An object.  The identity of the component that
       emitted and signed this record, with members id (REQUIRED, a
@@ -26479,25 +26485,26 @@ Table of Contents
 
    A record shows what it states; no set of records shows that no other
    record exists.  An emitter's sequence (Section 4) lets a verifier
-   detect a missing record before the last record it holds from that
-   emitter, including a missing first record.  It does not reveal
-   records after the last one held, or an emitter none of whose records
-   are held.  An emitter's stream is every record it emits for the
-   Mission, Refusal Records among them, so a gap check covers the whole
-   stream rather than one record type.
+   detect a gap before the last record it holds from that emitter,
+   including at the first position.  It does not reveal records after
+   the last one held, or an emitter none of whose records are held; an
+   emitter reading its own records also knows its last allocated
+   position, and so detects a missing tail.  An emitter's stream is
+   every record it emits for the Mission, Refusal Records among them, so
+   a gap check covers the whole stream rather than one record type.
 
    A consumer that decides on history, such as a PDP evaluating a
    history predicate ([I-D.draft-mcguinness-mission-runtime],
    Section "History"), therefore relies on its evidence store returning
    the complete, current Mission history.  The effect of an omission
-   depends on the record omitted.  An omitted Execution Evidence record
-   removes a completion, and the step that depends on it is denied.  An
-   omitted Decision Evidence record removes a permit: for a predicate
-   over every permit to which a class applied, omitting a permit that
-   never completed satisfies a predicate the complete history leaves
-   unsatisfied.  The countermeasures are those the runtime profile names
-   for its history input: record integrity and the audit profile's
-   transparency mechanisms ([I-D.draft-mcguinness-mission-audit]).
+   depends on the record and the predicate.  For a predicate that
+   requires a completion, an omitted Execution Evidence record can deny
+   the step, and an omitted Decision Evidence record of a permit that
+   never completed can satisfy the predicate where the complete history
+   leaves it unsatisfied.  For a predicate that limits prior actions,
+   either omission can satisfy it.  Record integrity counters a forged
+   record, not an omitted one; the audit profile's transparency
+   mechanisms ([I-D.draft-mcguinness-mission-audit]) counter omission.
 
 11.3.  Evidence integrity and signing keys
 
@@ -27058,19 +27065,19 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
-   *  Decision Evidence, Execution Evidence and Security Considerations:
-      an emitter's per-Mission sequence starts at 0 and steps by one
-      across every record type, and a position allocated to a record
-      never emitted is a gap; exactly one Execution Evidence Object
-      exists per execution, one per use of a multi-use permit and one
-      per refused presentation, and a second completion of a single-use
-      permit records an unauthorized execution; History Completeness
-      states what sequence checks cannot detect and how an omitted
-      record affects a history read (#2029).
-
    *  Decision Evidence: action_classes records every class whose
       requirements the PDP applied, when more than one applies;
-      action_class is defined as the assigned class (#1994).
+      action_class is defined as the assigned class (#1994).  An emitter
+      allocates sequence positions from 0, skipping none, across every
+      record type, and an allocated position never emitted is a gap
+      (#2029).
+
+   *  Execution Evidence and Security Considerations: one record exists
+      per execution, so a multi-use permit has one per use and a refused
+      presentation its own; a second completion of a single-use permit
+      is an unauthorized execution; History Completeness states what
+      sequence checks cannot detect and how an omitted record affects a
+      history read (#2029).
 
    *  Refusal Record: action_class_missing also records a mediated
       request carried with a class other than the one the PDP's trusted
@@ -28440,8 +28447,10 @@ Table of Contents
    applied, and every such permit has a completion witness: a linked
    Execution Evidence record
    ([I-D.draft-mcguinness-mission-runtime-evidence]) whose outcome is
-   completed and whose effective parameter and evaluation-context
-   digests equal its authorized ones.  The named class applied to a
+   completed and in which each authorized digest present
+   (authorized_parameter_digest, authorized_evaluation_context_digest)
+   has an equal effective counterpart (effective_parameter_digest,
+   effective_evaluation_context_digest).  The named class applied to a
    record when its action_classes member lists that class or, in a
    record without action_classes, its action_class is that class, so an
    execution the class applied to counts whichever class was assigned.
@@ -28458,19 +28467,24 @@ Table of Contents
 
    The predicate is per permit: a permit has a completion witness when
    any of its executions is one, so a failed use of a multi-use permit,
-   or a replay suppressed as permit_consumed, does not remove it.  A
-   predicate that requires every use of a permit to complete is a
-   different predicate type.  A completed record whose effective digest
-   differs from its authorized digest records an unauthorized execution
+   a replay suppressed as permit_consumed, or a second completion of a
+   single-use permit does not remove it.  A predicate that requires
+   every use of a permit to complete is a different predicate type.
+
+   A completed record whose effective digest differs from its authorized
+   digest records an unauthorized execution
    ([I-D.draft-mcguinness-mission-runtime-evidence]): it remains valid
    evidence, and it is not a completion witness.  A completed record
    that carries an authorized digest without its effective counterpart
-   is not a completion witness either, and where its permit has no
-   completion witness it leaves the predicate not establishable.  The
-   evaluation relies on the evidence store returning the complete,
-   current Mission history; sequence checks detect gaps only within the
-   records returned ([I-D.draft-mcguinness-mission-runtime-evidence],
-   Section "History Completeness").
+   is not a completion witness either, and a permit with such a record
+   and no witness has an undetermined completion.  The predicate is not
+   satisfied when some permit has neither a witness nor an undetermined
+   completion, and is otherwise not establishable while any permit's
+   completion is undetermined.  The evaluation relies on the evidence
+   store returning the complete, current Mission history; sequence
+   checks detect gaps only within the records returned
+   ([I-D.draft-mcguinness-mission-runtime-evidence], Section "History
+   Completeness").
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
@@ -30885,14 +30899,6 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
-   *  History Context: action_class_completed requires a completion
-      witness for every permit, a linked completed Execution Evidence
-      record whose effective digests equal its authorized ones; an
-      unauthorized execution is not one, a completed record missing an
-      effective digest leaves the predicate not establishable, a later
-      failed use or suppressed replay does not remove a witness, and the
-      evaluation relies on a complete history read (#2029).
-
    *  Changes a requirement (#1994): a mediated request carried with an
       action class other than the one the PDP's trusted declaration
       assigns its operation and phase has no class established, and the
@@ -30903,7 +30909,12 @@ Appendix A.  Document History
       a class that applies to the action calls for them, and
       action_class_completed counts a permit when the named class is in
       its action_classes, or is its action_class where the record
-      carries no action_classes (#1994).
+      carries no action_classes (#1994).  Every such permit needs a
+      completion witness, a linked completed record whose effective
+      digests equal the authorized ones; a digest deviation is none, a
+      failed use or suppressed replay removes none, a missing effective
+      digest leaves completion undetermined, and the evaluation relies
+      on a complete history read (#2029).
 
    *  Credential Decision Context: requiring a credential's whole
       authority description to be evaluable is this profile's credential

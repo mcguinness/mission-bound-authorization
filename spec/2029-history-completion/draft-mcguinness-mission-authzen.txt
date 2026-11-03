@@ -1229,8 +1229,10 @@ Table of Contents
    applied, and every such permit has a completion witness: a linked
    Execution Evidence record
    ([I-D.draft-mcguinness-mission-runtime-evidence]) whose outcome is
-   completed and whose effective parameter and evaluation-context
-   digests equal its authorized ones.  The named class applied to a
+   completed and in which each authorized digest present
+   (authorized_parameter_digest, authorized_evaluation_context_digest)
+   has an equal effective counterpart (effective_parameter_digest,
+   effective_evaluation_context_digest).  The named class applied to a
    record when its action_classes member lists that class or, in a
    record without action_classes, its action_class is that class, so an
    execution the class applied to counts whichever class was assigned.
@@ -1247,19 +1249,24 @@ Table of Contents
 
    The predicate is per permit: a permit has a completion witness when
    any of its executions is one, so a failed use of a multi-use permit,
-   or a replay suppressed as permit_consumed, does not remove it.  A
-   predicate that requires every use of a permit to complete is a
-   different predicate type.  A completed record whose effective digest
-   differs from its authorized digest records an unauthorized execution
+   a replay suppressed as permit_consumed, or a second completion of a
+   single-use permit does not remove it.  A predicate that requires
+   every use of a permit to complete is a different predicate type.
+
+   A completed record whose effective digest differs from its authorized
+   digest records an unauthorized execution
    ([I-D.draft-mcguinness-mission-runtime-evidence]): it remains valid
    evidence, and it is not a completion witness.  A completed record
    that carries an authorized digest without its effective counterpart
-   is not a completion witness either, and where its permit has no
-   completion witness it leaves the predicate not establishable.  The
-   evaluation relies on the evidence store returning the complete,
-   current Mission history; sequence checks detect gaps only within the
-   records returned ([I-D.draft-mcguinness-mission-runtime-evidence],
-   Section "History Completeness").
+   is not a completion witness either, and a permit with such a record
+   and no witness has an undetermined completion.  The predicate is not
+   satisfied when some permit has neither a witness nor an undetermined
+   completion, and is otherwise not establishable while any permit's
+   completion is undetermined.  The evaluation relies on the evidence
+   store returning the complete, current Mission history; sequence
+   checks detect gaps only within the records returned
+   ([I-D.draft-mcguinness-mission-runtime-evidence], Section "History
+   Completeness").
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
@@ -3674,14 +3681,6 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
-   *  History Context: action_class_completed requires a completion
-      witness for every permit, a linked completed Execution Evidence
-      record whose effective digests equal its authorized ones; an
-      unauthorized execution is not one, a completed record missing an
-      effective digest leaves the predicate not establishable, a later
-      failed use or suppressed replay does not remove a witness, and the
-      evaluation relies on a complete history read (#2029).
-
    *  Changes a requirement (#1994): a mediated request carried with an
       action class other than the one the PDP's trusted declaration
       assigns its operation and phase has no class established, and the
@@ -3692,7 +3691,12 @@ Appendix A.  Document History
       a class that applies to the action calls for them, and
       action_class_completed counts a permit when the named class is in
       its action_classes, or is its action_class where the record
-      carries no action_classes (#1994).
+      carries no action_classes (#1994).  Every such permit needs a
+      completion witness, a linked completed record whose effective
+      digests equal the authorized ones; a digest deviation is none, a
+      failed use or suppressed replay removes none, a missing effective
+      digest leaves completion undetermined, and the evaluation relies
+      on a complete history read (#2029).
 
    *  Credential Decision Context: requiring a credential's whole
       authority description to be evaluable is this profile's credential
