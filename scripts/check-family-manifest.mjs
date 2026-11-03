@@ -1447,7 +1447,11 @@ function main() {
   // Chained sub-check (#1176 item 5): the baseline Mission fixture and its
   // README's variant table are what the generator builds.
   const baseline = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "generate-baseline-fixture.mjs"), "--check"], { stdio: "inherit" });
-  process.exit((sub.status ?? 1) || (examples.status ?? 1) || (projection.status ?? 1) || (digests.status ?? 1) || (baseline.status ?? 1));
+  // Chained sub-check (#2009 P4): the OAuth binding's core-standalone example
+  // fixture is what its generator builds, after reproducing the binding's
+  // integrity-anchor test vectors.
+  const standalone = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "generate-core-standalone-fixture.mjs"), "--check"], { stdio: "inherit" });
+  process.exit((sub.status ?? 1) || (examples.status ?? 1) || (projection.status ?? 1) || (digests.status ?? 1) || (baseline.status ?? 1) || (standalone.status ?? 1));
 }
 
 // Guarded the same way as generate-drafts-index.mjs and
