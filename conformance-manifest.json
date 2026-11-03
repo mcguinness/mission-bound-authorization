@@ -28287,6 +28287,36 @@
    "notes": "#1686. Proved by mutation: doubling the issued access-token lifetime fails the witness."
   },
   {
+   "id": "status.revocation-propagation.advertise-max-stale",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "revocation-enforcement-classes",
+   "text": "A deployment that claims revocation propagation ({{conformance}}) advertises `mission_max_stale_seconds` ({{as-metadata}}), the ceiling, in seconds, on reliance on an observation of Mission state",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with revocation propagation claimed, the AS's authorization server metadata carries `mission_max_stale_seconds`, the deployment's ceiling in seconds on reliance on an observation of Mission state",
+    "local": "The reference switches the claim with its `revocation-propagation` provider capability (adapters/capabilities.ts, #2018); the advertised value is the configured `MISSION_MAX_STALE_SECONDS`."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/revocation-propagation-capability.test.ts",
+     "name": "the Revocation propagation capability switch owns mission_max_stale_seconds (#2018; @spec status#as-metadata, status#conformance) > on, the deployment advertises the issuer's ceiling, the bound the access-token lifetime is sized to",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#2022 (D1233): a pre-existing Mission Status gap, filed from #2021's review. Witness from #2018 (PR #2021, 3bcbe6d6, D1240): with the capability claimed, the metadata carries the configured ceiling. Mutation proof (2026-11-03, on the row's commit): replacing the gate in adapters/provider.ts (`if (enabled(\"revocation-propagation\")) meta.mission_max_stale_seconds = ...`) with `if (false)` fails the cited test, and the join test, whose enabled control expects the member; restoring it passes both. Composition limit, disclosed in #2021: an assembly that wires a Signals emitter with `revocation-propagation` off would not advertise the member, and construction cannot detect that; the claim is the deployment's, through the capability."
+  },
+  {
    "id": "management.bulk.scheduled-resume-grant-dry-run",
    "spec": "draft-mcguinness-oauth-mission-management.md",
    "anchor": "dry-run",
