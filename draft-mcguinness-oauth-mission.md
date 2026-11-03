@@ -377,9 +377,11 @@ examples assume that it authorizes initiating one described credit
 transfer at `https://example.com/payments` (EUR 123.50 to Merchant A,
 with its remittance text) and checking or cancelling that transfer;
 that the AS declares no transformation for the type, so the approved
-entry is the proposed one unchanged; and that the payments resource
-server permits an initiation only when its amount, currency, creditor
-and remittance text equal the entry's. These assumptions belong to the
+entry is the proposed one unchanged; that the entry, which carries
+`locations` rather than a `resource` member, has the payments resource
+server as its approved audience; and that the payments resource server
+permits an initiation only when its amount, currency, creditor and
+remittance text equal the entry's. These assumptions belong to the
 examples, not to this document.
 
 The following example shows a registered client initiating that
