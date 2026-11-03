@@ -1451,7 +1451,10 @@ function main() {
   // fixture is what its generator builds, after reproducing the binding's
   // integrity-anchor test vectors.
   const standalone = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "generate-core-standalone-fixture.mjs"), "--check"], { stdio: "inherit" });
-  process.exit((sub.status ?? 1) || (examples.status ?? 1) || (projection.status ?? 1) || (digests.status ?? 1) || (baseline.status ?? 1) || (standalone.status ?? 1));
+  // Chained sub-check (#2009 P4, plan step 7): the binding's displayed
+  // payment examples agree with that fixture.
+  const display = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "check-core-standalone-display.mjs")], { stdio: "inherit" });
+  process.exit((sub.status ?? 1) || (examples.status ?? 1) || (projection.status ?? 1) || (digests.status ?? 1) || (baseline.status ?? 1) || (standalone.status ?? 1) || (display.status ?? 1));
 }
 
 // Guarded the same way as generate-drafts-index.mjs and
