@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-03T01:18:06Z
-Source repository commit: 0e91c836fa9c11e8945bc78f334972c20c99c9db
+Generated: 2026-11-03T05:45:09Z
+Source repository commit: 3234389a2cd4a77efa200fd5e85dc8e4f8de4f06
 Member count: 7
 
 Reading order:
@@ -23244,10 +23244,12 @@ Table of Contents
    The history input (Section 2.7.10) makes prior evidence load-bearing
    for later decisions, so it is attacker-adjacent wherever evidence
    producers are compromised: a forged record is a forged precondition,
-   and a suppressed record denies the step that depends on it.  This is
-   the existing evidence-integrity story, not a new one; the record
-   integrity requirements of Section 11.3 and the transparency
-   mechanisms of the audit companion
+   and an omitted record can deny a step or satisfy a predicate the
+   complete history would not
+   ([I-D.draft-mcguinness-mission-runtime-evidence], Section "History
+   Completeness").  This is the existing evidence-integrity story, not a
+   new one; the record integrity requirements of Section 11.3 and the
+   transparency mechanisms of the audit companion
    ([I-D.draft-mcguinness-mission-audit]) are the countermeasures, and a
    deployment that makes history load-bearing weighs them as part of the
    decision path, not only as after-the-fact audit.  Shaping Evidence is
@@ -23758,6 +23760,10 @@ Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  The History Input: an omitted record can deny a step or satisfy a
+      predicate the complete history would not, not only deny it
+      (#2029).
+
    *  Classes are ordered only in part, and the three highest are not
       ordered among themselves; an invocation the classifier cannot
       place is treated under every class the operation can reach.
@@ -24160,9 +24166,10 @@ Table of Contents
      10.1.  Compromise-Boundary Outcomes
    11. Security Considerations
      11.1.  Decision Evidence versus Execution Evidence
-     11.2.  Evidence integrity and signing keys
-     11.3.  Transport
-     11.4.  Mission Receipt
+     11.2.  History Completeness
+     11.3.  Evidence integrity and signing keys
+     11.4.  Transport
+     11.5.  Mission Receipt
    12. Privacy Considerations
      12.1.  Evidence as PII sinks
      12.2.  Parameter exposure
@@ -24367,13 +24374,13 @@ Table of Contents
    |             |           |keys, so a party with access to that    |
    |             |           |statement verifies a record             |
    |             |           |independently of the deployment that    |
-   |             |           |emitted it (Section 11.2)               |
+   |             |           |emitted it (Section 11.3)               |
    +-------------+-----------+----------------------------------------+
    |Portable     |not        |Not supplied by this document alone:    |
    |Evidence     |consumed   |portability beyond a party with access  |
    |             |           |to the deployment's published keys      |
    |             |           |requires the transparency mechanisms of |
-   |             |           |the audit profile (Section 11.2,        |
+   |             |           |the audit profile (Section 11.3,        |
    |             |           |[I-D.draft-mcguinness-mission-audit])   |
    +-------------+-----------+----------------------------------------+
 
@@ -24609,17 +24616,22 @@ Table of Contents
       reconstruct the decision basis.
 
    sequence:  REQUIRED.  An integer.  The per-Mission sequence indicator
-      the runtime profile requires, so one emitter's decision stream has
-      a verifiable order and gaps are detectable.  MUST be zero or
+      the runtime profile requires, so one emitter's record stream has a
+      verifiable order and gaps are detectable.  MUST be zero or
       greater.  The sequence is scoped to the emitter identified by
       emitter: each emitter maintains its own monotonically increasing
       per-Mission sequence, and a verifier detects gaps and orders
-      records within (Mission, emitter).  It does not reconstruct
-      Mission-wide decision order across emitters: cross-emitter
-      ordering is best-effort, established, where the deployment's
-      evidence supports it, from the correlation members (evaluation_id,
-      mission.id, hop_reference) together with each record's timestamps,
-      not from sequence alone.
+      records within (Mission, emitter).  An emitter MUST allocate its
+      sequence positions for a Mission in order from 0, skipping none,
+      across every record type it emits for that Mission.  A position
+      allocated to a record that is never emitted, such as one whose
+      signing failed or one a replica reserved and did not use, is a gap
+      a verifier cannot tell from a missing record.  The sequence does
+      not reconstruct Mission-wide decision order across emitters:
+      cross-emitter ordering is best-effort, established, where the
+      deployment's evidence supports it, from the correlation members
+      (evaluation_id, mission.id, hop_reference) together with each
+      record's timestamps, not from sequence alone.
 
    emitter:  REQUIRED.  An object.  The identity of the component that
       emitted and signed this record, with members id (REQUIRED, a
@@ -25001,7 +25013,7 @@ Table of Contents
 
    Where the selected signing key is identified as compromised by the
    deployment-defined key-status mechanism, the verifier MUST apply the
-   compromise-boundary rule of Section 11.2 before treating the
+   compromise-boundary rule of Section 11.3 before treating the
    signature as verified: only an independently trusted existence proof
    over the complete signed artifact, or its unambiguous typed digest,
    establishing existence before the authenticated boundary permits the
@@ -25011,7 +25023,7 @@ Table of Contents
    The JWS protected header MUST carry:
 
    *  kid: a key identifier resolvable in the emitter's published JWKS
-      (Section 11.2), so a verifier can select the emitter's signing key
+      (Section 11.3), so a verifier can select the emitter's signing key
       independently.
 
    *  alg: ES256 [RFC7518] is mandatory to implement; an implementation
@@ -25189,11 +25201,20 @@ Table of Contents
 
    execution_id:  REQUIRED.  A string.  Unique execution identifier,
       stable across delivery retries of this record: exactly one
-      Execution Evidence Object exists per final disposition of a
-      permit, and delivery of that record is at-least-once, so a
-      consumer MUST deduplicate on execution_id rather than assume
-      single delivery.  ABNF: 1*64( ALPHA / DIGIT / "-" / "_" ).  At
-      least 128 bits of entropy.
+      Execution Evidence Object exists per execution, and delivery of
+      that record is at-least-once, so a consumer MUST deduplicate on
+      execution_id rather than assume single delivery.  ABNF: 1*64(
+      ALPHA / DIGIT / "-" / "_" ).  At least 128 bits of entropy.
+
+      An execution is the final disposition of one presentation of a
+      permit.  A multi-use permit has one record per use, and its uses
+      may differ in outcome; a presentation the PEP refuses, such as a
+      consumed single-use permit presented again (permit_consumed), is a
+      suppressed execution of its own.  A single-use permit has one
+      authorized completion, the one that took its single use: any other
+      completed record under it records an unauthorized execution,
+      whatever its digests, and the records themselves do not show which
+      completion took the use.
 
    evaluation_id:  REQUIRED.  A string.  Correlates this record with the
       linked Decision Evidence's own evaluation_id (Section 4), and with
@@ -25646,7 +25667,7 @@ Table of Contents
       enforcement scope statement already names (the PDP, or an
       executing PEP), and the statement declares which of them issue
       receipts; the verifier resolves the signing key through that
-      statement's published key sets (Section 11.2) and rejects an
+      statement's published key sets (Section 11.3) and rejects an
       emitter the statement does not name as a receipt issuer.  A self-
       published key presenting role receipt_issuer establishes nothing
       (Section 6.5).
@@ -25783,7 +25804,7 @@ Table of Contents
    rely on a receipt if any step fails.  Where the receipt issuer's
    signing key is identified as compromised, these steps are
    additionally governed by the compromise-boundary rule of
-   Section 11.2:
+   Section 11.3:
 
    1.  Verify the receipt's evidence_envelope: decode the JWS payload,
        compute the JCS canonical bytes of the receipt with
@@ -25793,7 +25814,7 @@ Table of Contents
        protected cty is application/mission-receipt+json, and verify the
        signature against the published key resolved by the JWS kid for
        the party named in emitter, through the enforcement scope
-       statement's published key sets (Section 11.2).  Confirm that
+       statement's published key sets (Section 11.3).  Confirm that
        statement names the emitter as a receipt issuer; the receipt's
        Mission binding is established by the verified records and the
        joins of step 4, never by key publication alone.
@@ -26044,7 +26065,7 @@ Table of Contents
    |           |that carried |                                         |record      |
    |           |the action   |                                         |contents and|
    |           |(Section     |                                         |linked state|
-   |           |11.2);       |                                         |evidence,   |
+   |           |11.3);       |                                         |evidence,   |
    |           |retired keys |                                         |not         |
    |           |stay         |                                         |consequences|
    |           |resolvable   |                                         |of signature|
@@ -26059,7 +26080,7 @@ Table of Contents
    |           |compromise-  |                                         |            |
    |           |boundary rule|                                         |            |
    |           |of           |                                         |            |
-   |           |Section 11.2:|                                         |            |
+   |           |Section 11.3:|                                         |            |
    |           |an artifact's|                                         |            |
    |           |own asserted |                                         |            |
    |           |timestamps   |                                         |            |
@@ -26086,7 +26107,7 @@ Table of Contents
    |           |emitting     |                                         |            |
    |           |deployment   |                                         |            |
    |           |(Section     |                                         |            |
-   |           |11.2)        |                                         |            |
+   |           |11.3)        |                                         |            |
    +-----------+-------------+-----------------------------------------+------------+
 
    Table 3: Evidence properties: what the records prove, and under which
@@ -26383,7 +26404,7 @@ Table of Contents
 
    A CONSUMER or VERIFIER conforming to this document MUST perform the
    byte-equality verification procedure and key checks of Section 4.3
-   against the emitter's published keys (Section 11.2), and classify
+   against the emitter's published keys (Section 11.3), and classify
    orphaned Decision Evidence and cross-record digest divergence as
    Section 11 and Section 5 require, never as proof of action.
 
@@ -26414,7 +26435,7 @@ Table of Contents
 10.1.  Compromise-Boundary Outcomes
 
    A VERIFIER and a RECEIPT VERIFIER conform to the compromise-boundary
-   rule (Section 11.2) when each of the following holds:
+   rule (Section 11.3) when each of the following holds:
 
    *  a self-asserted pre-boundary timestamp does not rescue a record
       signed under a compromised key;
@@ -26460,7 +26481,32 @@ Table of Contents
    undetermined-outcome or, per deployment policy, as action-attempted;
    it MUST NOT treat it as proof of action.
 
-11.2.  Evidence integrity and signing keys
+11.2.  History Completeness
+
+   A record shows what it states; no set of records shows that no other
+   record exists.  An emitter's sequence (Section 4) lets a verifier
+   detect a gap before the last record it holds from that emitter,
+   including at the first position.  It does not reveal records after
+   the last one held, or an emitter none of whose records are held; an
+   emitter reading its own records also knows its last allocated
+   position, and so detects a missing tail.  An emitter's stream is
+   every record it emits for the Mission, Refusal Records among them, so
+   a gap check covers the whole stream rather than one record type.
+
+   A consumer that decides on history, such as a PDP evaluating a
+   history predicate ([I-D.draft-mcguinness-mission-runtime],
+   Section "History"), therefore relies on its evidence store returning
+   the complete, current Mission history.  The effect of an omission
+   depends on the record and the predicate.  For a predicate that
+   requires a completion, an omitted Execution Evidence record can deny
+   the step, and an omitted Decision Evidence record of a permit that
+   never completed can satisfy the predicate where the complete history
+   leaves it unsatisfied.  For a predicate that limits prior actions,
+   either omission can satisfy it.  Record integrity counters a forged
+   record, not an omitted one; the audit profile's transparency
+   mechanisms ([I-D.draft-mcguinness-mission-audit]) counter omission.
+
+11.3.  Evidence integrity and signing keys
 
    The evidence_envelope binds each record to the emitting PDP or PEP.
    The PDP's jws-compact signing key MUST be resolvable, by the JWS
@@ -26539,13 +26585,13 @@ Table of Contents
    profile ([I-D.draft-mcguinness-mission-audit]), where a deployment
    adopts them.
 
-11.3.  Transport
+11.4.  Transport
 
    Audit channels carrying Decision Evidence and Execution Evidence MUST
    be served over TLS 1.2 or later (TLS 1.3 RECOMMENDED).  Evidence at
    rest MUST be encrypted per the deployment's data-protection posture.
 
-11.4.  Mission Receipt
+11.5.  Mission Receipt
 
    A Mission Receipt that copies fields from its underlying evidence
    invites a verifier to treat the receipt signer as authoritative for
@@ -26560,7 +26606,7 @@ Table of Contents
    independently.
 
    A compromised receipt-issuer signing key is governed by the
-   compromise-boundary rule of Section 11.2, applied during Receipt
+   compromise-boundary rule of Section 11.3, applied during Receipt
    verification (Section 6.5): timestamps asserted by the receipt itself
    never establish that its signature predates the boundary.
 
@@ -27021,7 +27067,17 @@ Appendix A.  Document History
 
    *  Decision Evidence: action_classes records every class whose
       requirements the PDP applied, when more than one applies;
-      action_class is defined as the assigned class (#1994).
+      action_class is defined as the assigned class (#1994).  An emitter
+      allocates sequence positions from 0, skipping none, across every
+      record type, and an allocated position never emitted is a gap
+      (#2029).
+
+   *  Execution Evidence and Security Considerations: one record exists
+      per execution, so a multi-use permit has one per use and a refused
+      presentation its own; a single-use permit's completion other than
+      the one that took its use is an unauthorized execution; History
+      Completeness states what sequence checks cannot detect and how an
+      omitted record affects a history read (#2029).
 
    *  Refusal Record: action_class_missing also records a mediated
       request carried with a class other than the one the PDP's trusted
@@ -28388,22 +28444,59 @@ Table of Contents
    action_class_completed.  It is satisfied when the PDP's evidence
    store holds, for the established Mission, at least one Decision
    Evidence record with decision permit to which the named class
-   applied, and every such record has a linked Execution Evidence record
+   applied, and every such permit has a completion witness: a linked
+   Execution Evidence record
    ([I-D.draft-mcguinness-mission-runtime-evidence]) whose outcome is
-   completed.  The named class applied to a record when its
-   action_classes member lists that class or, in a record without
-   action_classes, its action_class is that class, so an execution the
-   class applied to counts whichever class was assigned.  The predicate
-   carries an action_class: a runtime action class name, from the same
-   value space as the Decision Evidence action_class member
-   ([I-D.draft-mcguinness-mission-runtime-evidence]).  For a migration
-   Mission whose copy steps are consequential writes, policy names the
-   delete step's precondition this way:
+   completed and in which each authorized digest present
+   (authorized_parameter_digest, authorized_evaluation_context_digest)
+   has an equal effective counterpart (effective_parameter_digest,
+   effective_evaluation_context_digest).  The named class applied to a
+   record when its action_classes member lists that class or, in a
+   record without action_classes, its action_class is that class, so an
+   execution the class applied to counts whichever class was assigned.
+   The predicate carries an action_class: a runtime action class name,
+   from the same value space as the Decision Evidence action_class
+   member ([I-D.draft-mcguinness-mission-runtime-evidence]).  For a
+   migration Mission whose copy steps are consequential writes, policy
+   names the delete step's precondition this way:
 
    {
      "predicate": "action_class_completed",
      "action_class": "consequential_write"
    }
+
+   The predicate is per permit: a permit has a completion witness when
+   any of its executions is one, so a failed use of a multi-use permit,
+   or a replay suppressed as permit_consumed, does not remove it.  A
+   predicate that requires every use of a permit to complete is a
+   different predicate type.
+
+   A single-use permit has one authorized completion
+   ([I-D.draft-mcguinness-mission-runtime-evidence]): only the
+   completion that took its single use can be its witness, and any other
+   completed record under it creates none, whatever its digests.  The
+   order in which records reach the evidence store does not establish
+   which completion took the use, nor do the records' sequence or
+   timestamps.  Where no trusted source, such as the PEP's consumed-
+   identifier store, establishes it, a single-use permit with more than
+   one completed record has a witness only when each of them would be
+   one on its own, and its completion is undetermined when only some
+   would.
+
+   A completed record whose effective digest differs from its authorized
+   digest records an unauthorized execution
+   ([I-D.draft-mcguinness-mission-runtime-evidence]): it remains valid
+   evidence, and it is not a completion witness.  A completed record
+   that carries an authorized digest without its effective counterpart
+   is not a completion witness either, and a permit with such a record
+   and no witness has an undetermined completion.  The predicate is not
+   satisfied when some permit has neither a witness nor an undetermined
+   completion, and is otherwise not establishable while any permit's
+   completion is undetermined.  The evaluation relies on the evidence
+   store returning the complete, current Mission history; sequence
+   checks detect gaps only within the records returned
+   ([I-D.draft-mcguinness-mission-runtime-evidence], Section "History
+   Completeness").
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
@@ -30828,7 +30921,13 @@ Appendix A.  Document History
       a class that applies to the action calls for them, and
       action_class_completed counts a permit when the named class is in
       its action_classes, or is its action_class where the record
-      carries no action_classes (#1994).
+      carries no action_classes (#1994).  Every such permit needs a
+      completion witness, a linked completed record whose effective
+      digests equal the authorized ones; a digest deviation is none, a
+      failed use or suppressed replay removes none, a single-use
+      permit's completion other than the one that took its use creates
+      none, a missing effective digest leaves completion undetermined,
+      and the evaluation relies on a complete history read (#2029).
 
    *  Credential Decision Context: requiring a credential's whole
       authority description to be evaluable is this profile's credential
