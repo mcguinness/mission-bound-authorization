@@ -2206,84 +2206,57 @@ The following is an example of a Mission Record:
 =============== NOTE: '\' line wrapping per RFC 8792 ===============
 
 {
-  "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
   "issuer": "https://as.example.com",
   "state": "active",
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments of at most \
-      USD 500 per journal entry.",
-    "target_resources": ["https://erp.example.com"],
-    "task_bounds": [
-      "Read only invoices issued in 2026-Q3.",
-      "Post journal entries of at most USD 500 each."
-    ],
-    "purpose": "urn:example:purpose:reconcile",
-    "expires_at": "2026-12-31T23:59:59Z" },
+    "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+      with reference Ref Number Merchant, and check or cancel it.",
+    "target_resources": ["https://example.com/payments"],
+    "expires_at": "2026-11-02T13:00:00Z" },
   "proposed_authority": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.*"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "authority_set": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "authority_hash":
-    "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY",
   "intent_hash":
-    "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
+    "sha-256:Vo-xrC5HtrAUS9ZAPSWhhpLd7fr43eQsbH6AMiooa5Y",
   "proposal_hash":
-    "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
+    "sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg",
   "subject": { "iss": "https://idp.example.com",
-    "sub": "user_3p2q8mN1a0kV7tR" },
+    "sub": "user_5Tn8qW2xK7mR4vBc" },
   "approval_basis": {
     "type": "direct",
     "consent_principal": { "iss": "https://idp.example.com",
-      "sub": "user_3p2q8mN1a0kV7tR" },
-    "activation": { "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z" },
-    "activation_actor": { "iss": "https://idp.example.com",
-      "sub": "user_3p2q8mN1a0kV7tR" },
-    "adjudication": { "kind": "human" },
-    "root_commitment":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+      "sub": "user_5Tn8qW2xK7mR4vBc" }
   },
   "authority_source": { "type": "user_delegated" },
-  "client_id": "s6BhdRkqt3",
-  "policy_version": "deploy-policy:v17",
-  "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-  "created_at": "2026-11-02T08:00:00Z",
-  "expires_at": "2026-12-31T23:59:59Z"
+  "client_id": "pq7Lm2Xz9K",
+  "approval_event_id": "ape_3Hq8Lm2Vx7Rz9Tc4",
+  "created_at": "2026-11-02T12:00:00Z",
+  "expires_at": "2026-11-02T13:00:00Z"
 }
 ~~~
+
+Its `direct` basis omits `activation`, `activation_actor` and
+`root_commitment`, which take their implied values
+({{record-principal-members}}), and it carries no `adjudication` or
+`policy_version`.
 
 The following example shows an excerpt, other members omitted, of a
 Mission for an agent acting for its own workload principal: `subject`
