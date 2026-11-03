@@ -1583,6 +1583,22 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       }
     });
 
+    it("only a fresh human approval replaces the rendered maximum: after the ceiling is raised under the same policy_version and a restart, the earlier parent's children stay at 3, while a parent freshly approved under the raised ceiling admits children at its figure", () => {
+      const lineage = limitLineage(3, [undefined], onFile());
+      expect(lineage.child().derivation_limit).toBe(3);
+      const k = lineage.reopenWithCeiling(5);
+      try {
+        const fresh = lineage.approveParent();
+        expect(fresh.policy_version).toBe(lineage.parent.policy_version);
+        expect(fresh.child_derivation_maxima).toEqual([{ finite: 5 }]);
+        expect(lineage.childOf(fresh.id).derivation_limit).toBe(5);
+        expect(lineage.child().derivation_limit).toBe(3);
+        expect(lineage.child(5).derivation_limit).toBe(3);
+      } finally {
+        k.close();
+      }
+    });
+
     it("an entry committing a child_creation_policy is unaffected by the deployment ceiling: removed or raised under the same policy_version after a restart, its snapshot's figure still binds (control)", () => {
       const lineage = limitLineage(5, [stating({ derivation_limit_ceiling: 3 })], onFile());
       expect(lineage.parent.child_derivation_maxima).toEqual([null]);

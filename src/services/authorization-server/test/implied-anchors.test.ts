@@ -541,12 +541,18 @@ describe("migration: nullable anchor columns (@spec mission#record-content-membe
     const dir = mkdtempSync(join(tmpdir(), "implied-anchors-"));
     const source = makeKernel({ file: join(dir, "source.db") });
     const ids = [approve(source).id, approve(source, null).id];
-    const records = ids.map((id) => stored(source, id));
+    // A row of such a store retains no per-child figure (#2026): that column
+    // is added in place, empty, when the store is next opened.
+    const records = ids.map((id) => {
+      const { child_derivation_maxima: _figures, ...record } = stored(source, id);
+      return record;
+    });
     const rows = source.db.prepare("SELECT * FROM missions ORDER BY id").all() as Array<Record<string, unknown>>;
     source.db.close();
     const file = join(dir, "kernel.db");
     const db = openStore(PRE_1917_MISSIONS, { file });
-    const columns = Object.keys(rows[0] as object);
+    const legacy = new Set((db.prepare("PRAGMA table_info(missions)").all() as Array<{ name: string }>).map((c) => c.name));
+    const columns = Object.keys(rows[0] as object).filter((c) => legacy.has(c));
     const insert = db.prepare(
       `INSERT INTO missions (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
     );
@@ -570,6 +576,8 @@ describe("migration: nullable anchor columns (@spec mission#record-content-membe
     }
   };
   const notnull = (facts: ReturnType<typeof inspect>, name: string) => facts.columns.find((c) => c.name === name)?.notnull;
+  /** The additive column a later open adds in place (#2026), set aside where the rebuild alone is compared. */
+  const ADDED = "child_derivation_maxima_json";
 
   it("rebuilds a store whose anchor columns are NOT NULL once, keeping every record byte-identical with its anchors present", () => {
     const { file, ids, records } = preRebuildStore();
@@ -593,17 +601,20 @@ describe("migration: nullable anchor columns (@spec mission#record-content-membe
     // Every other column, the PRIMARY KEY, both UNIQUE constraints, the
     // defaults and STRICT: the definition differs only by the two clauses
     // (and the table name, which SQLite's RENAME writes quoted).
-    expect(after.sql.replace('CREATE TABLE "missions"', "CREATE TABLE missions")).toBe(
+    expect(after.sql.replace('CREATE TABLE "missions"', "CREATE TABLE missions").replace(new RegExp(`,\\s*${ADDED} TEXT`), "")).toBe(
       before.sql
         .replace("intent_hash TEXT NOT NULL", "intent_hash TEXT")
         .replace("authority_hash TEXT NOT NULL", "authority_hash TEXT"),
     );
     expect(after.indexes.map(({ seq: _s, ...i }) => i)).toEqual(before.indexes.map(({ seq: _s, ...i }) => i));
-    expect(after.columns.filter((c) => !["intent_hash", "authority_hash"].includes(c.name))).toEqual(
+    expect(after.columns.filter((c) => !["intent_hash", "authority_hash", ADDED].includes(c.name))).toEqual(
       before.columns.filter((c) => !["intent_hash", "authority_hash"].includes(c.name)),
     );
-    // Every stored value, rowids included, is unchanged.
-    expect(after.rows).toEqual(before.rows);
+    // Every stored value, rowids included, is unchanged; the added column is empty.
+    expect(after.rows.map((row) => (row as Record<string, unknown>)[ADDED])).toEqual(before.rows.map(() => null));
+    expect(after.rows.map((row) => Object.fromEntries(Object.entries(row as object).filter(([name]) => name !== ADDED)))).toEqual(
+      before.rows,
+    );
   });
 
   // Mutation: removing the notnull guard rebuilds on every open, and the
