@@ -319,6 +319,40 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(historyOf(negative)?.[0]?.outcome).toBe("unavailable");
   });
 
+  it("fails closed when a Decision Evidence stream does not start at its origin: 0 for the reference emitter, or the origin the binding declares", async () => {
+    // From the owner's review probe "reference stream missing its initial zero" (#2017):
+    // a store returning the stream from position 1 has omitted position 0.
+    const w1Done = await executionRecord({ evaluation_id: "w1", outcome: "completed" });
+    const suffix = [await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: 1 }), w1Done];
+    const decision = await evaluate(request(), options(historyBinding(suffix)));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(decision)).toEqual([{ predicate: "action_class_completed", action_class: "consequential_write", outcome: "unavailable" }]);
+    // A deployment whose emitter starts elsewhere declares the origin; the returned minimum never sets it.
+    const fromFive = [
+      await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: 5 }),
+      w1Done,
+      await decisionRecord({ evaluation_id: "w2", action_class: "consequential_write", sequence: 6 }),
+      await executionRecord({ evaluation_id: "w2", outcome: "completed", sequence: 1 }),
+    ];
+    const origins: Array<{ id: string; role: string }> = [];
+    const declared = await evaluate(
+      request(),
+      options({
+        ...historyBinding(fromFive),
+        sequenceOrigin: (emitter) => {
+          origins.push(emitter);
+          return emitter.id === PDP_ID ? 5 : undefined;
+        },
+      }),
+    );
+    expect(declared.decision, JSON.stringify(declared.context)).toBe(true);
+    expect(origins).toEqual([{ id: PDP_ID, role: "pdp" }]);
+    const undeclared = await evaluate(request(), options(historyBinding(fromFive)));
+    expect(undeclared.decision).toBe(false);
+    expect(historyOf(undeclared)?.[0]?.outcome).toBe("unavailable");
+  });
+
   it("counts a record delivered twice once, and fails closed when one execution_id carries different content", async () => {
     const w1 = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" });
     const w1Done = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1" });

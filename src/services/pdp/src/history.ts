@@ -12,6 +12,13 @@
  * predicate is `unavailable`: the decision fails closed. No predicate outcome
  * is ever taken from a request member.
  *
+ * Completeness: the reader's contract is the Mission's complete, current
+ * history. Each Decision Evidence stream must start at its trusted origin (0
+ * for this reference's emitter) and run without a gap or a reused position.
+ * That detects a missing first or interior record. It cannot detect a missing
+ * suffix (the most recent records) or a stream missing entirely, so the
+ * sequence check is no proof that the history is complete.
+ *
  * Cost and reach: each decision that selects a predicate reads the Mission's
  * whole retained history and verifies every record, one signature each,
  * uncached, so its cost grows linearly with the Mission's records. One record
@@ -66,10 +73,15 @@ export type HistoryPolicy = (input: HistorySelectionInput) => ReadonlyArray<Hist
 
 /**
  * The deployment's retained evidence, as stored: complete outer records, each
- * carrying its `evidence_envelope`. A read that cannot be completed rejects;
- * the PDP then treats every selected predicate as `unavailable`, as it does
- * when the read outlasts {@link HistoryBinding.readTimeoutMs}, after which
- * `signal` is aborted and any later result is ignored.
+ * carrying its `evidence_envelope`. A reader MUST return the Mission's
+ * complete, current history: every Decision Evidence record of every stream
+ * (denies included) and every Execution Evidence record retained for the
+ * Mission. The PDP's sequence checks detect a missing first or interior
+ * record, never a missing suffix or a missing stream. A read that cannot be
+ * completed rejects; the PDP then treats every selected predicate as
+ * `unavailable`, as it does when the read outlasts
+ * {@link HistoryBinding.readTimeoutMs}, after which `signal` is aborted and
+ * any later result is ignored.
  */
 export interface HistoryEvidenceReader {
   records(mission: { id: string; issuer: string }, options?: { signal: AbortSignal }): Promise<ReadonlyArray<unknown>>;
@@ -109,6 +121,17 @@ export interface HistoryBinding {
    * selected predicate `unavailable`.
    */
   readTimeoutMs?: number;
+  /**
+   * The first `sequence` position of a Decision Evidence stream, from trusted
+   * deployment metadata, never from the records a read returns. Absent, every
+   * stream starts at 0, this reference emitter's origin (its
+   * `DecisionEvidenceSequences` start each (Mission, emitter) counter at 0).
+   * Starting at 0 is this reference's policy, not a Runtime Evidence
+   * requirement: the draft leaves the indicator deployment-defined. A result
+   * that is not a non-negative integer matches no stream, so its history is
+   * not established.
+   */
+  sequenceOrigin?: (emitter: { id: string; role: string }) => number | undefined;
 }
 
 /** The runtime action classes `action_class_completed` may name: Decision Evidence's `action_class` value space. */
@@ -133,8 +156,8 @@ interface VerifiedDecision {
   action_class: string;
   /** Present only when the record carries it, then an array of strings holding `action_class`. */
   action_classes: string[] | undefined;
-  /** The record's (Mission, emitter) stream: its emitter's role and id. */
-  stream: string;
+  /** The record's emitter: with the Mission, its stream. */
+  emitter: { id: string; role: string };
   sequence: number;
   /** The signed content: the record's canonical form without its envelope. */
   content: string;
@@ -222,8 +245,9 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * another Mission, two
  * records conflict (Decision Evidence of one `evaluation_id`, or Execution
  * Evidence of one `execution_id`, with different content, or one permit with
- * more than one disposition), a Decision Evidence stream has a gap or a
- * reused `sequence` position, a record lacks its REQUIRED `audience`, or an
+ * more than one disposition), a Decision Evidence stream does not start at its
+ * origin or has a gap or a reused `sequence` position, a record lacks its
+ * REQUIRED `audience`, or an
  * Execution Evidence record links to no verified permit of the same Mission
  * and audience or carries authorized digests other than that permit's. A
  * record delivered more than once with the same content counts once.
@@ -302,7 +326,7 @@ async function verifiedHistory(
         evaluation_context_digest: contextDigest,
         action_class: actionClass,
         action_classes: actionClasses as string[] | undefined,
-        stream: JSON.stringify([emitter.role, emitter.id]),
+        emitter: { id: emitter.id as string, role: emitter.role },
         sequence,
         content,
       });
@@ -341,19 +365,23 @@ async function verifiedHistory(
   }
   // Completeness (@spec runtime-evidence#decision-evidence-object `sequence`):
   // each (Mission, emitter) Decision Evidence stream is ordered by its
-  // `sequence` "so ... gaps are detectable". A position missing between the
-  // first and last record read, or one held twice, is a record the store did
-  // not return, a permit with no completed execution among them perhaps, so
-  // the history cannot be established. The start is deployment-defined, so
-  // the stream is read from its lowest position present.
-  const streams = new Map<string, number[]>();
+  // `sequence` "so ... gaps are detectable". It must start at its trusted
+  // origin and run without a gap or a reused position: a missing first or
+  // interior record is a record the store did not return, a permit with no
+  // completed execution among them perhaps, so the history cannot be
+  // established. A missing suffix or stream is the reader's contract to rule
+  // out; no position check can.
+  const streams = new Map<string, { emitter: { id: string; role: string }; positions: number[] }>();
   for (const d of decisions.values()) {
-    const positions = streams.get(d.stream) ?? [];
-    positions.push(d.sequence);
-    streams.set(d.stream, positions);
+    const key = JSON.stringify([d.emitter.role, d.emitter.id]);
+    const stream = streams.get(key) ?? { emitter: d.emitter, positions: [] };
+    stream.positions.push(d.sequence);
+    streams.set(key, stream);
   }
-  for (const positions of streams.values()) {
+  for (const { emitter, positions } of streams.values()) {
+    const origin = binding.sequenceOrigin ? binding.sequenceOrigin(emitter) : 0;
     positions.sort((a, b) => a - b);
+    if (positions[0] !== origin) return undefined;
     for (let i = 1; i < positions.length; i++) {
       if (positions[i] !== (positions[i - 1] as number) + 1) return undefined;
     }
