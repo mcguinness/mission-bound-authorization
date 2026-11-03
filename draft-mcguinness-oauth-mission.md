@@ -735,7 +735,7 @@ The Mission Intent members are:
 
 `task_bounds`:
 : OPTIONAL. An array of strings. Human-readable bounds on the task
-  (for example, "read only invoices from 2026"). They are disclosure
+  (for example, "initiate one transfer only"). They are disclosure
   and audit context, rendered to the Approver beside the derived
   Authority Set ({{direct-approval-steps}}), and carry no machine
   semantics ({{authorization-derivation}}); a machine-enforceable bound
@@ -790,15 +790,10 @@ The following is an example of a Mission Intent:
 =============== NOTE: '\' line wrapping per RFC 8792 ===============
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments of at most \
-    USD 500 per journal entry.",
-  "target_resources": ["https://erp.example.com"],
-  "task_bounds": [
-    "Read only invoices issued in 2026-Q3.",
-    "Post journal entries of at most USD 500 each."
-  ],
-  "purpose": "urn:example:purpose:reconcile",
-  "expires_at": "2026-12-31T23:59:59Z"
+  "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+    with reference Ref Number Merchant, and check or cancel it.",
+  "target_resources": ["https://example.com/payments"],
+  "expires_at": "2026-11-02T13:00:00Z"
 }
 ~~~
 
@@ -862,10 +857,10 @@ deployment-defined type:
 
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments of at most \
-      USD 500 per journal entry.",
-    "target_resources": ["https://erp.example.com"],
-    "expires_at": "2026-12-31T23:59:59Z"
+    "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+      with reference Ref Number Merchant, and check or cancel it.",
+    "target_resources": ["https://example.com/payments"],
+    "expires_at": "2026-11-02T13:00:00Z"
   },
   "evidence": [
     {
