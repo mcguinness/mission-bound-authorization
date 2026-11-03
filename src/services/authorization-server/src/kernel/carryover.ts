@@ -41,6 +41,7 @@ import {
 import { withTransaction, type Database } from "@mission/store";
 import { compactVerify, type CryptoKey, type JWK, type KeyObject } from "jose";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
+import { childMaximumReferences, inheritedChildMaxima } from "./standing-consent-limit.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { successorAuthority as successorOf } from "./expansion.js";
 import {
@@ -1697,6 +1698,16 @@ export function applyCarryoverInCallerTx(
       authority_set: authority,
       eligibility_provenance: replacementProvenance,
       child_actor_provenance: replacementChildActorProvenance,
+      // @spec derivation-limits#effective-limit (#2026, D1249; review F1): a
+      // replacement carries the old child's authority (a subset of both the
+      // old child and the new parent, so it neither widens nor regroups), and
+      // each entry keeps the strictest per-child figure the old child's and
+      // the new parent's entries it may carry authority of retain, unknown
+      // where any is; its creation never reads the current policy for it.
+      child_derivation_maxima: inheritedChildMaxima(authority, [
+        ...childMaximumReferences(oldChild.authority_set, oldChild.child_derivation_maxima),
+        ...childMaximumReferences(newParent.authority_set, newParent.child_derivation_maxima),
+      ]),
       // The replacement carries the old child's intent, so its intent anchor
       // is the old child's, recorded or implied (#1917).
       intent_hash: resolvedAnchors(oldChild).intent_hash,

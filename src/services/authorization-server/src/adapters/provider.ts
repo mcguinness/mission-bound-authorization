@@ -4926,7 +4926,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // (committedPerChildMaximum). The figures are a view, not bound to the
       // decision: the decision re-derives and refuses an approval whose
       // per-child figure cannot be disclosed, and child creation re-verifies
-      // the committed policy.
+      // the committed policy. For an entry with no child_creation_policy the
+      // figure is `deploymentCeiling`, the read the approval retains with the
+      // Mission (kernel.establishedChildMaxima, #2026); the decision is bound
+      // to this rendering's derivation policy content (#1446), so the
+      // retained figure is the one shown.
       const derivation = approvalDerivationRendering({
         derivationLimits: enabled("derivation-limits"),
         limit: kernel.resolveDerivationLimit(intent.requested_derivation_limit),
