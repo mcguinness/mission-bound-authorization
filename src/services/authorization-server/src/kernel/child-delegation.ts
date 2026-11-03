@@ -669,6 +669,10 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     );
     if (committed.source === "deployment") {
       const retained = retainedChildMaximum(parent, pi);
+      // @spec derivation-limits#effective-limit (#2026, D1249 ruling 4): a
+      // reference diagnostic, not a protocol requirement: the refusal Child
+      // Delegation already uses for a per-child figure it cannot honor, with
+      // an explanatory message, committing nothing.
       if (!retained) {
         throw new ChildDelegationError(
           "policy_denied",
@@ -868,7 +872,8 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     child_actor_provenance: childActorProvenance,
     // @spec derivation-limits#effective-limit (#2026, D1249): a child's own
     // children are created under the same standing consent, so each child
-    // entry keeps the figure the parent entries it falls within retain, never
+    // entry keeps the strictest figure the parent entries it may carry
+    // authority of retain (a strict subset, so it adds nothing new), never
     // one read from the current policy.
     child_derivation_maxima: inheritedChildMaxima(
       childAuthority,

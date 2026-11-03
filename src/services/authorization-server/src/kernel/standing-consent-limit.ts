@@ -11,8 +11,9 @@
  * so a later raise or removal of the deployment's ceiling cannot lift it.
  */
 
-import type { ActivationPolicyRef, ActivationPolicySnapshot } from "@mission/core";
+import { type ActivationPolicyRef, type ActivationPolicySnapshot, unsupportedActionFamily } from "@mission/core";
 import { within } from "./approved-audience.js";
+import { entriesMayOverlap } from "./derive.js";
 import type { AuthorityEntry } from "./types.js";
 
 /** The snapshot member that states the maximum. */
@@ -182,17 +183,55 @@ export function retainedChildMaximum(
   return childMaximumReferences(record.authority_set, record.child_derivation_maxima)[index]?.maximum ?? undefined;
 }
 
+/** Whether an entry grants policy-created children at all (`delegation.children` is an object). */
+function grantsChildren(entry: AuthorityEntry): boolean {
+  const children: unknown = entry.delegation?.children;
+  return children !== null && typeof children === "object" && !Array.isArray(children);
+}
+
 /**
- * The figures a record derived from earlier authority retains (a Child
- * Mission, an Expansion successor, a carryover replacement, a ceiling
- * drawdown successor), index-aligned with its entries. Each entry that takes
- * a deployment figure keeps the strictest figure retained by every reference
- * it falls within that takes one too, so overlapping references never lend it
- * a looser figure. It is unknown where any such reference retains none. An
- * entry that falls within no such reference is one this creation adds: it
- * takes `added`, the figure this creation's own approval event establishes,
- * where the creating path has one, and is unknown otherwise. The current
- * deployment policy is never read for an inherited entry.
+ * @spec derivation-limits#effective-limit (#2026 review F1): whether `entry`
+ * may carry authority `source` held. False only where the two are provably
+ * disjoint ({@link entriesMayOverlap}: no shared action, unrelated
+ * resources, or constraints with an empty intersection). An action family
+ * on either side, which that literal comparison cannot narrow, or an entry
+ * it cannot read, counts as overlapping: what cannot be shown disjoint is
+ * treated as carried.
+ */
+export function mayCarryAuthorityOf(entry: AuthorityEntry, source: AuthorityEntry): boolean {
+  if (unsupportedActionFamily(entry) !== undefined || unsupportedActionFamily(source) !== undefined) return true;
+  try {
+    return entriesMayOverlap(entry, source);
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * @spec derivation-limits#effective-limit (#2026, D1249; review F1): the
+ * figures a record derived from earlier authority retains (a Child Mission,
+ * an Expansion successor, a carryover replacement, a ceiling drawdown
+ * successor), index-aligned with its entries. A successor can widen or
+ * regroup an entry, so an entry is bounded by every earlier entry whose
+ * authority it may carry, not only one it falls within whole:
+ * - its sources are the earlier entries that granted children and that it
+ *   may carry authority from ({@link mayCarryAuthorityOf}: overlapping, or
+ *   not provably disjoint);
+ * - with any source in unknown state (it retains no figure, or its figure
+ *   was stated by a `child_creation_policy` snapshot this record does not
+ *   retain), the entry is unknown, so no child is created under it until a
+ *   fresh human approval;
+ * - otherwise it keeps the strictest of its sources' figures;
+ * - where it falls within no single source whole, part of its authority may
+ *   be new, so `added`, the figure this creation establishes, bounds it too
+ *   where the creating path has one;
+ * - an entry with no source carries no earlier per-child commitment: it
+ *   takes `added` where the creating path has one, and is unknown otherwise.
+ * `added` is a provisional, creation-time figure (D1249 ruling 1): reference
+ * behavior for authority whose consent rendered no per-child figure, not
+ * conformance evidence, and it never loosens or replaces a known or unknown
+ * inherited bound. The current deployment policy is never read for carried
+ * authority.
  */
 export function inheritedChildMaxima(
   entries: readonly AuthorityEntry[],
@@ -201,13 +240,14 @@ export function inheritedChildMaxima(
 ): RetainedChildMaximum[] {
   return entries.map((entry) => {
     if (!takesDeploymentFigure(entry)) return null;
-    const containing = references.filter((r) => takesDeploymentFigure(r.entry) && within(entry, r.entry));
-    if (containing.length === 0) return added ? figureMaximum(added.deploymentFigure) : null;
+    const sources = references.filter((r) => grantsChildren(r.entry) && mayCarryAuthorityOf(entry, r.entry));
+    if (sources.length === 0) return added ? figureMaximum(added.deploymentFigure) : null;
     const maxima: StandingConsentMaximum[] = [];
-    for (const r of containing) {
-      if (!r.maximum) return null;
+    for (const r of sources) {
+      if (!takesDeploymentFigure(r.entry) || !r.maximum) return null;
       maxima.push(r.maximum);
     }
+    if (added && !sources.some((r) => within(entry, r.entry))) maxima.push(figureMaximum(added.deploymentFigure));
     return strictestMaximum(maxima);
   });
 }

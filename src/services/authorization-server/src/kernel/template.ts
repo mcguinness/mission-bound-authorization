@@ -1255,12 +1255,14 @@ export function dispatchFromTemplate(
     authority_set: final,
     eligibility_provenance: provenance,
     child_actor_provenance: childActorProvenance,
-    // @spec derivation-limits#effective-limit (#2026, D1249): the template
-    // consent renders and retains no per-child figure (only the per-instance
-    // maximum its Dispatch Policy states), so an instance entry whose
+    // @spec derivation-limits#effective-limit (#2026, D1249 ruling 1): the
+    // template consent renders and retains no per-child figure (only the
+    // per-instance maximum its Dispatch Policy states), and an instance
+    // carries no earlier Mission's authority, so an instance entry whose
     // policy-created children take the deployment's figure retains the one
-    // the deployment states at this dispatch; the instance's children never
-    // read a later policy for it.
+    // the deployment states at this dispatch. That figure is provisional
+    // reference behavior, not a rendered maximum or conformance evidence; the
+    // instance's children never read a later policy for it.
     child_derivation_maxima: kernel.establishedChildMaxima(final),
     intent_hash: intentHash(template.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(template.issuer, proposal as never) } : {}),

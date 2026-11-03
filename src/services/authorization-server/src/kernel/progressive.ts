@@ -1712,11 +1712,13 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     authority_set: authoritySet,
     eligibility_provenance: provenance,
     child_actor_provenance: childActorProvenance,
-    // @spec derivation-limits#effective-limit (#2026, D1249): a drawdown is no
-    // approval of its own. An entry within the predecessor's approved entries
-    // keeps the per-child figure the predecessor retains; an entry drawn from
-    // the ceiling, whose consent retains no per-child figure, takes the one
-    // the deployment states at this drawdown, retained from here on.
+    // @spec derivation-limits#effective-limit (#2026, D1249; review F1): a
+    // drawdown is no approval of its own. An entry that may carry authority
+    // of the predecessor's approved entries, widened or regrouped included,
+    // keeps the strictest figure they retain, and stays unknown where any of
+    // them is unknown. Only authority drawn from the ceiling, whose consent
+    // retains no per-child figure, takes the one the deployment states at
+    // this drawdown: provisionally (ruling 1), and never above a carried one.
     child_derivation_maxima: inheritedChildMaxima(
       authoritySet,
       childMaximumReferences(predecessor.authority_set, predecessor.child_derivation_maxima),
