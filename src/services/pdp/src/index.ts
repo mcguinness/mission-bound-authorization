@@ -97,6 +97,7 @@ export {
   type StatusMissionView,
   type UnresolvedMission,
 } from "./mission-status-resolver.js";
+export { ownReadDecide } from "./status-state-source.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
 export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, applicableActionClasses, assignedClassConflicts, declaredActionClasses, executionCapabilitiesFor, executionLeaseMaxSeconds, executionLeaseMaxSecondsOver, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, phaseAbsentOnPhasedOperation, phaseOnPhaselessOperation, phaseUnmatchedWithFurtherClasses, stalenessBoundOver, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement, withAuthorityDependencies } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";

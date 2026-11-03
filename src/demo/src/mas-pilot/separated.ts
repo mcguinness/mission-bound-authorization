@@ -35,18 +35,17 @@
  */
 
 import { readTopologyKeys, TOPOLOGY, trustedKids } from "@mission/demo-data";
-import { CANONICAL_RESOURCE, joinAssertionClient, type JoinAssertionSource, type LoadedView, type MissionReference, type MissionViewSource } from "@mission/mcp-payments";
+import { CANONICAL_RESOURCE, joinAssertionClient, type JoinAssertionSource, type MissionReference, statusLoadedView, statusViewSource } from "@mission/mcp-payments";
 import {
   acceptedJoinAssertionAlgorithms,
   type JoinAssertionPolicy,
-  type MissionView,
   MissionStatusResolver,
   missionStatusIssuer,
+  ownReadDecide,
   privateKeyJwtClient,
-  type ResolvedMission,
 } from "@mission/pdp";
 import { importJWK, type JWK } from "jose";
-import { assembleMasPilot, type MasPilotOptions, type MasPilotParts, type PdpDecide, requireDeclaredMappingContract } from "./compose.js";
+import { assembleMasPilot, type MasPilotOptions, type MasPilotParts, requireDeclaredMappingContract } from "./compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "./config.js";
 
 export interface SeparatedMasPilotOptions extends MasPilotOptions {
@@ -75,69 +74,13 @@ export interface SeparatedMasPilot extends MasPilotParts {
   reloadTrust(): void;
 }
 
-const iso = (ms: number) => new Date(ms).toISOString();
-
-/** The PEP's loaded view: the resolver's answer, with the observation of the read that produced it. */
-function loadedFrom(read: ResolvedMission): LoadedView {
-  return {
-    view: read.view as MissionView,
-    observation: {
-      state: read.view.state,
-      version: read.view.version,
-      mode: "cached",
-      freshness_at: iso(read.observedAtMs),
-      mission_status_issued_at: iso(read.observedAtMs),
-      mission_status_expires_at: iso(read.relianceBoundMs),
-    },
-  };
-}
-
 /**
- * The decision point's own read of the MAS for every decision: the view, the
- * signed observation point and the signed valid-through it decides on,
- * replacing whatever the PEP forwarded. With no read, no state option is
- * given, so the decision denies `stale_state`.
+ * The PDP's own read for every decision and the PEP's one read per
+ * enforcement, both over the resolver (`@mission/pdp`, `@mission/mcp-payments`,
+ * #1101), re-exported where the pilot's tests read them.
  */
-export function ownReadDecide(resolver: Pick<MissionStatusResolver, "resolve">): (inner: PdpDecide) => PdpDecide {
-  return (inner) => async (request, options) => {
-    const { stateObservedAt: _forwarded, stateFreshUntil: _signed, ...rest } = options;
-    const ref = request.context.mission;
-    if (ref === undefined) return inner(request, { ...rest, stateSourcePlacement: "pdp" });
-    const bound = options.stalenessBound(request.context.action_class);
-    const read = await resolver.resolve(
-      { id: ref.id, issuer: ref.issuer },
-      {
-        fresh: request.context.action_phase === "commit",
-        ...(bound.kind === "bounded" ? { maxAgeSeconds: bound.seconds } : {}),
-      },
-    );
-    return inner(request, {
-      ...rest,
-      stateSourcePlacement: "pdp",
-      ...(read.ok
-        ? { view: read.view as MissionView, stateObservedAt: iso(read.observedAtMs), stateFreshUntil: iso(read.relianceBoundMs) }
-        : {}),
-    });
-  };
-}
-
-/**
- * The PEP's one read per enforcement, through the resolver. A Mission the MAS
- * does not hold, or will not show this PDP, is `unknown_mission`; every
- * other failure leaves "Mission state not establishable at the PEP"
- * (authzen#failure-condition-coverage), `state_unavailable`, including the
- * MAS refusing this PDP's own credential, for which the join rules name no
- * code of their own.
- */
-export function statusViewSource(resolver: Pick<MissionStatusResolver, "resolve">): MissionViewSource {
-  return {
-    prepare: async (ref) => {
-      const read = await resolver.resolve(ref);
-      if (read.ok) return { ok: true };
-      return { ok: false, refusal: read.reason === "not_found" ? "unknown_mission" : "state_unavailable" };
-    },
-  };
-}
+export { ownReadDecide } from "@mission/pdp";
+export { statusViewSource } from "@mission/mcp-payments";
 
 /** Assemble the separated pilot against a running MAS. `close()` releases what it opened; the MAS is the caller's. */
 export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): Promise<SeparatedMasPilot> {
@@ -244,7 +187,7 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     missionIssuer: metadata.issuer,
     loadView: (ref: MissionReference) => {
       const read = resolver.peek(ref);
-      return read ? loadedFrom(read) : undefined;
+      return read ? statusLoadedView(read) : undefined;
     },
     viewSource: statusViewSource(resolver),
     stateSourcePlacement: source.placement,
