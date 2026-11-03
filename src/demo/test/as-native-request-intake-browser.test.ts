@@ -70,7 +70,8 @@ const SKIP_BROWSER = process.env.MISSION_SKIP_BROWSER === "1";
 if (SKIP_BROWSER) console.warn("MISSION_SKIP_BROWSER=1: skipping the real-browser witness of the request intake (#939 slice 2b-2)");
 const browserDescribe = SKIP_BROWSER ? describe.skip : describe;
 
-vi.setConfig({ testTimeout: 60_000 });
+// A browser, a whole target and its shutdown take longer than the defaults under a loaded suite.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 120_000 });
 
 const AS_PORT = 15171;
 const TYPE = "mission-request-provenance";
@@ -155,7 +156,7 @@ afterAll(async () => {
   hoisted.clock.restore();
   if (hoisted.resource === undefined) delete process.env.MCP_PAYMENTS_RESOURCE;
   else process.env.MCP_PAYMENTS_RESOURCE = hoisted.resource;
-});
+}, 120_000);
 
 /** Whether anything accepts a TCP connection at `url`. */
 async function accepts(url: string): Promise<boolean> {
@@ -231,8 +232,8 @@ async function sign(workflowToken: string, intent: Json): Promise<{ status: numb
   return { status: res.status, body: (await res.json()) as Json };
 }
 
-/** A pushed authorization request as ap-agent carrying `intent` and `entry`: the raw status and body. */
-async function push(intent: Json, entry: Json): Promise<{ status: number; body: Json }> {
+/** A pushed authorization request as ap-agent carrying `intent` and, where given, `entry`: the raw status and body. */
+async function push(intent: Json, entry?: Json): Promise<{ status: number; body: Json }> {
   const { asUrl, agentClientJwk } = authServer();
   const assertion = await (await clientAssertionSigner(asUrl, agentClientJwk))();
   const res = await fetch(`${asUrl}/request`, {
@@ -245,7 +246,7 @@ async function push(intent: Json, entry: Json): Promise<{ status: number; body: 
       resource: CANONICAL_RESOURCE,
       code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
       code_challenge_method: "S256",
-      mission_intent: JSON.stringify({ intent, evidence: [entry] }),
+      mission_intent: JSON.stringify(entry ? { intent, evidence: [entry] } : { intent }),
       authorization_details: AUTHORIZATION_DETAILS,
       client_assertion: assertion,
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
@@ -260,16 +261,17 @@ const claimsOf = (assertion: unknown): Json =>
 const rfc3339 = (s: number) => `${new Date(s * 1000).toISOString().slice(0, 19)}Z`;
 
 browserDescribe("the as-native target with MISSION_REQUEST_INTAKE=1, its originator in real Chrome (@spec request-provenance#capture, request-provenance#intake-isolation, #939 slice 2b-2, D1221)", () => {
-  it("launches the intake and the AS together: the summary names the intake's login, and the AS's one trusted signer is the intake", () => {
+  it("launches the intake and the AS together: the summary names the intake's login, the intake signs for this AS, the originator and the Approver are distinct accounts at the IdP, and a push without the intake's entry is still accepted, since the type is not required", async () => {
     expect(launched?.summary).toContain(
       `  request intake     ${intake().service.issuer}/login  (mission-request-provenance accepted, not required; originator login at the approver login provider)`,
     );
     expect(intake().service.audience).toBe(authServer().asUrl);
-    // The originator and the Approver are distinct accounts at the one IdP.
     const approver = (authServer().approverConsole as UpstreamApprovalConsole).upstream.account;
     expect(intake().originator.sub).toBe("idp-alice");
     expect(approver.sub).toBe("idp-bob");
     expect(intake().originator.device).not.toBe(approver.device);
+    const withoutEntry = await push(shapeIntent());
+    expect(withoutEntry.status, JSON.stringify(withoutEntry.body)).toBe(201);
   });
 
   it("Alice signs in through Chrome at the IdP with her password and her device's code, captures her instruction on the intake's page and reads the workflow token there; the agent's push as ap-agent with the intake's assertion is approved by Bob, and the Mission's facts carry her login's acr, amr and auth_time and the intake's signer", async () => {
