@@ -2672,9 +2672,11 @@ rather than assume single delivery. ABNF:
 permit. A multi-use permit has one record per use, and its uses may
 differ in <code>outcome</code>; a presentation the PEP refuses, such as a
 consumed single-use permit presented again (<code>permit_consumed</code>), is a
-<code>suppressed</code> execution of its own. A single-use permit has no second
-completion: a second <code>completed</code> record under it records an
-unauthorized execution.<a href="#section-5.1-1.2.2" class="pilcrow">¶</a></p>
+<code>suppressed</code> execution of its own. A single-use permit has one
+authorized completion, the one that took its single use: any other
+<code>completed</code> record under it records an unauthorized execution,
+whatever its digests, and the records themselves do not show which
+completion took the use.<a href="#section-5.1-1.2.2" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.1-1.3">
@@ -5010,8 +5012,9 @@ record type, and an allocated position never emitted is a gap
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Execution Evidence and Security Considerations: one record exists
 per execution, so a multi-use permit has one per use and a refused
-presentation its own; a second completion of a single-use permit is
-an unauthorized execution; History Completeness states what sequence
+presentation its own; a single-use permit's completion other than
+the one that took its use is an unauthorized execution; History
+Completeness states what sequence
 checks cannot detect and how an omitted record affects a history
 read (#2029).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>

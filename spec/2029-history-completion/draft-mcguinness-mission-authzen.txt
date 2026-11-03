@@ -1249,9 +1249,21 @@ Table of Contents
 
    The predicate is per permit: a permit has a completion witness when
    any of its executions is one, so a failed use of a multi-use permit,
-   a replay suppressed as permit_consumed, or a second completion of a
-   single-use permit does not remove it.  A predicate that requires
-   every use of a permit to complete is a different predicate type.
+   or a replay suppressed as permit_consumed, does not remove it.  A
+   predicate that requires every use of a permit to complete is a
+   different predicate type.
+
+   A single-use permit has one authorized completion
+   ([I-D.draft-mcguinness-mission-runtime-evidence]): only the
+   completion that took its single use can be its witness, and any other
+   completed record under it creates none, whatever its digests.  The
+   order in which records reach the evidence store does not establish
+   which completion took the use, nor do the records' sequence or
+   timestamps.  Where no trusted source, such as the PEP's consumed-
+   identifier store, establishes it, a single-use permit with more than
+   one completed record has a witness only when each of them would be
+   one on its own, and its completion is undetermined when only some
+   would.
 
    A completed record whose effective digest differs from its authorized
    digest records an unauthorized execution
@@ -3694,9 +3706,10 @@ Appendix A.  Document History
       carries no action_classes (#1994).  Every such permit needs a
       completion witness, a linked completed record whose effective
       digests equal the authorized ones; a digest deviation is none, a
-      failed use or suppressed replay removes none, a missing effective
-      digest leaves completion undetermined, and the evaluation relies
-      on a complete history read (#2029).
+      failed use or suppressed replay removes none, a single-use
+      permit's completion other than the one that took its use creates
+      none, a missing effective digest leaves completion undetermined,
+      and the evaluation relies on a complete history read (#2029).
 
    *  Credential Decision Context: requiring a credential's whole
       authority description to be evaluable is this profile's credential

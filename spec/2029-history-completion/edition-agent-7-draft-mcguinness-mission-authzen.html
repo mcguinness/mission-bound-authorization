@@ -2836,10 +2836,21 @@ delete step's precondition this way:<a href="#section-5.16-2" class="pilcrow">¶
 </div>
 <p id="section-5.16-4">The predicate is per permit: a permit has a completion witness when
 any of its executions is one, so a <code>failed</code> use of a multi-use permit,
-a replay suppressed as <code>permit_consumed</code>, or a second completion of a
-single-use permit does not remove it. A predicate that requires every
-use of a permit to complete is a different predicate type.<a href="#section-5.16-4" class="pilcrow">¶</a></p>
-<p id="section-5.16-5">A <code>completed</code> record whose effective digest differs from its
+or a replay suppressed as <code>permit_consumed</code>, does not remove it. A
+predicate that requires every use of a permit to complete is a
+different predicate type.<a href="#section-5.16-4" class="pilcrow">¶</a></p>
+<p id="section-5.16-5">A single-use permit has one authorized completion
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>): only the
+completion that took its single use can be its witness, and any other
+<code>completed</code> record under it creates none, whatever its digests. The
+order in which records reach the evidence store does not establish
+which completion took the use, nor do the records' <code>sequence</code> or
+timestamps. Where no trusted source, such as the PEP's
+consumed-identifier store, establishes it, a single-use permit with
+more than one <code>completed</code> record has a witness only when each of them
+would be one on its own, and its completion is undetermined when only
+some would.<a href="#section-5.16-5" class="pilcrow">¶</a></p>
+<p id="section-5.16-6">A <code>completed</code> record whose effective digest differs from its
 authorized digest records an unauthorized execution
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>): it remains valid
 evidence, and it is not a completion witness. A <code>completed</code> record
@@ -2852,35 +2863,35 @@ completion is undetermined. The evaluation relies on the evidence
 store returning the complete, current Mission history; sequence checks
 detect gaps only within the records returned
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>, Section "History
-Completeness").<a href="#section-5.16-5" class="pilcrow">¶</a></p>
-<p id="section-5.16-6">An extension predicate type <span class="bcp14">MUST</span> be either a collision-resistant name
+Completeness").<a href="#section-5.16-6" class="pilcrow">¶</a></p>
+<p id="section-5.16-7">An extension predicate type <span class="bcp14">MUST</span> be either a collision-resistant name
 or a name coordinated within this document family, under the same rule
-as denial reasons (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>).<a href="#section-5.16-6" class="pilcrow">¶</a></p>
-<p id="section-5.16-7">The <span class="bcp14">OPTIONAL</span> <code>context.mission_history</code> request object carries only what
+as denial reasons (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>).<a href="#section-5.16-7" class="pilcrow">¶</a></p>
+<p id="section-5.16-8">The <span class="bcp14">OPTIONAL</span> <code>context.mission_history</code> request object carries only what
 the PEP can supply in support of the policy-selected predicates, never
-a selection of which predicates apply. Members:<a href="#section-5.16-7" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5.16-8">
-          <dt id="section-5.16-8.1">
+a selection of which predicates apply. Members:<a href="#section-5.16-8" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.16-9">
+          <dt id="section-5.16-9.1">
 <code>evidence_reference</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.16-8.2">
-            <p id="section-5.16-8.2.1"><span class="bcp14">OPTIONAL</span>. A string. A reference to the evidence or state source the
+          <dd style="margin-left: 1.5em" id="section-5.16-9.2">
+            <p id="section-5.16-9.2.1"><span class="bcp14">OPTIONAL</span>. A string. A reference to the evidence or state source the
 PEP consulted, when that source is not the PDP's own evidence
-store, so the PDP can resolve the same history the PEP saw.<a href="#section-5.16-8.2.1" class="pilcrow">¶</a></p>
+store, so the PDP can resolve the same history the PEP saw.<a href="#section-5.16-9.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.16-8.3">
+<dt id="section-5.16-9.3">
 <code>attribute_values</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.16-8.4">
-            <p id="section-5.16-8.4.1"><span class="bcp14">OPTIONAL</span>. An object. Precomputed values for the policy-selected
+          <dd style="margin-left: 1.5em" id="section-5.16-9.4">
+            <p id="section-5.16-9.4.1"><span class="bcp14">OPTIONAL</span>. An object. Precomputed values for the policy-selected
 predicates, supplied where the deployment permits the PEP to
 compute them directly, mirroring the privacy-preserving carve-out
 for action parameters (<a href="#parameter-digest" class="auto internal xref">Section 5.7</a>); each member is a
 deployment-defined attribute the applicable predicate evaluates
-against.<a href="#section-5.16-8.4.1" class="pilcrow">¶</a></p>
+against.<a href="#section-5.16-9.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-5.16-9">The PDP evaluates each policy-selected predicate against its own
+<p id="section-5.16-10">The PDP evaluates each policy-selected predicate against its own
 evidence store, or, where the deployment's policy permits a
 non-default evidence source, against the supplied
 <code>evidence_reference</code> or <code>attribute_values</code>. A caller-supplied
@@ -2890,8 +2901,8 @@ accept a predicate outcome asserted through any context member. The
 request object is distinct from the Decision Evidence
 <code>mission_history</code> member, which the PDP computes (<a href="#evidence" class="auto internal xref">Section 7</a>): request
 input neither chooses the required predicates nor asserts their
-outcomes.<a href="#section-5.16-9" class="pilcrow">¶</a></p>
-<p id="section-5.16-10">The PDP <span class="bcp14">MUST</span> refuse the evaluation of a policy-selected predicate it
+outcomes.<a href="#section-5.16-10" class="pilcrow">¶</a></p>
+<p id="section-5.16-11">The PDP <span class="bcp14">MUST</span> refuse the evaluation of a policy-selected predicate it
 does not recognize, treating the predicate as not establishable,
 consistent with this profile's unknown-value conventions
 (<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>). Where deployment or Resource
@@ -2902,7 +2913,7 @@ runtime profile fixes the fail-closed posture and the evidence
 store's freshness discipline
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The PDP <span class="bcp14">MUST</span> record the
 evaluated predicates and their outcomes in Decision Evidence
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-5.16-10" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-5.16-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="projections">
@@ -5764,9 +5775,10 @@ its <code>action_classes</code>, or is its <code>action_class</code> where the r
 carries no <code>action_classes</code> (#1994). Every such permit needs a
 completion witness, a linked <code>completed</code> record whose effective
 digests equal the authorized ones; a digest deviation is none, a
-failed use or suppressed replay removes none, a missing effective
-digest leaves completion undetermined, and the evaluation relies on
-a complete history read (#2029).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+failed use or suppressed replay removes none, a single-use permit's
+completion other than the one that took its use creates none, a
+missing effective digest leaves completion undetermined, and the
+evaluation relies on a complete history read (#2029).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
           <p id="appendix-A-2.3.1">Credential Decision Context: requiring a credential's whole authority

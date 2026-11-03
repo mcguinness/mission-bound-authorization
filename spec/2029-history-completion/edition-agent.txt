@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-03T02:15:47Z
-Source repository commit: 9db95882b8d075503b6dca68f7f4ab740bacf89a
+Generated: 2026-11-03T04:45:06Z
+Source repository commit: 546369ba56560c68750a5cd07c6e737cb771e79f
 Member count: 9
 
 Reading order:
@@ -25212,9 +25212,11 @@ Table of Contents
       permit.  A multi-use permit has one record per use, and its uses
       may differ in outcome; a presentation the PEP refuses, such as a
       consumed single-use permit presented again (permit_consumed), is a
-      suppressed execution of its own.  A single-use permit has no
-      second completion: a second completed record under it records an
-      unauthorized execution.
+      suppressed execution of its own.  A single-use permit has one
+      authorized completion, the one that took its single use: any other
+      completed record under it records an unauthorized execution,
+      whatever its digests, and the records themselves do not show which
+      completion took the use.
 
    evaluation_id:  REQUIRED.  A string.  Correlates this record with the
       linked Decision Evidence's own evaluation_id (Section 4), and with
@@ -27074,10 +27076,10 @@ Appendix A.  Document History
 
    *  Execution Evidence and Security Considerations: one record exists
       per execution, so a multi-use permit has one per use and a refused
-      presentation its own; a second completion of a single-use permit
-      is an unauthorized execution; History Completeness states what
-      sequence checks cannot detect and how an omitted record affects a
-      history read (#2029).
+      presentation its own; a single-use permit's completion other than
+      the one that took its use is an unauthorized execution; History
+      Completeness states what sequence checks cannot detect and how an
+      omitted record affects a history read (#2029).
 
    *  Refusal Record: action_class_missing also records a mediated
       request carried with a class other than the one the PDP's trusted
@@ -28467,9 +28469,21 @@ Table of Contents
 
    The predicate is per permit: a permit has a completion witness when
    any of its executions is one, so a failed use of a multi-use permit,
-   a replay suppressed as permit_consumed, or a second completion of a
-   single-use permit does not remove it.  A predicate that requires
-   every use of a permit to complete is a different predicate type.
+   or a replay suppressed as permit_consumed, does not remove it.  A
+   predicate that requires every use of a permit to complete is a
+   different predicate type.
+
+   A single-use permit has one authorized completion
+   ([I-D.draft-mcguinness-mission-runtime-evidence]): only the
+   completion that took its single use can be its witness, and any other
+   completed record under it creates none, whatever its digests.  The
+   order in which records reach the evidence store does not establish
+   which completion took the use, nor do the records' sequence or
+   timestamps.  Where no trusted source, such as the PEP's consumed-
+   identifier store, establishes it, a single-use permit with more than
+   one completed record has a witness only when each of them would be
+   one on its own, and its completion is undetermined when only some
+   would.
 
    A completed record whose effective digest differs from its authorized
    digest records an unauthorized execution
@@ -30912,9 +30926,10 @@ Appendix A.  Document History
       carries no action_classes (#1994).  Every such permit needs a
       completion witness, a linked completed record whose effective
       digests equal the authorized ones; a digest deviation is none, a
-      failed use or suppressed replay removes none, a missing effective
-      digest leaves completion undetermined, and the evaluation relies
-      on a complete history read (#2029).
+      failed use or suppressed replay removes none, a single-use
+      permit's completion other than the one that took its use creates
+      none, a missing effective digest leaves completion undetermined,
+      and the evaluation relies on a complete history read (#2029).
 
    *  Credential Decision Context: requiring a credential's whole
       authority description to be evaluable is this profile's credential
