@@ -128,7 +128,7 @@ export async function composeSeparatedAsNative(opts: SeparatedAsNativeOptions): 
     ...(now ? { now } : {}),
   });
 
-  // @spec txn-authorization#two-phase-expiry — the resource publishes its
+  // @spec txn-authorization#two-phase-expiry: the resource publishes its
   // challenge-signing keys at `txn_challenge_jwks_uri`, on the listener the
   // configuration names, where the AS resolves them.
   const txnTopo = TOPOLOGY.txnChallenge.payments;

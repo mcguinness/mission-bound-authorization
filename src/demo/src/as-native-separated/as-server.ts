@@ -81,7 +81,7 @@ export async function buildSeparatedAs(opts: SeparatedAsOptions): Promise<Separa
     approvalAudience: TOPOLOGY.issuers.pdp,
     approvalTtlSeconds: TOPOLOGY.ttls.approvalSeconds,
   });
-  // @spec txn-authorization#two-phase-expiry — the resource's challenge keys,
+  // @spec txn-authorization#two-phase-expiry: the resource's challenge keys,
   // resolved over a real fetch at the URL it publishes.
   const challengeIssuers = new Map([
     [

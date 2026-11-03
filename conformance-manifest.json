@@ -2999,9 +2999,21 @@
      "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > relies on a cached read at its signed observation point, never re-stamped, and caps every permit on it at the same signed bound",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: the AS stops and starts (#1101) > with the AS down, a commit decision denies stale_state though the PEP's read is within its bounds, and an expired read refuses state_unavailable; restarted on its key ring and store, it reads again",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1535 (D649, finding 2). Partial (#1543 review): of the reference's two consumer paths, only the resolver enforces every term. The resolver (the PDP's own read) is tested on all three: fresh_until, the advertised ceiling (iat plus mission_max_stale_seconds) and, through check 10, exp; the separated pilot caps its permit at the resulting bound (the wiring test). The PEP-carried `assertion` path in evaluate.ts cannot enforce the advertised ceiling: it holds no issuer metadata, and only the action class's staleness window bounds the observation's age there. That path is tested on fresh_until (the two evaluate tests) and, through check 10, on exp. The `exp` term is unreachable once consumer check 10 holds (fresh_until is never later than exp), so on both paths it is witnessed only through status.response.consumer-fresh-until-within-exp. Proven by moving the bounds later: a 30 s allowance on the resolver's fresh_until and exp comparisons fails six resolver tests, one on the ceiling fails the two ceiling tests, the separated pilot feeding fresh_until in place of the bound into the permit cap fails the wiring test, and the PEP-carried path taking no signed bound fails both evaluate tests."
+   "notes": "#1535 (D649, finding 2). Partial (#1543 review): of the reference's two consumer paths, only the resolver enforces every term. The resolver (the PDP's own read) is tested on all three: fresh_until, the advertised ceiling (iat plus mission_max_stale_seconds) and, through check 10, exp; the separated pilot caps its permit at the resulting bound (the wiring test). The PEP-carried `assertion` path in evaluate.ts cannot enforce the advertised ceiling: it holds no issuer metadata, and only the action class's staleness window bounds the observation's age there. That path is tested on fresh_until (the two evaluate tests) and, through check 10, on exp. The `exp` term is unreachable once consumer check 10 holds (fresh_until is never later than exp), so on both paths it is witnessed only through status.response.consumer-fresh-until-within-exp. Proven by moving the bounds later: a 30 s allowance on the resolver's fresh_until and exp comparisons fails six resolver tests, one on the ceiling fails the two ceiling tests, the separated pilot feeding fresh_until in place of the bound into the permit cap fails the wiring test, and the PEP-carried path taking no signed bound fails both evaluate tests. #1101 (D1258): the separated AS-native configuration relies on the resolver's cached read only up to its signed bound, every permit on it capped there, and past it with the AS stopped refuses state_unavailable; the PEP-carried path keeps the row partial."
   },
   {
    "id": "status.caching.active-before-expires-at",
@@ -3202,9 +3214,58 @@
     "normative": "a resource server whose decision requires Mission Status and holds no verified response within its reliance bound reporting `active` refuses the request it is deciding, whatever the cause"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1535 (D649, finding 10). Resource-server twin of status.failures.decision-does-not-proceed. No resource server in the reference consumes Mission Status: the reference's only Status consumer is the PDP."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/view-source.test.ts",
+     "name": "a remote Mission view source at the PEP (#818, D560) > refuses a read the source could not establish before any decision, with the source's reason on a signed Refusal Record",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > an issuer answering unavailable or rate_limited establishes no state: state_unavailable before any decision",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a Mission the AS does not hold is unknown_mission before any decision",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a Status answer for another Mission establishes no state: state_unavailable before any decision",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a signed Status the AS never published a key for establishes no state: state_unavailable before any decision",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a malformed answer establishes no state: state_unavailable before any decision",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a source slower than its deadline establishes no state: state_unavailable before any decision, within the deadline",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: the AS stops and starts (#1101) > with the AS down, a commit decision denies stale_state though the PEP's read is within its bounds, and an expired read refuses state_unavailable; restarted on its key ring and store, it reads again",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1535 (D649, finding 10). Resource-server twin of status.failures.decision-does-not-proceed. Tested (#1101, D1258) in the separated AS-native configuration, whose payments PEP reads Mission Status through the PDP's resolver once per enforcement (statusViewSource) and holds no verified active response for each cause the clause lists: an error response (unavailable and rate_limited from a stand-in; not_found from the AS for an unknown Mission), a failed check (another Mission's signed answer, a key the AS never published, a malformed body), a network failure (a source past its deadline; the AS stopped) and a lapsed reliance bound (the AS stopped past the signed window). Each refuses before any decision with the PEP's signed Refusal Record and nothing disclosed or executed."
   },
   {
    "id": "status.failures.decision-does-not-proceed-as",
@@ -37929,8 +37990,21 @@
      "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > permits a read on the signed Status view: the PEP forwards no observation, the decision commits the AS's state, and the permit ends inside the signed window",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > relies on a cached read at its signed observation point, never re-stamped, and caps every permit on it at the same signed bound",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1101 (D1258): the separated AS-native configuration exercises the cap end to end on a signed Mission Status read, co-resident: each permit ends no later than the read's reliance bound, a cached read's permits included. Partial still: the remote PDP stack over the decision channel is not exercised."
   },
   {
    "id": "runtime.state-freshness.high-consequence-requires-active-source",
@@ -37952,16 +38026,34 @@
     "normative": "an irreversible-action, external-commitment, or privileged-administration class relies on an active freshness source, never token-lifetime expiry alone"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/agent/test/mediated-harness.test.ts",
      "name": "harness status-continuity: fresh-at-submission fail-closed > refuses the channel when the lease is stale, even though last state is active",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: revocation and suspension at the AS (#1101) > refuses the commit of a Mission revoked after its prepare: the commit-phase decision reads the AS now, and nothing executes",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: the AS stops and starts (#1101) > with the AS down, a commit decision denies stale_state though the PEP's read is within its bounds, and an expired read refuses state_unavailable; restarted on its key ring and store, it reads again",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-separated.test.ts",
+     "name": "the separated AS-native configuration: revocation and suspension at the AS (#1101) > observes a revocation at the Lifecycle endpoint within the signed bound: relied on until its fresh_until, then mission_inactive",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Tested for the harness's own status-lease freshness path; not tested for a PDP-embedded active source such as introspection or Mission Status."
+   "notes": "Tested for the harness's own status-lease freshness path, and (#1101, D1258) for a PDP-embedded active source: the separated AS-native configuration's PDP reads signed Mission Status, every commit phase of the irreversible wire reads it now, so a Mission revoked after its prepare refuses the commit with nothing executed, and with the source down the commit denies stale_state though the PEP holds a read inside its bounds; a revocation is observed within the signed 60 s window. Introspection is not selected there."
   },
   {
    "id": "runtime.state-freshness.credential-lifetime-source-every-path",
