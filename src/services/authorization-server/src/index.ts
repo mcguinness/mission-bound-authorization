@@ -1970,6 +1970,8 @@ export async function buildAuthorizationServer(opts: {
     // retained; a derived record inherits instead.
     entryAudiences: (entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry),
     policy: (opts.derivationPolicy ?? DERIVATION_POLICY) as never,
+    // @spec derivation-limits#conformance (#2018): the capability switch.
+    derivationLimits: capabilityEnabled(opts, "derivation-limits"),
     ...(opts.submissionEvidenceVerificationWork !== undefined
       ? { submissionEvidenceVerificationWork: opts.submissionEvidenceVerificationWork }
       : {}),
@@ -2332,7 +2334,14 @@ export async function buildAuthorizationServer(opts: {
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
-    introspectionPrincipals: [...INTROSPECTION_PRINCIPALS, ...(opts.testIntrospectionPrincipals ?? [])],
+    // @spec mission#optional-capabilities (#2018): the shipped registry is
+    // inert where the Introspection capability is off, since no route serves
+    // it; a principal the caller adds is a configured introspecting consumer,
+    // which the provider refuses at construction while the capability is off.
+    introspectionPrincipals: [
+      ...(capabilityEnabled(opts, "introspection") ? INTROSPECTION_PRINCIPALS : []),
+      ...(opts.testIntrospectionPrincipals ?? []),
+    ],
     // @spec mission#designation (#869, D449): config/delegation.json.
     designableClients: opts.designableClients ?? DESIGNABLE_CLIENTS,
     // @spec mission#authority-proposal (#1531, D741): config/governed-resources.json.

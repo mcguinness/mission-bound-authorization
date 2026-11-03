@@ -128,13 +128,19 @@ export const RAS_ISS = TOPOLOGY.issuers.ras;
 
 /**
  * D332: the AS capabilities the as-native target enables beyond the always-on
- * issuance profile: exactly the issuance-only floor's `lifecycle-revoke`
- * (#873) and `transaction-authorization`, where the remittance action-bound
- * approval redeems its challenge. Every other optional capability is off, and
- * so are the dev ordinary-token route (`dev-token`) and dev ordinary issuance.
+ * issuance profile: exactly the issuance-only floor's set (#873), whose
+ * optional capability is `lifecycle-revoke`, plus `transaction-authorization`,
+ * where the remittance action-bound approval redeems its challenge. The
+ * floor's set also keeps Introspection, Revocation propagation and Derivation
+ * Limits on, as they were before each became a capability (#2018). Every
+ * other optional capability is off, and so are the dev ordinary-token route
+ * (`dev-token`) and dev ordinary issuance.
  * `src/docs/initial-runtime-deployment.md` §2 and §9 state the set.
  */
 export const AS_NATIVE_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set<ProviderCapability>([
+  "introspection",
+  "revocation-propagation",
+  "derivation-limits",
   "lifecycle-revoke",
   "transaction-authorization",
 ]);

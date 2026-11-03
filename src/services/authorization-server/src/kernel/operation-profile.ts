@@ -64,10 +64,15 @@ export interface OperationProfile {
   resolve(entry: JsonValue, ctx: { resource: string }): OperationResolution;
 }
 
-/** The version an entry is admitted or completed under, and the operation it resolves to. */
+/**
+ * The version an entry is admitted or completed under, and the operation it
+ * resolves to. `missingReference` marks the refusal of an entry carrying no
+ * `resource_contract` where the resource requires one, so completion can say
+ * so instead of reporting an unresolvable version (D1078).
+ */
 export type ProfileResolution =
   | { ok: true; version: string; operation: ResolvedOperation }
-  | { ok: false; reason: string; unknownProfile?: true };
+  | { ok: false; reason: string; unknownProfile?: true; missingReference?: true };
 
 function key(iss: string, version: string): string {
   return `${iss}|${version}`;
@@ -223,9 +228,9 @@ export class OperationProfileRegistry {
    * a reference takes the resource's current version), and this adds no
    * family rule.
    */
-  private missingReference(iss: string, action: string): { ok: false; reason: string } | undefined {
+  private missingReference(iss: string, action: string): { ok: false; reason: string; missingReference: true } | undefined {
     return this.contracts.requiresReference(iss, action)
-      ? { ok: false, reason: "the resource requires a resource_contract reference for this operation" }
+      ? { ok: false, reason: "the resource requires a resource_contract reference for this operation", missingReference: true }
       : undefined;
   }
 

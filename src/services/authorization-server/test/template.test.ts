@@ -7,8 +7,11 @@ import {
   DISPATCH_PROHIBITED_ACTIONS,
   PROGRESSIVE_PROFILE,
 } from "@mission/demo-data";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { type CryptoKey, generateKeyPair } from "jose";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
   createExpansion,
@@ -909,7 +912,7 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
       }),
     );
   /** A kernel like the suite's, with the given deployment ceiling. */
-  const kernelWithCeiling = (ceiling: number | null) =>
+  const kernelWithCeiling = (ceiling: number | null, over: Partial<ConstructorParameters<typeof MissionKernel>[0]> = {}) =>
     new MissionKernel({
       issuer: ISS,
       policy: { ...DERIVATION_POLICY, derivation_limit_ceiling: ceiling } as never,
@@ -917,6 +920,7 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
       statusKey: key,
       statusKid: "as-status",
       now,
+      ...over,
     });
   const dispatchOn = (k: MissionKernel, templateId: string, limit?: number) =>
     dispatchFromTemplate(k, store, {
@@ -964,6 +968,66 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
       );
       expect(store.getByApprovalEvent(approval_event_id), id).toBeUndefined();
     }
+  });
+
+  // The kernel restarts from its file; the reference's template store is in
+  // memory, so the suite's one store stands in for a durable one across it.
+  describe("with Derivation Limits turned off after the template's consent (#2018 review F1; @spec derivation-limits#effective-limit)", () => {
+    let dir: string;
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "template-limit-off-"));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const onFile = (file: string, derivationLimits: boolean) => kernelWithCeiling(null, { store: { file }, derivationLimits });
+    const EPOCH = "1970-01-01T00:00:00Z";
+
+    it("a finite per-instance maximum the consent committed outlives the restart: with the capability on the instance records it, and after a restart with it off the next Dispatch is refused dispatch_policy_changed, committing nothing, while the earlier instance keeps its limit", () => {
+      const file = join(dir, "kernel.sqlite");
+      const t = mkTemplate({ dispatch_policy: policyRef("limit-3"), max_active: 5, rate_per_min: 10 });
+      const on = onFile(file, true);
+      const first = dispatchOn(on, t.id);
+      expect(first.derivation_limit).toBe(3);
+      on.close();
+      const off = onFile(file, false);
+      try {
+        const missions = off.allMissions().length;
+        const dispatches = store.dispatchesSince(t.id, EPOCH);
+        try {
+          dispatchOn(off, t.id);
+          expect.unreachable();
+        } catch (e) {
+          expect(e).toBeInstanceOf(DispatchError);
+          expect((e as DispatchError).reason).toBe("dispatch_policy_changed");
+          expect((e as Error).message).toMatch(/committed a per-Mission derivation limit of at most 3/);
+        }
+        expect(off.allMissions()).toHaveLength(missions);
+        expect(store.dispatchesSince(t.id, EPOCH)).toBe(dispatches);
+        // The instance dispatched before the restart keeps its own finite limit.
+        expect(off.get(first.id)?.derivation_limit).toBe(3);
+      } finally {
+        off.close();
+      }
+    });
+
+    it("a Dispatch Policy guaranteeing no finite maximum still dispatches after the restart, recording no limit (positive control)", () => {
+      for (const id of ["limit-null", "test-policy"]) {
+        const file = join(dir, `kernel-${id}.sqlite`);
+        const t = mkTemplate({ dispatch_policy: policyRef(id), max_active: 5, rate_per_min: 10 });
+        const on = onFile(file, true);
+        expect(dispatchOn(on, t.id).derivation_limit, id).toBeNull();
+        on.close();
+        const off = onFile(file, false);
+        try {
+          const missions = off.allMissions().length;
+          expect(dispatchOn(off, t.id).derivation_limit, id).toBeNull();
+          expect(off.allMissions(), id).toHaveLength(missions + 1);
+        } finally {
+          off.close();
+        }
+      }
+    });
   });
 });
 

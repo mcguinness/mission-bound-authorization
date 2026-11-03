@@ -51,12 +51,19 @@ export const CREDENTIALS_PATH =
 /**
  * The capabilities this deployment enables beyond the issuance profile, which
  * is always on (PAR, the authorization code with PKCE, DPoP-bound JWT access
- * tokens, refresh, scope projection, the approval interaction, introspection).
- * Only the lifecycle endpoint's `revoke` is added, because the walkthrough
- * revokes. Every other capability is off and refuses with its standard error;
- * `src/docs/issuance-only-deployment.md` § Enabled capabilities lists each.
+ * tokens, refresh, scope projection, the approval interaction). Introspection,
+ * which plain-rs calls in the introspection configuration, Revocation
+ * propagation (`mission_max_stale_seconds`, the bound the access-token
+ * lifetime is sized to) and Derivation Limits stay on, as they were before
+ * each became a capability (#2018). The lifecycle endpoint's `revoke` is
+ * added, because the walkthrough revokes. Every other capability is off and
+ * refuses with its standard error; `src/docs/issuance-only-deployment.md`
+ * § Enabled capabilities lists each.
  */
 export const ISSUANCE_ONLY_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set<ProviderCapability>([
+  "introspection",
+  "revocation-propagation",
+  "derivation-limits",
   "lifecycle-revoke",
 ]);
 
