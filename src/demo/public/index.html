@@ -3,648 +3,1072 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mission-Bound Authorization — Demo Consoles</title>
+<title>Mission Console</title>
+<link rel="icon" href="data:," />
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #f5f6f8; --panel: #ffffff; --panel-2: #fafbfc; --ink: #1b1f24; --muted: #5b6470;
-    --line: #d9dee5; --brand: #3b5bdb; --brand-ink: #ffffff;
-    --ok: #1a7f37; --no: #cf222e; --warn: #9a6700;
-    --chip: #eef1f5; --chip-line: #d9dee5;
-    --drop-bg: #ffe4e4; --drop-ink: #b42318;
-    --tight-bg: #fff2d1; --tight-ink: #8a5a00;
-    --grant-bg: #e4f4ea; --grant-ink: #1a7f37;
-    --untrust: #8a5a00; --untrust-bg: #fff7e6;
+    --bg: #f3f2ee; --surface: #ffffff; --surface-2: #f9f8f5; --ink: #16191d; --ink-2: #3b4148; --muted: #6a7079;
+    --line: #dfdcd4; --line-2: #ebe8e1;
+    --accent: #1d4ed8; --accent-ink: #ffffff; --accent-soft: #e7edfc;
+    --permit: #17703a; --permit-soft: #e2f2e7;
+    --refuse: #b42318; --refuse-soft: #fbe8e6;
+    --pause: #935600; --pause-soft: #fcf0da;
+    --shadow: 0 1px 2px rgba(22, 25, 29, .06), 0 4px 16px rgba(22, 25, 29, .05);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0d1117; --panel: #161b22; --panel-2: #11151b; --ink: #e6edf3; --muted: #9aa4b0;
-      --line: #2a313a; --brand: #6b8afd; --brand-ink: #0d1117;
-      --ok: #3fb950; --no: #f85149; --warn: #d29922;
-      --chip: #21262d; --chip-line: #2a313a;
-      --drop-bg: #3a1c1e; --drop-ink: #ff9d97;
-      --tight-bg: #38300f; --tight-ink: #e3b341;
-      --grant-bg: #12331f; --grant-ink: #56d364;
-      --untrust: #d29922; --untrust-bg: #2a2412;
+      --bg: #101214; --surface: #171a1e; --surface-2: #1c2025; --ink: #eceef0; --ink-2: #c3c8ce; --muted: #8e959d;
+      --line: #2b3036; --line-2: #23272c;
+      --accent: #7ea4ff; --accent-ink: #0d1117; --accent-soft: #1b2741;
+      --permit: #56c784; --permit-soft: #14301f;
+      --refuse: #ff8279; --refuse-soft: #3a1d1b;
+      --pause: #e5a845; --pause-soft: #33270f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
     }
   }
   * { box-sizing: border-box; }
-  body { font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; margin: 0; color: var(--ink); background: var(--bg); }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+  html { font-size: 15px; }
+  html.large { font-size: 17.5px; }
+  body { margin: 0; font: 1rem/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+  body.story-on { padding-bottom: calc(var(--story-h, 12rem) + 1rem); }
+  #narrowing, #queue { scroll-margin-top: 5rem; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { font-size: .86em; }
+  .num { font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); }
-  .ok { color: var(--ok); font-weight: 600; } .no { color: var(--no); font-weight: 600; }
+  h1, h2, h3, h4 { margin: 0; letter-spacing: -.01em; }
+  button { font: inherit; }
 
-  /* top bar + nav */
-  header.topbar {
-    position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 1rem;
-    padding: .55rem 1.1rem; background: var(--panel); border-bottom: 1px solid var(--line);
-  }
-  .brand { font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
-  .brand .env { font-weight: 600; font-size: .7rem; text-transform: uppercase; color: var(--brand);
-    border: 1px solid var(--brand); border-radius: 6px; padding: 0 .35rem; margin-left: .4rem; vertical-align: 1px; }
-  nav.tabs { display: flex; gap: .25rem; flex: 1; }
-  nav.tabs button {
-    font: inherit; font-weight: 600; color: var(--muted); background: transparent; border: 0;
-    border-radius: 8px; padding: .4rem .7rem; cursor: pointer;
-  }
-  nav.tabs button:hover { background: var(--chip); color: var(--ink); }
-  nav.tabs button.active { background: var(--brand); color: var(--brand-ink); }
-  .sess { font-size: .8rem; white-space: nowrap; }
+  /* ---------- top bar ---------- */
+  header.top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 1.5rem;
+    padding: .6rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; }
+  .brand b { font-size: 1.05rem; }
+  .brand span { font-size: .75rem; color: var(--muted); }
+  nav.views { display: flex; gap: .15rem; flex: 1; }
+  nav.views button { border: 0; background: transparent; color: var(--ink-2); font-weight: 600; padding: .45rem .75rem; border-radius: 6px; cursor: pointer; }
+  nav.views button:hover { background: var(--surface-2); color: var(--ink); }
+  nav.views button[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+  nav.views .who { font-weight: 400; color: var(--muted); }
+  .count { display: inline-block; min-width: 1.35rem; padding: 0 .35rem; margin-left: .3rem; border-radius: 999px; background: var(--pause); color: var(--surface); font-size: .75rem; text-align: center; }
+  .count:empty { display: none; }
+  .tools { display: flex; align-items: center; gap: .5rem; white-space: nowrap; }
+  .session { font-size: .8rem; color: var(--muted); }
 
-  main { max-width: 1040px; margin-inline: auto; padding: 1.2rem 1.1rem 7rem; }
+  /* ---------- buttons, fields ---------- */
+  .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .48rem .9rem; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--surface); color: var(--ink); cursor: pointer; font-weight: 500; }
+  .btn:hover { border-color: var(--ink-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.danger { background: var(--refuse); border-color: var(--refuse); color: #fff; font-weight: 600; }
+  .btn.ghost { background: transparent; }
+  .btn.small { padding: .28rem .6rem; font-size: .82rem; }
+  .btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.cue { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .btnrow { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .9rem; }
+  label.field { display: block; }
+  label.field > span { display: block; font-size: .82rem; font-weight: 600; color: var(--ink-2); margin-bottom: .3rem; }
+  label.field small { display: block; margin-top: .3rem; color: var(--muted); font-size: .8rem; }
+  .inp, select { width: 100%; font: inherit; padding: .5rem .65rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); }
+  .inp.big { font-size: 1.2rem; font-weight: 600; padding: .65rem .8rem; }
+  .inline { display: flex !important; align-items: center; gap: .6rem; }
+  .inline > span { margin: 0 !important; white-space: nowrap; }
+  .inline select { width: auto; min-width: 18rem; }
+
+  /* ---------- layout ---------- */
+  .shell { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 1.5rem; max-width: 92rem; margin: 0 auto; padding: 1.5rem; }
+  @media (max-width: 1100px) { .shell { grid-template-columns: minmax(0, 1fr); } }
   .view[hidden] { display: none; }
-  h2.vtitle { font-size: 1.15rem; margin: .2rem 0 .1rem; }
-  p.lead { color: var(--muted); margin: 0 0 1rem; max-width: 70ch; }
+  .vhead { margin: .25rem 0 1.25rem; }
+  .vhead h1 { font-size: 1.6rem; }
+  .vhead .lead { margin: .4rem 0 0; color: var(--ink-2); max-width: 68ch; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.25rem 1.35rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+  .panel > h2 { font-size: 1.05rem; margin-bottom: .75rem; }
+  .grid3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: .9rem; margin-top: 1rem; }
+  @media (max-width: 760px) { .grid3 { grid-template-columns: 1fr; } header.top { flex-wrap: wrap; gap: .6rem; } .inline select { min-width: 0; } }
+  .run-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .run-row p { margin: .25rem 0 0; }
 
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.15rem; margin: .9rem 0; }
-  .card h3 { font-size: 1rem; margin: 0 0 .6rem; }
-  .steptag { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-    color: var(--brand); border: 1px solid var(--brand); border-radius: 999px; padding: .05rem .55rem; margin-bottom: .7rem; }
+  /* ---------- authority rendering ---------- */
+  .auth { margin: 0; }
+  .auth + .auth { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed var(--line); }
+  .auth-res { font-weight: 600; font-size: .88rem; color: var(--ink-2); margin-bottom: .3rem; }
+  .auth dl { display: grid; grid-template-columns: 4.5rem 1fr; gap: .3rem .6rem; margin: 0; }
+  .auth dt { font-size: .8rem; color: var(--muted); padding-top: .12rem; }
+  .auth dd { margin: 0; display: flex; flex-wrap: wrap; gap: .3rem; }
+  .chip { display: inline-block; padding: .05rem .5rem; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); font-size: .85rem; }
+  .chip.dropped { background: var(--refuse-soft); border-color: transparent; color: var(--refuse); text-decoration: line-through; }
+  .chip.tightened { background: var(--pause-soft); border-color: transparent; color: var(--pause); }
+  .chip.gone { text-decoration: line-through; color: var(--muted); }
 
-  .row { display: flex; align-items: center; gap: .6rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
-  .row:last-child { border-bottom: 0; }
-  .grow { flex: 1; }
-  .pill { border: 1px solid var(--chip-line); border-radius: 999px; padding: .02rem .55rem; font-size: .78em; background: var(--chip); }
-  .pill.active { color: var(--ok); border-color: var(--ok); }
-  .pill.suspended { color: var(--warn); border-color: var(--warn); }
-  .pill.revoked, .pill.expired { color: var(--no); border-color: var(--no); }
+  .compare-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  @media (max-width: 760px) { .compare-cols { grid-template-columns: 1fr; } }
+  .compare-cols h3 { font-size: .95rem; margin-bottom: .6rem; display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+  .tag { font-size: .74rem; font-weight: 600; padding: .05rem .45rem; border-radius: 4px; }
+  .tag.untrusted { background: var(--pause-soft); color: var(--pause); }
+  .tag.derived { background: var(--permit-soft); color: var(--permit); }
+  .verdict-line { margin: 1rem 0 0; padding: .7rem .85rem; border-radius: 8px; background: var(--accent-soft); color: var(--ink); }
 
-  button.btn { font: inherit; padding: .38rem .8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--ink); cursor: pointer; }
-  button.btn:hover { border-color: var(--brand); }
-  button.btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); font-weight: 600; }
-  button.btn.primary:hover { filter: brightness(1.05); }
-  button.btn:disabled { opacity: .45; cursor: not-allowed; border-color: var(--line); }
-  .btnrow { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .3rem; }
+  details.wire { margin-top: .75rem; }
+  details.wire summary { cursor: pointer; color: var(--accent); font-size: .85rem; font-weight: 600; }
+  details.wire h4 { font-size: .8rem; color: var(--muted); margin: .7rem 0 .25rem; font-weight: 600; }
+  pre.json { margin: 0; padding: .65rem .75rem; max-height: 22rem; overflow: auto; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 6px; font-size: .78rem; line-height: 1.45; }
 
-  label.field { display: block; margin: .55rem 0; }
-  label.field span { display: block; font-size: .78rem; font-weight: 600; color: var(--muted); margin-bottom: .2rem; }
-  input.inp { width: 100%; font: inherit; padding: .4rem .55rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--ink); }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
-  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  /* ---------- the agent's Missions: a strip of record cards ---------- */
+  .strip-wrap { margin-bottom: 1.25rem; }
+  .strip-wrap h2, .rail h2 { font-size: .95rem; margin: 0 0 .6rem; display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+  .strip-wrap h2 .muted, .rail h2 .muted { font-weight: 400; font-size: .8rem; }
+  .strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(17.5rem, 1fr); gap: .75rem; overflow-x: auto; padding-bottom: .25rem; }
+  .mcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .8rem .95rem; box-shadow: var(--shadow); overflow: hidden; transition: background-color .8s ease; }
+  .mcard.flash { background: var(--accent-soft); }
+  .mcard.acting { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+  .mc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; }
+  .mc-top h3 { font-size: .95rem; line-height: 1.3; }
+  .state { flex: none; font-size: .75rem; font-weight: 700; padding: .1rem .5rem; border-radius: 999px; }
+  .state.active { background: var(--permit-soft); color: var(--permit); }
+  .state.suspended { background: var(--pause-soft); color: var(--pause); }
+  .state.terminated, .state.unknown { background: var(--refuse-soft); color: var(--refuse); }
+  .mc-meta { margin: .25rem 0 .5rem; font-size: .78rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: .1rem .6rem; }
+  .mc-flag { font-weight: 700; color: var(--accent); }
+  .aline { font-size: .84rem; line-height: 1.4; margin-top: .2rem; }
+  .aline .svc { color: var(--muted); }
+  .aline.gone { text-decoration: line-through; color: var(--muted); }
+  .mc-clock { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; padding-top: .5rem; border-top: 1px solid var(--line-2); font-size: .76rem; }
+  .mc-clock b { display: block; font-size: .92rem; color: var(--ink); }
+  .mc-clock span { color: var(--muted); }
+  .mcard details.wire { margin-top: .4rem; }
+  .stamp { position: absolute; top: .7rem; right: .7rem; transform: rotate(-8deg); border: 2px solid var(--refuse); color: var(--refuse);
+    padding: .05rem .5rem; border-radius: 4px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: .9rem; background: var(--surface); }
+  .mcard.ended h3 { padding-right: 6.5rem; }
+  .none-left { font-size: .84rem; color: var(--refuse); font-weight: 600; margin: .2rem 0 0; }
 
-  pre.json { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: .7rem .8rem;
-    overflow-x: auto; font-family: ui-monospace, monospace; font-size: .8em; margin: .5rem 0 0; max-height: 320px; }
-  .untrusted { border-left: 3px solid var(--untrust); }
-  .taglabel { display: inline-block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
-    padding: .05rem .5rem; border-radius: 6px; }
-  .taglabel.untrust { color: var(--untrust); background: var(--untrust-bg); border: 1px solid var(--untrust); }
-  .taglabel.grant { color: var(--grant-ink); background: var(--grant-bg); border: 1px solid var(--grant-ink); }
+  /* ---------- rail: decisions ---------- */
+  .rail { min-width: 0; }
+  @media (min-width: 1101px) {
+    .rail { position: sticky; top: calc(3.6rem + 1.5rem); align-self: start; max-height: calc(100vh - 3.6rem - 3rem - var(--story-h, 0px)); display: flex; flex-direction: column; }
+    .rail ol.feed { overflow: auto; min-height: 0; }
+  }
+  ol.feed { list-style: none; margin: 0; padding: 0 .2rem 0 0; }
+  .focusable { scroll-margin-top: 5rem; }
+  .op-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 1rem; align-items: start; }
+  .op-grid .panel { margin-bottom: 1rem; }
+  @media (max-width: 900px) { .op-grid { grid-template-columns: 1fr; } }
+  .ev { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: .65rem .8rem; margin-bottom: .5rem; transition: background-color 1.2s ease; }
+  .ev.fresh { background: var(--accent-soft); }
+  .ev-top { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+  .verdict { font-size: .76rem; font-weight: 700; padding: .08rem .5rem; border-radius: 4px; }
+  .ev.permit .verdict { background: var(--permit-soft); color: var(--permit); }
+  .ev.refuse .verdict { background: var(--refuse-soft); color: var(--refuse); }
+  .ev.pause .verdict { background: var(--pause-soft); color: var(--pause); }
+  .ev.note .verdict { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+  .ev-time { font-size: .75rem; color: var(--muted); }
+  .ev-what { margin-top: .35rem; font-weight: 600; font-size: .92rem; }
+  .ev-why { margin-top: .15rem; font-size: .86rem; color: var(--ink-2); }
+  .ev-why code { color: var(--muted); }
+  .ev-code { margin-top: .15rem; font-size: .78rem; color: var(--muted); }
+  .ev-ctx { margin-top: .3rem; font-size: .78rem; color: var(--muted); }
+  .empty { color: var(--muted); font-size: .9rem; padding: .3rem 0; }
 
-  .authentry { border: 1px solid var(--line); border-radius: 10px; padding: .55rem .7rem; margin-top: .5rem; background: var(--panel-2); }
-  .authentry .ael { margin-bottom: .35rem; }
-  .arow { display: flex; gap: .5rem; align-items: baseline; padding: .12rem 0; }
-  .alabel { min-width: 3.8rem; font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
-  .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
-  .chip { border: 1px solid var(--chip-line); border-radius: 999px; padding: .02rem .5rem; font-size: .78em; background: var(--chip); font-family: ui-monospace, monospace; }
-  .chip.drop { background: var(--drop-bg); color: var(--drop-ink); border-color: var(--drop-ink); text-decoration: line-through; }
-  .chip.tight { background: var(--tight-bg); color: var(--tight-ink); border-color: var(--tight-ink); }
-  .chip.grant { background: var(--grant-bg); color: var(--grant-ink); border-color: var(--grant-ink); }
-  .colhead { font-weight: 700; font-size: .82rem; margin-bottom: .2rem; display: flex; align-items: center; gap: .5rem; }
-  .summary { margin-top: .8rem; padding: .6rem .75rem; border-radius: 8px; background: var(--tight-bg); color: var(--tight-ink); border: 1px solid var(--tight-ink); font-size: .9em; }
-  .caption { margin-top: .6rem; color: var(--muted); font-size: .88em; font-style: italic; }
-  .legend { margin-top: .5rem; font-size: .78rem; color: var(--muted); display: flex; gap: 1rem; flex-wrap: wrap; }
-  .dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 3px; vertical-align: -1px; margin-right: .25rem; }
-  .issued { padding: .6rem .75rem; border-radius: 8px; background: var(--grant-bg); color: var(--grant-ink); border: 1px solid var(--grant-ink); font-weight: 600; }
+  /* ---------- approvals ---------- */
+  .signin { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 1rem; border-radius: 8px; margin-bottom: 1rem; background: var(--surface); border: 1px solid var(--line); }
+  .signin.stale { background: var(--pause-soft); border-color: transparent; }
+  .appr { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.2rem 1.35rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+  .appr-top { display: flex; align-items: center; gap: .6rem; margin-bottom: .6rem; }
+  .kind { font-size: .78rem; font-weight: 700; padding: .1rem .5rem; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+  .ask { margin: .2rem 0 1rem; font-size: 1.25rem; font-weight: 600; line-height: 1.35; }
+  .appr h4 { font-size: .85rem; color: var(--ink-2); margin: 0 0 .5rem; }
+  .appr .grant { padding: .8rem .9rem; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line-2); }
+  .appr p { margin: .6rem 0 0; }
+  .removed { color: var(--ink-2); font-size: .9rem; }
+  .floor { font-size: .88rem; padding: .5rem .7rem; border-radius: 6px; }
+  .floor.ok { background: var(--permit-soft); color: var(--permit); }
+  .floor.need { background: var(--pause-soft); color: var(--pause); }
+  .floor.no { background: var(--refuse-soft); color: var(--refuse); }
+  .appr .err { color: var(--refuse); font-weight: 600; }
 
-  /* activity log dock */
-  aside.logbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 4; background: var(--panel);
-    border-top: 1px solid var(--line); max-height: 30vh; }
-  .logbar .loghead { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
-    padding: .35rem 1.1rem; border-bottom: 1px solid var(--line); }
-  #log { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .8em; padding: .5rem 1.1rem; max-height: 22vh; overflow: auto; margin: 0; }
+  /* ---------- operator ---------- */
+  table.fleet { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  table.fleet th { text-align: left; font-size: .78rem; color: var(--muted); font-weight: 600; padding: .35rem .5rem; border-bottom: 1px solid var(--line); }
+  table.fleet td { padding: .55rem .5rem; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+  table.fleet tr.sel td { background: var(--accent-soft); }
+  table.fleet tbody tr { cursor: pointer; }
+  table.fleet tbody tr:hover td { background: var(--surface-2); }
+  .q { font-size: 1.15rem; }
+  .answer { margin: .7rem 0 0; }
+  .ops { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+  ol.receipt { list-style: none; margin: .5rem 0 0; padding: 0; }
+  .rc { display: grid; grid-template-columns: 5.5rem 6.5rem 1fr; gap: .6rem; align-items: baseline; padding: .45rem 0; border-bottom: 1px solid var(--line-2); font-size: .88rem; }
+  .rc-v { font-weight: 700; font-size: .78rem; }
+  .rc.ok .rc-v { color: var(--permit); }
+  .rc.bad { background: var(--refuse-soft); }
+  .rc.bad .rc-v { color: var(--refuse); }
+  .rc-d { grid-column: 2 / -1; color: var(--refuse); font-weight: 600; }
+  .rc code { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tamper { display: flex; align-items: center; gap: .8rem; margin-top: 1rem; flex-wrap: wrap; }
+
+  /* ---------- story bar ---------- */
+  footer.story { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(0, 0, 0, .08); }
+  body:not(.story-on) footer.story { display: none; }
+  .story-in { max-width: 92rem; margin: 0 auto; padding: .85rem 1.5rem 1rem; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1.5rem; align-items: center; }
+  @media (max-width: 900px) { .story-in { grid-template-columns: 1fr; gap: .6rem; } }
+  ol.beats { list-style: none; display: flex; gap: .3rem; margin: 0; padding: 0; }
+  ol.beats button { width: 2rem; height: 2rem; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); cursor: pointer; font-weight: 700; font-size: .85rem; }
+  ol.beats button.done { background: var(--permit-soft); color: var(--permit); border-color: transparent; }
+  ol.beats button.current { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .beat-title { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+  .beat-title strong { font-size: 1.1rem; }
+  .beat-num { font-size: .8rem; color: var(--muted); }
+  .beat-status { font-size: .8rem; font-weight: 600; color: var(--pause); }
+  .beat-status.done { color: var(--permit); }
+  .beat-status.error { color: var(--refuse); }
+  .beat-say { margin: .25rem 0 0; color: var(--ink); max-width: 95ch; }
+  .beat-notice { margin: .3rem 0 0; color: var(--ink-2); font-size: .9rem; max-width: 95ch; }
+  .beat-notice b { color: var(--ink); }
+  .beat-actions { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; }
+  .beat-actions .row { display: flex; gap: .5rem; }
+  .keyhint { font-size: .75rem; color: var(--muted); }
+  kbd { font-family: inherit; font-size: .75rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 .3rem; background: var(--surface-2); }
 </style>
 </head>
-<body>
-<header class="topbar">
-  <div class="brand">Mission-Bound Authorization<span class="env">demo</span></div>
-  <nav class="tabs" id="tabs">
-    <button data-view="mission" class="active">Mission</button>
+<body class="story-on">
+<header class="top">
+  <div class="brand"><b>Mission Console</b><span>Mission-Bound Authorization reference stack, local</span></div>
+  <nav class="views" id="views" aria-label="Views">
+    <button data-view="request">Request <span class="who">Alice</span></button>
     <button data-view="agent">Agent</button>
-    <button data-view="approver">Approver</button>
+    <button data-view="approver">Approvals <span class="who">Bob</span><span class="count" id="queueCount"></span></button>
     <button data-view="operator">Operator</button>
   </nav>
-  <div class="sess muted" id="sess"></div>
+  <div class="tools">
+    <button class="btn ghost small" id="storyToggle" aria-pressed="true" title="Show or hide the guided story bar">Story</button>
+    <button class="btn ghost small" id="sizeToggle" aria-pressed="false" title="Larger text for a projector">Large text</button>
+    <span class="session" id="sess"></span>
+  </div>
 </header>
 
-<main>
-  <!-- ============================ MISSION ============================ -->
-  <section class="view" data-view="mission">
-    <h2 class="vtitle">Shaper &rarr; Mission Proposal &rarr; Issue</h2>
-    <p class="lead">A natural-language goal is shaped into an untrusted Mission Intent. The authorization server derives a
-      bounded Authority Set from it (the proposal, narrowed to the policy ceiling), and the narrowed mission is issued into
-      the fleet. The form below deliberately over-asks so the narrowing is visible.</p>
-
-    <div class="card">
-      <span class="steptag">1 &middot; Shape</span>
-      <div class="grid2">
-        <label class="field"><span>Goal (natural language)</span>
-          <input class="inp" id="f_goal" value="Pay Acme and Globex invoices, up to $900" /></label>
-        <label class="field"><span>Cap (max_amount, USD)</span>
-          <input class="inp" id="f_cap" value="900.00" /></label>
-        <label class="field"><span>Proposed actions (comma-separated)</span>
-          <input class="inp" id="f_actions" value="payments:invoice.read, payments:payment.execute, payments:remittance.send" oninput="renderActionsHelp()" />
-          <span class="muted" id="actionsHelp" style="display:block;margin-top:.28rem;font-size:.78rem"></span></label>
-        <label class="field"><span>Vendors (comma-separated)</span>
-          <input class="inp" id="f_vendors" value="acme, globex" /></label>
+<div class="shell">
+  <main>
+    <section class="strip-wrap" aria-label="The agent's Missions">
+      <h2>The agent's Missions <span class="muted" id="missionCount"></span></h2>
+      <div class="strip" id="missions"><p class="empty">Loading</p></div>
+    </section>
+    <!-- ============================ REQUEST ============================ -->
+    <section class="view" data-view="request" hidden>
+      <div class="vhead">
+        <h1>Alice asks her agent</h1>
+        <p class="lead">The agent turns Alice's request into a proposal. The proposal is untrusted: the authorization server
+          derives what policy allows, and only that can be approved. The defaults below over-ask on purpose.</p>
       </div>
-      <div class="btnrow"><button class="btn primary" onclick="shape()">Shape intent</button></div>
-      <div id="intentOut"></div>
-    </div>
-
-    <div class="card">
-      <span class="steptag">2 &middot; Propose (derive)</span>
-      <p class="muted" style="margin:.1rem 0 .3rem">The AS mechanically intersects the proposal with the derivation ceiling.</p>
-      <div class="btnrow"><button class="btn primary" id="proposeBtn" onclick="propose()" disabled>Derive Authority Set</button></div>
-      <div id="proposeOut"></div>
-    </div>
-
-    <div class="card">
-      <span class="steptag">3 &middot; Submit for approval</span>
-      <p class="muted" style="margin:.1rem 0 .3rem">Submit routes to approval: PAR &rarr; authorize (no auto-approve). An approver
-        adjudicates it in the Approver tab; only then is the DPoP-bound token issued and the mission set active.</p>
-      <div class="btnrow"><button class="btn primary" id="issueBtn" onclick="submitApproval()" disabled>Submit for approval</button></div>
-      <div id="issueOut"></div>
-    </div>
-  </section>
-
-  <!-- ============================ AGENT ============================ -->
-  <section class="view" data-view="agent" hidden>
-    <h2 class="vtitle">Agent</h2>
-    <p class="lead">Every action runs through the real PEP &rarr; PDP &rarr; OpenFGA path, bounded by the mission the agent is
-      currently acting under.</p>
-
-    <div class="card">
-      <span class="steptag">Bound mission</span>
-      <div id="agentMission"><span class="muted">loading&hellip;</span></div>
-    </div>
-
-    <div class="card">
-      <h3>Reachable services &amp; actions</h3>
-      <div id="catalog"></div>
-    </div>
-
-    <div class="card">
-      <h3>Actions</h3>
-      <div class="btnrow" style="margin-bottom:.7rem">
-        <button class="btn primary" onclick="run()">Run mission</button>
-        <span class="muted" style="align-self:center">autonomous, deterministic — works the whole mission, pausing at the JIT gate</span>
+      <div class="panel">
+        <label class="field"><span>Alice's request</span>
+          <input class="inp big" id="f_goal" value="Pay Acme and Globex invoices, up to $900" /></label>
+        <div class="grid3">
+          <label class="field"><span>Actions the agent proposes</span>
+            <input class="inp" id="f_actions" value="payments:invoice.read, payments:payment.execute, payments:remittance.send" />
+            <small id="actionsHelp"></small></label>
+          <label class="field"><span>Vendors</span>
+            <input class="inp" id="f_vendors" value="acme, globex" /></label>
+          <label class="field"><span>Limit per payment (USD)</span>
+            <input class="inp num" id="f_cap" value="900.00" /></label>
+        </div>
+        <div class="btnrow">
+          <button class="btn primary" data-do="check">Check the proposal</button>
+          <button class="btn" data-do="submit" id="submitBtn" disabled>Send to Bob for approval</button>
+        </div>
       </div>
-      <div class="btnrow">
-        <button class="btn" onclick="act('get_invoice',{invoice_id:'inv-1'})">read inv-1 (in-authority)</button>
-        <button class="btn" onclick="act('execute_wire_transfer',{invoice_id:'inv-1'})">wire inv-1 ($125, ok)</button>
-        <button class="btn" onclick="act('execute_wire_transfer',{invoice_id:'inv-2'})">wire inv-2 ($900, over cap)</button>
-        <button class="btn" onclick="act('execute_wire_transfer',{invoice_id:'inv-3'})">wire inv-3 (globex, out of authority)</button>
+      <div id="narrowing"></div>
+    </section>
+
+    <!-- ============================ AGENT ============================ -->
+    <section class="view" data-view="agent" hidden>
+      <div class="vhead">
+        <h1>The agent at work</h1>
+        <p class="lead">Every tool call carries the Mission. The resource asks the policy decision point, which checks the call
+          against the Mission's Authority Set before anything moves. Each verdict lands in Decisions, on the right.</p>
       </div>
-      <div class="btnrow" style="margin-top:.6rem">
-        <button class="btn" onclick="jit()">send remittance inv-1 (needs JIT approval)</button>
-        <button class="btn" id="retryBtn" onclick="retryJit()" disabled>retry after approval</button>
+      <div class="panel">
+        <div class="run-row">
+          <div><h2>Run the Mission</h2>
+            <p class="muted">Pays each payable invoice, then sends the remittance, under the Mission marked Acting.</p></div>
+          <button class="btn primary" data-do="run" id="runBtn">Run the Mission</button>
+        </div>
       </div>
-    </div>
-  </section>
+      <div class="panel">
+        <h2>Try one action</h2>
+        <label class="field inline"><span>Act under</span><select id="actUnder"></select></label>
+        <div class="btnrow">
+          <button class="btn" data-do="act" data-tool="get_invoice" data-inv="inv-1">Read inv-1</button>
+          <button class="btn" data-do="act" data-tool="execute_wire_transfer" data-inv="inv-1">Pay inv-1 (Acme, $125)</button>
+          <button class="btn" data-do="act" data-tool="execute_wire_transfer" data-inv="inv-2">Pay inv-2 (Acme, $900)</button>
+          <button class="btn" data-do="act" data-tool="execute_wire_transfer" data-inv="inv-3">Pay inv-3 (Globex, $50)</button>
+        </div>
+        <div class="btnrow">
+          <button class="btn" data-do="jit">Send remittance for inv-1</button>
+          <button class="btn" data-do="retry" id="retryBtn" disabled>Retry after approval</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Services the agent can reach</h2>
+        <div id="catalog"><p class="empty">Loading</p></div>
+      </div>
+    </section>
 
-  <!-- ============================ APPROVER ============================ -->
-  <section class="view" data-view="approver" hidden>
-    <h2 class="vtitle">Approver</h2>
-    <p class="lead">Two kinds of approval land here: mission approvals (a submitted mission awaiting a grant decision) and
-      in-mission JIT actions gated behind a per-action approval (ARAP). Each entry shows enough context to decide.</p>
-    <div class="card">
-      <h3>Pending approvals</h3>
-      <div id="queue"></div>
-    </div>
-  </section>
+    <!-- ============================ APPROVER ============================ -->
+    <section class="view" data-view="approver" hidden>
+      <div class="vhead">
+        <h1>Bob's approvals</h1>
+        <p class="lead">Bob approves tasks, not scopes. Two kinds arrive here: a new Mission, and a single action that its
+          Mission says needs a person at the moment it happens.</p>
+      </div>
+      <div id="signin"></div>
+      <div id="queue"><p class="empty">Nothing waiting for Bob.</p></div>
+    </section>
 
-  <!-- ============================ OPERATOR ============================ -->
-  <section class="view" data-view="operator" hidden>
-    <h2 class="vtitle">Operator</h2>
-    <p class="lead">Fleet management and the verified evidence feed. Lifecycle operations transition mission state; the
-      timeline reflects each mission's transparency log.</p>
-    <div class="card">
-      <h3>Mission fleet</h3>
-      <div id="fleet"></div>
-    </div>
-    <div class="card">
-      <h3>Evidence timeline <span class="muted" id="tlMission"></span></h3>
-      <div id="timeline"></div>
-    </div>
-  </section>
-</main>
+    <!-- ============================ OPERATOR ============================ -->
+    <section class="view" data-view="operator" hidden>
+      <div class="vhead">
+        <h1>Operator</h1>
+        <p class="lead">Every task the agent holds, what each may still do, and the signed record of what it did.</p>
+      </div>
+      <div class="op-grid">
+        <div class="panel">
+          <h2>Missions</h2>
+          <table class="fleet"><thead><tr><th>Task</th><th>State</th></tr></thead><tbody id="fleet"></tbody></table>
+        </div>
+        <div class="panel focusable" id="detail"><p class="empty">Select a Mission.</p></div>
+      </div>
+      <div class="panel focusable" id="receipt"></div>
+    </section>
+  </main>
 
-<aside class="logbar">
-  <div class="loghead">Activity log</div>
-  <pre id="log"></pre>
-</aside>
+  <aside class="rail">
+    <h2>Decisions <span class="muted">newest first</span></h2>
+    <ol class="feed" id="feed"><li class="empty">No decisions yet.</li></ol>
+  </aside>
+</div>
+
+<footer class="story" id="story" aria-label="Story">
+  <div class="story-in">
+    <ol class="beats" id="beats"></ol>
+    <div>
+      <div class="beat-title"><span class="beat-num" id="beatNum"></span><strong id="beatTitle"></strong><span class="beat-status" id="beatStatus"></span></div>
+      <p class="beat-say" id="beatSay"></p>
+      <p class="beat-notice" id="beatNotice"></p>
+    </div>
+    <div class="beat-actions">
+      <div class="row">
+        <button class="btn ghost" id="beatBack">Back</button>
+        <button class="btn primary" id="beatGo">Start</button>
+      </div>
+      <span class="keyhint"><kbd>&rarr;</kbd> runs the next step</span>
+    </div>
+  </div>
+</footer>
 
 <script>
-  let CSRF = "", MISSION = "", SHAPED = null, SHAPED_DETAILS = null;
-  // Interval handles for the two auto-pollers (mission approval + JIT retry).
-  // Every poller has a bounded stop condition and clears its own handle.
-  let missionPoll = null, jitPoll = null;
-  const $ = (id) => document.getElementById(id);
-  const api = (p, init) => fetch(p, { credentials: "include", ...init }).then((r) => r.json());
-  const post = (p, body, extra) => api(p, { method: "POST", headers: { "content-type": "application/json", ...(extra || {}) }, body: JSON.stringify(body) });
-  const logLine = (t) => { $("log").textContent = `${new Date().toLocaleTimeString()}  ${t}\n` + $("log").textContent; };
-  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-  // Attribute-safe: esc() covers text nodes (& < >); quotes must also be escaped
-  // for values placed inside a double-quoted attribute (e.g. title=).
-  const escAttr = (s) => esc(s).replace(/"/g, "&quot;");
-  const shortRes = (r) => String(r).replace(/^https?:\/\//, "");
-  const csv = (id) => $(id).value.split(",").map((s) => s.trim()).filter(Boolean);
+  // ---------------------------------------------------------------------------
+  // State. Everything rendered is read from the demo server's routes; the page
+  // keeps only what it has been told, plus the story's own progress.
+  // ---------------------------------------------------------------------------
+  const S = {
+    csrf: "", sub: "", roles: [],
+    labels: { tools: {}, actions: {}, reasons: {} },
+    missions: [], activeId: "", queue: [], login: null, services: [], fleet: [], timeline: null,
+    selected: "", view: "agent", proposal: null, feed: [], pendingJit: null,
+  };
+  // The story's progress: the Mission it creates, and what has happened to it.
+  const STORY = { beat: 0, state: [], ran: [], approvalId: "", missionId: "", jitTaskId: "", jitDone: false, proofDone: false, tampered: false, otherId: "" };
 
-  // ---- display-only labels (fetched once from /labels; single source of truth) ----
-  let LABELS = { tools: {}, actions: {}, reasons: {} };
-  // Human name for a machine id, or the raw id when unmapped. Reason codes may
-  // arrive `:<state>`-suffixed (mission_not_active:suspended); strip + append.
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const csv = (id) => $(id).value.split(",").map((s) => s.trim()).filter(Boolean);
+  const api = (p, init) => fetch(p, { credentials: "include", ...init }).then(async (r) => ({ status: r.status, ...(await r.json()) }));
+  const get = (p) => fetch(p, { credentials: "include" }).then((r) => r.json());
+  const post = (p, body, csrf) => api(p, { method: "POST", headers: { "content-type": "application/json", ...(csrf ? { "x-csrf": S.csrf } : {}) }, body: JSON.stringify(body ?? {}) });
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  // ---------------------------------------------------------------------------
+  // Display helpers (presentation only; wire values are never derived here).
+  // ---------------------------------------------------------------------------
   function label(kind, id) {
     if (id === undefined || id === null || id === "") return id;
     if (kind === "reason") {
       const s = String(id), base = s.split(":")[0], state = s.slice(base.length + 1);
-      const human = LABELS.reasons[base];
+      const human = S.labels.reasons[base];
       return human ? (state ? `${human} (${state})` : human) : id;
     }
-    const map = kind === "tool" ? LABELS.tools : LABELS.actions;
+    const map = kind === "tool" ? S.labels.tools : S.labels.actions;
     return map[id] || id;
   }
-  // Reason gloss for log lines: human name with the raw code in parens (compact),
-  // or just the raw code when unmapped (never "code (code)").
-  const reasonGloss = (code) => {
-    if (!code) return "";
-    const h = label("reason", code);
-    return h === code ? code : `${h} (${code})`;
+  const title = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : s);
+  const money = (amount, currency) => (amount == null ? "" : currency === "USD" || !currency ? `$${amount}` : `${amount} ${currency}`);
+  const shortId = (id) => { const s = String(id || ""); return s.length > 13 ? s.slice(0, 12) + "…" : s; };
+  const clock = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const serviceName = (resource) => {
+    const svc = S.services.find((s) => s.endpoint === resource);
+    return svc ? svc.display_name.replace(/\s*\(.*\)\s*$/, "") : String(resource).replace(/^https?:\/\//, "");
   };
-
-  // ---- one renderer for every agent step (single actions AND run steps) ----
-  // Consumes the server's structured StepDetail: human tool name, target
-  // invoice·vendor·amount, verdict, short mission id, and the evidence outcome.
-  const shortMission = (id) => { const s = String(id || ""); return s.length > 11 ? s.slice(0, 10) + "…" : s; };
-  const money = (t) => (t && t.amount != null ? (t.currency === "USD" ? `$${t.amount}` : `${t.amount} ${t.currency}`) : "");
-  function renderStep(d) {
-    if (!d || !d.tool) return;
-    const t = d.target;
-    const target = t ? [t.invoice_id, t.vendor, money(t)].filter(Boolean).join(" ") : "";
-    let verdict;
-    if (d.ok) verdict = "PERMIT";
-    else if (d.outcome === "paused") verdict = "PAUSED" + (d.reason ? ": " + reasonGloss(d.reason) : "");
-    else verdict = "DENY" + (d.reason ? ": " + reasonGloss(d.reason) : "");
-    let line = [label("tool", d.tool), target].filter(Boolean).join(" · ") + ` → ${verdict}`;
-    if (d.missionId) line += ` · mission ${shortMission(d.missionId)}`;
-    // The verdict already states a denial; only PERMIT/PAUSED/READ add an outcome.
-    if (d.evidence && d.outcome !== "denied") line += ` · ${d.evidence}`;
-    if (d.deduped) line += " (deduped)";
-    logLine(line);
+  const missionById = (id) => S.missions.find((m) => m.id === id);
+  const goalOf = (id) => missionById(id)?.goal || shortId(id);
+  function relDays(iso) {
+    const ms = Date.parse(iso) - Date.now();
+    if (!Number.isFinite(ms)) return "";
+    if (ms <= 0) return "ended";
+    const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000);
+    return d >= 2 ? `in ${d} days` : h >= 1 ? `in ${h} h` : `in ${Math.max(1, Math.round(ms / 60000))} min`;
   }
-  // Caption under the actions input: the human meaning of the ids the user edits.
-  function renderActionsHelp() {
-    const el = $("actionsHelp");
-    if (!el) return;
-    const ids = csv("f_actions");
-    el.textContent = ids.length ? "Means: " + ids.map((a) => label("action", a)).join(", ") : "";
+  function countdown(iso) {
+    const s = Math.floor((Date.parse(iso) - Date.now()) / 1000);
+    if (!Number.isFinite(s)) return "";
+    if (s <= 0) return "lapsed, renews on next use";
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} left`;
   }
 
-  // ---- nav ----
-  $("tabs").addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-view]");
-    if (btn) showView(btn.dataset.view);
-  });
-  function showView(v) {
-    for (const b of document.querySelectorAll("#tabs button")) b.classList.toggle("active", b.dataset.view === v);
-    for (const s of document.querySelectorAll(".view")) s.hidden = s.dataset.view !== v;
+  // One Authority Set entry, as Bob or an operator reads it. `mark` strikes
+  // what the derivation removed and highlights what it tightened.
+  function entryHtml(entry, mark) {
+    const c = entry.constraints || {};
+    const dropActs = new Set(mark?.actions || []), dropVend = new Set(mark?.vendors || []);
+    const acts = (entry.actions || []).map((a) => `<span class="chip ${dropActs.has(a) ? "dropped" : mark?.gone ? "gone" : ""}" title="${esc(a)}">${esc(label("action", a))}</span>`).join("");
+    const vends = (c.vendors || []).map((v) => `<span class="chip ${dropVend.has(v) ? "dropped" : mark?.gone ? "gone" : ""}" title="${esc(v)}">${esc(title(v))}</span>`).join("");
+    const readsOnly = (entry.actions || []).every((a) => /\.(read|list)$/.test(a));
+    const cap = c.max_amount ? `<span class="chip num ${mark?.capTo ? "dropped" : mark?.capFrom ? "tightened" : mark?.gone ? "gone" : ""}">up to ${esc(money(c.max_amount.amount, c.max_amount.currency))}</span>${readsOnly && !mark?.capTo ? '<span class="muted" style="font-size:.8rem;align-self:center">reads carry no amount</span>' : ""}` : "";
+    return `<div class="auth"><div class="auth-res">${esc(serviceName(entry.resource))}</div><dl>
+      <dt>May</dt><dd>${acts || '<span class="muted">nothing</span>'}</dd>
+      ${vends ? `<dt>Vendors</dt><dd>${vends}</dd>` : ""}
+      ${cap ? `<dt>Limit</dt><dd>${cap}</dd>` : ""}
+    </dl></div>`;
   }
-
-  // ---- authority rendering ----
-  function chip(text, cls, title) {
-    const t = title !== undefined && title !== null ? ` title="${escAttr(title)}"` : "";
-    return `<span class="chip ${cls || ""}"${t}>${esc(text)}</span>`;
+  // The same entry as one line, for the compact Mission cards.
+  function entryLine(entry, gone) {
+    const c = entry.constraints || {};
+    const parts = [(entry.actions || []).map((a) => label("action", a)).join(", ")];
+    if (c.vendors?.length) parts.push(c.vendors.map(title).join(", "));
+    const readsOnly = (entry.actions || []).every((a) => /\.(read|list)$/.test(a));
+    if (c.max_amount && !readsOnly) parts.push(`up to ${money(c.max_amount.amount, c.max_amount.currency)}`);
+    return `<div class="aline${gone ? " gone" : ""}"><span class="svc">${esc(serviceName(entry.resource))}:</span> ${esc(parts.join(" · "))}</div>`;
   }
-  function authEntryHtml(entry, drops) {
-    const cons = entry.constraints || {};
-    const dActions = new Set((drops && drops.actions) || []);
-    const dVendors = new Set((drops && drops.vendors) || []);
-    // Action chips: lead with the human name, keep the raw action id in title=.
-    const acts = (entry.actions || []).map((a) => chip(label("action", a), dActions.has(a) ? "drop" : "", a)).join("") || '<span class="muted">&mdash;</span>';
-    const vends = (cons.vendors || []).map((v) => chip(v, dVendors.has(v) ? "drop" : "")).join("") || '<span class="muted">&mdash;</span>';
-    let capHtml = '<span class="muted">&mdash;</span>';
-    if (cons.max_amount) {
-      const cls = drops && drops.capTight ? "tight" : (drops ? "" : "grant");
-      capHtml = chip(`${cons.max_amount.amount} ${cons.max_amount.currency}`, cls);
-    }
-    return `<div class="authentry">
-      <div class="ael"><code>${esc(shortRes(entry.resource))}</code></div>
-      <div class="arow"><span class="alabel">actions</span><span class="chips">${acts}</span></div>
-      <div class="arow"><span class="alabel">vendors</span><span class="chips">${vends}</span></div>
-      <div class="arow"><span class="alabel">max</span><span class="chips">${capHtml}</span></div>
-    </div>`;
-  }
-  function dropsFor(entry, diff) {
-    const d = (diff || []).find((x) => x.resource === entry.resource);
-    if (!d) return null;
-    return { actions: d.actions_dropped || [], vendors: d.vendors_dropped || [], capTight: (d.constraints_tightened || []).length > 0 };
-  }
-  function narrowingSummary(diff) {
+  function narrowingText(diff) {
     const parts = [];
     for (const d of diff || []) {
-      if ((d.vendors_dropped || []).length) parts.push(`dropped vendor${d.vendors_dropped.length > 1 ? "s" : ""} ${d.vendors_dropped.join(", ")}`);
-      if ((d.actions_dropped || []).length) parts.push(`dropped action${d.actions_dropped.length > 1 ? "s" : ""} ${d.actions_dropped.map((a) => label("action", a)).join(", ")}`);
-      for (const t of d.constraints_tightened || []) parts.push(`tightened ${t.name} ${t.proposed} &rarr; ${t.granted}`);
+      for (const v of d.vendors_dropped || []) parts.push(`removed vendor ${esc(title(v))}`);
+      for (const a of d.actions_dropped || []) parts.push(`removed ${esc(label("action", a))}`);
+      for (const t of d.constraints_tightened || []) parts.push(`lowered the limit from ${esc(t.proposed)} to ${esc(t.granted)}`);
     }
-    return parts.length ? parts.join("; ") : "nothing to narrow &mdash; the proposal was already within the ceiling";
+    return parts.length ? parts.join("; ") : "nothing; the proposal was already within policy";
   }
 
-  // ---- step 1: shape ----
-  async function shape() {
-    const body = { goal: $("f_goal").value, actions: csv("f_actions"), vendors: csv("f_vendors"), cap: $("f_cap").value.trim() };
-    const r = await post("/agent/shape", body);
-    SHAPED = r.intent;
-    SHAPED_DETAILS = r.authorization_details || null;
-    $("intentOut").innerHTML =
-      `<div style="margin:.7rem 0 .3rem"><span class="taglabel untrust">untrusted &middot; client proposal</span></div>
-       <pre class="json untrusted">${esc(JSON.stringify(r.intent, null, 2))}</pre>` +
-      (SHAPED_DETAILS
-        ? `<div style="margin:.7rem 0 .3rem"><span class="taglabel untrust">untrusted &middot; authorization_details (RFC 9396, sent beside the intent)</span></div>
-       <pre class="json untrusted">${esc(JSON.stringify(SHAPED_DETAILS, null, 2))}</pre>`
-        : "");
-    $("proposeBtn").disabled = false;
-    $("issueBtn").disabled = true;
-    $("proposeOut").innerHTML = "";
-    $("issueOut").innerHTML = "";
-    logLine(`shape → proposed Mission Intent (untrusted): ${csv("f_vendors").join("+")} / cap ${$("f_cap").value}`);
+  // Facts beside a refusal, read from the step's target and the Mission's
+  // approved authority. The verdict and its code are the PDP's; these only
+  // say which bound the target sits outside.
+  function refusalFacts(step) {
+    const m = missionById(step.missionId), t = step.target;
+    if (!m || !t || !Array.isArray(m.authority)) return "";
+    const vendors = [...new Set(m.authority.flatMap((e) => e.constraints?.vendors || []))];
+    if (t.vendor && vendors.length && !vendors.includes(t.vendor)) return `${title(t.vendor)} is not a vendor this Mission names.`;
+    const capEntry = m.authority.find((e) => e.actions.includes("payments:payment.execute") && e.constraints?.max_amount);
+    if (capEntry && step.tool === "execute_wire_transfer" && Number(t.amount) > Number(capEntry.constraints.max_amount.amount)) {
+      return `${money(t.amount, t.currency)} is over this Mission's ${money(capEntry.constraints.max_amount.amount, capEntry.constraints.max_amount.currency)} limit.`;
+    }
+    return "";
   }
 
-  // ---- step 2: propose (derive) ----
-  async function propose() {
-    if (!SHAPED) return;
-    const r = await post("/agent/propose", { intent: SHAPED, ...(SHAPED_DETAILS ? { authorization_details: SHAPED_DETAILS } : {}) });
-    if (r.error) { $("proposeOut").innerHTML = `<p class="no">derivation error: ${esc(r.error)}</p>`; return; }
-    const proposedHtml = (r.proposed || []).map((e) => authEntryHtml(e, dropsFor(e, r.diff))).join("");
-    const grantedHtml = (r.derived || []).map((e) => authEntryHtml(e, null)).join("");
-    $("proposeOut").innerHTML = `
-      <div class="grid2" style="margin-top:.7rem">
-        <div><div class="colhead"><span class="taglabel untrust">proposed</span> client asked for</div>${proposedHtml}</div>
-        <div><div class="colhead"><span class="taglabel grant">granted</span> AS derived</div>${grantedHtml}</div>
-      </div>
-      <div class="legend">
-        <span><span class="dot" style="background:var(--drop-bg);border:1px solid var(--drop-ink)"></span>struck / red = dropped by derivation</span>
-        <span><span class="dot" style="background:var(--tight-bg);border:1px solid var(--tight-ink)"></span>amber = tightened to ceiling</span>
-      </div>
-      <div class="summary"><b>Narrowed:</b> ${narrowingSummary(r.diff)}</div>
-      <div class="caption">Derivation bounds the proposal — a compromised shaper can propose more but never widen.</div>`;
-    $("issueBtn").disabled = false;
-    logLine(`propose → derived Authority Set; narrowing: ${narrowingSummary(r.diff).replace(/&rarr;/g, "->").replace(/&mdash;/g, "-")}`);
+  // ---------------------------------------------------------------------------
+  // Decisions feed.
+  // ---------------------------------------------------------------------------
+  function push(ev) {
+    S.feed.unshift({ at: clock(), ...ev, fresh: true });
+    S.feed = S.feed.slice(0, 80);
+    renderFeed();
+    setTimeout(() => { for (const e of S.feed) e.fresh = false; renderFeed(); }, 1400);
+  }
+  function note(verdict, what, why, ctx) { push({ kind: "note", verdict, what, why, ctx }); }
+  function pushRenewal(renewal, missionId) {
+    if (!renewal) return;
+    if (renewal.renewed) note("Token", "Access token renewed", "Its token was about to lapse. The Mission is still active, so the refresh token was honored.", `Under “${esc(goalOf(missionId))}”`);
+    else note("Token", "Token renewal refused", `The authorization server answered <code>${esc(renewal.error)}</code>: no new token for this Mission.`, `Under “${esc(goalOf(missionId))}”`);
+  }
+  function pushStep(r, heading) {
+    if (!r || !r.tool) { note("Error", heading || "Action", esc(r?.error || "no result")); return; }
+    pushRenewal(r.renewal, r.missionId);
+    const t = r.target;
+    const what = [label("tool", r.tool), t?.invoice_id, t?.vendor ? title(t.vendor) : "", t?.amount ? money(t.amount, t.currency) : ""].filter(Boolean).map(esc).join(" · ");
+    let kind, verdict, why;
+    if (r.ok) { kind = "permit"; verdict = "Permitted"; why = r.outcome === "executed" ? "Within the Mission's authority. Executed, with evidence." : "Within the Mission's authority."; }
+    else if (r.outcome === "paused") { kind = "pause"; verdict = "Waiting"; why = "Needs a person to approve this one action. Sent to Bob."; }
+    else {
+      kind = "refuse"; verdict = "Refused";
+      const fact = refusalFacts(r);
+      why = `${fact ? esc(fact) : esc(label("reason", r.reason))}<div class="ev-code">Decision: <code>${esc(r.reason)}</code>${fact ? `, ${esc(String(label("reason", r.reason)).toLowerCase())}` : ""}</div>`;
+    }
+    push({ kind, verdict, what: (heading ? `${esc(heading)}: ` : "") + what, why, ctx: `Under “${esc(goalOf(r.missionId))}” <code>${esc(shortId(r.missionId))}</code>`, wire: r });
+  }
+  function renderFeed() {
+    $("feed").innerHTML = S.feed.length
+      ? S.feed.map((e) => `<li class="ev ${e.kind}${e.fresh ? " fresh" : ""}">
+          <div class="ev-top"><span class="verdict">${esc(e.verdict)}</span><span class="ev-time num">${esc(e.at)}</span></div>
+          <div class="ev-what">${e.what}</div>
+          ${e.why ? `<div class="ev-why">${e.why}</div>` : ""}
+          ${e.ctx ? `<div class="ev-ctx">${e.ctx}</div>` : ""}
+          ${e.wire ? `<details class="wire"><summary>Response</summary><pre class="json">${esc(JSON.stringify(e.wire, null, 2))}</pre></details>` : ""}
+        </li>`).join("")
+      : '<li class="empty">No decisions yet.</li>';
   }
 
-  // ---- step 3: submit for approval ----
-  // Submit routes to approval (no auto-approve). Park the approval, switch to the
-  // Approver tab, and poll approval-status until it goes active/denied or times out.
-  async function submitApproval() {
-    if (!SHAPED) return;
-    $("issueBtn").disabled = true;
-    const r = await post("/agent/submit", { intent: SHAPED, ...(SHAPED_DETAILS ? { authorization_details: SHAPED_DETAILS } : {}) });
-    if (r.error) { $("issueOut").innerHTML = `<p class="no">submit error: ${esc(r.error)}</p>`; $("issueBtn").disabled = false; return; }
-    const grantHtml = (r.derived || []).map((e) => authEntryHtml(e, null)).join("");
-    $("issueOut").innerHTML =
-      `<div class="summary" style="margin-top:.6rem">Submitted — awaiting approval in the Approver tab.</div>${grantHtml}`;
-    logLine(`submit → mission approval ${r.approvalId} pending; approve it in the Approver tab`);
-    $("issueBtn").disabled = false; // allow another submit (concurrent approvals are isolated)
-    showView("approver");
-    await refresh();
-    pollApprovalStatus(r.approvalId);
+  // ---------------------------------------------------------------------------
+  // Rendering: the agent's Missions (rail), catalog, approvals, operator.
+  // ---------------------------------------------------------------------------
+  const STATE_TEXT = (m) => (m.state === "terminated" ? title(m.termination?.reason || "ended") : title(m.state));
+  function orderedMissions() {
+    const rank = (m) => (m.id === S.activeId ? 0 : m.state === "active" ? 1 : m.state === "suspended" ? 2 : 3);
+    return [...S.missions].sort((a, b) => rank(a) - rank(b));
+  }
+  function renderMissions() {
+    const list = orderedMissions();
+    $("missionCount").textContent = list.length ? `${list.filter((m) => m.state === "active").length} active of ${list.length}` : "";
+    $("missions").innerHTML = list.map((m) => {
+      const ended = m.state !== "active";
+      const auth = ended ? (m.authority || []) : (m.effective || []);
+      const acting = m.id === S.activeId && !ended;
+      const flags = [acting ? '<span class="mc-flag">Acting</span>' : "", m.origin === "seeded" ? "<span>Seeded at boot</span>" : ""].filter(Boolean).join("");
+      return `<article class="mcard${acting ? " acting" : ""}${ended ? " ended" : ""}" data-mission="${esc(m.id)}">
+        <div class="mc-top"><h3>${esc(m.goal)}</h3>${ended ? "" : `<span class="state ${esc(m.state)}">${esc(STATE_TEXT(m))}</span>`}</div>
+        <div class="mc-meta">${flags}<span>for ${esc(m.subject)}, approved by ${esc(m.approver)}</span><code>${esc(shortId(m.id))}</code></div>
+        ${ended ? '<p class="none-left">No authority in force.</p>' : ""}
+        ${auth.map((e) => entryLine(e, ended)).join("")}
+        <div class="mc-clock">
+          <div><span>Mission</span><b class="num">${ended ? "Ended" : esc(relDays(m.expires_at))}</b></div>
+          <div><span>Access token</span><b class="num" ${ended ? "" : `data-exp="${esc(m.token?.expires_at || "")}"`}>${ended ? "Not renewable" : esc(countdown(m.token?.expires_at))}</b></div>
+        </div>
+        <details class="wire"><summary>Token claims</summary><pre class="json">${esc(JSON.stringify(m.token?.claims || {}, null, 2))}</pre></details>
+        ${ended ? `<div class="stamp">${esc(STATE_TEXT(m))}</div>` : ""}
+      </article>`;
+    }).join("") || '<p class="empty">The agent holds no Missions.</p>';
+    // Act-under selector: every active Mission, the acting one by default.
+    const sel = $("actUnder"), keep = sel.value;
+    sel.innerHTML = list.map((m) => `<option value="${esc(m.id)}">${esc(m.goal)} (${esc(STATE_TEXT(m))})</option>`).join("");
+    sel.value = list.some((m) => m.id === keep) ? keep : S.activeId;
+  }
+  function tickClocks() {
+    for (const el of document.querySelectorAll("[data-exp]")) el.textContent = countdown(el.dataset.exp);
+  }
+  function renderCatalog() {
+    $("catalog").innerHTML = S.services.map((s) => {
+      const st = s.connections?.[0]?.status || "unknown";
+      const cls = st === "connected" ? "active" : st === "consent_required" ? "suspended" : "unknown";
+      return `<div class="run-row" style="padding:.45rem 0;border-bottom:1px solid var(--line-2)"><span>${esc(s.display_name)}</span><span class="state ${cls}">${esc(st.replace(/_/g, " "))}</span></div>`;
+    }).join("") || '<p class="empty">No services.</p>';
   }
 
-  // Poll a parked mission approval. Stop on: active (adopt the mission + refresh),
-  // denied (log), unknown (untracked — terminal), or a bounded 30s timeout
-  // (visible still-pending). Clears its interval on every stop path. A NEW submit
-  // replaces this handle; the demo tracks one mission poll at a time.
-  function pollApprovalStatus(approvalId) {
-    if (missionPoll) { clearInterval(missionPoll); missionPoll = null; }
-    const deadline = Date.now() + 30000;
-    const stop = () => { clearInterval(missionPoll); missionPoll = null; };
-    const tick = async () => {
-      let s;
-      try { s = await api(`/agent/approval-status?id=${encodeURIComponent(approvalId)}`); } catch { return; }
-      if (s.state === "active") {
-        stop();
-        MISSION = s.missionId;
-        // Active-mission swap: void any armed JIT retry/poll for the OLD mission.
-        PENDING = null; $("retryBtn").disabled = true;
-        if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
-        logLine(`approval ${approvalId} → APPROVED; mission ${s.missionId} now active`);
-        await refreshMission();
-        await refresh();
-      } else if (s.state === "denied") {
-        stop();
-        logLine(`approval ${approvalId} → DENIED by the approver`);
-        $("issueOut").innerHTML = `<div class="summary">Mission approval was denied.</div>`;
-      } else if (s.state === "unknown") {
-        stop();
-        logLine(`approval ${approvalId} → no longer tracked`);
-      } else if (Date.now() > deadline) {
-        stop();
-        logLine(`approval ${approvalId} → still pending after 30s; approve it in the Approver tab`);
-        $("issueOut").innerHTML = `<div class="summary">Still pending — approve it in the Approver tab.</div>`;
+  function renderSignin() {
+    const l = S.login;
+    if (!l) { $("signin").innerHTML = ""; return; }
+    const age = Math.max(0, l.now - l.auth_time), stale = age > l.max_age_seconds;
+    const ago = age < 60 ? `${age} s ago` : `${Math.floor(age / 60)} min ago`;
+    $("signin").innerHTML = `<div class="signin${stale ? " stale" : ""}">
+      <span>Signed in as <b>${esc(l.sub)}</b> with ${esc(String(l.acr).toUpperCase())}, ${esc(ago)}. Approving money movement needs a sign-in within ${Math.round(l.max_age_seconds / 60)} min.</span>
+      <button class="btn small" data-do="login">Sign in again (simulated)</button></div>`;
+  }
+  function floorHtml(floor) {
+    if (!floor) return "";
+    if (floor.outcome === "not_applicable") return '<p class="floor ok">Sign-in check: not needed for this authority.</p>';
+    if (floor.outcome === "satisfied") return '<p class="floor ok">Sign-in check: satisfied. Bob signed in recently enough to approve money movement.</p>';
+    if (floor.unclassified) return `<p class="floor no">This authority cannot be approved: ${esc(floor.reason)}</p>`;
+    return `<p class="floor need">Sign-in check: Bob's sign-in is too old for this authority. Sign in again, then approve.</p>`;
+  }
+  function renderQueue() {
+    $("queueCount").textContent = S.queue.length ? String(S.queue.length) : "";
+    const cue = (btn) => (STORY.state[STORY.beat] === "waiting" ? " cue" : "");
+    $("queue").innerHTML = S.queue.map((t) => {
+      const c = t.context || {};
+      if (t.type === "mission") {
+        const stale = c.floor && c.floor.outcome === "refused";
+        const err = S.approvalErrors?.[t.id];
+        return `<article class="appr">
+          <div class="appr-top"><span class="kind">New Mission</span><span class="muted">for ${esc(t.subject)}</span></div>
+          <p class="ask">“${esc(c.goal || "")}”</p>
+          <h4>If you approve, the agent may</h4>
+          <div class="grant">${(c.derived || []).map((e) => entryHtml(e, null)).join("")}</div>
+          ${c.expires_at ? `<p class="muted">Until ${esc(new Date(c.expires_at).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }))} (${esc(relDays(c.expires_at))}), unless someone ends it first.</p>` : ""}
+          <p class="removed"><b>Policy already removed:</b> ${narrowingText(c.diff)}.</p>
+          ${floorHtml(c.floor)}
+          ${err ? `<p class="err">The authorization server refused the approval: ${esc(err)}</p>` : ""}
+          <div class="btnrow">
+            ${stale ? '<button class="btn" data-do="login">Sign in again (simulated)</button>' : ""}
+            <button class="btn primary${t.id === STORY.approvalId && !stale ? cue() : ""}" data-do="adjudicate" data-id="${esc(t.id)}" data-decision="approve" ${stale ? "disabled" : ""}>Approve Mission</button>
+            <button class="btn" data-do="adjudicate" data-id="${esc(t.id)}" data-decision="deny">Deny</button>
+          </div></article>`;
       }
-    };
-    missionPoll = setInterval(tick, 1500);
-    tick();
+      const digest = c.parameter_digest ? String(c.parameter_digest).slice(0, 18) + "…" : "";
+      return `<article class="appr">
+        <div class="appr-top"><span class="kind">Action approval</span><span class="muted">for ${esc(t.subject)}</span></div>
+        <p class="ask">The agent paused before: ${esc(label("tool", c.tool) || label("action", c.action))}</p>
+        <p class="num">Invoice ${esc(c.invoice_id || "")} · ${esc(title(c.vendor || ""))} · ${esc(money(c.amount, c.currency))}</p>
+        <p class="muted">Under “${esc(goalOf(c.mission_id))}” <code>${esc(shortId(c.mission_id))}</code>. This approval is bound to these exact parameters
+          ${digest ? `(<code>${esc(digest)}</code>)` : ""} and is good for this one action.</p>
+        <div class="btnrow">
+          <button class="btn primary${t.id === STORY.jitTaskId ? cue() : ""}" data-do="adjudicate" data-id="${esc(t.id)}" data-decision="approve">Approve action</button>
+          <button class="btn" data-do="adjudicate" data-id="${esc(t.id)}" data-decision="deny">Deny</button>
+        </div></article>`;
+    }).join("") || '<p class="empty">Nothing waiting for Bob.</p>';
   }
 
-  // ---- agent binding ----
-  async function refreshMission() {
-    const m = await api("/agent/mission");
-    const auth = (m.authority || []).map((e) => authEntryHtml(e, null)).join("") || '<span class="muted">no authority</span>';
-    $("agentMission").innerHTML = `<div class="arow"><span class="alabel">mission</span><code>${esc(m.missionId)}</code></div>${auth}`;
-    $("sess").innerHTML = $("sess").dataset.who ? `${$("sess").dataset.who} · <code>${esc(m.missionId)}</code>` : `<code>${esc(m.missionId)}</code>`;
+  function renderFleet() {
+    if (!S.selected && S.fleet.length) S.selected = S.activeId;
+    $("fleet").innerHTML = S.fleet.map((f) => {
+      const m = missionById(f.id);
+      const st = f.state === "terminated" ? title(f.termination?.reason || "ended") : title(f.state);
+      return `<tr data-do="select" data-id="${esc(f.id)}" class="${f.id === S.selected ? "sel" : ""}">
+        <td><b>${esc(m?.goal || "")}</b><br><span class="muted" style="font-size:.8rem">for ${esc(f.subject)}, approved by ${esc(f.approver)}</span>
+          <code class="muted" style="font-size:.75rem;margin-left:.4rem">${esc(shortId(f.id))}</code></td>
+        <td><span class="state ${esc(f.state)}">${esc(st)}</span></td></tr>`;
+    }).join("");
   }
-
-  // ---- shared refresh (catalog / fleet / timeline / queue) ----
-  async function refresh() {
-    const cat = await api("/agent/catalog");
-    $("catalog").innerHTML = (cat.services || []).map((s) =>
-      `<div class="row"><span>${esc(s.display_name)}</span><span class="grow"></span><span class="pill">${esc(s.connections[0]?.status)}</span></div>`).join("");
-
-    const fleet = await api("/bff/operator/fleet");
-    $("fleet").innerHTML = fleet.map((m) => `
-      <div class="row">
-        <code>${esc(m.id)}</code>
-        <span class="pill ${esc(m.state)}">${esc(m.state)}</span>
-        <span class="muted">subj ${esc(m.subject)} · appr ${esc(m.approver)}</span>
-        ${m.id === MISSION ? '<span class="pill active">active agent</span>' : ""}
-        <span class="grow"></span>
-        ${m.state === "active" ? `<button class="btn" onclick="lifecycle('${m.id}','suspend')">suspend</button>
-        <button class="btn" onclick="lifecycle('${m.id}','revoke')">revoke</button>` : ""}
-        ${m.state === "suspended" ? `<button class="btn" onclick="lifecycle('${m.id}','resume')">resume</button>` : ""}
-      </div>`).join("");
-
-    $("tlMission").innerHTML = MISSION ? `for <code>${esc(MISSION)}</code>` : "";
-    const tl = await api(`/bff/operator/missions/${MISSION}/timeline`);
-    $("timeline").innerHTML = (tl || []).length
-      ? tl.map((r) =>
-          `<div class="row"><span class="${r.verified ? "ok" : "no"}">${r.verified ? "VERIFIED" : "FAILED"}</span>
-           <code>${esc(r.evidence_type)}</code><span class="muted">${esc(r.producer)}</span>${r.detail ? `<span class="no">${esc(r.detail)}</span>` : ""}</div>`).join("")
-      : '<div class="muted" style="padding:.4rem 0">no evidence yet — run an agent action under this mission</div>';
-
-    const queue = await api("/bff/approver/queue");
-    $("queue").innerHTML = (queue || []).length
-      ? queue.map(queueEntryHtml).join("")
-      : '<span class="muted">no pending requests</span>';
-  }
-
-  // Render one enriched queue entry (mission OR jit) with full decision context.
-  function queueEntryHtml(t) {
-    const c = t.context || {};
-    const buttons =
-      `<span class="grow"></span>
-       <button class="btn primary" onclick="adjudicate('${esc(t.id)}','approve')">approve</button>
-       <button class="btn" onclick="adjudicate('${esc(t.id)}','deny')">deny</button>`;
-    if (t.type === "mission") {
-      const auth = (c.derived || []).map((e) => authEntryHtml(e, null)).join("");
-      return `<div class="authentry" style="margin:.55rem 0">
-        <div class="row"><span class="taglabel grant">mission approval</span>
-          <span class="muted">subj ${esc(t.subject)}</span>${buttons}</div>
-        <div class="arow"><span class="alabel">goal</span><span>${esc(c.goal || "—")}</span></div>
-        <div class="arow"><span class="alabel">grants</span><span class="chips">${auth || '<span class="muted">&mdash;</span>'}</span></div>
+  function renderDetail() {
+    const m = missionById(S.selected), f = S.fleet.find((x) => x.id === S.selected);
+    if (!f) { $("detail").innerHTML = '<p class="empty">Select a Mission.</p>'; return; }
+    const ended = f.state !== "active";
+    const cue = S.selected === STORY.missionId && BEATS[STORY.beat]?.key === "revoke" && STORY.state[STORY.beat] === "waiting" ? " cue" : "";
+    let answer;
+    if (f.state === "terminated") {
+      answer = `<p class="answer q"><b>Nothing.</b> This Mission was ${esc(f.termination?.reason || "ended")}${f.termination?.terminated_at ? ` at ${esc(new Date(f.termination.terminated_at).toLocaleTimeString())}` : ""}. Its tokens no longer authorize anything, and the authorization server will not renew them.</p>`;
+    } else if (f.state === "suspended") {
+      answer = `<p class="answer q"><b>Nothing, for now.</b> The Mission is suspended. Resuming it restores this authority:</p>${(m?.authority || []).map((e) => entryHtml(e, null)).join("")}`;
+    } else {
+      const contained = m && (m.effective || []).flatMap((e) => e.actions).length < (m.authority || []).flatMap((e) => e.actions).length;
+      answer = `<p class="answer q">Until ${esc(relDays(m?.expires_at || ""))}, it may:</p>${(m?.effective || []).map((e) => entryHtml(e, null)).join("")}
+        ${contained ? '<p class="muted">Part of the approved authority is contained.</p>' : ""}`;
+    }
+    $("detail").innerHTML = `<h2>What may this task still do?</h2>
+      <p class="muted" style="margin:0">“${esc(m?.goal || "")}” for ${esc(f.subject)}, approved by ${esc(f.approver)}, version ${esc(f.version)}.</p>
+      ${answer}
+      <div class="ops">
+        ${f.state === "active" ? `<button class="btn danger${cue}" data-do="lifecycle" data-id="${esc(f.id)}" data-op="revoke">Revoke Mission</button>
+          <button class="btn" data-do="lifecycle" data-id="${esc(f.id)}" data-op="suspend">Suspend</button>` : ""}
+        ${f.state === "suspended" ? `<button class="btn" data-do="lifecycle" data-id="${esc(f.id)}" data-op="resume">Resume</button>
+          <button class="btn danger" data-do="lifecycle" data-id="${esc(f.id)}" data-op="revoke">Revoke Mission</button>` : ""}
+        ${ended && f.state === "terminated" ? '<span class="muted">A terminated Mission cannot be resumed. New work needs a new approval.</span>' : ""}
       </div>`;
+  }
+  const EVIDENCE_NAME = { "decision-evidence": "Decision", "execution-evidence": "Execution", "refusal-record": "Refusal" };
+  function renderReceipt() {
+    const tl = S.timeline;
+    if (!S.selected) { $("receipt").innerHTML = ""; return; }
+    const cue = BEATS[STORY.beat]?.key === "receipt" && STORY.state[STORY.beat] === "waiting" ? " cue" : "";
+    const rows = (tl || []).map((r) => `<li class="rc ${r.verified ? "ok" : "bad"}">
+        <span class="rc-v">${r.verified ? "Verified" : "Failed"}</span>
+        <span>${esc(EVIDENCE_NAME[r.evidence_type] || r.evidence_type)}</span>
+        <code title="${esc(r.digest)} from ${esc(r.producer)}">${esc(r.digest)}</code>
+        ${r.detail ? `<span class="rc-d">${esc(r.detail)}</span>` : ""}</li>`).join("");
+    $("receipt").innerHTML = `<h2>Signed record <span class="muted" style="font-weight:400;font-size:.85rem">${tl ? `${tl.filter((r) => r.verified).length} of ${tl.length} verified` : ""}</span></h2>
+      <p class="muted" style="margin:0">Each entry was signed by the component that produced it and registered in a transparency log. The console checks every one, on every load.</p>
+      <ol class="receipt">${rows || '<li class="empty">No evidence for this Mission yet.</li>'}</ol>
+      <div class="tamper"><button class="btn${cue}" data-do="tamper" ${tl && tl.some((r) => r.evidence_type === "execution-evidence" && r.verified) ? "" : "disabled"}>Alter one stored record</button>
+        <span class="muted">Demo: rewrites one stored execution record (its outcome, completed to failed) behind the log's back.</span></div>`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data refresh. One loop keeps every view current; the timeline (five-step
+  // verification per row) loads only while the Operator view is open.
+  // ---------------------------------------------------------------------------
+  async function refresh() {
+    const [ms, queue, login] = await Promise.all([get("/agent/missions"), get("/bff/approver/queue"), get("/bff/approver/login")]);
+    if (Array.isArray(ms.missions)) { S.missions = ms.missions; S.activeId = ms.active; }
+    if (Array.isArray(queue)) S.queue = queue;
+    if (login && login.sub) S.login = login;
+    renderMissions(); renderQueue(); renderSignin();
+    $("sess").innerHTML = `${esc(S.sub)} <span class="muted">(${esc(S.roles.join(", "))})</span>`;
+    if (S.view === "operator") await refreshOperator();
+    await pollWaits();
+    renderStory();
+  }
+  async function refreshOperator() {
+    const fleet = await get("/bff/operator/fleet");
+    if (Array.isArray(fleet)) S.fleet = fleet;
+    renderFleet(); renderDetail();
+    if (S.selected) {
+      const tl = await get(`/bff/operator/missions/${encodeURIComponent(S.selected)}/timeline`);
+      S.timeline = Array.isArray(tl) ? tl : null;
     }
-    const amount = c.amount != null ? (c.currency === "USD" ? `$${c.amount}` : `${esc(c.amount)} ${esc(c.currency || "")}`) : "";
-    const inv = [c.invoice_id, c.vendor, amount].filter((x) => x != null && x !== "").map(esc).join(" · ");
-    const digest = c.parameter_digest ? esc(String(c.parameter_digest).slice(0, 12)) + "…" : "—";
-    return `<div class="authentry" style="margin:.55rem 0">
-      <div class="row"><span class="taglabel untrust">JIT action approval</span>
-        <span class="muted">subj ${esc(t.subject)}</span>${buttons}</div>
-      <div class="arow"><span class="alabel">action</span><span title="${escAttr(c.action || "")}">${esc(label("action", c.action))}</span></div>
-      <div class="arow"><span class="alabel">tool</span><span>${esc(label("tool", c.tool))}</span></div>
-      <div class="arow"><span class="alabel">invoice</span><span>${inv || "—"}</span></div>
-      <div class="arow"><span class="alabel">mission</span><code>${esc(shortMission(c.mission_id))}</code></div>
-      <div class="arow"><span class="alabel">digest</span><code>${digest}</code></div>
-    </div>`;
+    renderReceipt();
+  }
+  async function refreshCatalog() {
+    const cat = await get("/agent/catalog");
+    S.services = cat.services || [];
+    renderCatalog();
   }
 
-  // ---- agent actions (unchanged enforcement path) ----
-  async function act(tool, args) {
-    const r = await post("/agent/act", { tool, args });
-    renderStep(r);
-    refresh();
+  // Waits with no deadline: a presenter can talk as long as they like before
+  // Bob approves. Each resolves from the server's own state.
+  // One at a time: two overlapping retries would present the single-use
+  // transaction token twice.
+  let waitsBusy = false;
+  async function pollWaits() {
+    if (waitsBusy) return;
+    waitsBusy = true;
+    try { await pollWaitsOnce(); } finally { waitsBusy = false; }
   }
-
-  let PENDING = null;
-  async function jit() {
-    const tool = "send_remittance_email", args = { invoice_id: "inv-1" };
-    const r = await post("/agent/act", { tool, args });
-    renderStep(r);
-    if (r.taskId) {
-      PENDING = { taskId: r.taskId, tool, args };
-      $("retryBtn").disabled = false;
-      logLine(`  ↳ opened ARS task ${r.taskId} — approve it in the Approver tab (auto-retrying every 1.5s)`);
-      startJitPoll();
+  async function pollWaitsOnce() {
+    if (STORY.approvalId && !STORY.missionId) {
+      const s = await get(`/agent/approval-status?id=${encodeURIComponent(STORY.approvalId)}`);
+      if (s.state === "active" && s.missionId) adoptApproved(s.missionId);
+      else if (s.state === "denied" || s.state === "unknown") { note("Not approved", "The Mission was not approved", "Nothing was issued. Send the request again to retry."); STORY.approvalId = ""; }
     }
-    refresh();
-  }
-
-  // Auto-retry the armed JIT after approval. Stop on: executed (log), denied
-  // (log), or a bounded 30s timeout (visible still-pending; manual Retry stays).
-  // Captures the mission id at arm time and aborts if the ACTIVE mission swapped
-  // (a JIT poll for the OLD mission must never resolve against a new one). Clears
-  // its own interval on every stop path. Polling replaces the NEED to click Retry,
-  // not the ability.
-  function startJitPoll() {
-    if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
-    if (!PENDING) return;
-    const pollMission = MISSION;      // the mission this JIT belongs to
-    const armed = PENDING;            // the payload captured at arm time
-    const deadline = Date.now() + 30000;
-    const stop = () => { clearInterval(jitPoll); jitPoll = null; };
-    const tick = async () => {
-      // Abort if the active mission swapped, or the armed JIT changed/cleared.
-      if (MISSION !== pollMission || !PENDING || PENDING.taskId !== armed.taskId) { stop(); return; }
-      let r;
-      try { r = await post("/agent/retry", armed); } catch { return; }
+    if (S.pendingJit) {
+      const armed = S.pendingJit;
+      const disarm = () => { S.pendingJit = null; $("retryBtn").disabled = true; };
+      const m = missionById(armed.missionId);
+      if (m && m.state !== "active") { disarm(); return; }
+      if (S.queue.some((t) => t.id === armed.taskId)) return; // still waiting for Bob
+      const r = await post("/agent/retry", armed);
       if (r.pending) {
-        if (Date.now() > deadline) {
-          stop();
-          logLine(`retry ${label("tool", armed.tool)} → still ${r.state} after 30s — approve it in the Approver tab, or click Retry`);
-        }
+        // Approved or decided, yet no continuation is held: a newer Mission
+        // approval dropped it. The action has to be sent again.
+        if (r.state && r.state !== "pending") { disarm(); note("Dropped", "The waiting action was dropped", "A newer Mission was approved first. Send the action again under it."); }
         return;
       }
-      stop();
-      logLine(`retry ${label("tool", armed.tool)}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
-      PENDING = null; $("retryBtn").disabled = true;
-      refresh();
-    };
-    jitPoll = setInterval(tick, 1500);
-    tick();
+      disarm();
+      pushStep({ ...r, tool: armed.tool, args: armed.args, missionId: r.missionId || armed.missionId, target: armed.target, outcome: r.ok ? "executed" : "denied", reason: r.denial_reason || r.refusal_reason || null }, "Retry after approval");
+      if (r.ok && armed.taskId === STORY.jitTaskId) STORY.jitDone = true;
+    }
+  }
+  function adoptApproved(missionId) {
+    if (STORY.missionId === missionId) return;
+    STORY.missionId = missionId;
+    note("Approved", "Bob approved the Mission", "The authorization server issued a DPoP-bound token for it. The agent now acts under it.", `<code>${esc(shortId(missionId))}</code>`);
+    flashMission(missionId);
+  }
+  function flashMission(id) {
+    setTimeout(() => {
+      const el = document.querySelector(`.mcard[data-mission="${CSS.escape(id)}"]`);
+      if (el) { el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1500); }
+    }, 50);
   }
 
-  // Deterministic one-click run: attempt each payable invoice, then the JIT step.
-  // The server returns an array of the SAME step shape, so renderStep() logs each;
-  // the final paused step arms the existing PENDING/retry machinery.
-  async function run() {
-    logLine("▶ Running mission — attempting each payable invoice, then the JIT-gated remittance…");
-    const r = await post("/agent/run", {});
-    for (const step of (r.steps || [])) {
-      renderStep(step);
-      if (step.outcome === "paused" && step.taskId) {
-        PENDING = { taskId: step.taskId, tool: step.tool, args: step.args };
-        $("retryBtn").disabled = false;
-        logLine(`  ↳ paused — approve it in the Approver tab (auto-retrying every 1.5s)`);
-        startJitPoll();
-      }
-    }
-    refresh();
+  // ---------------------------------------------------------------------------
+  // Actions. Each calls the same route the earlier console called.
+  // ---------------------------------------------------------------------------
+  async function checkProposal() {
+    const body = { goal: $("f_goal").value, actions: csv("f_actions"), vendors: csv("f_vendors"), cap: $("f_cap").value.trim() };
+    const shaped = await post("/agent/shape", body);
+    const r = await post("/agent/propose", { intent: shaped.intent, ...(shaped.authorization_details ? { authorization_details: shaped.authorization_details } : {}) });
+    if (r.error) { $("narrowing").innerHTML = `<div class="panel"><p class="appr err">${esc(r.error)}</p></div>`; return; }
+    S.proposal = shaped;
+    // Only a cap the derivation actually lowered is highlighted; a fragment
+    // that keeps the proposal's own cap is shown as it is.
+    const tightenedTo = new Set((r.diff || []).flatMap((d) => (d.constraints_tightened || []).map((t) => t.granted)));
+    const marks = (entry) => {
+      const d = (r.diff || []).find((x) => x.resource === entry.resource);
+      return d ? { actions: d.actions_dropped, vendors: d.vendors_dropped, capTo: (d.constraints_tightened || []).length > 0 } : null;
+    };
+    $("narrowing").innerHTML = `<div class="panel">
+      <div class="compare-cols">
+        <div><h3>The agent asked for <span class="tag untrusted">untrusted proposal</span></h3>${(r.proposed || []).map((e) => entryHtml(e, marks(e))).join("")}</div>
+        <div><h3>Policy allows <span class="tag derived">derived by the authorization server</span></h3>${(r.derived || []).map((e) => entryHtml(e, tightenedTo.has(`${e.constraints?.max_amount?.amount} ${e.constraints?.max_amount?.currency}`) ? { capFrom: true } : null)).join("")}</div>
+      </div>
+      <p class="verdict-line"><b>Narrowed:</b> ${narrowingText(r.diff)}. A compromised agent can propose more; it can never be granted more.</p>
+      <details class="wire"><summary>Show the wire</summary>
+        <h4>mission_intent (pushed through PAR)</h4><pre class="json">${esc(JSON.stringify(shaped.intent, null, 2))}</pre>
+        <h4>authorization_details (RFC 9396, beside the intent)</h4><pre class="json">${esc(JSON.stringify(shaped.authorization_details || [], null, 2))}</pre>
+        <h4>Derived Authority Set</h4><pre class="json">${esc(JSON.stringify(r.derived, null, 2))}</pre>
+      </details></div>`;
+    $("submitBtn").disabled = false;
+    note("Checked", "Proposal checked against policy", `Narrowed: ${narrowingText(r.diff)}.`);
   }
-  // Manual Retry: still fully functional. Cancels the auto-poll, tries once, and
-  // (if still pending) re-arms the poll so either path resolves the JIT.
-  async function retryJit() {
-    if (!PENDING) return;
-    if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
-    const r = await post("/agent/retry", PENDING);
-    if (r.pending) { logLine(`retry ${label("tool", PENDING.tool)} → still ${r.state}; approve the request first`); startJitPoll(); return; }
-    logLine(`retry ${label("tool", PENDING.tool)}(inv-1) → ${r.ok ? "PERMIT (email sent, JIT approval matched)" : "DENY: " + reasonGloss(r.denial_reason || r.refusal_reason)}`);
-    PENDING = null; $("retryBtn").disabled = true;
-    refresh();
+  async function submitForApproval() {
+    if (!S.proposal) await checkProposal();
+    $("submitBtn").disabled = true;
+    const r = await post("/agent/submit", { intent: S.proposal.intent, ...(S.proposal.authorization_details ? { authorization_details: S.proposal.authorization_details } : {}) });
+    $("submitBtn").disabled = false;
+    if (r.error) { note("Error", "Submit failed", esc(r.error)); return; }
+    STORY.approvalId = r.approvalId; STORY.missionId = "";
+    note("Sent", "Sent to Bob for approval", "Pushed authorization request, then authorize. Nothing is issued until Bob decides.", `Approval <code>${esc(shortId(r.approvalId))}</code>`);
+    await refresh();
   }
-  // Adjudicate a queue entry: mission approvals return a missionId (adopt it as
-  // active here too, so approving straight from the queue swaps the mission and
-  // voids any armed JIT for the old one); jit approvals just re-enable Retry.
-  async function adjudicate(taskId, decision) {
-    const r = await post("/bff/approver/adjudicate", { taskId, decision }, { "x-csrf": CSRF });
-    if (r.approved && r.missionId) {
-      logLine(`approver approve(${taskId}) → approved · mission ${r.missionId} now active`);
-      MISSION = r.missionId;
-      PENDING = null; $("retryBtn").disabled = true;
-      if (jitPoll) { clearInterval(jitPoll); jitPoll = null; }
-      if (missionPoll) { clearInterval(missionPoll); missionPoll = null; }
-      await refreshMission();
+  async function adjudicate(id, decision) {
+    const r = await post("/bff/approver/adjudicate", { taskId: id, decision }, true);
+    S.approvalErrors = S.approvalErrors || {};
+    if (r.error) { S.approvalErrors[id] = r.error; note("Refused", "The authorization server refused the approval", esc(r.error)); await refresh(); return; }
+    delete S.approvalErrors[id];
+    if (r.missionId) {
+      if (id === STORY.approvalId) adoptApproved(r.missionId);
+      else note("Approved", "Bob approved a Mission", "", `<code>${esc(shortId(r.missionId))}</code>`);
+      if (S.pendingJit) { S.pendingJit = null; $("retryBtn").disabled = true; }
     } else {
-      logLine(`approver ${decision}(${taskId}) → ${r.approved ? "approved" : "denied"}`);
-      if (r.approved && PENDING && PENDING.taskId === taskId) $("retryBtn").disabled = false;
+      note(r.approved ? "Approved" : "Denied", r.approved ? "Bob approved the action" : "Bob denied the action", r.approved ? "The agent can now redeem it, once, for these parameters." : "");
     }
-    refresh();
+    await refresh();
+  }
+  async function act(tool, args, missionId, heading) {
+    const r = await post("/agent/act", { tool, args, ...(missionId ? { missionId } : {}) });
+    pushStep(r, heading);
+    if (r.taskId) armJit(r);
+    await refresh();
+    return r;
+  }
+  function armJit(step) {
+    S.pendingJit = { taskId: step.taskId, tool: step.tool, args: step.args, missionId: step.missionId, target: step.target };
+    $("retryBtn").disabled = false;
+  }
+  async function runMission() {
+    const r = await post("/agent/run", {});
+    pushRenewal(r.renewal, S.activeId);
+    for (const step of r.steps || []) {
+      pushStep(step);
+      if (step.outcome === "paused" && step.taskId) { armJit(step); STORY.jitTaskId = step.taskId; STORY.jitDone = false; }
+    }
+    await refresh();
+  }
+  async function retryJit() {
+    if (!S.pendingJit) return;
+    await pollWaits();
+    if (S.pendingJit) note("Waiting", "Still waiting for Bob", "Approve the action in Bob's approvals first.");
   }
   async function lifecycle(id, op) {
-    const r = await post(`/bff/operator/missions/${id}/lifecycle`, { operation: op }, { "x-csrf": CSRF });
-    logLine(`lifecycle ${op}(${id}) → ${r.state || r.error}`);
-    refresh();
+    const r = await post(`/bff/operator/missions/${encodeURIComponent(id)}/lifecycle`, { operation: op }, true);
+    note(r.error ? "Error" : title(op === "revoke" ? "revoked" : op === "suspend" ? "suspended" : "resumed"), `${title(op)}: “${esc(goalOf(id))}”`, r.error ? esc(r.error) : `The Mission is now ${esc(r.state)}${r.termination ? ` (${esc(r.termination.reason)})` : ""}. Every credential bound to it follows.`);
+    await refresh();
+    if (op === "revoke" && id === STORY.missionId && !STORY.proofDone) await runProof();
+  }
+  // The proof after a revoke: one read under the revoked Mission, then the
+  // same read under the agent's other Mission, read-only by preference.
+  async function runProof() {
+    const others = S.missions.filter((m) => m.id !== STORY.missionId && m.state === "active");
+    const other = others.find((m) => !(m.effective || []).some((e) => e.actions.includes("payments:payment.execute"))) || others[0];
+    await act("get_invoice", { invoice_id: "inv-1" }, STORY.missionId, "Same read, revoked Mission");
+    if (other) { STORY.otherId = other.id; await act("get_invoice", { invoice_id: "inv-1" }, other.id, "Same read, the agent's other Mission"); }
+    STORY.proofDone = true;
+    renderStory();
+  }
+  async function tamper() {
+    const id = S.selected || STORY.missionId;
+    const r = await post(`/bff/operator/missions/${encodeURIComponent(id)}/tamper`, {}, true);
+    if (r.error) { note("Error", "Could not alter a record", esc(r.error)); return; }
+    note("Altered", "One stored record was rewritten", `The ${esc(label("action", r.change.action) || "execution")} record's ${esc(r.change.path)} now says <code>${esc(r.change.to)}</code> instead of <code>${esc(r.change.from)}</code>. The log was not touched.`);
+    STORY.tampered = true;
+    await refresh();
+  }
+  async function signIn() {
+    const r = await post("/bff/approver/login", {}, true);
+    if (r.sub) { S.login = r; note("Signed in", "Bob signed in again", "Simulated MFA sign-in recorded for the approval surface."); }
+    await refresh();
   }
 
-  // ---- boot ----
+  // ---------------------------------------------------------------------------
+  // Views.
+  // ---------------------------------------------------------------------------
+  function showView(v) {
+    S.view = v;
+    for (const b of document.querySelectorAll("#views button")) {
+      if (b.dataset.view === v) b.setAttribute("aria-current", "page");
+      else b.removeAttribute("aria-current");
+    }
+    for (const s of document.querySelectorAll(".view")) s.hidden = s.dataset.view !== v;
+    if (v === "operator") refreshOperator();
+    if (v === "agent") refreshCatalog();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Story. Each beat runs real calls, then waits (with no deadline) for the
+  // human step it names. The bar's main button also performs that human step,
+  // so a presenter can drive the whole run from the keyboard.
+  // ---------------------------------------------------------------------------
+  const BEATS = [
+    { key: "open", title: "The question", view: "agent",
+      say: "Agents now hold delegated authority for hours, across many systems. When something looks wrong, someone has to ask what this task is still allowed to do, and how to end it. Identity cannot answer a question about a task. Only a record of the task can.",
+      notice: "Above, the agent already holds two <b>Missions</b>: a payments task and a read-only reconciliation task. Each is a record with an approver, an Authority Set and an end date. Its access tokens last minutes; the Mission lasts as long as its approval says." },
+    { key: "ask", title: "The ask", view: "request", go: "Check the proposal", focus: "narrowing",
+      say: "Alice asks her agent to pay Acme and Globex invoices, up to $900. The agent turns that into a proposal, and the proposal is untrusted.",
+      notice: "The authorization server derives what policy allows. <b>Globex is struck out and the limit drops from $900 to $500.</b> The agent proposed; the server decided.",
+      run: checkProposal },
+    { key: "approve", title: "The approval", view: "approver", go: "Send to Bob", focus: "queue",
+      say: "Bob approves a task, not a list of scopes: a goal, a vendor, a limit and an end date. Moving money needs a recent sign-in, and the approval surface checks it.",
+      notice: "Bob's card shows what the agent may do and what policy already removed. <b>Approve it</b>, and the new Mission joins the agent's list as the one it acts under.",
+      run: submitForApproval,
+      human: { label: "Approve as Bob", act: approveStoryMission, done: () => !!STORY.missionId } },
+    { key: "work", title: "The work stays in bounds", view: "agent", go: "Run the Mission",
+      say: "The agent works the task. Each tool call carries the Mission, and the policy decision point checks it before anything moves.",
+      notice: "<b>$125 to Acme is paid. $900 is refused</b>, over the Mission's $500 limit. <b>Globex is refused</b>; the Mission does not name it. The remittance stops and waits for a person.",
+      run: runMission },
+    { key: "jit", title: "A person, just in time", view: "approver", focus: "queue",
+      say: "Some actions need a person at the moment they happen. This approval is bound to one action and its exact parameters, and it grants nothing else.",
+      notice: "<b>Approve the remittance.</b> The agent retries on its own, and the email goes out.",
+      human: { label: "Approve the remittance", act: approveStoryJit, done: () => STORY.jitDone } },
+    { key: "revoke", title: "Something looks wrong", view: "operator", focus: "detail",
+      say: "It is 2 a.m. and something about this agent looks wrong. The operator opens the task and asks its record what it may still do. Then ends it.",
+      notice: "<b>Revoke the Mission.</b> Then watch Decisions: the same read is refused under the revoked Mission and still permitted under the agent's other Mission. Nobody went looking for tokens.",
+      run: async () => { S.selected = STORY.missionId || S.activeId; await refreshOperator(); },
+      human: { label: "Revoke the Mission", act: revokeStoryMission, done: () => STORY.proofDone } },
+    { key: "receipt", title: "The receipt", view: "operator", focus: "receipt",
+      say: "The task is over. Its record is not. Every decision was signed and registered in a transparency log, and the console checks each one.",
+      notice: "Every entry verifies. Now <b>alter one stored record</b> behind the log's back, and that entry fails verification.",
+      after: "Identity answers who is acting. Entitlements answer what a principal may hold. <b>A Mission answers what work was approved, and whether it is still in force.</b>",
+      run: async () => { S.selected = STORY.missionId || S.selected; await refreshOperator(); },
+      human: { label: "Alter one record", act: tamper, done: () => STORY.tampered } },
+  ];
+  async function approveStoryMission() {
+    if (!STORY.approvalId) { await submitForApproval(); return; }
+    const entry = S.queue.find((t) => t.id === STORY.approvalId);
+    if (entry?.context?.floor?.outcome === "refused" && !entry.context.floor.unclassified) await signIn();
+    await adjudicate(STORY.approvalId, "approve");
+  }
+  // Revoke the story's Mission, or the acting one when the earlier steps
+  // were skipped; lifecycle() then runs the proof reads.
+  async function revokeStoryMission() {
+    if (!STORY.missionId) STORY.missionId = S.selected || S.activeId;
+    await lifecycle(STORY.missionId, "revoke");
+  }
+  async function approveStoryJit() {
+    if (!STORY.jitTaskId) return;
+    if (S.queue.some((t) => t.id === STORY.jitTaskId)) await adjudicate(STORY.jitTaskId, "approve");
+    await pollWaits();
+  }
+
+  // Bring the beat's panel into view below the sticky header.
+  function focusBeat() {
+    const f = BEATS[STORY.beat].focus, el = f && $(f);
+    if (el && el.offsetParent) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    else window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function enterBeat(i) {
+    STORY.beat = Math.max(0, Math.min(BEATS.length - 1, i));
+    const b = BEATS[STORY.beat];
+    if (!STORY.state[STORY.beat]) STORY.state[STORY.beat] = "ready";
+    if (STORY.state[STORY.beat] === "ready" && !b.run) STORY.state[STORY.beat] = b.human && !b.human.done() ? "waiting" : "done";
+    showView(b.view);
+    renderStory();
+    renderQueue(); renderDetail(); renderReceipt();
+    setTimeout(focusBeat, 60);
+  }
+  async function primary() {
+    const i = STORY.beat, b = BEATS[i];
+    // After a failure, retry the part that failed: the run, or the human step.
+    const st = STORY.state[i] === "error" ? (b.run && !STORY.ran[i] ? "ready" : "waiting") : STORY.state[i];
+    const btn = $("beatGo");
+    if (btn.disabled) return;
+    if (st === "done") { if (i < BEATS.length - 1) enterBeat(i + 1); return; }
+    btn.disabled = true;
+    try {
+      if (st === "ready" && b.run) {
+        STORY.state[i] = "running"; renderStory();
+        await b.run();
+        STORY.ran[i] = true;
+        STORY.state[i] = b.human && !b.human.done() ? "waiting" : "done";
+      } else if (st === "waiting" && b.human) {
+        STORY.state[i] = "running"; renderStory();
+        await b.human.act();
+        STORY.state[i] = b.human.done() ? "done" : "waiting";
+      }
+    } catch (e) {
+      STORY.state[i] = "error";
+      note("Error", `Step failed: ${esc(b.title)}`, esc(e.message || e));
+    } finally {
+      btn.disabled = false;
+      renderStory(); renderQueue(); renderDetail(); renderReceipt();
+      setTimeout(focusBeat, 60);
+    }
+  }
+  function renderStory() {
+    const i = STORY.beat, b = BEATS[i];
+    for (let k = 0; k < BEATS.length; k++) {
+      const h = BEATS[k].human;
+      if (STORY.state[k] === "waiting" && h && h.done()) STORY.state[k] = "done";
+    }
+    const st = STORY.state[i] || "ready";
+    $("beats").innerHTML = BEATS.map((x, k) => `<li><button data-do="beat" data-i="${k}" class="${k === i ? "current" : STORY.state[k] === "done" ? "done" : ""}" title="${esc(x.title)}" aria-label="Step ${k + 1}: ${esc(x.title)}">${k + 1}</button></li>`).join("");
+    $("beatNum").textContent = `${i + 1} of ${BEATS.length}`;
+    $("beatTitle").textContent = b.title;
+    const status = { ready: "", running: "Working", waiting: b.human ? `Waiting: ${b.human.label.toLowerCase()}` : "", done: "Done", error: "Something failed; see Decisions" }[st];
+    $("beatStatus").textContent = status;
+    $("beatStatus").className = `beat-status ${st === "done" ? "done" : st === "error" ? "error" : ""}`;
+    $("beatSay").textContent = b.say;
+    $("beatNotice").innerHTML = st === "done" && b.after ? b.after : b.notice;
+    const go = $("beatGo");
+    go.textContent = st === "done" ? (i < BEATS.length - 1 ? "Next" : "End of story") : st === "waiting" && b.human ? b.human.label : st === "error" ? "Try again" : b.go || (b.human ? b.human.label : "Start");
+    go.disabled = st === "running" || (st === "done" && i === BEATS.length - 1);
+    $("beatBack").disabled = i === 0;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Wiring.
+  // ---------------------------------------------------------------------------
+  document.addEventListener("click", (e) => {
+    const nav = e.target.closest("#views button[data-view]");
+    if (nav) { showView(nav.dataset.view); return; }
+    const t = e.target.closest("[data-do]");
+    if (!t || t.disabled) return;
+    const d = t.dataset;
+    const run = (p) => Promise.resolve(p).catch((err) => note("Error", "Request failed", esc(err.message || err)));
+    switch (d.do) {
+      case "check": run(checkProposal()); break;
+      case "submit": run(submitForApproval()); break;
+      case "run": run(runMission()); break;
+      case "act": run(act(d.tool, { invoice_id: d.inv }, $("actUnder").value || undefined)); break;
+      case "jit": run(act("send_remittance_email", { invoice_id: "inv-1" }, $("actUnder").value || undefined)); break;
+      case "retry": run(retryJit()); break;
+      case "adjudicate": run(adjudicate(d.id, d.decision)); break;
+      case "login": run(signIn()); break;
+      case "select": S.selected = d.id; S.timeline = null; run(refreshOperator()); break;
+      case "lifecycle": run(lifecycle(d.id, d.op)); break;
+      case "tamper": run(tamper()); break;
+      case "beat": enterBeat(Number(d.i)); break;
+    }
+  });
+  $("beatGo").addEventListener("click", () => primary());
+  $("beatBack").addEventListener("click", () => enterBeat(STORY.beat - 1));
+  document.addEventListener("keydown", (e) => {
+    if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey || !document.body.classList.contains("story-on")) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); primary(); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); enterBeat(STORY.beat - 1); }
+  });
+  $("f_actions").addEventListener("input", renderActionsHelp);
+  function renderActionsHelp() {
+    const ids = csv("f_actions");
+    $("actionsHelp").textContent = ids.length ? "Means: " + ids.map((a) => label("action", a)).join(", ") : "";
+  }
+  function setToggle(id, cls, on, target) {
+    $(id).setAttribute("aria-pressed", on ? "true" : "false");
+    target.classList.toggle(cls, on);
+  }
+  // The story bar's height, so the page and the Decisions rail end above it.
+  const syncStoryH = () => document.documentElement.style.setProperty("--story-h", document.body.classList.contains("story-on") ? `${$("story").offsetHeight}px` : "0px");
+  new ResizeObserver(syncStoryH).observe($("story"));
+  $("storyToggle").addEventListener("click", () => {
+    const on = !document.body.classList.contains("story-on");
+    setToggle("storyToggle", "story-on", on, document.body); store.set("mission-console.story", on ? "1" : "0");
+    syncStoryH();
+  });
+  $("sizeToggle").addEventListener("click", () => {
+    const on = !document.documentElement.classList.contains("large");
+    setToggle("sizeToggle", "large", on, document.documentElement); store.set("mission-console.large", on ? "1" : "0");
+  });
+
+  // ---------------------------------------------------------------------------
+  // Boot: the operator-only login link, then the first load.
+  // ---------------------------------------------------------------------------
   (async () => {
-    // Display-only; keep the empty-map default (raw ids everywhere) unless the
-    // response is well-shaped. A 404 resolves with an {error} body, so a shape
-    // check — not just .catch — is what guarantees the raw-id fallback.
-    const lbls = await api("/labels").catch(() => null);
-    if (lbls && lbls.tools && lbls.actions && lbls.reasons) LABELS = lbls;
+    if (store.get("mission-console.large") === "1") setToggle("sizeToggle", "large", true, document.documentElement);
+    if (store.get("mission-console.story") === "0") setToggle("storyToggle", "story-on", false, document.body);
+    const lbls = await get("/labels").catch(() => null);
+    if (lbls && lbls.tools && lbls.actions && lbls.reasons) S.labels = lbls;
     renderActionsHelp();
     const launchSecret = new URLSearchParams(location.hash.slice(1)).get("console-login");
     if (launchSecret) {
       history.replaceState(null, "", location.pathname + location.search);
       const login = await fetch("/console/session", { method: "POST", credentials: "include", headers: { authorization: `Bearer ${launchSecret}` } });
-      if (!login.ok) throw new Error("Console login expired or invalid; restart the local demo for a new operator link.");
+      if (!login.ok) { document.querySelector("main").innerHTML = '<div class="panel"><h2>Console login expired or invalid</h2><p>Restart the local demo for a new operator link.</p></div>'; return; }
     }
-    const s = await api("/bff/session");
-    if (!s.roles) throw new Error("Open the operator-only login link printed when the demo started.");
-    CSRF = s.csrf; MISSION = s.missionId;
-    $("sess").dataset.who = `${esc(s.sub)} [${esc(s.roles.join(", "))}]`;
-    logLine(`session as ${s.sub} [${s.roles.join(", ")}], mission ${s.missionId}`);
-    await refreshMission();
+    const s = await get("/bff/session");
+    if (!s.roles) { document.querySelector("main").innerHTML = '<div class="panel"><h2>Open the operator login link</h2><p>The demo prints an operator-only link when it starts. Open that link to use the console.</p></div>'; return; }
+    S.csrf = s.csrf; S.sub = s.sub; S.roles = s.roles;
+    await refreshCatalog();
     await refresh();
+    enterBeat(0);
+    setInterval(() => refresh().catch(() => {}), 2000);
+    setInterval(tickClocks, 1000);
   })();
 </script>
 </body>
