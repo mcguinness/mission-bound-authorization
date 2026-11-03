@@ -1282,7 +1282,7 @@ delete step's precondition this way:
 An extension predicate type MUST be either a collision-resistant name
 or a name coordinated within this document family, under the same rule
 as denial reasons ({{runtime-denial-classification}}). The harness
-profile defines one coordinated type, `work_item_prerequisite_completed`
+profile defines the coordinated type `work_item_prerequisite_completed`
 ({{I-D.draft-mcguinness-mission-harness}}).
 
 The OPTIONAL `context.mission_history` request object carries only what
