@@ -156,14 +156,24 @@ export function templateConsentDisclosure(
     budgetExposure?: { port: BudgetExposurePort | undefined; unit: CounterUnit | undefined };
     /** @spec resource-access#resource-contract (#249, D875): the contract declarations the ceiling is assembled against. */
     resourceContracts?: ResourceContractDeclarations;
+    /**
+     * @spec mission-template#template-consent, derivation-limits#approval-rendering
+     * (#2018): whether the deployment implements Derivation Limits. Default
+     * true. False: the per-instance derivation-limit rule, which binds only a
+     * deployment adopting that profile, is not rendered.
+     */
+    derivationLimits?: boolean;
   },
 ): { disclosure: TemplateConsentDisclosure } | TemplateConsentRefusal {
   const { body } = proposal;
   const held = verifiedActivationPolicy(opts.issuer, dispatchPolicies, proposal.dispatch_policy);
   const maximum = held && standingConsentMaximumOf(held);
   if (!maximum) {
+    // #2018: without Derivation Limits the page shows no per-instance limit,
+    // so a changed policy is refused for the change alone.
+    const unshown = opts.derivationLimits === false && !held ? "" : ", so its per-instance derivation limit cannot be shown";
     return {
-      refusal: `The Dispatch Policy ${body.dispatch_policy.id} version ${body.dispatch_policy.version} is not the one this template was proposed under, so its per-instance derivation limit cannot be shown. This consent is refused; propose the template again.`,
+      refusal: `The Dispatch Policy ${body.dispatch_policy.id} version ${body.dispatch_policy.version} is not the one this template was proposed under${unshown}. This consent is refused; propose the template again.`,
     };
   }
   // @spec mission-template#prohibited-classes, metering#consent (#813): a
@@ -254,8 +264,12 @@ export function templateConsentDisclosure(
       bounds: [
         `At most ${body.max_active} dispatched instances are active at once.`,
         `At most ${body.rate_per_min} dispatches per minute.`,
-        ...standingConsentLines(maximum, "dispatched instance", { asyncDelegation: opts.asyncDelegation }),
-        `Each dispatched instance establishes and counts its own limit, so this consent admits up to ${body.max_active} such limits at once, and more over time.`,
+        ...(opts.derivationLimits === false
+          ? []
+          : [
+              ...standingConsentLines(maximum, "dispatched instance", { asyncDelegation: opts.asyncDelegation }),
+              `Each dispatched instance establishes and counts its own limit, so this consent admits up to ${body.max_active} such limits at once, and more over time.`,
+            ]),
       ],
       terms: [
         `Each dispatched instance lives at most ${body.per_instance_lifetime_s} seconds.`,

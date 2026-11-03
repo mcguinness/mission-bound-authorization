@@ -7735,7 +7735,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Submission envelope member other than intent and evidence is refused invalid_request; an Intent top-level member that neither the binding nor an implemented companion defines (the retired success_criteria) is refused invalid_request, while the otherwise identical Intent is accepted"
+    "normative": "a Submission envelope member other than intent and evidence is refused invalid_request; an Intent top-level member that neither the binding nor an implemented companion defines (the retired success_criteria, or requested_derivation_limit where the AS does not implement Derivation Limits) is refused invalid_request, while the otherwise identical Intent is accepted"
    },
    "level": "unit",
    "coverage": "tested",
@@ -7751,9 +7751,21 @@
      "name": "Submission envelope parse (@spec mission#submission-via-par) > the retired success_criteria member fails the inner closed top level with invalid_request (@spec mission#mission-intent)",
      "level": "unit",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-limits-capability.test.ts",
+     "name": "the Derivation Limits capability switch at intake and approval (#2018; @spec mission#submission-via-par, derivation-limits#introduction) > off, a requested_derivation_limit is refused invalid_request as an unknown member while the identical Intent without it is accepted, and the approval page renders no derivation limit",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/demo/test/minimal-baseline-config.test.ts",
+     "name": "what this configuration does not implement is refused as the binding states (#2009 P5 step 4) > without Derivation Limits a requested_derivation_limit is refused invalid_request under Closed top levels, while the identical Intent without it is accepted (#2018; @spec mission#submission-via-par, derivation-limits#introduction)",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "Both clauses are asserted on the registered invalid_request code. The Intent clause uses the retired success_criteria member with an accepted control; re-adding the member to the TOP_LEVEL allowlist fails the test. Acceptance of companion-defined members is not claimed by this row."
+   "notes": "Both clauses are asserted on the registered invalid_request code. The Intent clause uses the retired success_criteria member with an accepted control; re-adding the member to the TOP_LEVEL allowlist fails the test. #2018: the clause's companion half is witnessed at PAR with requested_derivation_limit, which Derivation Limits defines, on an AS built without that capability: refused invalid_request, the identical Intent without it accepted. Proved by mutation: admitting the member whatever the switch (kernel/intent.ts), or not passing the switch to the kernel (index.ts), fails both #2018 witnesses. With the capability on the same member is accepted (derivation-limits-capability.test.ts), which this row does not claim."
   },
   {
    "id": "core.commitment.duplicate-members",
@@ -13487,9 +13499,21 @@
      "name": "derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit) > an exact retry returns the recorded token without counting; once that token has expired, the fresh delivery token is gated by the successor's limit",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > with Derivation Limits turned off after the parent's approval (#2018 review F1; @spec derivation-limits#effective-limit) > a finite per-child maximum the parent committed outlives the restart: with the capability on the child records it, and after a restart with it off the next child is refused policy_denied, committing nothing, while the earlier child keeps its limit",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > with Derivation Limits turned off after the template's consent (#2018 review F1; @spec derivation-limits#effective-limit) > a finite per-instance maximum the consent committed outlives the restart: with the capability on the instance records it, and after a restart with it off the next Dispatch is refused dispatch_policy_changed, committing nothing, while the earlier instance keeps its limit",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. Not witnessed: the precondition that the maximum is rendered at the standing consent (the reference has no standing-consent rendering surface; see the rendering rows), and the clause that only a fresh human approval of the standing consent lifts the maximum. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling."
+   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. Not witnessed: the precondition that the maximum is rendered at the standing consent (the reference has no standing-consent rendering surface; see the rendering rows), and the clause that only a fresh human approval of the standing consent lifts the maximum. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling. #2018 review (F1): turning the derivation-limits capability off does not leave the limit absent for a Mission created under a consent committing a finite maximum. After a restart from the kernel file with the capability off, the next child or dispatched instance is refused (policy_denied, dispatch_policy_changed) and nothing is committed, while the Mission created before keeps its limit. Proved by mutation: restoring the defect, a finite maximum recorded as no limit, fails both witnesses, and removing either path's refusal fails its witness. This adds no witness of the fresh-approval clause, which stays unwitnessed."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -29370,7 +29394,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the authorization server metadata of a Mission Issuer that can withhold an event carrying authority_changed true from an undeclared stream carries mission_max_stale_seconds",
-    "local": "the reference authorization server advertises mission_max_stale_seconds in every deployment, so the condition never needs evaluating; the demo stack does not yet wire the Signals emitter, whose maxStaleSeconds option must equal the advertised value"
+    "local": "the reference authorization server advertises mission_max_stale_seconds wherever its revocation-propagation capability is on (#2018), which is the default assembly and every shipped deployment's capability set, so the condition never needs evaluating there; the demo stack does not yet wire the Signals emitter, whose maxStaleSeconds option must equal the advertised value"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -29382,7 +29406,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#1877 (D1017). The reference AS sets mission_max_stale_seconds in its metadata unconditionally (adapters/provider.ts), and the tracer test reads it from the discovery document. The witness covers the advertisement, not the binding between that value and an emitter's maxStaleSeconds, which is construction-site wiring."
+   "notes": "#1877 (D1017). The reference AS sets mission_max_stale_seconds in its metadata under the revocation-propagation capability (adapters/provider.ts, #2018), on in the default assembly the tracer test builds, and the tracer test reads it from the discovery document. The witness covers the advertisement, not the binding between that value and an emitter's maxStaleSeconds, which is construction-site wiring. An assembly that turns revocation-propagation off and wires a Signals emitter through onLifecycleCommit would not advertise the member; construction does not detect that, since the AS cannot tell an emitter from another lifecycle subscriber."
   },
   {
    "id": "signals.discharge.agreed-heartbeat-interval",
@@ -92371,7 +92395,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 (D1088): the MAS pilot's MAS is the reference authorization server, which publishes `mission_max_stale_seconds` in its metadata unconditionally, and the separated pilot's PDP reads it. Proved by mutation: removing the member fails the witness."
+   "notes": "#972 (D1088): the MAS pilot's MAS is the reference authorization server, which publishes `mission_max_stale_seconds` in its metadata under its revocation-propagation capability, on in the pilot's assembly (no capability set), and the separated pilot's PDP reads it. Proved by mutation: removing the member fails the witness. #2018: construction refuses an AS serving Mission join (joinEnrollment or joinAssertions) with that capability off (revocation-propagation-capability.test.ts), so no MAS assembly omits the member."
   },
   {
    "id": "mas.metadata.submission-auth-methods-required",

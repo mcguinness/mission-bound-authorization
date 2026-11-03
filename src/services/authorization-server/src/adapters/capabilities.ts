@@ -3,11 +3,12 @@
  *
  * The issuance profile itself (PAR, the authorization code with PKCE,
  * DPoP-bound JWT access tokens, refresh, scope projection, the approval
- * interaction, the `authorization_details` types metadata, and introspection)
- * is always on and is not listed here. Each capability below is a surface a
- * deployment may leave out. An assembly built with no capability set enables
- * every one of them except the opt-in ones ({@link OPT_IN_PROVIDER_CAPABILITIES}),
- * which is the full reference provider.
+ * interaction, and the `authorization_details` types metadata) is always on
+ * and is not listed here. Each capability below is a surface a deployment may
+ * leave out, the OAuth binding's optional Introspection capability and the
+ * companion surfaces among them (#2018). An assembly built with no capability
+ * set enables every one of them except the opt-in ones
+ * ({@link OPT_IN_PROVIDER_CAPABILITIES}), which is the full reference provider.
  *
  * A disabled capability refuses with the standard error its path already uses
  * when it is not configured: an unregistered grant type answers
@@ -57,6 +58,40 @@ export type ProviderCapability =
   /** RFC 7009 token revocation. */
   | "token-revocation"
   /**
+   * @spec mission#introspection, mission#optional-capabilities (#2018): the
+   * OAuth binding's optional Introspection capability, the RFC 7662
+   * `/introspect` route and its `introspection_endpoint` and
+   * `introspection_endpoint_auth_methods_supported` metadata. Off, the route
+   * is not served (404), neither member is advertised, and construction
+   * refuses a configured introspection principal.
+   */
+  | "introspection"
+  /**
+   * @spec status#revocation-enforcement-classes, status#conformance (#2018):
+   * Mission Status's Revocation propagation extension, which owns the
+   * `mission_max_stale_seconds` metadata member. Off, the member is not
+   * advertised.
+   */
+  | "revocation-propagation"
+  /**
+   * @spec derivation-limits#conformance, mission#submission-via-par (#2018):
+   * Mission Derivation Limits. Off, intake refuses a `requested_derivation_limit`
+   * Intent member `invalid_request` as a member no implemented profile
+   * defines, no Mission establishes a `derivation_limit`, and no approval or
+   * consent page renders a derivation limit. Construction refuses a
+   * deployment policy that sets `derivation_limit_ceiling`.
+   *
+   * Turning it off is not permission to remove an earlier commitment. A
+   * Mission created while it was on keeps its own `derivation_limit`, still
+   * enforced. A finite per-Mission maximum a standing consent committed (a
+   * Child Delegation entry's figure, a Mission Template's Dispatch Policy)
+   * stays in force, and only a fresh human approval replaces it, so a Child
+   * Mission or a dispatched instance created under one is refused
+   * (`policy_denied`, `dispatch_policy_changed`) rather than created with no
+   * limit. A consent guaranteeing no finite maximum still creates.
+   */
+  | "derivation-limits"
+  /**
    * @spec device-authorization (#1202): Mission Intent carriage at the RFC
    * 8628 device authorization endpoint. Opt-in (D412): off unless a set
    * names it.
@@ -98,6 +133,9 @@ export const ALL_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
   "dev-token",
   "oidc",
   "token-revocation",
+  "introspection",
+  "revocation-propagation",
+  "derivation-limits",
 ];
 
 /**

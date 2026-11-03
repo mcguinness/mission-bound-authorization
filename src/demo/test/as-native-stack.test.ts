@@ -122,6 +122,9 @@ const DISPATCH = "urn:ietf:params:oauth:grant-type:mission-dispatch";
 
 /** The optional capabilities D332 enables beyond the always-on issuance profile, and no others. */
 const ENABLED: ReadonlySet<ProviderCapability> = new Set<ProviderCapability>([
+  "introspection",
+  "revocation-propagation",
+  "derivation-limits",
   "lifecycle-revoke",
   "transaction-authorization",
 ]);
@@ -806,8 +809,16 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     },
 
     async capabilitySet(): Promise<void> {
-      // D332: the floor's one capability plus transaction authorization, and nothing else.
-      expect([...AS_NATIVE_CAPABILITIES].sort()).toEqual(["lifecycle-revoke", "transaction-authorization"]);
+      // D332: the floor's set plus transaction authorization, and nothing else.
+      // The floor keeps Introspection, Revocation propagation and Derivation
+      // Limits on, as before each became a capability (#2018).
+      expect([...AS_NATIVE_CAPABILITIES].sort()).toEqual([
+        "derivation-limits",
+        "introspection",
+        "lifecycle-revoke",
+        "revocation-propagation",
+        "transaction-authorization",
+      ]);
       expect(AS_NATIVE_CAPABILITIES).toEqual(new Set([...ISSUANCE_ONLY_CAPABILITIES, "transaction-authorization"]));
       expect(authServer().capabilities).toEqual(AS_NATIVE_CAPABILITIES);
       const meta = (await (await fetch(`${asUrl}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
@@ -1508,7 +1519,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       expect(launched.stack.masGovernedChannel).toBeUndefined();
       expect(launched.summary).toEqual(
         expect.arrayContaining([
-          "  AS capabilities    issuance profile + lifecycle-revoke, transaction-authorization",
+          "  AS capabilities    issuance profile + introspection, revocation-propagation, derivation-limits, lifecycle-revoke, transaction-authorization",
           "  dev ordinary token not served",
           "  signing keys       ephemeral (new at every restart)",
           "  kernel store       in memory (lost at restart)",
@@ -2377,7 +2388,7 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
     try {
       await run.waitFor("ready. Ctrl-C to stop.");
       expect(run.stdout()).toContain(`  issuer             ${asUrl}  (JWKS ${asUrl}/jwks)`);
-      expect(run.stdout()).toContain("  AS capabilities    issuance profile + lifecycle-revoke, transaction-authorization");
+      expect(run.stdout()).toContain("  AS capabilities    issuance profile + introspection, revocation-propagation, derivation-limits, lifecycle-revoke, transaction-authorization");
       expect(run.stdout()).toContain("  dev ordinary token not served");
       expect(run.stdout()).toContain(`  resource audience  ${CANONICAL_RESOURCE}  (HTTP MCP, DPoP verified on every request)`);
       expect(run.stdout()).toContain("  MAS join route     not mounted");

@@ -93,9 +93,13 @@ acceptance item witnessed (D436).
 
 **AS capability set (D332).** The target extends the issuance-only floor
 for the remittance approval flow. Its AS runs the always-on issuance profile
-plus exactly `lifecycle-revoke`, the floor's one capability, and
-`transaction-authorization`, where the remittance action-bound approval is
-redeemed (`AS_NATIVE_CAPABILITIES`, `demo/src/stack.ts:109-112`). The AS
+plus exactly the floor's set, whose one optional capability is
+`lifecycle-revoke`, and `transaction-authorization`, where the remittance
+action-bound approval is redeemed (`AS_NATIVE_CAPABILITIES`,
+`demo/src/stack.ts`). The floor's set also keeps `introspection`,
+`revocation-propagation` and `derivation-limits` on: each was part of the
+always-on profile until #2018 made it a capability, so the served surface is
+unchanged. The AS
 reports the set it was built with and whether it armed dev ordinary issuance
 (`BuiltAs.devOrdinaryIssuance` and `BuiltAs.capabilities`,
 `services/authorization-server/src/index.ts:1768-1769`), and neither

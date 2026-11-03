@@ -1316,8 +1316,10 @@ Tests marked
 acceptance pack are HTTP MCP with verified DPoP (D315): they reach the PEP
 only through the endpoint `composeStack({ target: "as-native" })` serves at
 the declared resource audience, and exclude the in-process mediated channel.
-The target's AS runs the issuance profile plus exactly `lifecycle-revoke`
-and `transaction-authorization`, arms no dev ordinary issuance, and refuses
+The target's AS runs the issuance profile, with Introspection, Revocation
+propagation and Derivation Limits kept on (#2018), plus exactly
+`lifecycle-revoke` and `transaction-authorization`, arms no dev ordinary
+issuance, and refuses
 each of the other 15 optional capabilities with its standard error (D332;
 the contract's §2 maps each to its witness). Ordinary-token minting is a
 test-only composition option that the launcher refuses.
@@ -1779,9 +1781,10 @@ Runtime overlay:
    uses the declared local read (D293). §5.3.
 10. An assembled deployment of exactly the contract's components. What
     `pnpm as-native` enables and exposes: the AS, on its port, with the D332
-    capability set (the issuance profile plus exactly `lifecycle-revoke` and
-    `transaction-authorization`, with `dev-token` and dev ordinary issuance
-    off); the resource's HTTP MCP endpoint at the declared audience; the
+    capability set (the issuance profile, with Introspection, Revocation
+    propagation and Derivation Limits kept on (#2018), plus exactly
+    `lifecycle-revoke` and `transaction-authorization`, with `dev-token`
+    and dev ordinary issuance off); the resource's HTTP MCP endpoint at the declared audience; the
     listener serving the resource's `txn_challenge_jwks_uri`; in remote PDP
     mode, the loopback PDP hop; and, in process, the PDP, its OpenFGA client
     and the approval service. It mounts no MAS join route. It also constructs
