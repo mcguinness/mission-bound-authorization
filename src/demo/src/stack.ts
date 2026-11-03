@@ -30,7 +30,6 @@ import {
   type IssuerEvidenceStore,
   MissionKernel,
   mintActivationPolicyRef,
-  contractOperationProfiles,
   OperationProfileRegistry,
   type ProviderCapability,
   type SigningKeySource,
@@ -48,7 +47,6 @@ import {
   type RuntimePosture,
   type Fga,
   type MissionView,
-  relationForAction,
 } from "@mission/pdp";
 import {
   ActorRecords,
@@ -87,6 +85,7 @@ import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./appro
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
 import { kernelBudgetBinding, kernelMissionView, kernelMissionViewFor } from "./kernel-mission-view.js";
 import { assemblePaymentsResource } from "./payments-resource.js";
+import { paymentsTransactionAuthorization } from "./payments-txn-authorization.js";
 
 export { withServedEstablishmentModes } from "./payments-resource.js";
 import { defaultMissionExpiry } from "./mission-expiry.js";
@@ -741,6 +740,10 @@ export async function composeStack(opts: {
       : standingPaymentPolicies
         ? new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"])
         : undefined;
+    // The payments TAS, one definition with the separated AS's (#1101); its
+    // fresh decision reads this AS's kernel through `viewFor`.
+    const transactionAuthorization = paymentsTransactionAuthorization({ challengeIssuers, ars, viewFor: (missionId) => viewFor(missionId) });
+    operationProfiles = transactionAuthorization.operationProfiles;
     const lifecycleConsole = await constructing(() => newLifecycleConsole());
     const kernelStore = opts.kernelStore;
     if (kernelStore) await constructing(() => mkdirSync(dirname(kernelStore.file), { recursive: true }));
@@ -782,57 +785,7 @@ export async function composeStack(opts: {
       // this only gives the demo a plain token to present. The as-native
       // target mounts no such route and mints none (D332).
       devOrdinaryIssuance: ordinaryMinting,
-      transactionAuthorization: {
-        challengeIssuers,
-        ars,
-        // @spec txn-authorization#two-phase-expiry — the pending workflow's own
-        // lifetime and the deployment maximum for an issued transaction token
-        // are INDEPENDENT of the challenge's admission window.
-        workflowLifetimeSeconds: txnTopo.workflowLifetimeSeconds,
-        maxTokenLifetimeSeconds: txnTopo.maxTokenLifetimeSeconds,
-        maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
-        // @spec txn-authorization#resource-challenge — the Operation Profiles
-        // this deployment recognizes. The payments resource challenges with the
-        // family's own `mission_resource_access` entry, so that profile governs
-        // its operations; an entry naming any other type is refused at
-        // admission rather than read structurally.
-        // #249, #1846: one profile under each version the payments contract
-        // declares, named by its own document, the current one registered and
-        // the others retained, so a supported older reference resolves to its
-        // own profile and a retired one is refused by resolution.
-        operationProfiles: (operationProfiles = contractOperationProfiles(CANONICAL_RESOURCE)),
-        // @spec txn-authorization#challenge-redemption step 7 — the deployment's
-        // entitlement and resource-policy decision, run FRESH at completion
-        // against LIVE state. A completed approval is context here, never a
-        // bypass: each of these denies on its own, after an approval, whenever
-        // the input no longer holds -- the Mission is no longer active, the
-        // containment overlay has narrowed the entry away, the deployment does
-        // not recognize the action, the entry has no vendor scope left, or the
-        // local subject is no longer an entitled account.
-        freshDecision: async (input) => {
-          const view = viewFor(input.missionId);
-          if (!view || view.state !== "active") return { decision: "deny", reason: "mission_inactive" };
-          const entry = view.authority_set.find(
-            (e) => e.resource === input.resource && e.actions.includes(input.action),
-          );
-          if (!entry) return { decision: "deny", reason: "out_of_authority" };
-          const contained = view.containment?.contained.some(
-            (c) => c.resource === input.resource && (c.actions === undefined || c.actions.includes(input.action)),
-          );
-          if (contained) return { decision: "deny", reason: "authority_contained" };
-          if (!relationForAction(input.action)) return { decision: "deny", reason: "unknown_action" };
-          if (!entry.constraints?.vendors?.length) return { decision: "deny", reason: "no_vendor_scope" };
-          // Principal entitlement, from the deployment's own identity config:
-          // the DESTINATION-LOCAL subject must still be an account this estate
-          // carries. Where the Origin Principal profile applies the decision
-          // also receives `originPrincipal`, issuer-qualified and separate; a
-          // local account list is never matched against a foreign namespace.
-          if (!USERS.some((u) => u.sub === input.subject)) {
-            return { decision: "deny", reason: "entitlement_denied" };
-          }
-          return { decision: "permit" };
-        },
-      },
+      transactionAuthorization,
     }));
     // #1326, #1349: what this boot revoked from a kernel written before #1340.
     for (const n of startupRemediationNotices(as.startupRemediation)) {
