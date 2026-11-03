@@ -685,6 +685,28 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(historyOf(control)?.[0]?.outcome).toBe("not_satisfied");
   });
 
+  it("leaves the history unestablishable when a failed execution lacks the effective digest its authorized digest requires, in either family, and flags nothing", async () => {
+    // From the owner's re-review probes "failed execution missing required effective_parameter_digest /
+    // effective_evaluation_context_digest must not establish history" (#2017): beside an authorized
+    // completion of the same unrestricted permit, which alone would satisfy it.
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { parameter_digest: DIGEST_A, evaluation_context_digest: DIGEST_C } });
+    const digests = { ...AUTHORIZED, effective_parameter_digest: DIGEST_A, effective_evaluation_context_digest: DIGEST_C };
+    const done = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "good", sequence: 1, overrides: digests });
+    for (const member of ["effective_parameter_digest", "effective_evaluation_context_digest"]) {
+      const flags: UnauthorizedExecutionFlag[] = [];
+      const failed = await executionRecord({ evaluation_id: "w1", outcome: "failed", execution_id: "bad", sequence: 0, overrides: { ...digests, error: "urn:example:execution-failed" }, omit: [member] });
+      const decision = await evaluate(request(), options(flagging(historyBinding([permit, failed, done]), flags)));
+      expect(decision.decision, member).toBe(false);
+      expect(decision.context.denial_reason, member).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, member).toBe("unavailable");
+      expect(flags, member).toEqual([]);
+    }
+    // Control: the same failed use with both effective digests leaves the completion standing.
+    const failedWithDigests = await executionRecord({ evaluation_id: "w1", outcome: "failed", execution_id: "bad", sequence: 0, overrides: { ...digests, error: "urn:example:execution-failed" } });
+    const control = await evaluate(request(), options(historyBinding([permit, failedWithDigests, done])));
+    expect(control.decision, JSON.stringify(control.context)).toBe(true);
+  });
+
   it("fails closed when the store returns a record of another Mission", async () => {
     const records = [
       await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }),

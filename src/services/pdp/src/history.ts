@@ -293,8 +293,8 @@ export function unavailableHistory(selected: ReadonlyArray<HistoryPredicate>): H
  * has a gap or a reused `sequence` position, a record lacks its REQUIRED
  * `audience`, or an Execution Evidence record links to no verified permit of
  * the same Mission and audience or carries authorized digests other than
- * that permit's, or a `completed` execution lacks an effective digest its
- * authorized digest requires. A record delivered more than once with the
+ * that permit's, or a `completed` or `failed` execution lacks an effective
+ * digest its authorized digest requires. A record delivered more than once with the
  * same content counts once. An execution whose effective digest differs from
  * its authorized digest is kept, flagged, and never a completion.
  */
@@ -490,9 +490,10 @@ async function verifiedHistory(
     if (execution.authorized_evaluation_context_digest !== linked.evaluation_context_digest) return undefined;
     // @spec runtime-evidence#execution-evidence-object: each effective digest
     // is REQUIRED where its authorized digest is present, except on a
-    // `suppressed` record that could not establish it. A `completed` record
-    // without one cannot show what ran, so its completion is not established.
-    if (execution.outcome === "completed") {
+    // `suppressed` record that could not establish it. A `completed` or
+    // `failed` record without one cannot show what ran, so the history is not
+    // established: missing data is neither equality nor a deviation to flag.
+    if (execution.outcome === "completed" || execution.outcome === "failed") {
       if (execution.authorized_parameter_digest !== undefined && execution.effective_parameter_digest === undefined) return undefined;
       if (execution.authorized_evaluation_context_digest !== undefined && execution.effective_evaluation_context_digest === undefined) return undefined;
     }
