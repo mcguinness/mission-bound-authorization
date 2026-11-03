@@ -37,7 +37,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, keyedRecordFrom, loadStandingPaymentDeployment, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, scopeMappingEntries, type SeededTrustedSource, type StandingPaymentDeployment, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, keyedRecordFrom, loadStandingPaymentDeployment, parseRequestProvenanceConfig, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, REQUEST_PROVENANCE_CONFIG, RUNTIME_SCOPE_CONFIG, scopeMappingEntries, type SeededTrustedSource, type StandingPaymentDeployment, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
 import { type DurableEvidenceKey, evidenceKeyBundle, loadEvidenceKeyFile } from "./evidence-key-files.js";
 import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
@@ -115,7 +115,8 @@ import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
 import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "./resource-policy-store.js";
 import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type UpstreamApprovalConsole } from "./approval-console.js";
-import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
+import { type ApproverAccount, type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
+import { REQUEST_INTAKE_CLIENT_ID, type RequestIntakeService, startRequestIntake } from "./request-intake.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
 import { kernelBudgetBinding, kernelMissionView, kernelMissionViewFor } from "./kernel-mission-view.js";
 import { defaultMissionExpiry } from "./mission-expiry.js";
@@ -179,6 +180,15 @@ export interface AuthServerExtras {
    */
   approverProvider?: { issuer: string; logins: readonly CompletedLogin[] };
   /**
+   * @spec request-provenance#capture (#939 slice 2b-2, D1221): the demo
+   * request intake the `as-native` target starts under its opt-in
+   * `requestIntake` option, and the originator's account at the upstream
+   * provider: Alice's password and enrolled device, generated at this boot
+   * and distinct from the Approver's. Trusted console/driver only, like the
+   * Approver's account. Absent without the option.
+   */
+  requestIntake?: { service: RequestIntakeService; originator: ApproverAccount };
+  /**
    * @spec status#lifecycle-authorization: the dedicated lifecycle console's
    * private-key-JWT credential at the advertised Mission Lifecycle endpoint. It
    * generated its own key; the AS holds only the public half and binds the
@@ -205,8 +215,10 @@ export interface AuthServerExtras {
     cnfJkt: string,
   ) => Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }>;
   /**
-   * Stop the AS HTTP listener and the txn-challenge discovery listener; resolves
-   * once both ports are released (the exhibit calls this before exit).
+   * Stop the AS HTTP listener and the txn-challenge discovery listener, and
+   * under `as-native` the upstream provider and, with `requestIntake`, the
+   * request intake; resolves once every port is released (the exhibit calls
+   * this before exit).
    */
   closeAuthServer: () => Promise<void>;
   /**
@@ -505,6 +517,24 @@ export async function composeStack(opts: {
    */
   target?: "as-native";
   /**
+   * @spec request-provenance#capture, request-provenance#verification (#939
+   * slice 2b-2, D1221): under the `as-native` target only, start the demo
+   * request intake (`request-intake.ts`) and enable the AS's
+   * `mission-request-provenance` evidence type together, so neither half
+   * runs without the other. The intake starts first, signing for this AS's
+   * issuer; the upstream provider starts inside its registration, hosting
+   * the originator Alice beside the Approver Bob, with the intake registered
+   * as a further client and `amr` issued; and the AS trusts exactly
+   * `intake.signer()` under the bounds `config/request-provenance.json`
+   * declares, which also set the intake's assertion lifetime and maximum
+   * capture age, so the two halves cannot drift. The type is accepted, not
+   * required of any client. The shipped file stays `enabled: false`; with a
+   * file-backed kernel store (`kernelStore`) the AS refuses construction
+   * (D1119 Q5, #1963). `pnpm as-native` sets it from
+   * `MISSION_REQUEST_INTAKE=1`. Absent: the target is unchanged.
+   */
+  requestIntake?: boolean;
+  /**
    * @spec #831: the AS's signing keys: a key ring (durable across restarts)
    * or keys generated at this boot. Absent: generated at this boot, as tests
    * and the demos run. `pnpm as-native` sets it from its environment
@@ -590,6 +620,10 @@ export async function composeStack(opts: {
   // #813: the standing-payment fixture is the shared composition's only.
   if (opts.testStandingPaymentDispatch && (asNative || !opts.withAuthServer)) {
     throw new Error("testStandingPaymentDispatch needs withAuthServer, and the as-native target refuses it");
+  }
+  // #939 slice 2b-2 (D1221): the request intake composes in as-native only.
+  if (opts.requestIntake && !asNative) {
+    throw new Error("requestIntake composes the demo request intake with the as-native target only (D1221)");
   }
   // @spec mission-template#standing-payment-exception, metering#aggregate-bounds
   // (#813, #816, D830, D1122 draft enablement, D1143): the shared composition
@@ -750,11 +784,14 @@ export async function composeStack(opts: {
     metadataServer = await startResourceMetadataServer(() => paymentsServerRef);
     // A failed construction releases every listener it already opened (the
     // discovery listener and, under `as-native`, the upstream Approver login
-    // provider) and, with a kernel file, the kernel (#250): the caller never
-    // receives the stack that would close them (#1320).
+    // provider and, under `requestIntake`, the request intake) and, with a
+    // kernel file, the kernel (#250): the caller never receives the stack
+    // that would close them (#1320).
     let approverIdp: ApproverIdp | undefined;
+    let requestIntake: RequestIntakeService | undefined;
     const releaseConstruction = async (built?: { kernel: MissionKernel }): Promise<void> => {
       await metadataServer?.close();
+      await requestIntake?.close();
       await approverIdp?.close();
       if (opts.kernelStore) built?.kernel.close();
     };
@@ -790,16 +827,46 @@ export async function composeStack(opts: {
     // password and device are generated at this boot and held only by the
     // trusted console.
     const approverUsername = USERS.find((u) => u.sub === "bob")?.email ?? "bob";
-    if (asNative) {
-      approverIdp = await constructing(() =>
-        startApproverIdp({
-          redirectUri: `${asUrl}${APPROVER_LOGIN_CALLBACK_PATH}`,
-          accounts: [{ sub: "idp-bob", username: approverUsername }],
-          ...(opts.approverIdpPort !== undefined ? { port: opts.approverIdpPort } : {}),
+    const approverIdpOptions = {
+      redirectUri: `${asUrl}${APPROVER_LOGIN_CALLBACK_PATH}`,
+      accounts: [{ sub: "idp-bob", username: approverUsername }],
+      ...(opts.approverIdpPort !== undefined ? { port: opts.approverIdpPort } : {}),
+    };
+    // @spec request-provenance#capture (#939 slice 2b-2, D1221): with the
+    // request intake, the intake starts first, for this AS's issuer, and the
+    // provider starts inside its registration. The provider also hosts the
+    // originator Alice, an account of her own and no Approver, registers the
+    // intake as a client of its own and issues `amr`. The intake's assertion
+    // lifetime and maximum capture age are the AS's declared bounds.
+    const originatorUsername = USERS.find((u) => u.sub === "alice")?.email ?? "alice";
+    const originatorSub = "idp-alice";
+    const provenanceBounds = REQUEST_PROVENANCE_CONFIG;
+    if (asNative && opts.requestIntake) {
+      requestIntake = await constructing(() =>
+        startRequestIntake({
+          audience: asUrl,
+          presenter: { client_id: "ap-agent" },
+          assertionLifetimeSeconds: provenanceBounds.max_assertion_lifetime_seconds,
+          maxCaptureAgeSeconds: provenanceBounds.max_capture_age_seconds,
+          originatorIdp: async (redirectUri) => {
+            const provider = await startApproverIdp({
+              ...approverIdpOptions,
+              accounts: [...approverIdpOptions.accounts, { sub: originatorSub, username: originatorUsername }],
+              clients: [{ clientId: REQUEST_INTAKE_CLIENT_ID, redirectUri }],
+              idTokenAmr: true,
+            });
+            approverIdp = provider;
+            const credentials = provider.clients.get(REQUEST_INTAKE_CLIENT_ID);
+            if (!credentials) throw new Error("the provider did not register the request intake");
+            return { issuer: provider.issuer, ...credentials, originators: [originatorSub], acrValues: ["mfa"] };
+          },
         }),
       );
+    } else if (asNative) {
+      approverIdp = await constructing(() => startApproverIdp(approverIdpOptions));
     }
     const approverAccount = approverIdp?.accounts.get(approverUsername);
+    const originatorAccount = requestIntake ? approverIdp?.accounts.get(originatorUsername) : undefined;
     // D332: the as-native target's AS runs exactly AS_NATIVE_CAPABILITIES,
     // plus `dev-token` only under the test fixture. The shared demo passes the
     // full reference assembly plus the opt-in `standing-payment-dispatch`
@@ -846,6 +913,24 @@ export async function composeStack(opts: {
       enforcementScopeStatement: baseStatement,
       ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
       ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
+      // @spec request-provenance#verification (#939 slice 2b-2, D1221): the
+      // type enabled with the intake, trusting its one signer under the
+      // shipped file's declared bounds, through the same validation as the
+      // file. Accepted, not required. With a kernel file the AS refuses
+      // construction here (D1119 Q5, #1963), releasing the intake too.
+      ...(requestIntake
+        ? {
+            requestProvenance: {
+              config: parseRequestProvenanceConfig({
+                enabled: true,
+                clock_skew_seconds: provenanceBounds.clock_skew_seconds,
+                max_assertion_lifetime_seconds: provenanceBounds.max_assertion_lifetime_seconds,
+                max_capture_age_seconds: provenanceBounds.max_capture_age_seconds,
+                signers: [requestIntake.signer()],
+              }),
+            },
+          }
+        : {}),
       ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
       // @spec authority-server#mission-join (#557) — the demo's MAS-governed
       // route acts under an ORDINARY OAuth credential, and no other path in
@@ -1060,6 +1145,7 @@ export async function composeStack(opts: {
         ? { upstream: { account: approverAccount, secondFactor: "code" } }
         : { sessions: approvalSessions, login: approverLogin },
       ...(approverIdp ? { approverProvider: { issuer: approverIdp.issuer, logins: approverIdp.logins } } : {}),
+      ...(requestIntake && originatorAccount ? { requestIntake: { service: requestIntake, originator: originatorAccount } } : {}),
       lifecycleConsole: lifecycleConsole.credentials,
       deferrals: as.deferrals,
       ras,
@@ -1089,6 +1175,7 @@ export async function composeStack(opts: {
         await Promise.all([
           new Promise<void>((resolve) => asServer.close(() => resolve())),
           metadataServer?.close(),
+          requestIntake?.close(),
           approverIdp?.close(),
         ]);
       },

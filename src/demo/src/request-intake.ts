@@ -1,15 +1,17 @@
 /**
  * @spec request-provenance#intake-isolation, request-provenance#capture,
  * request-provenance#signing, request-provenance#assertion,
- * request-provenance#audit (#939 slice 2b-1, D1119 Q6)
+ * request-provenance#audit (#939 slices 2b-1 and 2b-2, D1119 Q6, D1221)
  *
  * The demo request intake: a party of its own, with its own listener, issuer
  * and ephemeral ES256 signing key, that wraps `@mission/request-provenance`'s
- * `createRequestIntake` behind four closed HTTP endpoints. It is a demo
- * service, started in-process by a test assembly; the shipped compositions
- * never start it, and the authorization server accepts its assertions only
- * where a caller enables the type with this intake's {@link
- * RequestIntakeService.signer} entry (D1151, D1157).
+ * `createRequestIntake` behind five closed HTTP endpoints. It is a demo
+ * service, started in-process. The `as-native` target starts it only under
+ * its opt-in `requestIntake` launch option (`MISSION_REQUEST_INTAKE=1`,
+ * D1221), which enables the authorization server's type with this intake's
+ * {@link RequestIntakeService.signer} entry in the same step; no other
+ * composition starts it, and the shipped configuration enables nothing
+ * (D1151, D1157).
  *
  * **Originator authentication.** The intake is an OpenID Connect relying
  * party of the reference IdP (`approver-idp.ts`), reusing the authorization
@@ -30,7 +32,14 @@
  * - `GET /login` (no parameters): starts the originator's login at the IdP.
  * - `GET /login/callback`: the IdP's authorization response (`code`,
  *   `state`, `iss`, or `error`, `error_description`, `error_uri`); opens the
- *   intake session.
+ *   intake session and answers `303` to the capture page.
+ * - `GET /capture` (no parameters), in the originator's intake session: the
+ *   capture page, an HTML form whose script base64url-encodes the
+ *   instruction's UTF-8 bytes and posts them, from this origin, to
+ *   `POST /capture`, then shows the `capture_id` and the workflow token. That
+ *   display is the console's handoff to the shaper. The page's own
+ *   Content-Security-Policy allows only its one script and requests to this
+ *   origin.
  * - `POST /capture`, in the originator's intake session: a JSON body of
  *   exactly `{"instruction": <base64url of the exact bytes>, "media_type":
  *   <the media type as recorded>}`. The originator and the channel come from
@@ -53,6 +62,13 @@
  * presenter, digest, `intent_hash` or audience, and resolves the capture
  * from the token alone, so the shaper can obtain no signature over a request
  * this intake did not capture.
+ *
+ * **The session cookie.** `HttpOnly`, `SameSite=Strict`, `Path=/` and
+ * host-only (no `Domain`), so no script reads it and a user agent sends it
+ * on no request another site initiates. Cookies are scoped by host, not by
+ * port (RFC 6265 Section 8.5): on one host, every listener receives the
+ * others' cookies, and the reference IdP and this intake on loopback receive
+ * each other's. A deployment gives each party a host of its own.
  *
  * **Retention.** Capture records (the instruction, its media type, the
  * capture secret, the request digest, the origin facts, and the `jti` of
@@ -195,6 +211,65 @@ function send(res: ServerResponse, status: number, body: unknown, headers: Recor
   res.setHeader("cache-control", "no-store");
   for (const [k, v] of Object.entries(headers)) res.setHeader(k, v);
   res.end(JSON.stringify(body));
+}
+
+/** The media type the capture page records: the instruction's text, as the UTF-8 bytes the page encodes. */
+export const CAPTURE_PAGE_MEDIA_TYPE = "text/plain;charset=utf-8";
+
+/**
+ * The capture page's script: it encodes the instruction's UTF-8 bytes as
+ * unpadded base64url, posts them to the capture endpoint from this origin
+ * (the session cookie goes with it), and shows the receipt, or the refusal.
+ */
+const CAPTURE_SCRIPT = `
+const form = document.getElementById("capture");
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const error = document.getElementById("error");
+  error.hidden = true;
+  let binary = "";
+  for (const byte of new TextEncoder().encode(form.elements.instruction.value)) binary += String.fromCharCode(byte);
+  const instruction = btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
+  const res = await fetch(${JSON.stringify(REQUEST_INTAKE_CAPTURE_PATH)}, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ instruction, media_type: ${JSON.stringify(CAPTURE_PAGE_MEDIA_TYPE)} }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (res.status !== 201) {
+    error.textContent = "Not captured (" + res.status + "): " + (body.error_description ?? body.error ?? "");
+    error.hidden = false;
+    return;
+  }
+  document.getElementById("capture-id").textContent = body.capture_id;
+  document.getElementById("workflow-token").textContent = body.workflow_token;
+  document.getElementById("handoff").hidden = false;
+});
+`;
+
+/** The capture page, its one script allowed by `nonce`. */
+const capturePage = (nonce: string): string =>
+  `<!doctype html><html><head><meta charset="utf-8"><title>Capture an instruction</title></head><body>
+<h1>Capture an instruction</h1>
+<form id="capture"><label>Instruction <textarea name="instruction" rows="4" cols="60" required></textarea></label>
+<button>Capture</button></form>
+<p role="alert" id="error" hidden></p>
+<section id="handoff" hidden><h2>Hand this to the agent</h2>
+<dl><dt>capture_id</dt><dd><code id="capture-id"></code></dd><dt>Workflow token</dt><dd><code id="workflow-token"></code></dd></dl></section>
+<script nonce="${nonce}">${CAPTURE_SCRIPT}</script></body></html>`;
+
+function sendCapturePage(res: ServerResponse): void {
+  const nonce = randomBytes(16).toString("base64url");
+  res.statusCode = 200;
+  res.setHeader("content-type", "text/html; charset=utf-8");
+  res.setHeader("cache-control", "no-store");
+  res.setHeader("referrer-policy", "no-referrer");
+  res.setHeader("x-content-type-options", "nosniff");
+  res.setHeader(
+    "content-security-policy",
+    `default-src 'none'; script-src 'nonce-${nonce}'; connect-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'`,
+  );
+  res.end(capturePage(nonce));
 }
 
 /** Refuse any query parameter: these endpoints define none. */
@@ -397,9 +472,21 @@ export async function startRequestIntake(opts: RequestIntakeOptions): Promise<Re
         channel,
         expires: Date.now() + sessionLifetime * 1000,
       });
-      send(res, 200, { signed_in: true }, {
-        "set-cookie": `${REQUEST_INTAKE_SESSION_COOKIE}=${id}; Path=/; Max-Age=${sessionLifetime}; HttpOnly; SameSite=Strict`,
-      });
+      // The session's cookie, and the originator's user agent on to the capture page.
+      res.statusCode = 303;
+      res.setHeader("location", `${issuer}${REQUEST_INTAKE_CAPTURE_PATH}`);
+      res.setHeader(
+        "set-cookie",
+        `${REQUEST_INTAKE_SESSION_COOKIE}=${id}; Path=/; Max-Age=${sessionLifetime}; HttpOnly; SameSite=Strict`,
+      );
+      res.setHeader("cache-control", "no-store");
+      res.end();
+      return;
+    }
+    if (url.pathname === REQUEST_INTAKE_CAPTURE_PATH && req.method === "GET") {
+      noParameters(url);
+      sessionOf(req);
+      sendCapturePage(res);
       return;
     }
     if (url.pathname === REQUEST_INTAKE_CAPTURE_PATH && req.method === "POST") {
