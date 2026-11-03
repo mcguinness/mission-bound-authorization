@@ -372,7 +372,9 @@
   </div>
 </footer>
 
-<script>
+<script type="module">
+  import { proveRevocation } from "/console-story.js";
+
   // ---------------------------------------------------------------------------
   // State. Everything rendered is read from the demo server's routes; the page
   // keeps only what it has been told, plus the story's own progress.
@@ -733,7 +735,10 @@
     if (STORY.approvalId && !STORY.missionId) {
       const s = await get(`/agent/approval-status?id=${encodeURIComponent(STORY.approvalId)}`);
       if (s.state === "active" && s.missionId) adoptApproved(s.missionId);
-      else if (s.state === "denied" || s.state === "unknown") { note("Not approved", "The Mission was not approved", "Nothing was issued. Send the request again to retry."); STORY.approvalId = ""; }
+      else if (s.state === "denied" || s.state === "failed" || s.state === "unknown") {
+        note("Not approved", s.state === "failed" ? "The approval did not complete" : "The Mission was not approved", `${s.error ? esc(s.error) + ". " : ""}Nothing was issued. Send the request again to retry.`);
+        STORY.approvalId = "";
+      }
     }
     if (S.pendingJit) {
       const armed = S.pendingJit;
@@ -742,6 +747,7 @@
       if (m && m.state !== "active") { disarm(); return; }
       if (S.queue.some((t) => t.id === armed.taskId)) return; // still waiting for Bob
       const r = await post("/agent/retry", armed);
+      if (r.error) { disarm(); note("Error", "The waiting action could not be retried", esc(r.error)); return; }
       if (r.pending) {
         // Approved or decided, yet no continuation is held: a newer Mission
         // approval dropped it. The action has to be sent again.
@@ -813,9 +819,10 @@
     if (r.error) {
       // 409: the console's own floor check, before the interaction is touched;
       // otherwise the authorization server's answer.
-      const msg = r.status === 409 ? `Sign in again first. ${r.error}` : `The authorization server refused the approval: ${r.error}`;
+      const msg = r.status === 409 ? `Sign in again first. ${r.error}` : `The approval did not complete: ${r.error}`;
       S.approvalErrors[id] = msg;
-      note("Refused", r.status === 409 ? "Approval needs a fresh sign-in" : "The authorization server refused the approval", esc(r.error));
+      note(r.status === 409 ? "Refused" : "Failed", r.status === 409 ? "Approval needs a fresh sign-in" : "The approval did not complete", esc(r.error));
+      if (r.state === "failed" && id === STORY.approvalId) STORY.approvalId = "";
       await refresh();
       return;
     }
@@ -859,17 +866,23 @@
   }
   async function lifecycle(id, op) {
     const r = await post(`/bff/operator/missions/${encodeURIComponent(id)}/lifecycle`, { operation: op }, true);
-    note(r.error ? "Error" : title(op === "revoke" ? "revoked" : op === "suspend" ? "suspended" : "resumed"), `${title(op)}: “${esc(goalOf(id))}”`, r.error ? esc(r.error) : `The Mission is now ${esc(r.state)}${r.termination ? ` (${esc(r.termination.reason)})` : ""}.${op === "revoke" ? " Its tokens no longer authorize anything, and the authorization server will not renew them." : ""}`);
+    note(r.error ? "Error" : title(op === "revoke" ? "revoked" : op === "suspend" ? "suspended" : "resumed"), `${title(op)}: \u201c${esc(goalOf(id))}\u201d`, r.error ? esc(r.error) : `The Mission is now ${esc(r.state)}${r.termination ? ` (${esc(r.termination.reason)})` : ""}.${op === "revoke" ? " Its tokens no longer authorize anything, and the authorization server will not renew them." : ""}`);
     await refresh();
-    if (op === "revoke" && id === STORY.missionId && !STORY.proofDone) await runProof();
+    return r;
   }
-  // The proof after a revoke: one read under the revoked Mission, then the
-  // same read under the agent's other Mission, read-only by preference.
-  async function runProof() {
-    const others = S.missions.filter((m) => m.id !== STORY.missionId && m.state === "active");
-    const other = others.find((m) => !(m.effective || []).some((e) => e.actions.includes("payments:payment.execute"))) || others[0];
-    await act("get_invoice", { invoice_id: "inv-1" }, STORY.missionId, "Same read, revoked Mission");
-    if (other) { STORY.otherId = other.id; await act("get_invoice", { invoice_id: "inv-1" }, other.id, "Same read, the agent's other Mission"); }
+  // The proof after a revoke (console-story.js): one read under the revoked
+  // Mission, then the same read under the agent's other Mission. Done only
+  // when the revoke succeeded and the two verdicts show the contrast;
+  // otherwise it throws, and the story step reports it with a retry.
+  async function runProof(revoke) {
+    const verdict = await proveRevocation({
+      revoke,
+      missions: S.missions,
+      missionId: STORY.missionId,
+      read: (id, heading) => act("get_invoice", { invoice_id: "inv-1" }, id, heading),
+    });
+    if (!verdict.done) throw new Error(`The revocation proof did not finish: ${verdict.problem}.`);
+    STORY.otherId = verdict.otherId;
     STORY.proofDone = true;
     renderStory();
   }
@@ -945,11 +958,16 @@
     if (entry?.context?.floor?.outcome === "refused" && !entry.context.floor.unclassified) await signIn();
     await adjudicate(STORY.approvalId, "approve");
   }
-  // Revoke the story's Mission, or the acting one when the earlier steps
-  // were skipped; lifecycle() then runs the proof reads.
+  // Revoke the story's Mission (or the acting one when the earlier steps
+  // were skipped), then prove it. A retry after a revoke that succeeded proves
+  // again from the Mission's recorded state instead of revoking twice.
   async function revokeStoryMission() {
     if (!STORY.missionId) STORY.missionId = S.selected || S.activeId;
-    await lifecycle(STORY.missionId, "revoke");
+    const m = missionById(STORY.missionId);
+    const revoke = m?.state === "terminated" && m.termination?.reason === "revoked"
+      ? { id: m.id, state: m.state, termination: m.termination }
+      : await lifecycle(STORY.missionId, "revoke");
+    await runProof(revoke);
   }
   async function approveStoryJit() {
     if (!STORY.jitTaskId) return;
@@ -1042,7 +1060,15 @@
       case "adjudicate": run(adjudicate(d.id, d.decision)); break;
       case "login": run(signIn()); break;
       case "select": S.selected = d.id; S.timeline = null; run(refreshOperator()); break;
-      case "lifecycle": run(lifecycle(d.id, d.op)); break;
+      case "lifecycle":
+        // Revoking the story's Mission from its card runs the same proof; a
+        // problem is reported here, and the story bar's button retries it.
+        run(lifecycle(d.id, d.op).then((r) => {
+          if (d.op === "revoke" && d.id === STORY.missionId && !STORY.proofDone) {
+            return runProof(r).catch((e) => note("Error", "The revocation proof did not finish", esc(e.message)));
+          }
+        }));
+        break;
       case "tamper": run(tamper()); break;
       case "beat": enterBeat(Number(d.i)); break;
     }
