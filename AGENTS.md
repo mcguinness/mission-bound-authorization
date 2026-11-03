@@ -36,6 +36,10 @@ Rules every agent follows:
 - Code, in `src/`: `pnpm typecheck && pnpm lint && pnpm test`. Tests
   that need a live PDP are skipped without OpenFGA, so CI can fail
   where a local run passes.
+- Dates, in `src/`: `node scripts/check-date-literals.mjs` (advisory)
+  warns on a fixed future date a change adds. Derive it from the
+  clock, or mark a deliberate one `// date-literal: controlled-clock`
+  or `// date-literal: policy`, on its line or the line before.
 - Ledger changes follow the coverage rules in CONTRIBUTING.md's
   Conformance Traceability Convention.
 
