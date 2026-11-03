@@ -328,9 +328,9 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(twice.decision).toBe(false);
     expect(twice.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(twice)?.[0]?.outcome).toBe("unavailable");
-    // A record with no valid position cannot be placed in the stream.
+    // A record with no valid position cannot be placed in the stream, whatever origin the binding declares.
     const unplaced = [await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: -1 }), w1Done];
-    const negative = await evaluate(request(), options(historyBinding(unplaced)));
+    const negative = await evaluate(request(), options({ ...historyBinding(unplaced), sequenceOrigin: () => -1 }));
     expect(negative.decision).toBe(false);
     expect(negative.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(negative)?.[0]?.outcome).toBe("unavailable");
