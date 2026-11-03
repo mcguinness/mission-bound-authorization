@@ -369,63 +369,70 @@ concrete values.
 
 ## Introductory Example {#first-mission}
 
-In the examples in this document, each service's operation contract
-identifies the service's own identifier, such as
-`https://erp.example.com`, as the operation target
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
-constraints determine the permitted operations within that service.
+The examples in this document follow one Mission whose only authority
+is the `payment_initiation` example of {{Section 2 of RFC9396}}. The
+type is illustrative: it is not a Mission type or a complete payment
+API, and its interpretation belongs to the AS and the API. The
+examples assume that it authorizes initiating one described credit
+transfer at `https://example.com/payments` (EUR 123.50 to Merchant A,
+with its remittance text) and checking or cancelling that transfer;
+that the AS declares no transformation for the type, so the approved
+entry is the proposed one unchanged; and that the payments resource
+server permits an initiation only when its amount, currency, creditor
+and remittance text equal the entry's. These assumptions belong to the
+examples, not to this document.
 
-The following example shows a registered client reading invoices
-from one ERP resource for Alice, who is both the Subject and the
-Approver; the authority source is user-delegated. The AS and ERP
-support the `mission_resource_access` type defined by
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}. The example
-uses a direct approval, a JWT access token, no delegated token, and
-no submission evidence (the AS's admission policy requires none).
-All times are UTC on the same day.
+The following example shows a registered client initiating that
+payment for Alice, who is both the Subject and the Approver; the
+authority source is user-delegated. The example uses a direct
+approval, a JWT access token, no delegated token, and no submission
+evidence (the AS's admission policy requires none). All times are UTC
+on the same day.
 
 1. **Submit.** The client pushes a Mission Intent naming
-   `https://erp.example.com` and requesting expiry at 13:00, with a
-   proposed `authorization_details` entry of type
-   `mission_resource_access` for that resource and the action
-   `invoices.read`. It follows the PAR `request_uri` into the
-   authorization interaction ({{submission-via-par}}).
+   `https://example.com/payments` and requesting expiry at 13:00, with
+   a proposed `authorization_details` entry of type
+   `payment_initiation` for the transfer. It follows the PAR
+   `request_uri` into the authorization interaction
+   ({{submission-via-par}}).
 2. **Approve and commit.** At 12:00 the AS authenticates Alice,
-   verifies the authority source and proposed read authority, and
-   renders that authority and the effective 13:00 expiry for her
+   verifies the authority source and the proposed payment authority,
+   and renders that authority and the effective 13:00 expiry for her
    approval. On approval it atomically creates the active Mission,
    records its commitments, and binds the authorization code to it
    ({{direct-approval-steps}}, {{grant-binding-resolution}}).
 3. **Issue.** Still at 12:00, the client redeems the code. The AS
    resolves and checks the Mission and returns a sender-constrained
-   ERP token that expires at 12:05, with the read authority and a
+   payments token that expires at 12:05, with the approved entry and a
    `mission` reference. The response also carries the granted
    authority ({{token-response}}), `mission_id`, and
    `mission_expires_at`; the access token's five-minute lifetime is
    distinct from the Mission's one-hour lifetime
    ({{mission-response-parameters}}).
-4. **Use.** The ERP is a Mission-aware Resource Server: it enforces
-   the `mission_resource_access` entry itself, work a plain
+4. **Use.** The payments service is a Mission-aware Resource Server:
+   it enforces the `payment_initiation` entry itself, work a plain
    {{RFC9068}} resource server does not do ({{conformance}}). It
    validates the token and proof of possession and permits the
-   authorized read; the
-   token grants no write authority. The resource request involves no
-   Mission-state lookup or complete-set retrieval ({{rs-enforcement}}).
+   described initiation; the token authorizes no other transfer. The
+   resource request involves no Mission-state lookup or complete-set
+   retrieval ({{rs-enforcement}}).
 5. **Stop further issuance.** At 12:02 an authorized revocation makes
    the Mission non-active. A subsequent refresh, if the AS issued a
    refresh token, is refused with the `invalid_grant` error code
    ({{refusing-a-derivation}}). The already-issued access token can
    still be honored on this stateless path until 12:05; revocation does
-   not undo a completed read ({{revocation}}).
+   not undo a completed initiation ({{revocation}}).
 
-An ERP that instead introspects on every request stops honoring the
-token on its next request after revocation, through the composite
-`active` result ({{composite-active}}).
+A payments service that instead introspects on every request stops
+honoring the token on its next request after revocation, through the
+composite `active` result ({{composite-active}}).
 
-The later message examples use the end-to-end example's separate Q3
-reconciliation Mission ({{e2e-example}}), whose approved authority
-includes invoice reads and bounded journal writes. Its identifiers and
-timeline differ from this introductory example.
+The later examples follow the same Mission, through the end-to-end
+example ({{e2e-example}}). The delegation examples ({{delegation}}) use
+a Resource Access entry instead
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}), since an
+entry whose type defines no delegation policy is non-delegable
+({{delegation-constraints}}).
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -434,7 +441,8 @@ timeline differ from this introductory example.
 All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. An
 example line too long for the page is folded with the single backslash
-strategy of {{RFC8792}}.
+strategy of {{RFC8792}}. A compact token, DPoP proof or form-encoded
+value that ends in `...` is truncated and does not verify.
 
 ## Terminology {#terminology}
 
@@ -563,9 +571,10 @@ Applicable entry:
 : An `authorization_details` entry that applies, under the entry's
   type, to a request to a resource server: where the type defines a
   `resource`, the request's operation target matches it under that type
-  ({{token-response}}). {{rs-requirements}} governs an entry whose type
-  the resource server does not implement, or whose type-defined
-  enforcement it cannot complete.
+  ({{token-response}}). An operation target is the resource a request
+  acts on. {{rs-requirements}} governs an entry whose type the resource
+  server does not implement, or whose type-defined enforcement it cannot
+  complete.
 
 Delegate:
 : A sub-agent, service, or tool, itself an OAuth client authenticated
