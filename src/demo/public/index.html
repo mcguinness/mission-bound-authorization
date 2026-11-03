@@ -859,7 +859,7 @@
   }
   async function lifecycle(id, op) {
     const r = await post(`/bff/operator/missions/${encodeURIComponent(id)}/lifecycle`, { operation: op }, true);
-    note(r.error ? "Error" : title(op === "revoke" ? "revoked" : op === "suspend" ? "suspended" : "resumed"), `${title(op)}: “${esc(goalOf(id))}”`, r.error ? esc(r.error) : `The Mission is now ${esc(r.state)}${r.termination ? ` (${esc(r.termination.reason)})` : ""}. Every credential bound to it follows.`);
+    note(r.error ? "Error" : title(op === "revoke" ? "revoked" : op === "suspend" ? "suspended" : "resumed"), `${title(op)}: “${esc(goalOf(id))}”`, r.error ? esc(r.error) : `The Mission is now ${esc(r.state)}${r.termination ? ` (${esc(r.termination.reason)})` : ""}.${op === "revoke" ? " Its tokens no longer authorize anything, and the authorization server will not renew them." : ""}`);
     await refresh();
     if (op === "revoke" && id === STORY.missionId && !STORY.proofDone) await runProof();
   }
