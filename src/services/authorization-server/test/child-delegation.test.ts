@@ -1613,12 +1613,13 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       }
     });
 
-    it("a child's own children are created under the same consent: after the ceiling is removed, a grandchild is still bounded by the figure the root's approval rendered", () => {
+    it("a child's own children are created under the same consent: a child created after the ceiling is removed keeps the root's rendered figure, and so does its own child", () => {
       const lineage = limitLineage(3, [undefined], onFile(), true);
-      const child = lineage.child();
-      expect(child.child_derivation_maxima).toEqual([{ finite: 3 }]);
       const k = lineage.reopenWithCeiling(null);
       try {
+        const child = lineage.child();
+        expect(child.derivation_limit).toBe(3);
+        expect(child.child_derivation_maxima).toEqual([{ finite: 3 }]);
         const grandchild = lineage.childOf(child.id, undefined, [RA], "limit-grandchild");
         expect(grandchild.parent?.depth).toBe(2);
         expect(grandchild.derivation_limit).toBe(3);
