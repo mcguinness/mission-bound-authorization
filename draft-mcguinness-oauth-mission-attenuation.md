@@ -755,8 +755,9 @@ issuer-qualified actor identifier is independently bound to that
 hop's `cnf` key through a validated workload credential or
 attestation. Absent that binding the hop is key-only: its asserted
 identity is informational provenance at most and MUST NOT satisfy an
-eligibility matcher (the issuance profile's `allowed_delegates` or a
-`sub_profile` selector, {{I-D.draft-mcguinness-oauth-mission}}) or
+eligibility matcher (the Resource Access `allowed_delegates` or a
+`sub_profile` selector,
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}) or
 otherwise influence authorization; where policy requires a named
 actor and the binding is absent or invalid, verification fails
 closed.
@@ -768,7 +769,7 @@ An orchestrator agent (`s6BhdRkqt3`), acting for `alice` under Mission
 Mission-bound attenuation root. Its authority covers reading invoices
 and posting journal entries of at most USD 500; `del_max_depth` allows
 two levels of offline narrowing (illustrative; this Mission's Authority
-Set extends the single-domain walkthrough's, its write entry also
+Set extends the shared Q3 example's, its write entry also
 carrying a `delegation` member with `max_depth` 2, so both mapped
 entries are delegable to depth 2 under the root-shaping rules of
 {{root-mapping}} and its `authority_hash` differs from that example's).

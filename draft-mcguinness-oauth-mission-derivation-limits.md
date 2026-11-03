@@ -617,8 +617,8 @@ Delegation Transport").
 
 ## Delegation Fan-Out {#sec-fan-out}
 
-In-Mission delegation bounds the length of a delegation chain with
-`max_depth` and its breadth with `allowed_delegates`
+In-Mission delegation bounds the length and breadth of a delegation
+chain through each entry's type-defined delegation policy
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
 Constraints"). The derivation limit caps total derivations, including
 each Token Exchange that issues a delegated token
