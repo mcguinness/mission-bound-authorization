@@ -214,6 +214,20 @@ describe("a successor that widens or regroups an entry keeps every carried per-c
     expect(refused.message).toMatch(/is not retained, and the entry carries no child_creation_policy/);
   });
 
+  it("an entry mixing carried and new authority is also bounded by the creation-time figure: [res.read] approved at 10 and widened by a drawdown at 3 retains 3, and its child records 3 after the ceiling is raised to 20", () => {
+    const open = store();
+    let k = open(10);
+    const parent = approve(k, [["res.read"]], true);
+    expect(parent.child_derivation_maxima).toEqual([{ finite: 10 }]);
+    k.close();
+    k = open(3);
+    const successor = drawdown(k, parent, [["res.read", "res.list"]]);
+    expect(successor.child_derivation_maxima).toEqual([{ finite: 3 }]);
+    k.close();
+    k = open(20);
+    expect(child(k, successor, ["res.list"]).derivation_limit).toBe(3);
+  });
+
   it("genuinely new authority takes the creation-time figure: a drawn entry no earlier entry overlaps retains the ceiling current at the drawdown, while the carried entry keeps 3 (control)", () => {
     const open = store();
     let k = open(3);
