@@ -79,6 +79,8 @@ interface DecisionShape {
   action_classes?: string[];
   work_item?: unknown;
   sequence?: number;
+  /** Members signed as given, beside the shape's own. */
+  overrides?: Record<string, unknown>;
 }
 
 /** A retained permit, signed by the trusted PDP key: the backup of `consequential_write` for W1 unless overridden. */
@@ -101,6 +103,7 @@ async function permit(d: DecisionShape): Promise<Record<string, unknown>> {
     sequence: d.sequence ?? 0,
     emitter: { id: PDP_ID, role: "pdp" },
     evaluated_at: NOW.toISOString(),
+    ...d.overrides,
   };
   return {
     ...unsigned,
@@ -116,6 +119,8 @@ interface ExecutionShape {
   result_summary?: Record<string, unknown> | null | string;
   execution_id?: string;
   sequence?: number;
+  /** Members signed as given, beside the shape's own. */
+  overrides?: Record<string, unknown>;
 }
 
 /** A retained Execution Evidence record, signed by the trusted PEP key: completed, W1, on orders at r1 unless overridden. */
@@ -133,6 +138,7 @@ async function execution(e: ExecutionShape): Promise<Record<string, unknown>> {
     emitter: { id: PEP_ID, role: "pep" },
     ...(e.work_item === undefined ? { work_item: W1 } : e.work_item === null ? {} : { work_item: e.work_item }),
     ...(summary === null ? {} : { result_summary: summary }),
+    ...e.overrides,
   };
   return {
     ...unsigned,
@@ -322,7 +328,7 @@ describe("work_item_prerequisite_completed joins the request to a verified permi
     expect(historyOf(established)).toEqual(SATISFIED);
   });
 
-  it("keeps the History reader's rules: a failed or suppressed backup never satisfies, and a malformed work item or result_summary leaves the history unestablished", async () => {
+  it("keeps the History reader's rules: a failed, suppressed or unauthorized backup never satisfies, and a malformed work item or result_summary leaves the history unestablished", async () => {
     const failed = [await permit({ evaluation_id: "b1" }), await execution({ evaluation_id: "b1", outcome: "failed" })];
     const notDone = await evaluate(request(), options(historyBinding(failed)));
     expect(notDone.decision).toBe(false);
@@ -331,6 +337,18 @@ describe("work_item_prerequisite_completed joins the request to a verified permi
     const refused = await evaluate(request(), options(historyBinding(suppressed)));
     expect(refused.decision).toBe(false);
     expect(historyOf(refused)).toEqual(NOT_SATISFIED);
+    // A completed execution whose effective digest differs from the authorized one is an unauthorized execution: flagged, never the prerequisite.
+    const digest = (n: number) => `sha-256:${Buffer.alloc(32, n).toString("base64url")}`;
+    const deviated = [
+      await permit({ evaluation_id: "b1", overrides: { parameter_digest: digest(1) } }),
+      await execution({ evaluation_id: "b1", overrides: { authorized_parameter_digest: digest(1), effective_parameter_digest: digest(2) } }),
+    ];
+    const flags: UnauthorizedExecutionFlag[] = [];
+    const unauthorized = await evaluate(request(), options({ ...historyBinding(deviated), onUnauthorizedExecution: (flag) => flags.push(flag) }));
+    expect(unauthorized.decision).toBe(false);
+    expect(unauthorized.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(unauthorized)).toEqual(NOT_SATISFIED);
+    expect(flags.map((f) => f.execution_id)).toEqual(["exe_b1"]);
     // Each malformed record sits beside a satisfying backup: it leaves the whole history unestablished, never uncounted.
     const satisfying = [await permit({ evaluation_id: "b2", sequence: 1 }), await execution({ evaluation_id: "b2" })];
     const control = await evaluate(request(), options(historyBinding([await permit({ evaluation_id: "b1" }), ...satisfying])));
