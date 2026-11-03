@@ -2877,13 +2877,13 @@ not reject a grant narrower than its proposal. The `mission_id` and
 `mission_expires_at` response parameters carry the Mission reference
 and expiry beside it ({{mission-response-parameters}}).
 
-The following is an example of a refresh request that narrows the
-canonical ERP Mission (the worked example of {{mission-record}}) to a
-read-only token with the {{RFC8707}} `resource` parameter and the
-`authorization_details` parameter ({{Section 6 of RFC9396}}). The ERP
-consumes `authorization_details`, so a resource `scope` for it would
-be refused ({{scope-projection}}). Extra line breaks are for display
-purposes only:
+The following is an example of a refresh request for the payment
+Mission of {{worked-example}}, with the {{RFC8707}} `resource`
+parameter and the `authorization_details` parameter
+({{Section 6 of RFC9396}}). The payments service consumes
+`authorization_details`, so a resource `scope` for it would be refused
+({{scope-projection}}). Extra line breaks are for display purposes
+only:
 
 ~~~
 POST /token HTTP/1.1
@@ -2893,56 +2893,47 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 grant_type=refresh_token
 &refresh_token=rt_4mN8qV2xP7sL1tY9zB3k
-&resource=https%3A%2F%2Ferp.example.com
-&authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+&resource=https%3A%2F%2Fexample.com%2Fpayments
+&authorization_details=%5B%7B%22type%22%3A%22payment_initiation%22...
 ~~~
 
 The `authorization_details` value, before form encoding, requests the
-Mission's read entry alone:
+Mission's entry unchanged; an entry equal to its reference entry is a
+subset of it for every type ({{subset}}):
 
 ~~~ json
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 ~~~
 
 The issuance is a derivation, gated on the Mission being `active`
 ({{issuance-gating}}). The following example shows the token response.
 It carries no `scope` member because none was requested or granted, and
-it echoes the narrowed grant and the `mission_id` reference
-({{mission-response-parameters}}). The emitted entry is a subset
-({{subset}}) of the Mission's read entry, its `constraints` carried
-intact:
+it echoes the granted entry and the `mission_id` reference
+({{mission-response-parameters}}):
 
 ~~~ json
 {
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "DPoP",
   "expires_in": 300,
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "mission_expires_at": "2026-12-31T23:59:59Z",
+  "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
+  "mission_expires_at": "2026-11-02T13:00:00Z",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ]
 }
 ~~~
@@ -3262,34 +3253,24 @@ The following is an example of a decoded Mission-bound token payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "aud": "https://erp.example.com",
-  "client_id": "s6BhdRkqt3",
-  "iat": 1793606405,
-  "exp": 1793606705,
+  "sub": "user_5Tn8qW2xK7mR4vBc",
+  "aud": "https://example.com/payments",
+  "client_id": "pq7Lm2Xz9K",
+  "iat": 1793620805,
+  "exp": 1793621105,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com"
   }
 }
