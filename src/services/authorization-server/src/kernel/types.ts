@@ -669,6 +669,22 @@ export interface MissionRecord {
    */
   approved_audiences?: string[][];
   /**
+   * @spec derivation-limits#effective-limit, child-delegation#derivation-budget
+   * (#2026, D1249): for each entry whose policy-created children take the
+   * deployment's per-child figure (a `children` grant with no
+   * `child_creation_policy`), index-aligned with `authority_set`, the figure
+   * the human approval behind the entry rendered and the Approver accepted:
+   * `{ finite: n }`, or `{ finite: null }` for an explicitly retained "no
+   * finite maximum"; `null` for every other entry, or where the figure is
+   * unknown. Retained at a direct approval event, inherited by a record
+   * derived from earlier authority, never re-read from a later policy. The
+   * same authorization-server state as `approved_audiences`: outside every
+   * integrity anchor, never on the wire, immutable after creation. Absent,
+   * or not aligned with `authority_set`, it retains no figure, and no child
+   * is created under an entry that takes one.
+   */
+  child_derivation_maxima?: ({ finite: number | null } | null)[];
+  /**
    * @spec mission#record-content-members, mission#integrity-anchors (#1917,
    * D1061): OPTIONAL with an implied value, the `mission-intent` anchor over
    * the retained `intent` under `iss` = `issuer`. Absent when the deployment

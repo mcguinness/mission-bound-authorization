@@ -1355,6 +1355,12 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
     authority_set: final,
     eligibility_provenance: finalProvenance,
     child_actor_provenance: finalChildActorProvenance,
+    // @spec derivation-limits#effective-limit (#2026, D1249): the governed
+    // root's consent renders and retains no per-child figure, so an entry
+    // whose policy-created children take the deployment's figure retains the
+    // one the deployment states at this activation; the instance's children
+    // never read a later policy for it.
+    child_derivation_maxima: kernel.establishedChildMaxima(final),
     intent_hash: iHash,
     ...(proposal ? { proposal_hash: proposalHash(issuer, proposal as never) } : {}),
     authority_hash: aHash,
