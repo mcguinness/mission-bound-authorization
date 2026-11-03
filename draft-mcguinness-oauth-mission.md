@@ -4551,10 +4551,11 @@ client's workflows unrelated to the Mission
 
 An AS that advertises support for this document MUST include at least
 one AS-supported type in its `authorization_details_types_supported`
-metadata ({{RFC9396}}). Where `mission_resource_access` is among them,
+metadata ({{RFC9396}}). Where a type among them has a defining
+specification, that specification, not out-of-band documentation, is
+the type's normative definition; for `mission_resource_access`, it is
 the Mission Resource Access Profile
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}), not
-out-of-band documentation, is that type's normative definition.
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 An AS that advertises `mission_bound_authorization_supported: true`
 MUST also publish `pushed_authorization_request_endpoint`
@@ -5310,12 +5311,13 @@ which issuance-time bounds alone do not provide:
 - approval bound to a single action; or
 - a bound the receiving resource server cannot enforce.
 
-Where the resource server or a composing runtime layer matches an
-operation target against a `prefix` entry, the Resource Boundary
+Where the resource server and a composing runtime layer both match an
+operation target against an entry, a target the two normalize
+differently can be permitted by one and refused by the other. The
+entry's type defines the single normalization for that match; for a
+`mission_resource_access` `prefix` entry, the Resource Boundary
 Canonicalization analysis of the Mission Resource Access Profile
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}) gives the
-single-normalization rule for that match, for a deployment that
-supports that type.
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}) gives it.
 
 Short-lived access tokens are this document's issuance-only
 recommendation: with no runtime layer, token lifetime is the
