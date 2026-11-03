@@ -40,6 +40,8 @@ export interface SeparatedAsProcess {
   adjudicate: (decision: "approve" | "deny") => Promise<void>;
   /** Suspend a Mission in the kernel (operator channel; no Lifecycle operation serves it here). */
   suspend: (missionId: string) => Promise<void>;
+  /** Contain a Mission's authority in the kernel (operator channel; no Lifecycle operation serves it here). */
+  contain: (missionId: string, remove: { resource: string; actions?: string[] }[]) => Promise<void>;
   /** SIGTERM, and resolve once the process has exited. */
   stop: () => Promise<void>;
   output: () => string;
@@ -123,6 +125,9 @@ export async function startSeparatedAsProcess(opts: SeparatedAsProcessOptions): 
     },
     suspend: async (missionId) => {
       await ask({ op: "suspend", missionId });
+    },
+    contain: async (missionId, remove) => {
+      await ask({ op: "contain", missionId, remove });
     },
     stop: async () => {
       if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");

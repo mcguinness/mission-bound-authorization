@@ -35,9 +35,10 @@
  * at start: the provider's token times and the kernel's both follow it, so
  * they agree with the test's controlled clock), `credentials` (the per-boot submitting
  * agent's private key, for its PAR and token requests), `adjudicate` (decide
- * the oldest pending action-bound approval on the ARS) and `suspend` (a
- * kernel suspension: this capability set serves no suspend operation at the
- * Lifecycle endpoint). Started any other way, none is registered.
+ * the oldest pending action-bound approval on the ARS), `suspend` and
+ * `contain` (a kernel suspension or containment: this capability set serves
+ * neither operation at the Lifecycle endpoint). Started any other way, none
+ * is registered.
  */
 
 import { createServer, type Server } from "node:http";
@@ -137,10 +138,11 @@ console.log(`as-native-separated: ready ${built.issuer}`);
 
 interface OperatorMessage {
   id: number;
-  op: "clock" | "credentials" | "adjudicate" | "suspend";
+  op: "clock" | "credentials" | "adjudicate" | "suspend" | "contain";
   offsetMs?: number;
   decision?: "approve" | "deny";
   missionId?: string;
+  remove?: { resource: string; actions?: string[] }[];
 }
 
 // Test harness only: registered where this process has an IPC channel.
@@ -163,6 +165,12 @@ if (process.send) {
         }
         case "suspend":
           built.built.kernel.transition(String(msg.missionId), "suspend");
+          return reply({ ok: true });
+        case "contain":
+          built.built.kernel.contain(String(msg.missionId), {
+            event: { type: "anomaly.detected", source: "svc:soc", observed_at: new Date().toISOString(), event_id: `evt-${crypto.randomUUID()}` },
+            remove: msg.remove ?? [],
+          });
           return reply({ ok: true });
         default:
           return reply({ ok: false, error: `unknown operator message ${String((msg as { op?: unknown }).op)}` });

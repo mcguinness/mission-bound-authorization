@@ -32,7 +32,7 @@ import {
   loadRuntimePosture,
   openIdempotencyClaimDomain,
   type RuntimePosture,
-  stalenessBound,
+  postureStalenessBound,
   stateSourcePlacement,
   type Fga,
   fgaResourcePolicy,
@@ -548,6 +548,9 @@ export async function assemblePaymentsResource(ctx: PaymentsResourceContext): Pr
     requiresActionApproval: (action: string) => ACTION_APPROVAL_POLICY.actions.includes(action),
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
     stateSourcePlacement: stateSourcePlacement(statement),
+    // @spec runtime#state-freshness (#1101): the per-class bounds of the
+    // statement this resource runs under, which every decision applies.
+    stalenessBound: (actionClass: string | undefined) => postureStalenessBound(statement, actionClass),
     delegatePolicy: {
       delegates: keyedRecordFrom(Object.entries(masJoin.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }] as const)),
     },
@@ -592,7 +595,6 @@ export async function assemblePaymentsResource(ctx: PaymentsResourceContext): Pr
         fga,
         modelId,
         now: () => new Date(),
-        stalenessBound,
         relationForAction,
         ...runtimeDecisionPolicy,
       };
