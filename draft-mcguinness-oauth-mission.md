@@ -5890,20 +5890,19 @@ member's registration in its own IANA considerations.
 This appendix follows one Mission in a single trust domain through
 Mission creation, token issuance, resource server enforcement, a
 refusal, and revocation. It is illustrative and adds no requirements.
-The OAuth steps follow
-this document. Identifiers are illustrative; the hash
-values are computed over the displayed objects
+The OAuth steps follow this document. Identifiers are illustrative;
+the hash values are computed over the displayed objects
 ({{integrity-anchors}}).
 
 The OAuth flow of Stages 1 to 4, and the revocation in Stage 5, use
-only this document and the `mission_resource_access` type
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}): the
-baseline issuance path, with enforcement from the token alone,
+only this document and the illustrative `payment_initiation` type of
+{{Section 2 of RFC9396}}, under the assumptions of {{first-mission}}:
+the baseline issuance path, with enforcement from the token alone,
 bounded by token lifetime.
 
-Scenario: agent `s6BhdRkqt3`, acting for `alice`
-(`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in the home ERP
-under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
+Scenario: agent `pq7Lm2Xz9K`, acting for `alice`
+(`user_5Tn8qW2xK7mR4vBc`), initiates one credit transfer at the
+payments service under Mission `msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u`.
 
 ## Stage 1: Mission Creation {#stage-1-mission-creation}
 
@@ -5916,15 +5915,10 @@ no evidence:
 
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments of at most \
-      USD 500 per journal entry.",
-    "target_resources": ["https://erp.example.com"],
-    "task_bounds": [
-      "Read only invoices issued in 2026-Q3.",
-      "Post journal entries of at most USD 500 each."
-    ],
-    "purpose": "urn:example:purpose:reconcile",
-    "expires_at": "2026-12-31T23:59:59Z"
+    "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+      with reference Ref Number Merchant, and check or cancel it.",
+    "target_resources": ["https://example.com/payments"],
+    "expires_at": "2026-11-02T13:00:00Z"
   }
 }
 ~~~
@@ -5934,23 +5928,13 @@ In the same push, the agent proposes concrete authority on the
 
 ~~~ json
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.*"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 ~~~
 
@@ -5964,12 +5948,12 @@ Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
 
 response_type=code
-&client_id=s6BhdRkqt3
+&client_id=pq7Lm2Xz9K
 &redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
 &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
 &code_challenge_method=S256
-&mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Reconcile...
-&authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+&mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Initiate...
+&authorization_details=%5B%7B%22type%22%3A%22payment_initiation%22...
 ~~~
 
 The AS returns a `request_uri`:
@@ -5989,51 +5973,43 @@ and the agent sends `alice`'s user agent to the authorization
 endpoint with it:
 
 ~~~
-GET /authorize?client_id=s6BhdRkqt3&request_uri=urn%3Aietf%3Aparams
+GET /authorize?client_id=pq7Lm2Xz9K&request_uri=urn%3Aietf%3Aparams
   %3Aoauth%3Arequest_uri%3A6esc_11ACC5bwc HTTP/1.1
 Host: as.example.com
 ~~~
 
-The AS (`as.example.com`) validates both, derives this Authority Set
-under a declared `narrowing` capability (each entry a same-type subset
-of a proposed entry, {{proposal-derivation}},
+The AS (`as.example.com`) validates both. It declares no `narrowing`
+capability for the type, so it retains the proposed entry unchanged as
+the Authority Set ({{proposal-derivation}},
 {{transformation-capabilities}}), and renders it for `alice`'s
 consent:
 
 ~~~ json
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 ~~~
 
-The user `alice` approves at 08:00:00 UTC on 2026-11-02, and the AS
-records Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active`
+The user `alice` approves at 12:00:00 UTC on 2026-11-02, and the AS
+records Mission `msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u` in the `active`
 state with `authority_hash`
-`sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM`,
+`sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY`,
 `intent_hash`
-`sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0`, and
+`sha-256:Vo-xrC5HtrAUS9ZAPSWhhpLd7fr43eQsbH6AMiooa5Y`, and
 `proposal_hash`
-`sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo`.
+`sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg`. The proposal
+and the Authority Set are the same array, yet their anchors differ:
+`typ` separates them ({{integrity-anchors}}).
 
 ## Stage 2: Mission-Bound Token Issuance {#stage-2-mission-bound-token-issuance}
 
-At 08:00:05 the agent redeems the authorization code with its PKCE
+At 12:00:05 the agent redeems the authorization code with its PKCE
 verifier and a DPoP proof ({{RFC9449}}):
 
 ~~~
@@ -6051,8 +6027,8 @@ grant_type=authorization_code
 The AS resolves the Mission from the grant
 ({{grant-binding-resolution}}), checks that it is `active`
 ({{issuance-gating}}), and issues a Mission-bound access token for the
-ERP and a refresh token. The token response carries the granted
-`authorization_details` echo ({{token-response}}) and the
+payments service and a refresh token. The token response carries the
+granted `authorization_details` echo ({{token-response}}) and the
 `mission_id` and `mission_expires_at` response parameters
 ({{mission-response-parameters}}):
 
@@ -6062,26 +6038,16 @@ ERP and a refresh token. The token response carries the granted
   "token_type": "DPoP",
   "expires_in": 300,
   "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "mission_expires_at": "2026-12-31T23:59:59Z",
+  "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
+  "mission_expires_at": "2026-11-02T13:00:00Z",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ]
 }
 ~~~
@@ -6091,80 +6057,64 @@ The following is an example of the decoded access token payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "aud": "https://erp.example.com",
-  "client_id": "s6BhdRkqt3",
-  "iat": 1793606405,
-  "exp": 1793606705,
+  "sub": "user_5Tn8qW2xK7mR4vBc",
+  "aud": "https://example.com/payments",
+  "client_id": "pq7Lm2Xz9K",
+  "iat": 1793620805,
+  "exp": 1793621105,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com"
   }
 }
 ~~~
 
-The token's `authorization_details` claim carries the same two entries
-as the token response's echo. The token carries everything enforcement
+The token's `authorization_details` claim carries the same entry as
+the token response's echo. The token carries everything enforcement
 needs: the audience, the sender constraint (the `cnf` claim), the
-authority with its constraints, and the `mission` claim naming the
-Mission it was derived under. Its 300-second lifetime ends well
-before the Mission's `expires_at`. Revoking the Mission stops further
-derivation, but this token remains valid until its own `exp`
-({{revocation}}).
+authority, and the `mission` claim naming the Mission it was derived
+under. Its 300-second lifetime ends well before the Mission's
+`expires_at`. Revoking the Mission stops further derivation, but this
+token remains valid until its own `exp` ({{revocation}}).
 
 ## Stage 3: Resource Server Enforcement {#stage-3-the-resource-server-enforces}
 
-The agent calls the ERP resource server (`erp.example.com`) with that
-token. The resource server:
+The agent asks the payments service (`https://example.com/payments`)
+to initiate the transfer with that token. The resource server:
 
 - validates the JWT and verifies the request's DPoP proof against the
   key identified by the token's `cnf` claim;
-- enforces the `authorization_details` entries whose `resource`
-  matches the operation target, `https://erp.example.com`,
-  permitting `invoices.read` within the Q3 issuance window and
-  `journal-entries.write` up to the `max_amount` ceiling of 500.00
-  USD ({{rs-enforcement}}); and
+- enforces the `payment_initiation` entry whose `locations` include
+  the operation target, `https://example.com/payments`, permitting the
+  initiation of the described transfer (EUR 123.50 to Merchant A, with
+  its remittance text) and the checking or cancelling of that transfer
+  ({{rs-enforcement}}); and
 - treats the `mission` claim as audit and correlation context, making
   no call to the AS.
 
-With enforcement from the token alone, the consequential
-`journal-entries.write` is bounded only by token lifetime and the
-carried constraints.
-
-At 08:14:00 the agent refreshes for a write-only token, narrowed to
-the `journal-entries.write` entry, as the refresh example in
-{{token-response}} narrows to the read entry.
+With enforcement from the token alone, the consequential initiation is
+bounded only by token lifetime and the carried entry.
 
 ## Stage 4: Resource Server Refusal {#stage-4-the-resource-server-refuses}
 
-The agent then asks the ERP to post a 780.00 USD adjustment with the
-same write-only token. The amount exceeds the entry's `max_amount` of
-500.00 USD, so the ERP refuses it from the token alone as outside the
-carried authority ({{rs-enforcement}}). This deployment accepts the
-agent learning that more authority needs a new approval or an
-expansion ({{denial-disclosure}}), so the challenge carries
-`mission_denial`:
+The agent then asks the payments service to initiate a transfer of EUR
+1,235.00 to Merchant A with the same token. The amount differs from
+the entry's `instructedAmount`, so the payments service refuses it
+from the token alone as outside the carried authority
+({{rs-enforcement}}). This deployment accepts the agent learning that
+more authority needs a new approval or an expansion
+({{denial-disclosure}}), so the challenge carries `mission_denial`:
 
 ~~~
 HTTP/1.1 403 Forbidden
@@ -6177,13 +6127,10 @@ derives is a subset of the same Authority Set ({{subset}}).
 
 ## Stage 5: Revocation {#stage-5-revocation}
 
-At 08:50:00 the agent refreshes for the read-only token of the
-refresh example in {{token-response}}, which expires at 08:55:00.
-
-At 08:53:20 the Mission is revoked, and the AS commits `terminated`
+At 12:02:00 the Mission is revoked, and the AS commits `terminated`
 with reason `revoked`. Revocation stops the Mission at the issuer
-({{revocation}}). A later refresh is refused with the `mission_error`
-diagnostic ({{mission-error-member}}):
+({{revocation}}). The agent's refresh at 12:03:00 is refused with the
+`mission_error` diagnostic ({{mission-error-member}}):
 
 ~~~
 HTTP/1.1 400 Bad Request
@@ -6196,14 +6143,14 @@ Cache-Control: no-store
 }
 ~~~
 
-Introspection reports the 08:50:00 token inactive with the Mission's
+Introspection reports the access token inactive with the Mission's
 termination, although the token has not expired ({{examples}},
 {{composite-active}}).
 
-Revocation does not recall the token already issued. The ERP,
-enforcing from the token alone, can honor the read-only token until
-its `exp` at 08:55:00. A resource server that introspects at the
-issuer on every request stops honoring it on its next request.
+Revocation does not recall the token already issued. The payments
+service, enforcing from the token alone, can honor it until its `exp`
+at 12:05:05. A resource server that introspects at the issuer on every
+request stops honoring it on its next request.
 
 # Deployment Choices {#deployment-choices}
 
