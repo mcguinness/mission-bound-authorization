@@ -4603,6 +4603,36 @@
    "notes": "The resolver tests witness the missing, ambiguous and duplicate-entry cases of the mapping; the continuation test witnesses the token-endpoint error mapping. The reference implementation has no HTTP surface for the base refresh-token-mode grant exchange (the demo calls issueCrossDomainGrant directly), so the continuation exchange is the endpoint witness."
   },
   {
+   "id": "cross-domain.cross-domain-grant.sender-constrained",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "MUST be sender-constrained ({{RFC7800}}) to the presenting client by the proof-of-possession mechanism the cross-domain grant profile defines",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every cross-domain grant the Mission Issuer mints carries a `cnf` binding it to the key the presenting client proved on the exchange (for the ID-JAG profile, the `jkt` of its DPoP key), never no binding",
+    "local": "the continuation exchange binds the jkt of the verified token-endpoint DPoP proof, which must equal the ICA's cnf.jkt; the base grant is minted in process from a caller-supplied jkt, since the reference serves no refresh-token-mode exchange"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > happy path: mints a Mission-rooted ID-JAG with a fresh handle, deterministic sub, collapsed act, and carried envelope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: deleting the grant's cnf at the mint lets the exchange answer with an unbound grant, and the happy-path test fails at the grant's cnf.jkt. Witnessed on the wire for the continuation exchange only; the base refresh-token-mode grant shares the mint but has no token-endpoint route in the reference."
+  },
+  {
    "id": "cross-domain.error-responses.unresolved-subject-invalid-request",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "error-responses",
@@ -18424,6 +18454,100 @@
     }
    ],
    "notes": "#1503 finding 3 (D620): the introspection half of the issuer checks that core.rs-enforcement.mission-issuer-trusted, core.rs-enforcement.mission-issuer-equals-iss and core.rs-enforcement.mission-issuer-invalid-token witness for JWT acceptance. Partial, not twinned: both halves quote this one sentence, and a twin for the refusal half would need an applicability for an introspecting route whose issuer is not trusted for Mission-bound authorization, which the model does not define. Witnessed: the trust check on introspection, where an estate route refuses an active response carrying `mission` with 401 `invalid_token` and no PEP entry or evidence, while the same response without it opens a session. Proved by mutation: removing the adapter's `mission` refusal fails the test on the status, and with the status and body assertions removed, the PEP-entry spy assertion and the no-evidence assertion each fail alone. Not witnessed: acceptance of a Mission-bound opaque token with the issuer and `mission.issuer` checks, since no reference resource server accepts one (core.introspected-consumption is unclaimed)."
+  },
+  {
+   "id": "core.rs-enforcement.authorization-details-authoritative",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST treat `authorization_details` as the authoritative expression of authority and enforce each applicable entry according to that entry's own type specification.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server authorizes a request only from the token's `authorization_details`, enforcing each applicable entry under its own type's rules; a validly presented token none of whose entries admits the request under those rules is refused",
+    "local": "the SaaS resource enforces `mission_resource_access` from the token alone: the entry's `resource` under its matching mode, its `actions`, and each `constraints` key (`vendors`); it reads no `scope`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource enforces vendors against the vendor the operation addresses (@spec resource-access#rs-enforcement) > permits a journal write for a listed vendor and refuses one for an unlisted vendor, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > out-of-scope tool at the SaaS server is denied token-only",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers, one behavior at a time, each making a request the entry's type does not admit succeed: the vendors gate made always true fails the vendors test; dropping the actions check fails the out-of-scope-tool test; dropping the resource match fails the operation-target test. Item 3 (scope never broader than the entry) is a separate rule with no row; no test here presents a competing `scope`."
+  },
+  {
+   "id": "core.rs-enforcement.entries-alternative-grants",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "Where more than one carried entry applies, entries are alternative grants of authority, not conjunctive filters, unless the entry's type states otherwise.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where several carried entries apply, a request one of them covers on its own is authorized whatever the others carry, unless the entry's type states otherwise",
+    "local": "no type the reference implements states otherwise, so the exception is not exercised"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > authorizes through an unconstrained covering entry beside one it cannot enforce",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only an entry it cannot enforce covers, while another entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only parts of two enforceable entries together cover",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > authorizes a journal write through a clean covering entry listed after one carrying a member it does not recognize",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: the decision made conjunctive (`.some` to `.every`) fails all four on their permit assertions, refusing a request one entry covers on its own."
   },
   {
    "id": "core.introspection.composite-active",
@@ -67504,6 +67628,131 @@
    "notes": "#1374, #1180. The clause binds only a Resource AS that issues delegated tokens of its own, so the row is gated on cross-domain.resource-as-delegated-issuance, which no deployment claims. core.delegation does not gate it, because the reference implements that capability at the originating AS, not at the Resource AS. The reference Resource AS lacks the capability: in src/services/ras/src/index.ts, redeem() mints one local token per grant and returns only access_token and expires_in, metadata() advertises only the JWT-bearer grant, and the class has no token exchange or other delegation path. No witness exists, so the row stays todo."
   },
   {
+   "id": "cross-domain.resource-as.verifies-sender-constraint",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST verify the grant's sender-constraint by the proof-of-possession mechanism the cross-domain grant profile defines.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS redeems a cross-domain grant only for a presenter that proves the key the grant's `cnf` names, by the profile's mechanism (for ID-JAG, a DPoP proof for its token endpoint)",
+    "local": "redeem() compares the grant's cnf.jkt with the presenter thumbprint its caller supplies; the reference RAS has no token endpoint and verifies no DPoP proof itself"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant sender-constraint (@spec cross-domain#validation-at-resource-as, #2033) > a grant bound to one key is invalid_grant for another key the same client registered, and still redeems for its bound key",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Partial: the comparison against the grant's cnf.jkt is proven by disabling it (removing the presenter-key check lets a second key of the same registered client redeem the grant), but the reference Resource AS has no token endpoint, so the DPoP proof that establishes the presenter's thumbprint is verified by its caller, not here. The existing \"presenter-key mismatch is rejected (sender-constraint)\" test (mcp-saas cross-domain) is not cited: it presents a key no client registered, so removing the check still refuses it as invalid_client."
+  },
+  {
+   "id": "cross-domain.resource-as.refuses-unbound-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "It MUST reject with `invalid_grant` a cross-domain grant that is not sender-constrained or whose proof-of-possession does not verify. A bearer grant MUST NOT be accepted",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a cross-domain grant carrying no `cnf`, or whose proof-of-possession does not verify (for the ID-JAG profile, a DPoP proof that fails verification or proves a key other than the one its `cnf` names), is refused with invalid_grant and yields no local token",
+    "local": "redeem() refuses a grant with no cnf.jkt, and one whose cnf.jkt differs from the presenter thumbprint its caller supplies; the reference Resource AS has no token endpoint and verifies no DPoP proof itself"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant sender-constraint (@spec cross-domain#validation-at-resource-as, #2033) > a grant bound to one key is invalid_grant for another key the same client registered, and still redeems for its bound key",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant sender-constraint (@spec cross-domain#validation-at-resource-as, #2033) > a bearer grant, carrying no cnf, is invalid_grant and yields no local token",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Partial (owner review of #2042, F1): the two cited tests prove refusal of a grant with no cnf (a bearer grant) and of a grant presented with another registered key of the same client, each by disabling the code it covers: removing the presenter-key check lets the other key redeem (the first test fails); removing both cnf checks lets the bearer grant mint a local token (the second fails). Removing only the absence check is not a proof: the comparison then throws a TypeError instead of permitting. Not witnessed: refusal when the proof itself fails verification (for example, a DPoP proof with the expected key but an invalid signature). redeem() takes the presenter's thumbprint directly, so no such proof can reach it; the reference Resource AS has no token endpoint (see cross-domain.resource-as.verifies-sender-constraint)."
+  },
+  {
+   "id": "cross-domain.resource-as.local-token-sender-constrained",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST be sender-constrained ({{RFC7800}}), like the grant it derives from;",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a local token minted from a cross-domain grant carries a `cnf` binding it to the key the grant was bound to and the presenter proved"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: deleting the local token's cnf lets redemption mint a bearer local token, and the end-to-end test fails at the local token's cnf.jkt."
+  },
+  {
+   "id": "cross-domain.resource-as.local-token-not-bearer",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST NOT be issued as a bearer token;",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no local token minted from a cross-domain grant is usable without proof of its bound key",
+    "local": "the binding is the local token's cnf.jkt, which the SaaS resource requires with a matching DPoP proof"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). The same witness and mutation as cross-domain.resource-as.local-token-sender-constrained: without the cnf the minted token is a bearer token, and the end-to-end test fails at its cnf.jkt."
+  },
+  {
    "id": "cross-domain.revocation.late-redemption-bounded-by-grant",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "cross-domain-revocation",
@@ -94592,6 +94841,48 @@
     }
    ],
    "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work. #939 slice 2a-2 (D1151): the real mission-request-provenance verifier performs exactly one signature verification, fetches no key and walks no chain, so it charges nothing beyond the dispatch's unit: one entry verifies at PAR at a bound of 1, and at a bound of 0 the push is refused invalid_request with no signature verified (the verifier's calls are counted). A resume at a later step verifies nothing and is charged nothing, even at a bound of 0 (unit). Mutations: charging a further unit refuses the entry at a bound of 1; charging a resume fails the unit test."
+  },
+  {
+   "id": "submission-evidence.required-evidence.absent-type-refused",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "required-evidence",
+   "text": "When a required type is absent from the submission, the AS MUST refuse the submission with the `invalid_mission_intent_evidence` error code.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission that presents no entry of a type the applicable policy requires, whether it carries no evidence or only other types, is refused with invalid_mission_intent_evidence",
+    "local": "required types are the deployment-global requiredIntentEvidenceTypes unioned with the client's registered required_intent_evidence_types; the check runs on every carrier's verification"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "stage-2 verification (@spec mission#intent-submission-evidence) > anti-downgrade: a policy-REQUIRED type absent from the submission refuses",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > anti-downgrade on the wire: a required type absent refuses the PAR submission; presenting it proceeds",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: making the absent-type check false accepts the submission, and all three cited tests fail. Witnessed at PAR with the deployment-global option and a test-only evidence type: no test sets required types on the token-endpoint carriers, dispatch, device authorization or deferred activation, or through per-client metadata, and the shipped configuration requires none (D1151, D1157)."
   },
   {
    "id": "request-provenance.trust.no-header-key",
