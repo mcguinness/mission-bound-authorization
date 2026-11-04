@@ -35580,7 +35580,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "at issuance the PEP records, with each surrogate, the service, the principal or account, the operation, the Mission and any attributed work item, and a lifetime and use limit no greater than the item's own; the record is observed through the refusals of runtime.authority-content.surrogate-resolution-bound"
+    "normative": "at issuance the PEP records, with each surrogate, the service, the principal or account, the operation, the Mission and any attributed work item, and a lifetime and use limit at most the class's finite configured cap; the record is observed through the refusals of runtime.authority-content.surrogate-resolution-bound"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -41568,7 +41568,7 @@
    "id": "runtime.negative-conformance.authority-content-should-demonstrate",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "negative-conformance",
-   "text": "A deployment that applies the dispositions SHOULD demonstrate the first outcome below, and every other outcome wherever it issues surrogates:",
+   "text": "A deployment that applies the dispositions SHOULD demonstrate each outcome below that its declared dispositions reach:",
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
@@ -41585,7 +41585,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a deployment applying authority-bearing content dispositions demonstrates, with an injected recognized item independent of the detector, that a recognized declared item never reaches the agent component; where it issues surrogates, that a surrogate is refused toward another service, account, operation, Mission or work item, after its lifetime, beyond its use limit, and outside the Effective Authority Set, that mailbox-read plus generic HTTP authority cannot redeem a reset link, that a redemption's session credential stays at the PEP, and that the item's value is absent from redirects, responses, logs, and evidence"
+    "normative": "a deployment applying authority-bearing content dispositions demonstrates, with an injected recognized item independent of the detector, each outcome its declared dispositions reach: a recognized declared item never reaches the agent component; a routed item with no established authorized recipient, or one the agent names, is withheld; an item whose account or operation cannot be established from a trusted source is never surrogated; and, where it issues surrogates, that a surrogate is refused toward another service, account, operation, Mission or work item, after its lifetime, beyond its use limit, outside the Effective Authority Set, when its mapping is no longer held or its item changed, that mailbox-read plus generic HTTP authority cannot redeem a reset link, that a redemption's session credential stays at the PEP, and that the item's value is absent from redirects, responses, logs, and evidence"
    },
    "level": "endpoint",
    "coverage": "todo",
