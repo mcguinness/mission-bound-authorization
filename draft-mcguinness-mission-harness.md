@@ -1358,6 +1358,10 @@ make explicitly public or released. The set includes at least:
 - every further source the deployment declares protected.
 
 The set is a floor: a deployment adds sources to it and removes none.
+The release rule can establish particular content as public, but
+retrieval from the web alone does not: an authenticated or
+personalized response can carry protected data.
+
 Exposure's baseline is the reverse of taint's. Content from the
 Approver or the delegating person does not taint ({{session-taint}}),
 but it is protected data: a trusted instruction can itself be
@@ -1741,7 +1745,9 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
 
 `decision`:
 : REQUIRED. One of `continue`, `suppress`, `pause`, `terminate`, or
-  `handoff`.
+  `handoff`. An `egress_qualified` record carries `continue`: it
+  records continuation past the harness's taint gate, and is neither a
+  resource authorization nor proof that the egress executed.
 
 `reason`:
 : REQUIRED. String reason.
@@ -2163,18 +2169,21 @@ exists.
 - Protected-Data Exposure, Establishment and Binding, and
   Exposure-Qualified Egress: exposure, the confidentiality counterpart
   of taint, attaches to the context that composed an action's bound
-  parameters. Direct user content is protected by default, and absent,
-  unknown or untracked exposure reads as exposed. The harness, or a
-  layer below it separated from the agent-facing components,
-  establishes the determination and binds it to the request; under
-  agent-compromise-resistant enforcement a
-  harness-established determination reads as exposed. Where the scope
-  statement declares it, an external-communication egress whose
-  composing context is unexposed is relieved of the taint response and
-  nothing else, never for an Irreversible action, External commitment
-  or Privileged administration class. `context.protected_data` carries
-  the determination to the PDP, and Harness Evidence adds
-  `egress_qualified` and `protected_data` (#2044).
+  parameters. Direct user content is protected by default, web
+  retrieval alone does not make content public, and absent, unknown or
+  untracked exposure reads as exposed. The harness, or a layer below
+  it separated from the agent-facing components, establishes the
+  determination and binds it to the request; under
+  agent-compromise-resistant enforcement a harness-established
+  determination reads as exposed. Where a scope statement declares it,
+  the Enforcement Scope Statement for the PDP path, an
+  external-communication egress whose composing context is unexposed
+  is relieved of the taint response and nothing else, never for an
+  Irreversible action, External commitment or Privileged
+  administration class. `context.protected_data` carries the
+  determination to the PDP, and Harness Evidence adds
+  `egress_qualified`, recorded with `decision` `continue`, and
+  `protected_data` (#2044).
 
 - Work-Item Prerequisite: `work_item_prerequisite_completed`, a history
   predicate requiring that a policy-named operation and class completed

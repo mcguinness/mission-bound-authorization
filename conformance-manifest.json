@@ -112312,6 +112312,28 @@
    "notes": "#2044 (D1275): the MUST NOT gained the exposure-qualification exception; it had no row. No witness: the reference harness has no session-taint logic (src/services/agent/src/harness-scope.ts names session-taint and egress-downgrade logic as deferred)."
   },
   {
+   "id": "harness.protected-data.web-retrieval-not-release",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "The release rule can establish particular content as public, but retrieval from the web alone does not: an authenticated or personalized response can carry protected data.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "content retrieved from the web under Mission authority is protected data unless the release rule establishes that particular content as public; a context that received such content without that release is determined exposed, however the content was fetched"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 owner ruling (review of PR #2050): open-web reads stay protected by default. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
    "id": "harness.protected-data.direct-user-content-protected",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "protected-data-exposure",
@@ -112869,6 +112891,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#2044. The taint half of this bullet is unchanged and has no row of its own. No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src)."
+  },
+  {
+   "id": "harness.evidence.egress-qualified-decision-continue",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "harness-evidence-object",
+   "text": "An `egress_qualified` record carries `continue`: it records continuation past the harness's taint gate, and is neither a resource authorization nor proof that the egress executed.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Harness Evidence record with event_type egress_qualified has decision continue, and no other value"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 owner ruling (review of PR #2050). No witness: the reference emits no Harness Evidence."
   },
   {
    "id": "harness.evidence.protected-data-required-for-egress-qualified",
