@@ -1153,6 +1153,17 @@ a `stale_state` denial ({{runtime-denial-classification}}).
   ({{runtime-denial-classification}}) when `context.taint` is absent
   from an in-scope decision.
 
+## Protected-Data Context {#context-protected-data}
+
+`protected_data`:
+: OPTIONAL, carried at `context.protected_data`. A registered
+  extension point owned by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which defines the member
+  shape (`exposed`, `established_by`), the establishing layer's
+  attachment the PEP populates it from, its reading when absent, and
+  the exposure qualification it can satisfy. It never relaxes the
+  fail-closed default of `context.taint` ({{context-taint}}).
+
 ## Work-Item Context {#context-work-item}
 
 `work_item`:
@@ -1387,11 +1398,11 @@ Authorization binding:
   contract reference ({{context-resource-contract}}),
   credential-derived facts, the Mission reference, the authority and
   view identity, the approval, and every policy-relevant context
-  input, including `taint`, `work_item`, the Mission history
-  reference, the capability source, and any extension member a
-  companion profile adds. This is what a permit is bound to. A new
-  companion context member is part of the authorization binding by
-  default; a companion narrows it only by amending this enumeration.
+  input, including `taint`, `protected_data`, `work_item`, the
+  Mission history reference, the capability source, and any extension
+  member a companion profile adds. This is what a permit is bound to.
+  A new companion context member is part of the authorization binding
+  by default; a companion narrows it only by amending this enumeration.
   It excludes only the request's volatile machinery: the
   `supported_obligations` declaration and transport metadata.
 
@@ -2837,7 +2848,7 @@ profile defines two Decision Evidence extension members:
 `mission_history`, the policy-selected history predicates and their
 outcomes ({{context-history}}), and `authority_bound` (below). It also
 carries coordinated extension members owned elsewhere, for example
-`taint` and `work_item` (owned by the harness profile,
+`taint`, `protected_data` and `work_item` (owned by the harness profile,
 {{I-D.draft-mcguinness-mission-harness}}) and `capability_source`
 (owned by Mission Capability Binding,
 {{I-D.draft-mcguinness-mission-capability-binding}}).
@@ -2856,8 +2867,9 @@ This profile maps its wire members into Decision Evidence as follows,
 in addition to the members other sections require the PDP to record:
 
 - `mission`, `subject`, `resource`, `action`, `audience`,
-  `credential`, `parameter_digest`, `obligations`, `taint`, and
-  `work_item` are populated from the correspondingly named members of
+  `credential`, `parameter_digest`, `obligations`, `taint`,
+  `protected_data`, and `work_item` are populated from the
+  correspondingly named members of
   the PDP request and response ({{pdp-request}}, {{pdp-response}}).
 - `mission_history` records the predicates the PDP evaluated and their
   outcomes ({{context-history}}); the PDP computes it, never copying it
@@ -2975,7 +2987,8 @@ Mission Capability Binding
 profile ({{I-D.draft-mcguinness-mission-harness}}) are normative
 references. The requirements that cite them bind only a deployment that
 adopts Capability Binding, or the harness capability the requirement
-names (PDP-enforced taint, for the taint members, and work-item
+names (PDP-enforced taint, for the taint members; exposure
+qualification, for the protected-data member; and work-item
 attribution, for the work-item member).
 
 A PEP conforming to the Decision Base MUST:
@@ -3170,7 +3183,7 @@ response members this document defines ({{pdp-request}},
 in an IANA registry. Members a companion adds are that companion's:
 `context.capability_source`
 ({{I-D.draft-mcguinness-mission-capability-binding}}), and
-`context.taint`, `context.work_item`, and
+`context.taint`, `context.protected_data`, `context.work_item`, and
 `action.properties.external_communication`
 ({{I-D.draft-mcguinness-mission-harness}}). The Mission-bound token
 claims this profile consumes are registered by
@@ -3250,6 +3263,12 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Protected-Data Context: `context.protected_data` is a harness-owned
+  extension point carrying the exposure determination that the harness
+  profile's exposure qualification relies on. It is part of the
+  authorization binding and recorded in Decision Evidence, and
+  `taint_context_missing` is unchanged (#2044).
 
 - History Context: names `work_item_prerequisite_completed`, the
   harness profile's coordinated predicate type (#815).

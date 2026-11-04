@@ -660,9 +660,9 @@ canonicalization, and integrity envelope a deployment emits.
 A Decision Evidence Object is closed to uncoordinated extension; see
 {{evidence-extensions}} for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
-commonly carries (`taint`, `work_item`, `mission_history`,
-`authority_bound`, `capability_source`, `hop_reference`,
-`principal_mapping`, `join_view_id`).
+commonly carries (`taint`, `protected_data`, `work_item`,
+`mission_history`, `authority_bound`, `capability_source`,
+`hop_reference`, `principal_mapping`, `join_view_id`).
 
 ## Refusal Record {#pre-decision-refusal}
 
@@ -2214,6 +2214,15 @@ a common wire carrier.
   carrier of the context this member records
   ({{I-D.draft-mcguinness-mission-authzen}}).
 
+`protected_data`:
+: OPTIONAL. An object, recorded on Decision Evidence as presented.
+  REQUIRED when the decision request carried a protected-data context.
+  What exposes a context, how a determination is established, and when
+  it relieves a taint requirement are defined by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which owns this member's
+  semantics; the AuthZEN profile is one wire carrier of the context
+  this member records ({{I-D.draft-mcguinness-mission-authzen}}).
+
 `mission_history`:
 : OPTIONAL. An array of objects, recorded on Decision Evidence: the
   policy-selected history predicates the PDP evaluated, each with its
@@ -2773,6 +2782,10 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Extension Members: `protected_data`, owned by the harness profile,
+  records on Decision Evidence the exposure determination a decision
+  request carried, as presented (#2044).
 
 - Extension Members and Execution Evidence: `authority_content`, owned
   by the runtime profile, records on Execution Evidence each
