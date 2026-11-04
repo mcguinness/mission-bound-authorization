@@ -1736,7 +1736,9 @@ here), together with the agent-isolated evidence-emission condition's
 per-emitter declaration where that condition is claimed
 ({{evidence}}, {{agent-isolated-evidence-emission}}); the per-row EAT
 evidence selections a High-Assurance Agent claim rests on
-({{compromise-resistant}}, {{trifecta-containment}}); and the
+({{compromise-resistant}}, {{trifecta-containment}}); the classes,
+covered reads, dispositions, and detection coverage of
+authority-bearing content ({{authority-content}}); and the
 reconciliation window, responsible component, and alerting obligation
 for outcome reconciliation ({{evidence}}). A deployment claiming none
 of these carries only the baseline declaration above; the baseline
@@ -2292,7 +2294,10 @@ Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
 define (data-loss prevention, redaction, payload policy) compose
 naturally at the mediating PEP, the one component that sees the full
-payload after the decision and before presentation.
+payload after the decision and before presentation. The same PEP sees
+a mediated read's response before the agent component does, which is
+where {{authority-content}} places the disposition of
+authority-bearing content.
 
 ## Agent-Isolated Evidence Emission {#agent-isolated-evidence-emission}
 
@@ -2438,6 +2443,166 @@ Least exposure narrows what injection can read and what within-scope
 laundering can draw from; it is not information-flow control, and an
 exposure filter, like a tool-catalog filter ({{classification}}),
 never replaces per-action authorization.
+
+## Authority Carried in Content {#authority-content}
+
+Least exposure and custody keep issued credential material out of the
+agent component ({{least-exposure}}, {{custody}}). A read can deliver
+authority by another path. **Authority-bearing content** is content an
+authorized read returns that is itself authority at some service. Read
+authority over a primary mailbox reaches the one-time codes and reset
+links that arrive there, and with them the ability to sign in as the
+Subject, or recover the Subject's account, at each service that sends
+them.
+
+The baseline classes are:
+
+`one_time_code`:
+: A one-time code or passcode, such as a sign-in or verification code.
+
+`sign_in_link`:
+: A link that signs in whoever follows it.
+
+`password_reset_link`:
+: A link that resets a password or another authentication factor.
+
+`recovery_code`:
+: An account recovery code.
+
+`bearer_credential`:
+: A reusable bearer credential, such as an access token or a session
+  cookie.
+
+`api_key`:
+: An API key.
+
+A deployment can declare further classes, such as invitation links,
+each under a collision-resistant name.
+
+A disposition is what the mediating PEP does with an item of a
+declared class, and the Enforcement Scope Statement declares one per
+class:
+
+`withhold`:
+: The PEP removes the item from the response before the response
+  reaches the agent component.
+
+`surrogate`:
+: The PEP replaces the item with a surrogate: an opaque handle from
+  which the item cannot be derived. The agent component passes the
+  handle as a parameter of a later mediated action, and the PEP
+  resolves it into that action by substituting the item.
+
+`route_to_principal`:
+: The PEP withholds the item from the agent component and delivers it,
+  through a surface the agent component cannot read, to a recipient
+  authorized to receive that item.
+
+A deployment that applies these dispositions MUST declare in its
+Enforcement Scope Statement ({{runtime-conformance}}):
+
+- the declared classes, which include every baseline class where the
+  deployment makes either named claim below;
+- the covered reads: the resources and read operations whose responses
+  the PEP inspects;
+- the disposition of each class;
+- the detection mechanism and the representations it supports (for
+  example plain text, HTML, links, attachments, or images);
+- how it handles uncertain classification and detector failure; and
+- the residual false negatives it accepts.
+
+Where the deployment claims agent-compromise-resistant enforcement
+({{compromise-resistant}}) or trifecta containment
+({{trifecta-containment}}), each item of a declared class that the PEP
+recognizes in the response to a covered mediated consequential read
+MUST receive its disposition before the response reaches the agent
+component. A deployment that makes neither claim SHOULD apply the
+dispositions to each mediated consequential read whose response can
+carry authority-bearing content.
+
+An item is recognized when the declared detection mechanism classifies
+it as a declared class. Detection and disposition fail differently: a
+detector that misses an item leaves a coverage gap, and a PEP that
+mishandles an item it recognized has an enforcement defect. The
+requirement above binds enforcement. Coverage is what the statement
+declares, never inferred from tests: no finite test set establishes
+that a detector recognizes every item of a class in every
+representation.
+
+The PEP MUST deliver a routed item only to a recipient authorized to
+receive that item, established independently of any routing
+instruction the agent component supplies, for example from trusted
+configuration or the deployment's authorization. The delegating person
+of a user-delegated Mission who holds the account the item serves is
+one such recipient; authority to approve the Mission does not by
+itself authorize receiving an item for another account. Where it
+establishes no authorized recipient, the PEP MUST withhold the item.
+
+When it issues a surrogate, the PEP MUST record with it:
+
+- the service at which the item is authority, from trusted
+  configuration keyed to the read's source, never from a URL or other
+  value in the content;
+- the principal or account at that service the item serves;
+- the operation the item serves there, such as sign-in, verification,
+  or password reset;
+- the Mission under which the read ran and, where the harness
+  attributes one, its work item
+  ({{I-D.draft-mcguinness-mission-harness}}); and
+- a lifetime and a use limit: the finite cap the deployment configures
+  for the item's class, shortened to any expiry or use limit the PEP
+  knows the item to carry. An unknown item limit never leaves a
+  surrogate unlimited.
+
+The account and the operation MUST each be established by a trusted
+source: trusted configuration, or service-specific transaction
+information the PEP verifies. The content, or an assertion of the
+agent component, never establishes either alone. The PEP MUST NOT
+surrogate an item whose account or operation it cannot establish; it
+withholds or routes that item.
+
+The PEP MUST resolve a surrogate only within its lifetime and use
+limit, only into an action that matches every other recorded element,
+not the service alone, and only when the decision ({{decision}})
+permits that action within the current Effective Authority Set
+({{input-authority}}). It MUST NOT resolve a surrogate for an item that
+resets or recovers an account, such as a `password_reset_link` or
+`recovery_code` item, unless an entry of the Effective Authority Set
+explicitly grants account recovery at that service: authority to read
+the source together with a generic HTTP or browsing entry does not.
+
+The decision and parameter binding ({{parameter-binding}}) MUST be
+evaluated over the surrogate form of the parameters, with the
+authorized and effective parameter digests computed over that form, so
+the binding holds across substitution and no digest commits to the
+item. The binding holds only while a handle names one item. The PEP
+MUST fix a surrogate's item and recorded binding when it issues the
+surrogate, and MUST NOT reassign either: a changed item takes a new
+handle. At substitution, the PEP MUST check the recorded binding and
+limits against the item it actually substitutes, and MUST refuse a
+handle whose mapping it no longer holds. The PEP MUST substitute the
+item only after the permit. The value of a surrogated item MUST NOT appear in a
+redirect, a response to the agent component, a log, or evidence.
+
+A credential that redeeming an item returns, such as a session cookie,
+an access token, or an authenticated browser session, is
+authority-bearing content in that action's response. The PEP MUST hold
+it and give the agent component at most a further surrogate, and each
+later use of it is a mediated action decided on its own. Where the PEP
+cannot hold what redeeming a class's items returns, as when the agent
+component drives the browser session itself, it MUST NOT issue
+surrogates for that class, and withholds or routes that class's items.
+
+For a mediated action whose response received a disposition, the PEP
+MUST produce Execution Evidence
+({{I-D.draft-mcguinness-mission-runtime-evidence}}), even where the
+action's class otherwise requires none, carrying the coordinated
+extension member `authority_content`: each item's class and
+disposition, and the handle of each surrogate. The Execution Evidence of an action into
+which a surrogate resolved MUST record the substitution as an
+`authority_content` entry with the disposition `substitute` and the
+surrogate's handle. These records MUST NOT carry the item's value or
+an unkeyed digest of it: a digest of a six-digit code reveals the code.
 
 # Resource Server Runtime Profile {#rs-runtime-profile}
 
@@ -3229,7 +3394,9 @@ runtime conformance. The claim names exactly the set of classes it
 covers. This claim additionally requires execution-environment
 attestation of the scope statement, the condition
 {{trifecta-containment}} states for both High-Assurance Agent
-claims.
+claims. Authority Carried in Content ({{authority-content}}) attaches
+one further duty to this claim: authority-bearing content in a covered
+read's response receives its disposition.
 
 The guarantee is the conjunction of these conditions, not any one of
 them. Mediated custody alone prevents only off-path presentation of
@@ -3275,6 +3442,9 @@ of its base-profile level:
   applied: the context surfaced to the agent is scoped to the active
   Mission, and credential material stays out of the agent for every
   mediated class ({{custody}}).
+  Each item of a declared authority-bearing class that the PEP
+  recognizes in a covered read's response receives its disposition
+  ({{authority-content}}).
 - **Untrusted content.** A taint policy for untrusted content, as the
   harness profile defines one
   ({{I-D.draft-mcguinness-mission-harness}}), is in force and its
@@ -3337,6 +3507,7 @@ the evidence is missing.
 | `least_exposure`: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission ({{trifecta-containment}}, {{least-exposure}}) | Signed configuration naming the exposure-scoping rule for the classes claimed, and negative tests demonstrating out-of-Mission context is withheld | The exposure-scoping rule's coverage over the classes claimed | The auditor reading the configuration, against the deployment's operator key | Current with the deployment's active exposure-scoping configuration version | Unknown, stale, or unverifiable configuration, or a found unscoped exposure, makes the claim unavailable |
 | `taint_egress_topology`: the taint policy and egress rule are enforced, and every egress channel is enumerated ({{trifecta-containment}}) | Topology audit (channel enumeration) and negative tests | Every egress channel available to the agent's execution environment | The auditor, an organizational anchor | Per audit cycle or channel-inventory change | A stale enumeration or a found unenumerated channel makes the claim unavailable |
 | `exposure_establishment`: an unexposed determination is established below the agent-facing harness, for the action's composing context, and bound to the request ({{trifecta-containment}}, {{I-D.draft-mcguinness-mission-harness}}) | Signed configuration naming the establishing layer and its inheritance rule, and negative tests showing that parameters composed in an exposed context and presented through a fresh worker get no relief | The establishing layer's determinations for the classes for which the scope statement declares exposure qualification | The auditor reading the configuration, against the deployment's operator key | Current with the deployment's active establishment configuration version | Absent, stale, or unverifiable evidence makes exposure qualification unavailable: every determination reads as exposed, and the claim rests on the full taint polarity |
+| `authority_content_disposition`: each item of a declared authority-bearing class that the PEP recognizes in a covered read's response receives its disposition before the response reaches the agent component ({{authority-content}}, {{compromise-resistant}}, {{trifecta-containment}}) | Signed configuration declaring the classes, covered reads, representations, detection mechanism, and dispositions, and negative tests ({{negative-conformance}}) | The mediated consequential reads the statement covers | The auditor reading the configuration and the tests, against the deployment's operator key | Current with the active configuration version and the audit cycle | Unknown, stale, or unverifiable configuration, or a recognized item of a declared class found reaching the agent component, makes the claim unavailable |
 
 A deployment claiming either named property MUST bind its statement
 to the evidence this table names, for each condition its Enforcement
@@ -3608,6 +3779,28 @@ deployment claiming it SHOULD demonstrate, per covered emitter:
 These tests demonstrate the exposed control surface; they do not
 prove the absence of a hidden bypass, which remains an attestation,
 audit, and path-completeness property.
+
+The disposition of authority-bearing content ({{authority-content}})
+has its own observable form. A deployment that applies the
+dispositions SHOULD demonstrate each outcome below that its declared
+dispositions reach:
+
+| Bypass attempt | Required outcome |
+|---|---|
+| A covered read's response carries a recognized item of a declared class | Withheld, surrogated, or routed as declared; the item never reaches the agent component |
+| An item is routed where no recipient authorized to receive it is established, or to a recipient the agent component names | Withheld; never delivered on the agent's instruction |
+| An item's account or operation cannot be established from a trusted source | Withheld or routed; never surrogated |
+| A handle is presented whose mapping the PEP no longer holds, or whose item has changed | Refused |
+| A surrogate is presented toward another service, another account at the same service, another operation, or another Mission or work item | Refused |
+| A surrogate is presented after its lifetime or beyond its use limit | Refused |
+| A surrogate is presented for an action outside the Effective Authority Set | Refused |
+| A surrogate for a reset link is presented under mailbox-read authority and a generic HTTP or browsing entry | Refused |
+| Redeeming an item returns a session credential | The credential stays at the PEP; the agent component receives at most a surrogate |
+| The item's value is sought in redirects, responses to the agent component, logs, and evidence | Absent from each |
+
+These tests inject an item the PEP recognizes, independent of the
+detector: they demonstrate enforcement, not detection coverage, which
+the Enforcement Scope Statement declares.
 
 The Remote Decision Channel's baseline requirements
 ({{decision-channel}}) are not a claimed extension: they apply to
@@ -3961,7 +4154,7 @@ Least exposure ({{least-exposure}}) is the input-side complement: it
 shrinks what an injected agent can read and what within-scope
 laundering can draw from, without changing the limits below.
 
-Two limits are inherent and a deployment MUST NOT overstate the
+Three limits are inherent and a deployment MUST NOT overstate the
 guarantee. First, it is exactly as strong as PEP-placement completeness:
 every exfiltration channel an agent runtime offers (DNS, logs, error
 strings, a write to a store another process reads) is a channel that
@@ -3985,6 +4178,11 @@ determination shows the context that composed it is unexposed; it
 never reaches an irreversible, external-commitment, or
 privileged-administration action, and it is only as sound as the
 protected source set and the establishment it rests on.
+
+Third, the disposition of authority-bearing content
+({{authority-content}}) reaches only the items its detector recognizes.
+Detection coverage is declared, not complete, and an item the detector
+misses reaches the agent component with the authority it carries.
 
 ## Relationship to Inspection-Based Controls {#inspection-controls}
 
@@ -4342,6 +4540,25 @@ worked example shows the concrete record
   condition makes exposure qualification unavailable, not the claim.
   Prompt Injection and Exfiltration notes the qualification and its
   limit.
+
+- Authority Carried in Content (#2045): content a read returns that is
+  itself authority (baseline: one-time codes, sign-in and
+  password-reset links, recovery codes, reusable bearer credentials,
+  and API keys) receives a declared disposition at the mediating PEP,
+  `withhold`, `surrogate`, or `route_to_principal`, which is MUST under
+  either named claim and SHOULD otherwise. A surrogate resolves only
+  into an action matching its recorded service, account, operation,
+  Mission, and limits and permitted within the Effective Authority
+  Set; its account and operation come from a trusted source, its
+  lifetime is a finite configured cap, and its mapping never changes
+  after issuance. The decision and parameter digests use the surrogate
+  form, a credential redemption returns stays at the PEP, and the value
+  appears in no redirect, response, log, or evidence. A routed item
+  goes only to a recipient authorized to receive it, and is otherwise
+  withheld. Detection coverage is declared in the Enforcement Scope
+  Statement. Agent-Compromise-Resistant Enforcement, Trifecta
+  containment and its evidence table, Prompt Injection and
+  Exfiltration, and Negative Conformance Tests carry the rule.
 
 - The History Input: an omitted record can deny a step or satisfy a
   predicate the complete history would not, not only deny it (#2029).
