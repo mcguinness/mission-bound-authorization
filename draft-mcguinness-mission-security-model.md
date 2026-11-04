@@ -1063,12 +1063,21 @@ Exfiltration of private data (the third leg of the lethal trifecta):
 : Addressed by external communication is a gated consequential action;
   harness leaves no unmediated path; session taint downgrades egress
   after untrusted input (optional; recommended, not required);
+  exposure qualification relieves that downgrade only for an
+  external-communication egress whose composing context is established
+  as unexposed, never for an irreversible, external-commitment, or
+  privileged-administration action
+  ({{I-D.draft-mcguinness-mission-harness}});
   least-exposure context minimization narrows what an injected agent
   sees (runtime, harness); the composite is claimable as trifecta
   containment (runtime). Residual: PEP-placement completeness; no
   information-flow control, so a sequence of in-scope steps can launder
-  data; the quarantine pattern (separate ingestion and egress Missions)
-  turns that limit into a deployment architecture
+  data; exposure qualification is only as sound as the protected
+  source set and the layer that establishes exposure, so a source left
+  out of the set, or a determination made for the executing process
+  rather than the composing context, lets protected data leave without
+  approval; the quarantine pattern (separate ingestion and egress
+  Missions) turns that limit into a deployment architecture
   ({{I-D.draft-mcguinness-mission-architecture}}).
 
 Sub-agent fan-out abuse (Child Missions):
@@ -1631,6 +1640,11 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The exfiltration entry names the harness profile's exposure
+  qualification under Addressed, and its dependence on the protected
+  source set and on establishment under Residual. No requirement
+  changed (#2044).
 
 - The Trusted Base gives a materialized policy view its own entry: it
   carries compiled authority, never Mission lifecycle state, and is no
