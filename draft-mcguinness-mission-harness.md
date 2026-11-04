@@ -1289,7 +1289,9 @@ approval ({{I-D.draft-mcguinness-mission-runtime}}) or downgrade that
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
 pattern: untrusted content may inform the agent's planning, but it
-MUST NOT, on its own, drive an egress that no trusted direction gave.
+MUST NOT, on its own, drive an egress that no trusted direction gave,
+other than one exposure qualification relieves
+({{exposure-qualified-egress}}).
 
 A deployment MAY instead route the taint determination through the
 decision request where the binding carries it
@@ -1314,7 +1316,10 @@ approved with the Mission from being human-gated per send. Where a
 deployment claims the runtime profile's trifecta containment for
 content-derived destinations
 ({{I-D.draft-mcguinness-mission-runtime}}), the full taint polarity,
-every tainted egress human-gated, remains a condition of that claim.
+every tainted egress human-gated, remains a condition of that claim,
+except for an egress exposure qualification relieves where that
+profile's `exposure_establishment` condition holds
+({{exposure-qualified-egress}}).
 
 The taint policy MUST be declared in the execution-environment scope
 statement ({{mediated-egress}}): the content trust list, the trigger
@@ -1329,6 +1334,157 @@ and the cost of its default-taint polarity, are discussed in
 source class, the provenance where established, and the resulting
 downgrade or approval in Harness Evidence ({{harness-evidence}}).
 
+## Protected-Data Exposure {#protected-data-exposure}
+
+The taint rule tracks one ingredient of injection-driven
+exfiltration: untrusted content able to drive an action. **Exposure**
+tracks another: whether protected data has reached the reasoning
+context that composed an action's bound parameters, its **composing
+context**. A context protected data has reached is **exposed**.
+Exposure is the confidentiality counterpart of taint, and this profile
+uses it only for exposure qualification
+({{exposure-qualified-egress}}).
+
+The **release rule**, declared in the execution-environment scope
+statement ({{exposure-qualified-egress}}), says which content is
+explicitly public or released. **Protected data** is content from a
+source in the **protected source set** that the release rule does not
+make explicitly public or released. The set includes at least:
+
+- every read made under Mission authority;
+- every store a governed session can write;
+- direct user content: what the delegating person, the Approver, or
+  another person supplies to the session, instructions included; and
+- every further source the deployment declares protected.
+
+The set is a floor: a deployment adds sources to it and removes none.
+Exposure's baseline is the reverse of taint's. Content from the
+Approver or the delegating person does not taint ({{session-taint}}),
+but it is protected data: a trusted instruction can itself be
+confidential, and trusted provenance does not establish that content
+is public.
+
+A context is **isolated** when every input it holds reached it through
+a path the establishing layer ({{exposure-establishment}}) observes,
+with no model context, memory, or working state shared outside those
+paths. A context is **unexposed** only when it is isolated and every
+input it has received is explicitly public or released under the
+release rule.
+
+An exposure determination concerns the composing context, not the
+process that executes the action. A worker that read no protected data
+does not establish an unexposed determination for parameters an
+exposed context composed and handed to it. A process-level label
+serves as a determination only where it propagates conservatively from
+the composing context: a process that receives anything an exposed
+context composed is labelled exposed.
+
+Exposure follows derivation as taint does ({{session-taint}}):
+
+- a sub-agent session inherits the exposure of the context that
+  composed its task and inputs;
+- a context seeded with a summary, a compaction, or working notes
+  derived from an exposed context is exposed;
+- content an exposed context writes to memory or to a store exposes a
+  context that reads it back; and
+- a tool argument an exposed context composed exposes every context
+  that receives it.
+
+A determination covers the inputs the context held when it was made.
+A later input invalidates it, and the context reads as exposed until a
+new determination covers every input it holds. Absent, unknown, or
+untracked exposure reads as exposed: a context that an input of
+unknown provenance has reached, or whose inputs the establishing
+layer cannot account for, is exposed.
+
+## Establishment and Binding {#exposure-establishment}
+
+The **establishing layer** makes exposure determinations: the harness,
+or a layer below it, such as the mediating PEP or a platform
+data-flow layer, separated from the agent-facing harness components
+as {{sec-harness-compromise}} requires of the mediating PEP. A layer
+without that separation is the harness for this purpose, and its
+determinations are the harness's.
+
+The establishing layer makes a determination for the composing context
+of a request's bound parameters ({{protected-data-exposure}}) and
+attaches it to that one request. A determination not bound to the
+request it is presented with is no determination, and the request
+reads as exposed. The layer's label does not by itself justify
+relief: a determination counts only when the layer made it for the
+composing context and bound it to the request.
+
+Where the deployment claims the runtime profile's
+agent-compromise-resistant enforcement for a class that applies to
+the action ({{I-D.draft-mcguinness-mission-runtime}}), a determination
+the harness established (`established_by` `harness`,
+{{decision-api-composition}}) reads as exposed. Otherwise a
+compromised harness could send private parameters through a fresh
+worker it presents as unexposed.
+
+## Exposure-Qualified Egress {#exposure-qualified-egress}
+
+Exposure qualification relieves a tainted egress of the taint response
+({{session-taint}}) when its composing context is unexposed: untrusted
+content may have steered the request, but the request holds no
+protected data to disclose. It is an alternative to the architecture's
+quarantine pattern ({{I-D.draft-mcguinness-mission-architecture}},
+Section "The Quarantine Pattern"), which gives the Mission that
+ingests untrusted content no external-communication or
+external-commitment authority.
+Exposure qualification instead lets an isolated, unexposed context
+make content-derived requests, such as a search query or a followed
+link, without a per-request approval. It does not change that
+pattern.
+
+Exposure qualification applies to a tainted action only when all of
+the following hold:
+
+- the execution-environment scope statement declares exposure
+  qualification for every class that applies to the action
+  ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action
+  Classification");
+- an unexposed determination for the action's composing context is
+  present, made and bound as {{exposure-establishment}} requires; and
+- the action satisfies the external-communication predicate, and no
+  Irreversible action, External commitment, or Privileged
+  administration class applies to it, as its assigned class or by
+  predicate.
+
+The relief removes only the taint response: the fresh action-bound
+approval the taint rule requires, or the suppression it applies, on
+taint grounds. Authority, destination constraints, ordinary approval
+policy, parameter binding, and the per-action permit still govern the
+action; an unexposed determination never permits one. The
+Irreversible action, External commitment, and Privileged
+administration classes are excluded because injection does harm
+through them without disclosing anything. Under the runtime profile's
+multi-predicate rule, the relief reaches only the taint requirement it
+names ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action
+Classification"). The exclusions do not establish that every other
+write is harmless: a consequential write that satisfies the
+external-communication predicate gets the same narrow relief and no
+more.
+
+The conditions and limits bind whichever party applies the taint rule:
+the harness, where it enforces the rule itself, and the PDP, where the
+deployment routes taint through the decision request
+({{decision-api-composition}}). A harness that relieves an egress
+under exposure qualification records the relief in Harness Evidence,
+with `event_type` `egress_qualified` ({{harness-evidence-object}}).
+
+Where a deployment applies exposure qualification, the
+execution-environment scope statement ({{mediated-egress}}) MUST
+declare:
+
+- the classes for which exposure qualification is declared;
+- the protected source set: the floor of {{protected-data-exposure}}
+  and every source the deployment adds;
+- the release rule: what counts as explicitly public or released;
+- the establishing layer ({{exposure-establishment}}); and
+- the mechanism by which exposure is inherited and a determination
+  invalidated.
+
 ## Decision-API Composition {#decision-api-composition}
 
 Where a deployment routes taint enforcement through the PDP
@@ -1337,8 +1493,10 @@ to, enforcing the rule above at the harness itself, this section
 defines the composition: the member shapes the decision-API binding
 carries, and the PDP-side behavior those members drive. The harness
 remains the layer that establishes taint and the external-
-communication predicate; the decision-API binding is one wire carrier
-of that determination, never a second source of truth for it.
+communication predicate, and the establishing layer establishes
+exposure ({{exposure-establishment}}); the decision-API binding is
+one wire carrier of each determination, never a second source of
+truth for it.
 
 The external-communication predicate is parameter-dependent: whether
 an action carries data outside the deployment's trust boundary
@@ -1385,6 +1543,33 @@ taint enforcement through the PDP, as the value of `context.taint`:
   source (for example, `web_fetch`, `inbound_message`,
   `third_party_document`), for policy and evidence.
 
+The OPTIONAL `protected_data` member carries the establishing layer's
+exposure determination for the requested action
+({{exposure-establishment}}), as the value of
+`context.protected_data`:
+
+~~~ json
+{
+  "exposed": false,
+  "established_by": "pep"
+}
+~~~
+
+`exposed`:
+: REQUIRED when `protected_data` is present. A boolean. Whether the
+  action's composing context is exposed ({{protected-data-exposure}}).
+
+`established_by`:
+: REQUIRED when `protected_data` is present. A string naming the
+  establishing layer: `pep` for the mediating PEP, `platform` for a
+  platform data-flow layer, or `harness` for the harness or a layer
+  without the separation {{exposure-establishment}} requires.
+
+The PEP populates `context.protected_data` only from the establishing
+layer's attachment to this request, never from tool arguments or
+another value the agent supplies. Absence of `protected_data`, or a
+member not of this shape, reads as exposed.
+
 Absence of `taint` means the harness did not route the determination
 through the decision request, not that the action is untainted; the
 harness's own egress rule above then applies. That reading is
@@ -1405,9 +1590,11 @@ class ({{I-D.draft-mcguinness-mission-runtime}}):
   PDP MUST deny or return `approval_required`
   ({{I-D.draft-mcguinness-mission-authzen}}) unless a fresh
   action-bound approval bound to the action's parameters is present
-  in the decision context.
-- The PDP MUST record the presented taint context in Decision
-  Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+  in the decision context, or exposure qualification applies
+  ({{exposure-qualified-egress}}).
+- The PDP MUST record the presented taint context, and any presented
+  `protected_data`, in Decision Evidence
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 # Harness Evidence {#harness-evidence}
 
@@ -1495,7 +1682,8 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
 : REQUIRED. One of `resume_allowed`, `resume_suppressed`,
   `queue_suppressed`, `cache_disabled`, `subagent_stopped`,
   `subagent_continued`, `human_review_completed`, `egress_downgraded`,
-  `egress_refused`, `mission_superseded`, or `mission_state_stale`.
+  `egress_qualified`, `egress_refused`, `mission_superseded`, or
+  `mission_state_stale`.
   `event_type` categorizes the work item the record is about; the
   `decision` member records the outcome, so the two are orthogonal.
 
@@ -1565,6 +1753,14 @@ A Harness Evidence object is a JSON object {{RFC8259}} with:
   source class, the provenance basis (`parameter` or `session`), and
   the applied action (a fresh action-bound approval required, or the
   action suppressed) ({{session-taint}}).
+
+`protected_data`:
+: OPTIONAL. An object for an `egress_qualified` event: the exposure
+  determination relied on (`exposed` and `established_by`,
+  {{decision-api-composition}}) and the taint context it relieved (the
+  tainting source class and the provenance basis)
+  ({{exposure-qualified-egress}}). REQUIRED for an `egress_qualified`
+  event.
 
 `egress`:
 : OPTIONAL. An object for an `egress_refused` event: the
@@ -1773,8 +1969,9 @@ revocation still terminates authority at its source. A compromised
 harness cannot manufacture Mission authority the issuer never granted.
 
 What falls is everything the harness alone mediates:
-local-tool mediation, session-level suppression, taint control, and
-the mediated execution environment itself ({{mediated-egress}}). The
+local-tool mediation, session-level suppression, taint control, the
+exposure determinations it establishes ({{exposure-establishment}}),
+and the mediated execution environment itself ({{mediated-egress}}). The
 no-unmediated-path condition is harness-operated, so a compromised
 harness can resume suppressed work, ignore its own stop decisions,
 drive egress that the taint rule was meant to hold, and open an
@@ -1857,8 +2054,15 @@ its taint, at the cost of gating untraceable parameters in a tainted
 session. In an open-world session that has ingested untrusted
 content, that cost is the rule rather than the exception:
 model-composed egress to an unnamed destination is untraceable, so it
-is human-gated, and the content trust list and the pre-consented
-destination set are the levers that keep the gate proportionate.
+is human-gated, and the content trust list, the pre-consented
+destination set, and exposure qualification
+({{exposure-qualified-egress}}) are the levers that keep the gate
+proportionate. Exposure qualification is only as sound as its
+protected source set and its establishment: a protected source left
+out of the set, a release rule that releases protected content
+wholesale, or a determination made for the executing process rather
+than the composing context lets protected data leave without the
+approval the taint rule would have required.
 The control still cannot close within-scope data laundering
 ({{I-D.draft-mcguinness-oauth-mission}},
 {{I-D.draft-mcguinness-mission-runtime}}); it raises the bar by
@@ -1947,6 +2151,22 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Protected-Data Exposure, Establishment and Binding, and
+  Exposure-Qualified Egress: exposure, the confidentiality counterpart
+  of taint, attaches to the context that composed an action's bound
+  parameters. Direct user content is protected by default, and absent,
+  unknown or untracked exposure reads as exposed. The harness, or a
+  layer below it separated from the agent-facing components,
+  establishes the determination and binds it to the request; under
+  agent-compromise-resistant enforcement a
+  harness-established determination reads as exposed. Where the scope
+  statement declares it, an external-communication egress whose
+  composing context is unexposed is relieved of the taint response and
+  nothing else, never for an Irreversible action, External commitment
+  or Privileged administration class. `context.protected_data` carries
+  the determination to the PDP, and Harness Evidence adds
+  `egress_qualified` and `protected_data` (#2044).
 
 - Work-Item Prerequisite: `work_item_prerequisite_completed`, a history
   predicate requiring that a policy-named operation and class completed
