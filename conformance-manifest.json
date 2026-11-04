@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "a37feeec949766fc136ddf250835567a68fcf98f",
-    "content_sha256": "ef8ad29f38d242d63ab35d7cc06b2dc8a40df72f7a6d1f9de26595078944cb03"
+    "revision": "54ca93942823ce3994039dab548518df88495c07",
+    "content_sha256": "ed860c198d9f812d1422617aa30efbbb122beb0493783abbcdaaacd45df7caa0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -11341,6 +11341,52 @@
     }
    ],
    "notes": "#1892 ruling 6 (row debt). The consent-object bullet of step 5. The derivation-timing witness parses the page's derived-authority block and compares it with the full derivation of the same Intent and proposal (two or more entries, capability bindings included), then checks the record commits exactly that set; the render-gate control asserts the goal and the derived entries appear together. Mutation proof (2026-10-29): rendering only the first derived entry fails the derivation-timing witness on its assertion (one entry against the two derived); the render-gate control witnesses the goal and the derived entries shown together, not completeness. Fresh review of #1893: the observation restates the quoted sentence; that the record commits the rendered set is the approval-commit rows' obligation, which the derivation-timing witness also exercises."
+  },
+  {
+   "id": "core.rendering-safeguards.implied-authority-disclosed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "When the AS holds an **implied-authority statement** for a rendered Authority Set entry, a statement of authority the entry carries beyond what it names (for example, account recovery at each service that sends reset links or one-time codes to a mailbox the entry reads), the rendering MUST present the statement with that entry as a disclosure of risk, never as part of the derived Authority Set.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a derived Authority Set entry the AS holds an implied-authority statement for, the approval rendering presents that statement beside the entry, marked as a disclosure of risk; the statement is never omitted, and it never appears as an entry, an action or a bound of the derived Authority Set"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2046 (D1275: a warning about risk, not an authority grant; MUST when the AS holds a statement, which the AS is not required to produce). The clause's condition (the AS holds a statement for a rendered entry) has no applicability kind, so the row stays unconditional, as core.approval-event.subject-rendering does. No witness: the reference AS holds no implied-authority statement, so the conditional duty never triggers; a witness needs an AS policy statement for a mailbox-style entry. A search of the authorization server (provider.ts renderApprovalPage and its callers) finds no implied-authority input on the approval page and no policy source that carries one."
+  },
+  {
+   "id": "core.rendering-safeguards.implied-authority-attributed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "The rendering attributes a statement from the AS's local policy to the AS; one the client supplied, such as the `implied_authority` member defined by {{I-D.draft-mcguinness-mission-shaping}}, is client-supplied text under the rules below.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an implied-authority statement drawn from the AS's local policy is attributed to the AS on the approval rendering; one the client supplied is rendered as client-supplied text, inert, apart from the derived Authority Set and attributed to the client, never to the AS"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2046. The client-supplied half incorporates the client-text rules (core.rendering-safeguards.client-strings-inert, core.rendering-safeguards.client-text-attributed), whose witnesses cover the Intent text and the proposal only. Shaping is cited informatively and carries no row. No witness: the reference AS holds no implied-authority statement from either source, so neither attribution is ever rendered; a witness needs an AS policy statement for a mailbox-style entry and a client-supplied statement for another entry."
   },
   {
    "id": "core.approval-event.proposal-narrowing-distinguished",
