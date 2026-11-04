@@ -11,20 +11,20 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "a35ab59a708ddc5eda517e61794e436c0e87bfb1",
-    "content_sha256": "d01e2af222f5324dc1ad6332dc61c553787c57031f6e4d31ba631622c946854a"
+    "revision": "cad628f2660524f9a9c282d5e05087f2e9222a62",
+    "content_sha256": "5fc7bf6168359ea3ac1fa124c5ea387084a4178fd827f59f9f1a94abb85e6c45"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "e3be60288cf916a8610db66daa9160f0e2c88388",
-    "content_sha256": "1616b2961df62b4d985ac5e9a8fc6bd3941af146b70e7b43ad572a13d3bf9bde"
+    "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
+    "content_sha256": "9bf8e198efbb2f419c9350376403611ccfb5e7633e035be3727b8ecf4cca54d1"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "8718b08145792642827f8fe1ccfb3ae265c8e90a",
-    "content_sha256": "e7c8f5a9f76cf1dc98f7d6a29284c7965c1a462a60630a6fbb997ce1be1395bf"
+    "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
+    "content_sha256": "ee18b94778764846a4a6e5955970e5a24a1ffed0eabbf109fb86b50bbe20017b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "aa284101326ff8dce48925418b3c8c6f858ea264",
@@ -159,8 +159,8 @@
     "content_sha256": "a73a267a1da167dd2cb76a976c5e0bca75d8a056d0b44d9723bae39e0263793a"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "dd734cdadf47e726f0fdf3aa04d4a4b60822c519",
-    "content_sha256": "a2596ca80ba9395f323afcca48bacc512474a60087757a386e1fd375f91f6a2c"
+    "revision": "48bcb9db1b0fd525d3971595790b0f07b34db51b",
+    "content_sha256": "99cc188fd7f669f5c0fd5b4af8389a0839ca44811014caef4b639e611b4c3245"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
     "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
@@ -345,7 +345,8 @@
    "consent-evidence.rung-1",
    "consent-evidence.rung-3",
    "consent-evidence.rung-2",
-   "consent-evidence.rung-4"
+   "consent-evidence.rung-4",
+   "harness.exposure-qualification"
   ]
  },
  "profiles": [
@@ -41388,6 +41389,33 @@
    "tests": []
   },
   {
+   "id": "runtime.named-claims.exposure-establishment-failure-withdraws-qualification",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "Evidence that is unknown, stale, or unverifiable for a required condition makes the named claim unavailable, except for `exposure_establishment`, where it makes exposure qualification unavailable instead, as the table states.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.trifecta-containment",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where exposure_establishment evidence (signed configuration naming the establishing layer and its inheritance rule, and the fresh-worker negative tests) is unknown, stale, or unverifiable, every determination reads as exposed and the trifecta claim rests on the full taint polarity; the claim itself stays available"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275). No witness: the reference makes no trifecta containment claim and has no component that establishes exposure (#820 is parked)."
+  },
+  {
    "id": "runtime.named-claims.no-eat-alone-satisfies-other-facts",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "trifecta-containment",
@@ -41474,12 +41502,39 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "under the trifecta containment claim, a tainted external-communication or external-commitment action obtains a fresh action-bound approval or is refused"
+    "normative": "under the trifecta containment claim, a tainted external-communication or external-commitment action obtains a fresh action-bound approval or is refused, except a send to a destination the Approver concretely named (pre-consented egress) and an egress the harness profile's exposure qualification relieves where the exposure_establishment condition holds"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "runtime.trifecta-containment is not implemented: no taint-tracking or tainted-content predicate exists anywhere in mcp-payments (`grep -rln \"taint\" src/services/mcp-payments/src` is empty). send_remittance_email and execute_wire_transfer are gated by ordinary classification and action-approval only, never by content provenance, so there is no tainted/untainted distinction for this row's MUST to act on. (The sibling condition, external-communication-mediated-condition, IS tested via the egress gate in services/agent -- a different component from mcp-payments -- but that covers mediation of the channel, not the taint predicate this row states.)"
+   "notes": "runtime.trifecta-containment is not implemented: no taint-tracking or tainted-content predicate exists anywhere in mcp-payments (`grep -rln \"taint\" src/services/mcp-payments/src` is empty). send_remittance_email and execute_wire_transfer are gated by ordinary classification and action-approval only, never by content provenance, so there is no tainted/untainted distinction for this row's MUST to act on. (The sibling condition, external-communication-mediated-condition, IS tested via the egress gate in services/agent -- a different component from mcp-payments -- but that covers mediation of the channel, not the taint predicate this row states.) #2044: the quoted clause is unchanged; the observation names the two carve-outs the bullet states after it, the exposure-qualified one in runtime.trifecta-containment.exposure-qualified-egress-not-gated."
+  },
+  {
+   "id": "runtime.trifecta-containment.exposure-qualified-egress-not-gated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "So does its exposure qualification, where the `exposure_establishment` condition below holds: an egress it relieves is not human-gated on taint grounds, and the relief never reaches an action to which the Irreversible action, External commitment, or Privileged administration class applies.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.trifecta-containment",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under the trifecta containment claim, an exposure-qualified egress proceeds without a taint-driven approval only where the exposure_establishment condition holds; for an action to which the Irreversible action, External commitment, or Privileged administration class applies, exposure qualification supplies no exception: the taint rule applies as it otherwise would, and a fresh action-bound approval bound to the parameters satisfies it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: runtime.trifecta-containment is not implemented (see runtime.trifecta-containment.untrusted-content-egress-condition), and the reference has no component that establishes exposure (#820 is parked)."
   },
   {
    "id": "runtime.trifecta-containment.external-communication-mediated-condition",
@@ -44924,6 +44979,31 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1994 owner review: the condition names a class that applies to the action. No witness: the reference declares no PDP-enforced taint."
+  },
+  {
+   "id": "authzen.context-protected-data.never-relaxes-taint-fail-closed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-protected-data",
+   "text": "It never relaxes the fail-closed default of `context.taint` ({{context-taint}}).",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an in-scope decision that carries context.protected_data, exposed false included, but no context.taint is still denied taint_context_missing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275 open question 2: no new missing-context error; taint_context_missing unchanged). No witness: the reference declares no PDP-enforced taint (see authzen.context-taint.fail-closed-when-missing)."
   },
   {
    "id": "authzen.context-approval.arap-object-verbatim",
@@ -57570,6 +57650,29 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.extensions.protected-data-required-when-context-present",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "REQUIRED when the decision request carried a protected-data context.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the protected_data extension member is REQUIRED on Decision Evidence exactly when the decision request carried a protected-data context; this document records it as presented, and the harness profile owns its semantics"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference PDP does not evaluate or record context.taint or context.protected_data (no taint handling in src/services/pdp/src)."
   },
   {
    "id": "evidence.extensions.mission-history-required-when-selected",
@@ -112949,6 +113052,652 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1994 (D1175): the rule keyed on one stored action_class before; it had no row. No witness: the reference PDP does not implement PDP-enforced taint (the harness enforces taint, and the shipped statement declares no PDP-enforced taint class)."
+  },
+  {
+   "id": "harness.session-taint.untrusted-content-never-drives-egress",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "session-taint",
+   "text": "untrusted content may inform the agent's planning, but it MUST NOT, on its own, drive an egress that no trusted direction gave, other than one exposure qualification relieves ({{exposure-qualified-egress}}).",
+   "role": "harness",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "in a tainted session, an egress that no trusted direction gave and that exposure qualification does not relieve does not proceed on untrusted content alone: it obtains a fresh action-bound approval or is suppressed"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275): the MUST NOT gained the exposure-qualification exception; it had no row. No witness: the reference harness has no session-taint logic (src/services/agent/src/harness-scope.ts names session-taint and egress-downgrade logic as deferred)."
+  },
+  {
+   "id": "harness.protected-data.web-retrieval-not-release",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "The release rule can establish particular content as public, but retrieval from the web alone does not: an authenticated or personalized response can carry protected data.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "content retrieved from the web under Mission authority is protected data unless the release rule establishes that particular content as public; a context that received such content without that release is determined exposed, however the content was fetched"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 owner ruling (review of PR #2050): open-web reads stay protected by default. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.protected-data.direct-user-content-protected",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "Content from the Approver or the delegating person does not taint ({{session-taint}}), but it is protected data: a trusted instruction can itself be confidential, and trusted provenance does not establish that content is public.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a context that has received direct user content, the Approver's or the delegating person's instructions included, that the release rule does not make explicitly public or released is determined exposed, although that content does not taint"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.protected-data.unexposed-only-isolated-and-released",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "A context is **unexposed** only when it is isolated and every input it has received is explicitly public or released under the release rule.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an unexposed determination is made only for a context every input of which reached it through a path the establishing layer observes and is explicitly public or released under the declared release rule; any other context is determined exposed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.protected-data.determination-covers-composing-context",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "An exposure determination concerns the composing context, not the process that executes the action. A worker that read no protected data does not establish an unexposed determination for parameters an exposed context composed and handed to it. A process-level label serves as a determination only where it propagates conservatively from the composing context: a process that receives anything an exposed context composed is labelled exposed.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "parameters an exposed context composed and handed to a fresh worker that read no protected data are determined exposed; a process-level label counts only where every process receiving an exposed context's output is labelled exposed"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275 correction 2). A PDP test that accepts a supplied boolean is not a witness here. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.protected-data.inheritance",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "a sub-agent session inherits the exposure of the context that composed its task and inputs; - a context seeded with a summary, a compaction, or working notes derived from an exposed context is exposed; - content an exposed context writes to memory or to a store exposes a context that reads it back; and - a tool argument an exposed context composed exposes every context that receives it.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "exposure survives a sub-agent hand-off, a summary or compaction, a memory or store write read back, and a tool argument: each receiving context is determined exposed when its source context was"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.protected-data.invalidation",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "A determination covers the inputs the context held when it was made. A later input invalidates it, and the context reads as exposed until a new determination covers every input it holds.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a context receives a new input, an earlier unexposed determination no longer stands, and the context is exposed until a new determination covers every input it holds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.protected-data.unknown-reads-exposed",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "protected-data-exposure",
+   "text": "Absent, unknown, or untracked exposure reads as exposed: a context that an input of unknown provenance has reached, or whose inputs the establishing layer cannot account for, is exposed.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a context reached by an input of unknown provenance, or whose inputs the establishing layer cannot account for, is determined exposed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.exposure-establishment.unseparated-layer-is-harness",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-establishment",
+   "text": "A layer without that separation is the harness for this purpose, and its determinations are the harness's.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a determination made by a layer not separated from the agent-facing harness components as the harness profile requires of the mediating PEP is labelled established_by harness, never pep or platform"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.exposure-establishment.bound-to-request",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-establishment",
+   "text": "The establishing layer makes a determination for the composing context of a request's bound parameters ({{protected-data-exposure}}) and attaches it to that one request. A determination not bound to the request it is presented with is no determination, and the request reads as exposed.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a determination is attached to the one request whose bound parameters its composing context composed; presented with another request, or with parameters an exposed context composed and handed to a fresh worker, it supplies no exception: the request reads as exposed and the taint rule applies as it otherwise would, a fresh action-bound approval bound to the parameters satisfying it"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275 correction 2). A PDP test that accepts a supplied boolean is not a witness here. No witness: the reference has no component that establishes exposure (#820 is parked)."
+  },
+  {
+   "id": "harness.exposure-establishment.harness-established-exposed-under-compromise-resistance",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-establishment",
+   "text": "Where the deployment claims the runtime profile's agent-compromise-resistant enforcement for a class that applies to the action ({{I-D.draft-mcguinness-mission-runtime}}), a determination the harness established (`established_by` `harness`, {{decision-api-composition}}) reads as exposed.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification",
+     "runtime.compromise-resistant"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where agent-compromise-resistant enforcement is claimed for a class that applies to the action, a context.protected_data with exposed false and established_by harness reads as exposed and supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. The PDP observes only established_by; an unbound determination never reaches it, because the PEP carries only the establishing layer's attachment (harness.decision-api.pep-protected-data-from-attachment-only). No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; authzen.context-taint.fail-closed-when-missing is todo)."
+  },
+  {
+   "id": "harness.exposure-qualification.undeclared-class-not-relieved",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "exposure qualification is declared for every class that applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\"): in the Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}}) where the PDP applies the taint rule, and in the execution-environment scope statement where the harness applies it;",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the PDP applies the taint rule and the Enforcement Scope Statement does not declare exposure qualification for every class that applies to the action, an unexposed determination supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. Review re-quote: the PDP path keys on the Enforcement Scope Statement, as PDP-enforced taint does. No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; authzen.context-taint.fail-closed-when-missing is todo)."
+  },
+  {
+   "id": "harness.exposure-qualification.undeclared-class-not-relieved-harness-enforced",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "exposure qualification is declared for every class that applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\"): in the Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}}) where the PDP applies the taint rule, and in the execution-environment scope statement where the harness applies it;",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the harness enforces the taint rule itself and the execution-environment scope statement does not declare exposure qualification for every class that applies to the action, an unexposed determination supplies no exception: the taint rule applies as it otherwise would, and a fresh action-bound approval bound to the parameters satisfies it. Positive control: the same tainted egress carrying an independently sufficient fresh action-bound approval proceeds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044: harness-enforced twin of harness.exposure-qualification.undeclared-class-not-relieved. Review re-quote: the harness path keys on the execution-environment scope statement. No witness: the reference harness has no session-taint logic (src/services/agent/src/harness-scope.ts names it deferred)."
+  },
+  {
+   "id": "harness.exposure-qualification.excluded-class-not-relieved",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "the action satisfies the external-communication predicate, and no Irreversible action, External commitment, or Privileged administration class applies to it, as its assigned class or by predicate.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when action.properties.external_communication is not true, or the Irreversible action, External commitment, or Privileged administration class applies to the action as its assigned class or by predicate, an admissible unexposed determination supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters, and an action outside the taint rule is decided as it would be without the determination. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275 correction 3). No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; authzen.context-taint.fail-closed-when-missing is todo)."
+  },
+  {
+   "id": "harness.exposure-qualification.excluded-class-not-relieved-harness-enforced",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "the action satisfies the external-communication predicate, and no Irreversible action, External commitment, or Privileged administration class applies to it, as its assigned class or by predicate.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the harness enforces the taint rule itself and the egress is not an external-communication action, or the Irreversible action, External commitment, or Privileged administration class applies to it, an unexposed determination supplies no exception: the taint rule applies as it otherwise would (an action outside it is unaffected), and a fresh action-bound approval bound to the parameters satisfies it. Positive control: the same tainted egress carrying an independently sufficient fresh action-bound approval proceeds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044: harness-enforced twin of harness.exposure-qualification.excluded-class-not-relieved. No witness: the reference harness has no session-taint logic (src/services/agent/src/harness-scope.ts names it deferred)."
+  },
+  {
+   "id": "harness.exposure-qualification.relieves-only-taint-response",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "The relief removes only the taint response: the fresh action-bound approval the taint rule requires, or the suppression it applies, on taint grounds. Authority, destination constraints, ordinary approval policy, parameter binding, and the per-action permit still govern the action; an unexposed determination never permits one.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a relieved decision is still denied without authority, still refused on a destination constraint or parameter-binding failure, and still returns approval_required where ordinary approval policy requires one; the relief removes only the deny or approval_required the taint rule adds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275 correction 3). No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; authzen.context-taint.fail-closed-when-missing is todo)."
+  },
+  {
+   "id": "harness.exposure-qualification.relieves-only-taint-response-harness-enforced",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "The relief removes only the taint response: the fresh action-bound approval the taint rule requires, or the suppression it applies, on taint grounds. Authority, destination constraints, ordinary approval policy, parameter binding, and the per-action permit still govern the action; an unexposed determination never permits one.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the harness enforces the taint rule itself, a relieved egress omits only the taint-driven approval or suppression; it still goes through the per-action permit, parameter binding and every approval ordinary policy requires"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044: harness-enforced twin of harness.exposure-qualification.relieves-only-taint-response. No witness: the reference harness has no session-taint logic (src/services/agent/src/harness-scope.ts names it deferred)."
+  },
+  {
+   "id": "harness.exposure-qualification.relief-recorded",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "A harness that relieves an egress under exposure qualification records the relief in Harness Evidence, with `event_type` `egress_qualified` ({{harness-evidence-object}}).",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every egress the harness relieves under exposure qualification has a Harness Evidence record with event_type egress_qualified"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference emits no Harness Evidence (src/services/agent/src/harness-scope.ts names signed Harness Evidence as deferred)."
+  },
+  {
+   "id": "harness.exposure-qualification.scope-statement-declares",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "Where a deployment applies exposure qualification, the execution-environment scope statement ({{mediated-egress}}) MUST declare: - the classes for which the harness applies exposure qualification itself; - the protected source set: the floor of {{protected-data-exposure}} and every source the deployment adds; - the release rule: what counts as explicitly public or released; - the establishing layer ({{exposure-establishment}}); and - the mechanism by which exposure is inherited and a determination invalidated.",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a published execution-environment scope statement of a deployment that applies exposure qualification names the classes for which the harness applies it itself, the protected source set (the floor and every addition), the release rule, the establishing layer, and the inheritance and invalidation mechanism, whichever party applies the taint rule"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. Review re-quote: the classes the PDP qualifies are declared in the Enforcement Scope Statement (harness.exposure-qualification.enforcement-scope-statement-declares-pdp-classes). No witness: the reference scope statement (src/services/agent/src/harness-scope.ts) carries the taint policy only as an opaque string and declares no exposure qualification."
+  },
+  {
+   "id": "harness.exposure-qualification.enforcement-scope-statement-declares-pdp-classes",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "Where the PDP applies the taint rule, the Enforcement Scope Statement MUST declare the classes for which the PDP applies exposure qualification, as it declares PDP-enforced taint ({{decision-api-composition}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the PDP applies the taint rule and exposure qualification, the Enforcement Scope Statement names the classes for which the PDP applies exposure qualification, beside its PDP-enforced taint classes"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 review: the PDP path keys on the Enforcement Scope Statement, as PDP-enforced taint does. No witness: the reference Enforcement Scope Statement declares no PDP-enforced taint class and no exposure qualification."
+  },
+  {
+   "id": "harness.decision-api.pep-protected-data-from-attachment-only",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "The PEP populates `context.protected_data` only from the establishing layer's attachment to this request, never from tool arguments or another value the agent supplies.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "context.protected_data carries only the determination the establishing layer attached to this request; a value in tool arguments or otherwise agent-supplied is never carried, alone or beside an attachment"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference has no establishing layer, so its PEP never populates context.protected_data (#820 is parked)."
+  },
+  {
+   "id": "harness.decision-api.protected-data-exposed-required",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "REQUIRED when `protected_data` is present. A boolean. Whether the action's composing context is exposed ({{protected-data-exposure}}).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a context.protected_data the PEP carries has a boolean exposed member stating whether the action's composing context is exposed"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. A member without it reads as exposed at the PDP (harness.decision-api.protected-data-absent-reads-exposed). No witness: the reference has no establishing layer, so its PEP never populates context.protected_data (#820 is parked)."
+  },
+  {
+   "id": "harness.decision-api.protected-data-established-by-required",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "REQUIRED when `protected_data` is present. A string naming the establishing layer: `pep` for the mediating PEP, `platform` for a platform data-flow layer, or `harness` for the harness or a layer without the separation {{exposure-establishment}} requires.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a context.protected_data the PEP carries has an established_by member of pep, platform or harness naming the layer that made the determination, harness for a layer without the required separation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. A member without it reads as exposed at the PDP (harness.decision-api.protected-data-absent-reads-exposed). No witness: the reference has no establishing layer, so its PEP never populates context.protected_data (#820 is parked)."
+  },
+  {
+   "id": "harness.decision-api.protected-data-absent-reads-exposed",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "Absence of `protected_data`, or a member not of this shape, reads as exposed.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a context.protected_data that is absent, or is not an object with a boolean exposed and an established_by of harness, pep or platform, reads as exposed and supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters, and the absent or malformed member is never itself a cause of a taint_context_missing denial. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 (D1275 open question 2: absence reads as exposed; no new missing-context error). No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; authzen.context-taint.fail-closed-when-missing is todo)."
+  },
+  {
+   "id": "harness.decision-api.tainted-denied-unless-approval-or-qualified",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "When `taint` is present with `tainted` true on such an action, the PDP MUST deny or return `approval_required` ({{I-D.draft-mcguinness-mission-authzen}}) unless a fresh action-bound approval bound to the action's parameters is present in the decision context, or exposure qualification applies ({{exposure-qualified-egress}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.taint-enforcement"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where PDP-enforced taint is declared for a class that applies to the action, a decision on an in-scope action whose context.taint has tainted true is denied or returns approval_required, unless a fresh action-bound approval bound to its parameters is in the decision context or exposure qualification applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044: the bullet gained the exposure-qualification exception; it had no row. No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; see harness.decision-api.taint-required-where-external-commitment-applies)."
+  },
+  {
+   "id": "harness.decision-api.records-protected-data",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "decision-api-composition",
+   "text": "The PDP MUST record the presented taint context, and any presented `protected_data`, in Decision Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a decision whose request carried context.protected_data records it, as presented, in Decision Evidence beside the presented taint context"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. The taint half of this bullet is unchanged and has no row of its own. No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src)."
+  },
+  {
+   "id": "harness.evidence.egress-qualified-decision-continue",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "harness-evidence-object",
+   "text": "An `egress_qualified` record carries `continue`: it records continuation past the harness's taint gate, and is neither a resource authorization nor proof that the egress executed.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Harness Evidence record with event_type egress_qualified has decision continue, and no other value"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 owner ruling (review of PR #2050). No witness: the reference emits no Harness Evidence."
+  },
+  {
+   "id": "harness.evidence.protected-data-required-for-egress-qualified",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "harness-evidence-object",
+   "text": "REQUIRED for an `egress_qualified` event.",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.exposure-qualification"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Harness Evidence record with event_type egress_qualified carries protected_data: the determination relied on (exposed, established_by) and the taint context it relieved"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044. No witness: the reference emits no Harness Evidence."
   },
   {
    "id": "authzen.context-work-item.verified-reference-is-not-attachment",
