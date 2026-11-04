@@ -79,6 +79,8 @@ interface GrantOverrides {
    * Section 3.1). Defaults to REGISTERED_CLIENT_ID; null omits the claim.
    */
   clientId?: string | null;
+  /** The grant's sender-constraint; defaults to the client's key, null omits it (a bearer grant). */
+  cnf?: { jkt: string } | null;
 }
 
 async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
@@ -95,7 +97,7 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
   const payload: Record<string, unknown> = {
     mission,
     authorization_details: overrides.authorizationDetails ?? [DEFAULT_CEILING[0]],
-    cnf: { jkt: clientJkt },
+    ...(overrides.cnf !== null ? { cnf: overrides.cnf ?? { jkt: clientJkt } } : {}),
     ...(overrides.sub !== null ? { sub: overrides.sub ?? GRANT_SUB } : {}),
     ...(overrides.clientId !== null ? { client_id: overrides.clientId ?? REGISTERED_CLIENT_ID } : {}),
     ...(overrides.identityContinuationHandle !== undefined
@@ -184,6 +186,25 @@ describe("RAS grant client_id match (@spec cross-domain#validation-at-resource-a
     const server = await ras({ registeredClients: { [clientJkt]: "ap-agent" } });
     const result = await server.redeem(await mintGrant({ clientId: "ap-agent" }), clientJkt);
     expect(clientIdOf(result.access_token)).toBe("ap-agent");
+  });
+});
+
+describe("RAS grant sender-constraint (@spec cross-domain#validation-at-resource-as, #2033)", () => {
+  it("a grant bound to one key is invalid_grant for another key the same client registered, and still redeems for its bound key", async () => {
+    const otherKeys = await generateKeyPair("ES256", { extractable: true });
+    const otherJkt = await calculateJwkThumbprint(await exportJWK(otherKeys.publicKey));
+    // Both keys authenticate the same registration, so only the grant's
+    // sender-constraint can tell them apart.
+    const server = await ras({ registeredClients: { [clientJkt]: REGISTERED_CLIENT_ID, [otherJkt]: REGISTERED_CLIENT_ID } });
+    const grant = await mintGrant();
+    await expect(server.redeem(grant, otherJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    const result = await server.redeem(grant, clientJkt);
+    expect(result.access_token).toBeTruthy();
+  });
+
+  it("a bearer grant, carrying no cnf, is invalid_grant and yields no local token", async () => {
+    const server = await ras();
+    await expect(server.redeem(await mintGrant({ cnf: null }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
   });
 });
 
