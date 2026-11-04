@@ -19,6 +19,7 @@ import {
   selectorOverlapsEntry,
 } from "@mission/core";
 import { type AudienceReference, audienceReferences, derivedAudiences, derivesFrom } from "./approved-audience.js";
+import { childMaximumReferences, inheritedChildMaxima } from "./standing-consent-limit.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { resolvedAnchors } from "./anchors.js";
 import { entriesMayOverlap } from "./derive.js";
@@ -272,6 +273,18 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     // @spec child-delegation#fanout (#1304): the successor's own child-actor
     // origins, from the same fresh derivation.
     child_actor_provenance: derived.childActorProvenance,
+    // @spec derivation-limits#effective-limit (#2026, D1249; review F1): the
+    // Expansion approval surface renders no per-child figure, so an entry that
+    // may carry authority of the predecessor's entries, widened or regrouped
+    // included, keeps the strictest figure they retain, and stays unknown
+    // where any of them is unknown. Only authority this approval adds takes
+    // the figure the deployment states at this approval event: provisionally
+    // (ruling 1), and never above a carried one.
+    child_derivation_maxima: inheritedChildMaxima(
+      authoritySet,
+      childMaximumReferences(predecessor.authority_set, predecessor.child_derivation_maxima),
+      { deploymentFigure: kernel.resolveDerivationLimit(undefined) },
+    ),
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

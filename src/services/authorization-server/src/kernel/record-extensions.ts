@@ -29,6 +29,7 @@ const RECOGNIZED: Record<keyof MissionRecord, true> = {
   eligibility_provenance: true,
   child_actor_provenance: true,
   approved_audiences: true,
+  child_derivation_maxima: true,
   intent_hash: true,
   authority_hash: true,
   proposal_hash: true,

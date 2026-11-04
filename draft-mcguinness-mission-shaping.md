@@ -668,6 +668,28 @@ emits a partial proposal only when both of the following hold:
 The Mission Issuer enforces its own ceiling whether or not a shaping
 ceiling is present.
 
+## Authority Amplification Through Reads {#read-amplification}
+
+A read entry can carry more authority than its face. Content a read
+returns can itself be authority at another service
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Authority Carried
+in Content"). Read access to a primary mailbox reaches the one-time
+codes and reset links that arrive there, and with them sign-in or
+account recovery at each service that sends them.
+
+When a proposed read entry can return such content, the shaper SHOULD
+narrow the entry where the capability source allows, for example to a
+folder, a label, a sender set, or a time window. Where the entry can
+still return such content, the shaper SHOULD record the authority it
+implies as `implied_authority` in the entry's `entry_rationales`
+object ({{shaping-evidence}}). Where the shaper can neither exclude
+such content nor state what the entry implies, it SHOULD request
+clarification ({{clarifications}}).
+
+The `implied_authority` member discloses a risk and grants nothing:
+the Mission Issuer derives the same Authority Set with or without it, and a consent
+surface presents it as a disclosure of risk, never as authority.
+
 ## Constraints from Trusted Context {#context-constraints}
 
 Trusted context can supply constraints the request does not state: a
@@ -937,8 +959,11 @@ to every outcome.
 : Array of objects, one per proposed resource or action, with the
   members `applies_to` (object naming the `resource` and `action`) and
   `basis` (string, the user-supplied or inferred fact that motivated
-  its inclusion). A consent surface draws on this record to answer why
-  the task needs an entry (Disclosure Interrogation,
+  its inclusion), and optionally `implied_authority` (string, the
+  authority the entry carries beyond its face, such as account
+  recovery at the services whose codes reach a mailbox,
+  {{read-amplification}}). A consent surface draws on this record to
+  answer why the task needs an entry (Disclosure Interrogation,
   {{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 `ambiguities`:
@@ -1561,6 +1586,14 @@ where the travel policy authorizes the Mission Issuer to approve one.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Authority Amplification Through Reads ({{read-amplification}}):
+  when a proposed read entry can return content that is itself
+  authority, such as the codes that reach a mailbox, the shaper
+  narrows the entry, records the authority it still implies in the
+  optional `entry_rationales` member `implied_authority`, and requests
+  clarification when it can do neither. The member discloses a risk
+  and grants nothing (#2045).
 
 - Constraints from Trusted Context ({{context-constraints}})
   describes how the shaper carries a deployment policy, a preference

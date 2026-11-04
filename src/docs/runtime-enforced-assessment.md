@@ -268,10 +268,27 @@ declaration or an exercised path, with its gated rows.
 Not exercised by this composition:
 
 - Rows all `todo`: `runtime.evaluation-context-binding` (16),
-  `runtime.history-input` (6), `runtime.mediated-execution` (3),
-  `runtime.instance-context` (2), `runtime.semantic-evaluator`,
-  `runtime.taint-enforcement` and `runtime.break-glass` (1 each). The loader
-  refuses any break-glass value other than `absent` (`loadRuntimePosture`).
+  `runtime.mediated-execution` (3), `runtime.instance-context` (2),
+  `runtime.semantic-evaluator`, `runtime.taint-enforcement` and
+  `runtime.break-glass` (1 each). The loader refuses any break-glass value
+  other than `absent` (`loadRuntimePosture`).
+- `runtime.history-input` (8 rows: 7 tested, 1 todo): the PDP implements
+  the History Context (#2015). Tested against a bound history policy and
+  retained evidence (`src/services/pdp/test/evaluate-history.test.ts`):
+  `authzen.context-history.no-caller-asserted-outcome`,
+  `authzen.context-history.unrecognized-predicate-refusal`,
+  `authzen.context-history.deny-when-unsatisfied-or-unestablishable`,
+  `authzen.context-history.record-predicates-and-outcomes`,
+  `authzen.context-history.action-class-completed-applied-class`,
+  `authzen.evidence.mission-history-computed` and
+  `runtime.decision-inputs.history-fail-closed`. Todo:
+  `runtime.decision-inputs.history-no-expand-authority`. This composition
+  binds no history policy, so it selects no predicate and does not claim
+  the capability. #815's destructive-operation witness binds one only in a
+  test-only composition (`src/services/mcp-payments/test/work-item-prerequisite.test.ts`),
+  where `work_item_prerequisite_completed` gates a test-only database
+  delete; its ten rows are gated on `harness.work-item-prerequisite`, also
+  unclaimed.
 - `mas.join-assertion` (13 rows, all `todo`): the composition has no Join
   Assertion endpoint or consumer, so the capability is unclaimed (#972).
 - `runtime.compromise-resistant` (1 tested, 3 partial, 7 todo) and

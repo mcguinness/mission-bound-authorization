@@ -589,12 +589,17 @@ canonicalization, and integrity envelope a deployment emits.
 
 `sequence`:
 : REQUIRED. An integer. The per-Mission sequence indicator
-  the runtime profile requires, so one emitter's decision stream has a
+  the runtime profile requires, so one emitter's record stream has a
   verifiable order and gaps are detectable. MUST be zero or greater.
   The sequence is scoped to the emitter identified by `emitter`: each
   emitter maintains its own monotonically increasing per-Mission
   sequence, and a verifier detects gaps and orders records within
-  (Mission, emitter). It does not reconstruct Mission-wide decision
+  (Mission, emitter). An emitter MUST allocate its sequence positions
+  for a Mission in order from 0, skipping none, across every record
+  type it emits for that Mission. A position allocated to a record
+  that is never emitted, such as one whose signing failed or one a
+  replica reserved and did not use, is a gap a verifier cannot tell
+  from a missing record. The sequence does not reconstruct Mission-wide decision
   order across emitters: cross-emitter ordering is best-effort,
   established, where the deployment's evidence supports it, from the
   correlation members (`evaluation_id`, `mission.id`, `hop_reference`)
@@ -1195,20 +1200,32 @@ failed, or was suppressed, linked to the Decision Evidence by
 `evaluation_id`. A record is emitted once a final outcome exists, not
 for the attempt in progress; `attempted_at` carries the attempt's
 timing without asserting an `attempted` outcome. Emission follows
-the runtime profile's class rule: Execution Evidence is required for
-the high-consequence classes and for every further class the
+the runtime profile's rules: Execution Evidence is required for
+the high-consequence classes, for every further class the
 deployment claims under the runtime profile's transaction-assurance
-tier ({{I-D.draft-mcguinness-mission-runtime}}).
+tier, and for the dispositions and surrogate resolutions of that
+profile's Section "Authority Carried in Content"
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Members
 
 `execution_id`:
 : REQUIRED. A string. Unique execution identifier, stable across
   delivery retries of this record: exactly one Execution Evidence
-  Object exists per final disposition of a permit, and delivery of
-  that record is at-least-once, so a consumer MUST deduplicate on
-  `execution_id` rather than assume single delivery. ABNF:
+  Object exists per execution, and delivery of that record is
+  at-least-once, so a consumer MUST deduplicate on `execution_id`
+  rather than assume single delivery. ABNF:
   `1*64( ALPHA / DIGIT / "-" / "_" )`. At least 128 bits of entropy.
+
+  An execution is the final disposition of one presentation of a
+  permit. A multi-use permit has one record per use, and its uses may
+  differ in `outcome`; a presentation the PEP refuses, such as a
+  consumed single-use permit presented again (`permit_consumed`), is a
+  `suppressed` execution of its own. A single-use permit has one
+  authorized completion, the one that took its single use: any other
+  `completed` record under it records an unauthorized execution,
+  whatever its digests, and the records themselves do not show which
+  completion took the use.
 
 `evaluation_id`:
 : REQUIRED. A string. Correlates this record with the linked Decision
@@ -1408,7 +1425,8 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 An Execution Evidence Object is closed to uncoordinated extension
 under the same rule as Decision Evidence ({{evidence-extensions}}):
 coordinated companion members (for example, the metering companion's
-`measured_duration`) are permitted, any other extension MUST use a
+`measured_duration`, or the runtime profile's `authority_content`) are
+permitted, any other extension MUST use a
 collision-resistant name, and a consumer MUST ignore members it does
 not understand.
 
@@ -2279,6 +2297,19 @@ a common wire carrier.
   `work_item` carry the same pair. The AuthZEN profile is one wire
   carrier ({{I-D.draft-mcguinness-mission-authzen}}).
 
+`authority_content`:
+: OPTIONAL. An array of objects, recorded at the top level of
+  Execution Evidence: one entry per authority-bearing item the
+  execution gave a disposition or resolved a surrogate into. Each entry
+  has `class` (REQUIRED, a string, the item's declared class),
+  `disposition` (REQUIRED, a string: `withhold`, `surrogate`,
+  `route_to_principal`, or `substitute`), and `handle` (a string, the
+  surrogate's handle, REQUIRED when `disposition` is `surrogate` or
+  `substitute` and absent otherwise). Registered and owned by the
+  runtime profile ({{I-D.draft-mcguinness-mission-runtime}}, Section
+  "Authority Carried in Content"), which defines when it is REQUIRED
+  and forbids recording the item's value or an unkeyed digest of it.
+
 # Conformance {#conformance}
 
 This document defines conformance for four roles: a PRODUCER that
@@ -2375,6 +2406,32 @@ classify orphaned Decision Evidence (no matching Execution Evidence
 within the deployment's reconciliation window) as undetermined-outcome
 or, per deployment policy, as action-attempted; it MUST NOT treat it as
 proof of action.
+
+## History Completeness {#history-completeness}
+
+A record shows what it states; no set of records shows that no other
+record exists. An emitter's `sequence` ({{decision-evidence-object}})
+lets a verifier detect a gap before the last record it holds from that
+emitter, including at the first position. It does not reveal records
+after the last one held, or an emitter none of whose records are
+held; an emitter reading its own records also knows its last
+allocated position, and so detects a missing tail. An emitter's
+stream is every record it emits for the Mission, Refusal Records among
+them, so a gap check covers the whole stream rather than one record
+type.
+
+A consumer that decides on history, such as a PDP evaluating a history
+predicate ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"History"), therefore relies on its evidence store returning the
+complete, current Mission history. The effect of an omission depends
+on the record and the predicate. For a predicate that requires a
+completion, an omitted Execution Evidence record can deny the step,
+and an omitted Decision Evidence record of a permit that never
+completed can satisfy the predicate where the complete history leaves
+it unsatisfied. For a predicate that limits prior actions, either
+omission can satisfy it. Record integrity counters a forged record,
+not an omitted one; the audit profile's transparency mechanisms
+({{I-D.draft-mcguinness-mission-audit}}) counter omission.
 
 ## Evidence integrity and signing keys {#evidence-integrity-signing-keys}
 
@@ -2717,9 +2774,26 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Extension Members and Execution Evidence: `authority_content`, owned
+  by the runtime profile, records on Execution Evidence each
+  authority-bearing item a read's response gave a disposition and each
+  surrogate an action resolved, by class, disposition, and handle,
+  never the item's value (#2045).
+
 - Decision Evidence: `action_classes` records every class whose
   requirements the PDP applied, when more than one applies;
-  `action_class` is defined as the assigned class (#1994).
+  `action_class` is defined as the assigned class (#1994). An emitter
+  allocates `sequence` positions from 0, skipping none, across every
+  record type, and an allocated position never emitted is a gap
+  (#2029).
+
+- Execution Evidence and Security Considerations: one record exists
+  per execution, so a multi-use permit has one per use and a refused
+  presentation its own; a single-use permit's completion other than
+  the one that took its use is an unauthorized execution; History
+  Completeness states what sequence
+  checks cannot detect and how an omitted record affects a history
+  read (#2029).
 
 - Refusal Record: `action_class_missing` also records a mediated
   request carried with a class other than the one the PDP's trusted

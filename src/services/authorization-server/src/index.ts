@@ -1325,12 +1325,15 @@ export async function buildAuthorizationServer(opts: {
    * this AS, with this trust configuration (the shape `@mission/demo-data`'s
    * `loadRequestProvenanceConfig` returns) and replay store (default
    * in-memory). Registered only where `config.enabled` is true. The shipped
-   * `config/request-provenance.json` is disabled, and `server.ts` and
-   * `stack.ts` never pass this option: enabling the real verifier in the
-   * reference composition is unauthorized (D1151, D1157). With a file-backed
-   * kernel store, an enabled type refuses construction, since its replay
-   * history and acceptance records do not survive a restart (D1119 Q5,
-   * #1963).
+   * `config/request-provenance.json` is disabled, so the default is off, and
+   * `server.ts` never passes this option (D1151, D1157). The one composition
+   * that passes it is the `as-native` target under its opt-in
+   * `requestIntake` launch option (`MISSION_REQUEST_INTAKE=1`, #939 slice
+   * 2b-2), as D1221 authorizes: it enables the type together with the demo
+   * request intake, trusting that intake's one signer under the shipped
+   * file's declared bounds. With a file-backed kernel store, an enabled type
+   * refuses construction, since its replay history and acceptance records do
+   * not survive a restart (D1119 Q5, #1963).
    */
   requestProvenance?: { config: RequestProvenanceConfig; store?: RequestProvenanceStore };
   /**

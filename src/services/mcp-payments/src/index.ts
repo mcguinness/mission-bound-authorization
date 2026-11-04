@@ -29,6 +29,8 @@ export {
   type HeldEvaluationContext,
   PAYMENTS_FACT_RESOLVERS,
   recomputeEvaluationContext,
+  type RevisionedRecord,
+  type RevisionedRecordSource,
 } from "./evaluation-context.js";
 export {
   boundaryEvidenceAuthorization,

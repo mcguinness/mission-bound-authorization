@@ -853,8 +853,8 @@ The provider's authentication is witnessed on its own
 nothing here rests on it.
 
 It mints no ordinary token. It prints the issuer, the AS capability set, the
-signing-key source, the resource audience, the PDP mode and the approver
-login provider, and needs only `pnpm setup` and `docker compose up -d`
+signing-key source, the resource audience, the PDP mode, the approver
+login provider and the request intake, and needs only `pnpm setup` and `docker compose up -d`
 (OpenFGA). Shutdown and a failed startup, a bind or the AS's construction,
 close the provider's listener too:
 `the as-native launcher in process, OpenFGA client stubbed (D332) > closes every listener it published and releases both store files on shutdown, in co-resident and remote PDP mode`
@@ -864,7 +864,7 @@ and
 `the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS cannot be built, its kernel file a directory, and keeps no listener it opened, the upstream Approver login provider's included (#1320)`.
 
 Its configuration is the OpenFGA connection, the Resource-policy store, the
-PDP mode, the signing-key and evidence-key sources, the kernel's file and the RAS's redemption store from the environment,
+PDP mode, the signing-key and evidence-key sources, the kernel's file, the RAS's redemption store and the opt-in request intake from the environment,
 and nothing else (`asNativeLaunchOptions`, `demo/src/as-native.ts`).
 
 The deployment chooses where the AS's signing keys come from (#831).
@@ -927,6 +927,29 @@ one `init` did not create, refuses startup before anything listens:
 A lost store is restored, not replaced, while any grant it could have
 recorded is still acceptable; a restored older copy loses the claims made
 after it was taken, and nothing detects that (D901).
+`MISSION_REQUEST_INTAKE=1` starts the demo request intake
+(`demo/src/request-intake.ts`) and enables the AS's
+`mission-request-provenance` type in one step (#939 slice 2b-2, D1221). The
+intake starts first, for this AS's issuer; the upstream provider also hosts
+the originator Alice, an account of her own, with the intake registered as
+a client of its own and `amr` issued; and the AS trusts exactly the intake's
+signer under `config/request-provenance.json`'s declared bounds, which also
+set the intake's assertion lifetime and maximum capture age. The file stays
+`enabled: false`, and the type is accepted, not required of any client. The
+launcher prints the intake's login URL. Alice signs in there, captures her
+instruction on the intake's capture page and hands the workflow token the
+page shows to the agent, which asks the intake to sign its Intent and pushes
+it, witnessed in Chrome:
+`the as-native target with MISSION_REQUEST_INTAKE=1, its originator in real Chrome (@spec request-provenance#capture, request-provenance#intake-isolation, #939 slice 2b-2, D1221) > Alice signs in through Chrome at the IdP with her password and her device's code, captures her instruction on the intake's page and reads the workflow token there; the agent's push as ap-agent with the intake's assertion is approved by Bob, and the Mission's facts carry her login's acr, amr and auth_time and the intake's signer`.
+Any other value refuses startup by name, and beside `MISSION_KERNEL_STORE`
+the AS refuses construction, releasing the intake and the provider, since
+the type's replay history is in memory only (D1119 Q5, #1963):
+`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup with MISSION_REQUEST_INTAKE=1 beside MISSION_KERNEL_STORE with the AS's own refusal, never skipping the type, and keeps no listener it opened, the request intake's and the upstream provider's included (D1119 Q5, #1963, D1221)`.
+On loopback the intake and the provider share the host `127.0.0.1`, so each
+receives the other's cookies (RFC 6265 Section 8.5), and a page on any port
+of that host is the intake's own site; a deployment gives each party its own
+host:
+`the as-native target with MISSION_REQUEST_INTAKE=1, its originator in real Chrome (@spec request-provenance#capture, request-provenance#intake-isolation, #939 slice 2b-2, D1221) > the loopback limitation (RFC 6265 Section 8.5): cookies are scoped by host, not port, so Chrome sends the intake's session cookie to the IdP on the same host and another port, the IdP's session cookie to the intake, and the session cookie with a form POST from a page on another port of the intake's host`.
 With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
 set it attaches to that store and model, verifying the model and creating
 nothing; with neither it bootstraps a development store seeded from
