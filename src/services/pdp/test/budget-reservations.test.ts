@@ -2406,6 +2406,45 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
     });
 
+    it("a permit_consumed replay delivered before the completion settles nothing, and the completion then commits with no conflict retained or alarmed (@spec metering#settlement-contract, metering#settlement-states, #2039)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      // The redemption owner answers that the replay's own attempt held the use, so only the carve-out keeps it from settling.
+      const replay = await executionRecord(a, "suppressed", undefined, { error: "permit_consumed" });
+      expect(await claims.settle(REQUESTER, replay, () => String(replay.execution_id))).toEqual({ accepted: false, reason: "not_a_settling_outcome" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      const completed = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.settlementConflicts(a)).toEqual([]);
+      expect(conflicts).toEqual([]);
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", execution_id: completed.execution_id, outcome: "completed" });
+    });
+
+    it("a permit_consumed replay delivered after the completion leaves the committed settlement unchanged and is no conflict: nothing is retained or alarmed (@spec metering#settlement-contract, metering#settlement-states, #2039)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const completed = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      // The redemption owner answers that the replay's own attempt held the use, so only the carve-out keeps it from the conflict check.
+      const replay = await executionRecord(a, "suppressed", undefined, { error: "permit_consumed" });
+      expect(await claims.settle(REQUESTER, replay, () => String(replay.execution_id))).toEqual({ accepted: false, reason: "not_a_settling_outcome" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.settlementConflicts(a)).toEqual([]);
+      expect(conflicts).toEqual([]);
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", execution_id: completed.execution_id, outcome: "completed" });
+    });
+
     it("two budgets with one budget id under different owners draw on separate standing_consent counters, each held to its own declared limit (@spec metering#aggregate-bounds, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
