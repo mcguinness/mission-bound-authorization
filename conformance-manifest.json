@@ -35496,8 +35496,11 @@
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "runtime.authority-content-disposition"
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
    },
    "profiles": [],
    "surface": "deployment-documentation",
@@ -35964,8 +35967,11 @@
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "runtime.authority-content-disposition"
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
    },
    "profiles": [],
    "surface": "evidence-emission",
@@ -36008,8 +36014,11 @@
    "role": "PEP",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "capability",
-    "capability": "runtime.authority-content-disposition"
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
    },
    "profiles": [],
    "surface": "evidence-emission",
@@ -41731,8 +41740,11 @@
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "capability",
-    "capability": "runtime.authority-content-disposition"
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
    },
    "profiles": [],
    "surface": "resource-operation",
@@ -112370,8 +112382,11 @@
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "runtime.authority-content-disposition"
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
    },
    "profiles": [],
    "surface": "evidence-emission",
