@@ -1275,7 +1275,16 @@ treats session continuity as proof that Mission authority continues.<a href="#se
             <p id="section-toc.1-1.14.1"><a href="#section-14" class="auto internal xref">14</a>. <a href="#name-untrusted-content-and-egres" class="internal xref">Untrusted Content and Egress</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.1">
-                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-decision-api-composition" class="internal xref">Decision-API Composition</a></p>
+                <p id="section-toc.1-1.14.2.1.1"><a href="#section-14.1" class="auto internal xref">14.1</a>.  <a href="#name-protected-data-exposure" class="internal xref">Protected-Data Exposure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.2">
+                <p id="section-toc.1-1.14.2.2.1"><a href="#section-14.2" class="auto internal xref">14.2</a>.  <a href="#name-establishment-and-binding" class="internal xref">Establishment and Binding</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.3">
+                <p id="section-toc.1-1.14.2.3.1"><a href="#section-14.3" class="auto internal xref">14.3</a>.  <a href="#name-exposure-qualified-egress" class="internal xref">Exposure-Qualified Egress</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14.2.4">
+                <p id="section-toc.1-1.14.2.4.1"><a href="#section-14.4" class="auto internal xref">14.4</a>.  <a href="#name-decision-api-composition" class="internal xref">Decision-API Composition</a></p>
 </li>
             </ul>
 </li>
@@ -2940,7 +2949,9 @@ approval (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xre
 authority (suppress the action), rather than let the agent egress on
 the strength of injected content. This is the plan-then-execute
 pattern: untrusted content may inform the agent's planning, but it
-<span class="bcp14">MUST NOT</span>, on its own, drive an egress that no trusted direction gave.<a href="#section-14-10" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST NOT</span>, on its own, drive an egress that no trusted direction gave,
+other than one exposure qualification relieves
+(<a href="#exposure-qualified-egress" class="auto internal xref">Section 14.3</a>).<a href="#section-14-10" class="pilcrow">¶</a></p>
 <p id="section-14-11">A deployment <span class="bcp14">MAY</span> instead route the taint determination through the
 decision request where the binding carries it
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); the PDP then enforces
@@ -2962,7 +2973,10 @@ approved with the Mission from being human-gated per send. Where a
 deployment claims the runtime profile's trifecta containment for
 content-derived destinations
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the full taint polarity,
-every tainted egress human-gated, remains a condition of that claim.<a href="#section-14-13" class="pilcrow">¶</a></p>
+every tainted egress human-gated, remains a condition of that claim,
+except for an egress exposure qualification relieves where that
+profile's <code>exposure_establishment</code> condition holds
+(<a href="#exposure-qualified-egress" class="auto internal xref">Section 14.3</a>).<a href="#section-14-13" class="pilcrow">¶</a></p>
 <p id="section-14-14">The taint policy <span class="bcp14">MUST</span> be declared in the execution-environment scope
 statement (<a href="#mediated-egress" class="auto internal xref">Section 5</a>): the content trust list, the trigger
 granularity (parameter provenance, session-level, or both), and the
@@ -2974,20 +2988,219 @@ and the cost of its default-taint polarity, are discussed in
 <a href="#sec-taint-limits" class="auto internal xref">Section 18.7</a>. A harness that applies it records the taint
 source class, the provenance where established, and the resulting
 downgrade or approval in Harness Evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>).<a href="#section-14-15" class="pilcrow">¶</a></p>
-<div id="decision-api-composition">
+<div id="protected-data-exposure">
 <section id="section-14.1">
-        <h3 id="name-decision-api-composition">
-<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-decision-api-composition" class="section-name selfRef">Decision-API Composition</a>
+        <h3 id="name-protected-data-exposure">
+<a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-protected-data-exposure" class="section-name selfRef">Protected-Data Exposure</a>
         </h3>
-<p id="section-14.1-1">Where a deployment routes taint enforcement through the PDP
+<p id="section-14.1-1">The taint rule tracks one ingredient of injection-driven
+exfiltration: untrusted content able to drive an action. <strong>Exposure</strong>
+tracks another: whether protected data has reached the reasoning
+context that composed an action's bound parameters, its <strong>composing
+context</strong>. A context protected data has reached is <strong>exposed</strong>.
+Exposure is the confidentiality counterpart of taint, and this profile
+uses it only for exposure qualification
+(<a href="#exposure-qualified-egress" class="auto internal xref">Section 14.3</a>).<a href="#section-14.1-1" class="pilcrow">¶</a></p>
+<p id="section-14.1-2">The <strong>release rule</strong>, declared in the execution-environment scope
+statement (<a href="#exposure-qualified-egress" class="auto internal xref">Section 14.3</a>), says which content is
+explicitly public or released. <strong>Protected data</strong> is content from a
+source in the <strong>protected source set</strong> that the release rule does not
+make explicitly public or released. The set includes at least:<a href="#section-14.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.1-3.1">
+            <p id="section-14.1-3.1.1">every read made under Mission authority;<a href="#section-14.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-3.2">
+            <p id="section-14.1-3.2.1">every store a governed session can write;<a href="#section-14.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-3.3">
+            <p id="section-14.1-3.3.1">direct user content: what the delegating person, the Approver, or
+another person supplies to the session, instructions included; and<a href="#section-14.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-3.4">
+            <p id="section-14.1-3.4.1">every further source the deployment declares protected.<a href="#section-14.1-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-14.1-4">The set is a floor: a deployment adds sources to it and removes none.
+The release rule can establish particular content as public, but
+retrieval from the web alone does not: an authenticated or
+personalized response can carry protected data.<a href="#section-14.1-4" class="pilcrow">¶</a></p>
+<p id="section-14.1-5">Exposure's baseline is the reverse of taint's. Content from the
+Approver or the delegating person does not taint (<a href="#session-taint" class="auto internal xref">Section 14</a>),
+but it is protected data: a trusted instruction can itself be
+confidential, and trusted provenance does not establish that content
+is public.<a href="#section-14.1-5" class="pilcrow">¶</a></p>
+<p id="section-14.1-6">A context is <strong>isolated</strong> when every input it holds reached it through
+a path the establishing layer (<a href="#exposure-establishment" class="auto internal xref">Section 14.2</a>) observes,
+with no model context, memory, or working state shared outside those
+paths. A context is <strong>unexposed</strong> only when it is isolated and every
+input it has received is explicitly public or released under the
+release rule.<a href="#section-14.1-6" class="pilcrow">¶</a></p>
+<p id="section-14.1-7">An exposure determination concerns the composing context, not the
+process that executes the action. A worker that read no protected data
+does not establish an unexposed determination for parameters an
+exposed context composed and handed to it. A process-level label
+serves as a determination only where it propagates conservatively from
+the composing context: a process that receives anything an exposed
+context composed is labelled exposed.<a href="#section-14.1-7" class="pilcrow">¶</a></p>
+<p id="section-14.1-8">Exposure follows derivation as taint does (<a href="#session-taint" class="auto internal xref">Section 14</a>):<a href="#section-14.1-8" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.1-9.1">
+            <p id="section-14.1-9.1.1">a sub-agent session inherits the exposure of the context that
+composed its task and inputs;<a href="#section-14.1-9.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-9.2">
+            <p id="section-14.1-9.2.1">a context seeded with a summary, a compaction, or working notes
+derived from an exposed context is exposed;<a href="#section-14.1-9.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-9.3">
+            <p id="section-14.1-9.3.1">content an exposed context writes to memory or to a store exposes a
+context that reads it back; and<a href="#section-14.1-9.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-9.4">
+            <p id="section-14.1-9.4.1">a tool argument an exposed context composed exposes every context
+that receives it.<a href="#section-14.1-9.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-14.1-10">A determination covers the inputs the context held when it was made.
+A later input invalidates it, and the context reads as exposed until a
+new determination covers every input it holds. Absent, unknown, or
+untracked exposure reads as exposed: a context that an input of
+unknown provenance has reached, or whose inputs the establishing
+layer cannot account for, is exposed.<a href="#section-14.1-10" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="exposure-establishment">
+<section id="section-14.2">
+        <h3 id="name-establishment-and-binding">
+<a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-establishment-and-binding" class="section-name selfRef">Establishment and Binding</a>
+        </h3>
+<p id="section-14.2-1">The <strong>establishing layer</strong> makes exposure determinations: the harness,
+or a layer below it, such as the mediating PEP or a platform
+data-flow layer, separated from the agent-facing harness components
+as <a href="#sec-harness-compromise" class="auto internal xref">Section 18.1</a> requires of the mediating PEP. A layer
+without that separation is the harness for this purpose, and its
+determinations are the harness's.<a href="#section-14.2-1" class="pilcrow">¶</a></p>
+<p id="section-14.2-2">The establishing layer makes a determination for the composing context
+of a request's bound parameters (<a href="#protected-data-exposure" class="auto internal xref">Section 14.1</a>) and
+attaches it to that one request. A determination not bound to the
+request it is presented with is no determination, and the request
+reads as exposed. The layer's label does not by itself justify
+relief: a determination counts only when the layer made it for the
+composing context and bound it to the request.<a href="#section-14.2-2" class="pilcrow">¶</a></p>
+<p id="section-14.2-3">Where the deployment claims the runtime profile's
+agent-compromise-resistant enforcement for a class that applies to
+the action (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), a determination
+the harness established (<code>established_by</code> <code>harness</code>,
+<a href="#decision-api-composition" class="auto internal xref">Section 14.4</a>) reads as exposed. Otherwise a
+compromised harness could send private parameters through a fresh
+worker it presents as unexposed.<a href="#section-14.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="exposure-qualified-egress">
+<section id="section-14.3">
+        <h3 id="name-exposure-qualified-egress">
+<a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-exposure-qualified-egress" class="section-name selfRef">Exposure-Qualified Egress</a>
+        </h3>
+<p id="section-14.3-1">Exposure qualification relieves a tainted egress of the taint response
+(<a href="#session-taint" class="auto internal xref">Section 14</a>) when its composing context is unexposed: untrusted
+content may have steered the request, but the request holds no
+protected data to disclose. It is an alternative to the architecture's
+quarantine pattern (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>,
+Section "The Quarantine Pattern"), which gives the Mission that
+ingests untrusted content no external-communication or
+external-commitment authority.
+Exposure qualification instead lets an isolated, unexposed context
+make content-derived requests, such as a search query or a followed
+link, without a per-request approval. It does not change that
+pattern.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+<p id="section-14.3-2">Exposure qualification applies to a tainted action only when all of
+the following hold:<a href="#section-14.3-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.3-3.1">
+            <p id="section-14.3-3.1.1">exposure qualification is declared for every class that applies to
+the action (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
+"Action Classification"): in the Enforcement Scope Statement
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) where the PDP applies the
+taint rule, and in the execution-environment scope statement where
+the harness applies it;<a href="#section-14.3-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-3.2">
+            <p id="section-14.3-3.2.1">an unexposed determination for the action's composing context is
+present, made and bound as <a href="#exposure-establishment" class="auto internal xref">Section 14.2</a> requires; and<a href="#section-14.3-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-3.3">
+            <p id="section-14.3-3.3.1">the action satisfies the external-communication predicate, and no
+Irreversible action, External commitment, or Privileged
+administration class applies to it, as its assigned class or by
+predicate.<a href="#section-14.3-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-14.3-4">The relief removes only the taint response: the fresh action-bound
+approval the taint rule requires, or the suppression it applies, on
+taint grounds. Authority, destination constraints, ordinary approval
+policy, parameter binding, and the per-action permit still govern the
+action; an unexposed determination never permits one. The
+Irreversible action, External commitment, and Privileged
+administration classes are excluded because injection does harm
+through them without disclosing anything. Under the runtime profile's
+multi-predicate rule, the relief reaches only the taint requirement it
+names (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action
+Classification"). The exclusions do not establish that every other
+write is harmless: a consequential write that satisfies the
+external-communication predicate gets the same narrow relief and no
+more.<a href="#section-14.3-4" class="pilcrow">¶</a></p>
+<p id="section-14.3-5">The conditions and limits bind whichever party applies the taint rule:
+the harness, where it enforces the rule itself, and the PDP, where the
+deployment routes taint through the decision request
+(<a href="#decision-api-composition" class="auto internal xref">Section 14.4</a>). A harness that relieves an egress
+under exposure qualification records the relief in Harness Evidence,
+with <code>event_type</code> <code>egress_qualified</code> (<a href="#harness-evidence-object" class="auto internal xref">Section 15.1</a>).<a href="#section-14.3-5" class="pilcrow">¶</a></p>
+<p id="section-14.3-6">Where a deployment applies exposure qualification, the
+execution-environment scope statement (<a href="#mediated-egress" class="auto internal xref">Section 5</a>) <span class="bcp14">MUST</span>
+declare:<a href="#section-14.3-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14.3-7.1">
+            <p id="section-14.3-7.1.1">the classes for which the harness applies exposure qualification
+itself;<a href="#section-14.3-7.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-7.2">
+            <p id="section-14.3-7.2.1">the protected source set: the floor of <a href="#protected-data-exposure" class="auto internal xref">Section 14.1</a>
+and every source the deployment adds;<a href="#section-14.3-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-7.3">
+            <p id="section-14.3-7.3.1">the release rule: what counts as explicitly public or released;<a href="#section-14.3-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-7.4">
+            <p id="section-14.3-7.4.1">the establishing layer (<a href="#exposure-establishment" class="auto internal xref">Section 14.2</a>); and<a href="#section-14.3-7.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.3-7.5">
+            <p id="section-14.3-7.5.1">the mechanism by which exposure is inherited and a determination
+invalidated.<a href="#section-14.3-7.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-14.3-8">Where the PDP applies the taint rule, the Enforcement Scope Statement
+<span class="bcp14">MUST</span> declare the classes for which the PDP applies exposure
+qualification, as it declares PDP-enforced taint
+(<a href="#decision-api-composition" class="auto internal xref">Section 14.4</a>).<a href="#section-14.3-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="decision-api-composition">
+<section id="section-14.4">
+        <h3 id="name-decision-api-composition">
+<a href="#section-14.4" class="section-number selfRef">14.4. </a><a href="#name-decision-api-composition" class="section-name selfRef">Decision-API Composition</a>
+        </h3>
+<p id="section-14.4-1">Where a deployment routes taint enforcement through the PDP
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) instead of, or in addition
 to, enforcing the rule above at the harness itself, this section
 defines the composition: the member shapes the decision-API binding
 carries, and the PDP-side behavior those members drive. The harness
 remains the layer that establishes taint and the external-
-communication predicate; the decision-API binding is one wire carrier
-of that determination, never a second source of truth for it.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
-<p id="section-14.1-2">The external-communication predicate is parameter-dependent: whether
+communication predicate, and the establishing layer establishes
+exposure (<a href="#exposure-establishment" class="auto internal xref">Section 14.2</a>); the decision-API binding is
+one wire carrier of each determination, never a second source of
+truth for it.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
+<p id="section-14.4-2">The external-communication predicate is parameter-dependent: whether
 an action carries data outside the deployment's trust boundary
 depends on the concrete request parameters, not on the action class
 alone (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so the PDP has no
@@ -2995,67 +3208,101 @@ class-only way to recognize one. It is therefore an action-scoped
 member, carried at <code>action.properties.external_communication</code>
 alongside the other action parameter members. The PEP, at the last
 controllable boundary, computes the predicate from the request
-parameters and marks the action:<a href="#section-14.1-2" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-14.1-3">
-          <dt id="section-14.1-3.1">
+parameters and marks the action:<a href="#section-14.4-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-14.4-3">
+          <dt id="section-14.4-3.1">
 <code>external_communication</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-14.1-3.2">
-            <p id="section-14.1-3.2.1">CONDITIONAL. A boolean. <code>true</code> when the PEP determines, from the
+          <dd style="margin-left: 1.5em" id="section-14.4-3.2">
+            <p id="section-14.4-3.2.1">CONDITIONAL. A boolean. <code>true</code> when the PEP determines, from the
 request parameters at the last controllable boundary, that the
 action carries data to a recipient outside the deployment's trust
 boundary. <span class="bcp14">REQUIRED</span> for every action in a class for which the
 deployment declares PDP-enforced taint, so the taint requirement
-has a deterministic PDP-side trigger; <span class="bcp14">OPTIONAL</span> otherwise.<a href="#section-14.1-3.2.1" class="pilcrow">¶</a></p>
+has a deterministic PDP-side trigger; <span class="bcp14">OPTIONAL</span> otherwise.<a href="#section-14.4-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-14.1-4">The <span class="bcp14">OPTIONAL</span> <code>taint</code> member carries the harness's untrusted-content
+<p id="section-14.4-4">The <span class="bcp14">OPTIONAL</span> <code>taint</code> member carries the harness's untrusted-content
 determination for the requested action, when the deployment routes
-taint enforcement through the PDP, as the value of <code>context.taint</code>:<a href="#section-14.1-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-14.1-5">
+taint enforcement through the PDP, as the value of <code>context.taint</code>:<a href="#section-14.4-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-14.4-5">
 <pre>
 {
   "tainted": true,
   "granularity": "parameter",
   "source_class": "web_fetch"
 }
-</pre><a href="#section-14.1-5" class="pilcrow">¶</a>
+</pre><a href="#section-14.4-5" class="pilcrow">¶</a>
 </div>
-<span class="break"></span><dl class="dlParallel" id="section-14.1-6">
-          <dt id="section-14.1-6.1">
+<span class="break"></span><dl class="dlParallel" id="section-14.4-6">
+          <dt id="section-14.4-6.1">
 <code>tainted</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-14.1-6.2">
-            <p id="section-14.1-6.2.1"><span class="bcp14">REQUIRED</span> when <code>taint</code> is present. A boolean. Whether a bound
+          <dd style="margin-left: 1.5em" id="section-14.4-6.2">
+            <p id="section-14.4-6.2.1"><span class="bcp14">REQUIRED</span> when <code>taint</code> is present. A boolean. Whether a bound
 parameter of the action derives from tainted content (under
 <code>granularity</code> <code>parameter</code>) or tainted content has entered the
-governed session (under <code>granularity</code> <code>session</code>).<a href="#section-14.1-6.2.1" class="pilcrow">¶</a></p>
+governed session (under <code>granularity</code> <code>session</code>).<a href="#section-14.4-6.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-14.1-6.3">
+<dt id="section-14.4-6.3">
 <code>granularity</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-14.1-6.4">
-            <p id="section-14.1-6.4.1"><span class="bcp14">REQUIRED</span> when <code>taint</code> is present. A string, <code>parameter</code> or
-<code>session</code>: the trigger granularity the harness established.<a href="#section-14.1-6.4.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-14.4-6.4">
+            <p id="section-14.4-6.4.1"><span class="bcp14">REQUIRED</span> when <code>taint</code> is present. A string, <code>parameter</code> or
+<code>session</code>: the trigger granularity the harness established.<a href="#section-14.4-6.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-14.1-6.5">
+<dt id="section-14.4-6.5">
 <code>source_class</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-14.1-6.6">
-            <p id="section-14.1-6.6.1"><span class="bcp14">OPTIONAL</span>. A string. The deployment-defined class of the tainting
+          <dd style="margin-left: 1.5em" id="section-14.4-6.6">
+            <p id="section-14.4-6.6.1"><span class="bcp14">OPTIONAL</span>. A string. The deployment-defined class of the tainting
 source (for example, <code>web_fetch</code>, <code>inbound_message</code>,
-<code>third_party_document</code>), for policy and evidence.<a href="#section-14.1-6.6.1" class="pilcrow">¶</a></p>
+<code>third_party_document</code>), for policy and evidence.<a href="#section-14.4-6.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-14.1-7">Absence of <code>taint</code> means the harness did not route the determination
+<p id="section-14.4-7">The <span class="bcp14">OPTIONAL</span> <code>protected_data</code> member carries the establishing layer's
+exposure determination for the requested action
+(<a href="#exposure-establishment" class="auto internal xref">Section 14.2</a>), as the value of
+<code>context.protected_data</code>:<a href="#section-14.4-7" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-14.4-8">
+<pre>
+{
+  "exposed": false,
+  "established_by": "pep"
+}
+</pre><a href="#section-14.4-8" class="pilcrow">¶</a>
+</div>
+<span class="break"></span><dl class="dlParallel" id="section-14.4-9">
+          <dt id="section-14.4-9.1">
+<code>exposed</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.4-9.2">
+            <p id="section-14.4-9.2.1"><span class="bcp14">REQUIRED</span> when <code>protected_data</code> is present. A boolean. Whether the
+action's composing context is exposed (<a href="#protected-data-exposure" class="auto internal xref">Section 14.1</a>).<a href="#section-14.4-9.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-14.4-9.3">
+<code>established_by</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-14.4-9.4">
+            <p id="section-14.4-9.4.1"><span class="bcp14">REQUIRED</span> when <code>protected_data</code> is present. A string naming the
+establishing layer: <code>pep</code> for the mediating PEP, <code>platform</code> for a
+platform data-flow layer, or <code>harness</code> for the harness or a layer
+without the separation <a href="#exposure-establishment" class="auto internal xref">Section 14.2</a> requires.<a href="#section-14.4-9.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-14.4-10">The PEP populates <code>context.protected_data</code> only from the establishing
+layer's attachment to this request, never from tool arguments or
+another value the agent supplies. Absence of <code>protected_data</code>, or a
+member not of this shape, reads as exposed.<a href="#section-14.4-10" class="pilcrow">¶</a></p>
+<p id="section-14.4-11">Absence of <code>taint</code> means the harness did not route the determination
 through the decision request, not that the action is untainted; the
 harness's own egress rule above then applies. That reading is
 confined to harness-enforced deployments. When the deployment's
 Enforcement Scope Statement declares PDP-enforced taint for an action
-class (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>):<a href="#section-14.1-7" class="pilcrow">¶</a></p>
+class (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>):<a href="#section-14.4-11" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-14.1-8.1">
-            <p id="section-14.1-8.1.1">The PDP <span class="bcp14">MUST</span> require <code>context.taint</code> on every decision on an
+<li class="normal" id="section-14.4-12.1">
+            <p id="section-14.4-12.1.1">The PDP <span class="bcp14">MUST</span> require <code>context.taint</code> on every decision on an
 action to which that class applies and whose
 <code>action.properties.external_communication</code> is <code>true</code> or to which
 the External commitment class applies
@@ -3063,18 +3310,20 @@ the External commitment class applies
 Classification"), and <span class="bcp14">MUST</span> deny
 with the decision-API binding's <code>taint_context_missing</code>
 classification (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) when it
-is absent.<a href="#section-14.1-8.1.1" class="pilcrow">¶</a></p>
+is absent.<a href="#section-14.4-12.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-8.2">
-            <p id="section-14.1-8.2.1">When <code>taint</code> is present with <code>tainted</code> true on such an action, the
+          <li class="normal" id="section-14.4-12.2">
+            <p id="section-14.4-12.2.1">When <code>taint</code> is present with <code>tainted</code> true on such an action, the
 PDP <span class="bcp14">MUST</span> deny or return <code>approval_required</code>
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) unless a fresh
 action-bound approval bound to the action's parameters is present
-in the decision context.<a href="#section-14.1-8.2.1" class="pilcrow">¶</a></p>
+in the decision context, or exposure qualification applies
+(<a href="#exposure-qualified-egress" class="auto internal xref">Section 14.3</a>).<a href="#section-14.4-12.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-8.3">
-            <p id="section-14.1-8.3.1">The PDP <span class="bcp14">MUST</span> record the presented taint context in Decision
-Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-14.1-8.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.4-12.3">
+            <p id="section-14.4-12.3.1">The PDP <span class="bcp14">MUST</span> record the presented taint context, and any presented
+<code>protected_data</code>, in Decision Evidence
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-14.4-12.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3189,7 +3438,8 @@ evidence companion's complete compromise-boundary rule
             <p id="section-15.1-2.4.1"><span class="bcp14">REQUIRED</span>. One of <code>resume_allowed</code>, <code>resume_suppressed</code>,
 <code>queue_suppressed</code>, <code>cache_disabled</code>, <code>subagent_stopped</code>,
 <code>subagent_continued</code>, <code>human_review_completed</code>, <code>egress_downgraded</code>,
-<code>egress_refused</code>, <code>mission_superseded</code>, or <code>mission_state_stale</code>.
+<code>egress_qualified</code>, <code>egress_refused</code>, <code>mission_superseded</code>, or
+<code>mission_state_stale</code>.
 <code>event_type</code> categorizes the work item the record is about; the
 <code>decision</code> member records the outcome, so the two are orthogonal.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -3272,7 +3522,9 @@ decision, each a value from the harness execution states of
 <code>decision</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.26">
             <p id="section-15.1-2.26.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
-<code>handoff</code>.<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
+<code>handoff</code>. An <code>egress_qualified</code> record carries <code>continue</code>: it
+records continuation past the harness's taint gate, and is neither a
+resource authorization nor proof that the egress executed.<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.27">
@@ -3307,18 +3559,29 @@ action suppressed) (<a href="#session-taint" class="auto internal xref">Section 
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.35">
-<code>egress</code>:</dt>
+<code>protected_data</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.36">
-            <p id="section-15.1-2.36.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_refused</code> event: the
-<code>channel_class</code> and <code>destination</code> of the refused egress and the
-<code>disposition</code> the statement declares for that channel
-(<a href="#mediated-egress" class="auto internal xref">Section 5</a>). <span class="bcp14">REQUIRED</span> for an <code>egress_refused</code> event.<a href="#section-15.1-2.36.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.36.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_qualified</code> event: the exposure
+determination relied on (<code>exposed</code> and <code>established_by</code>,
+<a href="#decision-api-composition" class="auto internal xref">Section 14.4</a>) and the taint context it relieved (the
+tainting source class and the provenance basis)
+(<a href="#exposure-qualified-egress" class="auto internal xref">Section 14.3</a>). <span class="bcp14">REQUIRED</span> for an <code>egress_qualified</code>
+event.<a href="#section-15.1-2.36.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.37">
-<code>scope_statement_digest</code>:</dt>
+<code>egress</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.38">
-            <p id="section-15.1-2.38.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
+            <p id="section-15.1-2.38.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_refused</code> event: the
+<code>channel_class</code> and <code>destination</code> of the refused egress and the
+<code>disposition</code> the statement declares for that channel
+(<a href="#mediated-egress" class="auto internal xref">Section 5</a>). <span class="bcp14">REQUIRED</span> for an <code>egress_refused</code> event.<a href="#section-15.1-2.38.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.1-2.39">
+<code>scope_statement_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.40">
+            <p id="section-15.1-2.40.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the published
 Enforcement Scope Statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
 or of this profile's execution-environment scope statement where
@@ -3327,13 +3590,13 @@ when this record was made, so a record can be joined to the
 published scope claim after the fact. It is a raw-octet digest
 over the referenced statement's exact published bytes, under the
 substrate's default commitment construction, which this document
-imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-15.1-2.38.1" class="pilcrow">¶</a></p>
+imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-15.1-2.40.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-15.1-2.39">
+<dt id="section-15.1-2.41">
 <code>occurred_at</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.1-2.40">
-            <p id="section-15.1-2.40.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.40.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.42">
+            <p id="section-15.1-2.42.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.42.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3576,8 +3839,9 @@ issuance gating still bounds what authority can exist, and Mission
 revocation still terminates authority at its source. A compromised
 harness cannot manufacture Mission authority the issuer never granted.<a href="#section-18.1-2" class="pilcrow">¶</a></p>
 <p id="section-18.1-3">What falls is everything the harness alone mediates:
-local-tool mediation, session-level suppression, taint control, and
-the mediated execution environment itself (<a href="#mediated-egress" class="auto internal xref">Section 5</a>). The
+local-tool mediation, session-level suppression, taint control, the
+exposure determinations it establishes (<a href="#exposure-establishment" class="auto internal xref">Section 14.2</a>),
+and the mediated execution environment itself (<a href="#mediated-egress" class="auto internal xref">Section 5</a>). The
 no-unmediated-path condition is harness-operated, so a compromised
 harness can resume suppressed work, ignore its own stop decisions,
 drive egress that the taint rule was meant to hold, and open an
@@ -3681,8 +3945,15 @@ its taint, at the cost of gating untraceable parameters in a tainted
 session. In an open-world session that has ingested untrusted
 content, that cost is the rule rather than the exception:
 model-composed egress to an unnamed destination is untraceable, so it
-is human-gated, and the content trust list and the pre-consented
-destination set are the levers that keep the gate proportionate.
+is human-gated, and the content trust list, the pre-consented
+destination set, and exposure qualification
+(<a href="#exposure-qualified-egress" class="auto internal xref">Section 14.3</a>) are the levers that keep the gate
+proportionate. Exposure qualification is only as sound as its
+protected source set and its establishment: a protected source left
+out of the set, a release rule that releases protected content
+wholesale, or a determination made for the executing process rather
+than the composing context lets protected data leave without the
+approval the taint rule would have required.
 The control still cannot close within-scope data laundering
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); it raises the bar by
@@ -3940,72 +4211,92 @@ exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Work-Item Prerequisite: <code>work_item_prerequisite_completed</code>, a history
+          <p id="appendix-B-2.1.1">Protected-Data Exposure, Establishment and Binding, and
+Exposure-Qualified Egress: exposure, the confidentiality counterpart
+of taint, attaches to the context that composed an action's bound
+parameters. Direct user content is protected by default, web
+retrieval alone does not make content public, and absent, unknown or
+untracked exposure reads as exposed. The harness, or a layer below
+it separated from the agent-facing components, establishes the
+determination and binds it to the request; under
+agent-compromise-resistant enforcement a harness-established
+determination reads as exposed. Where a scope statement declares it,
+the Enforcement Scope Statement for the PDP path, an
+external-communication egress whose composing context is unexposed
+is relieved of the taint response and nothing else, never for an
+Irreversible action, External commitment or Privileged
+administration class. <code>context.protected_data</code> carries the
+determination to the PDP, and Harness Evidence adds
+<code>egress_qualified</code>, recorded with <code>decision</code> <code>continue</code>, and
+<code>protected_data</code> (#2044).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Work-Item Prerequisite: <code>work_item_prerequisite_completed</code>, a history
 predicate requiring that a policy-named operation and class completed
 for the same qualified work item, operation target, and revision as
 the action being decided, through a permit's completion witness whose
 <code>result_summary</code> carries the <code>operation_target</code> the effect was
 released for and the <code>revision</code> the resource reported; the request
-carries its revision as <code>resource.properties.revision</code> (#815).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Decision-API Composition: the PDP requires taint context on every action
-to which the External commitment class applies, not only one whose
-assigned class is <code>external_commitment</code> (#1994).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+carries its revision as <code>resource.properties.revision</code> (#815).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Queue Item Object: work-item attribution, <code>expires_at</code> or a maximum
+          <p id="appendix-B-2.3.1">Decision-API Composition: the PDP requires taint context on every action
+to which the External commitment class applies, not only one whose
+assigned class is <code>external_commitment</code> (#1994).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">Queue Item Object: work-item attribution, <code>expires_at</code> or a maximum
 queue age, and the fresh approval after a non-active interval apply
 when any class that applies to the item's action calls for them;
 <code>action_class</code> is the assigned class, and the shortest applicable
-maximum queue age applies (#1994).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Harness Evidence: the imported sequence indicator is per emitter for
-each Mission, as the runtime profile scopes it. No requirement
-changed (#821).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+maximum queue age applies (#1994).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Work-Item Identity: the harness assigns a qualified work-item
+          <p id="appendix-B-2.5.1">Harness Evidence: the imported sequence indicator is per emitter for
+each Mission, as the runtime profile scopes it. No requirement
+changed (#821).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">Work-Item Identity: the harness assigns a qualified work-item
 identifier (<code>work_item_issuer</code> and <code>work_item</code>), binds it to one
 Mission, and attaches it as extension members of the propagated
 Mission reference, with mapping, inheritance, retry, and concurrency
 rules. A PEP carries it to the decision only from that attachment.
 The Queue Item Object and Harness Evidence carry it, and a
-<code>mission_superseded</code> record names it (#815).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+<code>mission_superseded</code> record names it (#815).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">The taint baseline, taint reset and egress direction no longer key
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">The taint baseline, taint reset and egress direction no longer key
 on the Subject. Content from the Approver or from the delegating
 person of a user-delegated Mission does not taint, and a workload or
 organizational Subject confers no baseline trust. A reset or an
 egress direction is a trusted direction, given through a surface the
 governed agent cannot invoke; being the Subject, identity alone, and
 administrative metadata authorize none. Inherited taint and the
-transformed-content rule are unchanged (#1193).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+transformed-content rule are unchanged (#1193).<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">The Mission binding and Harness Evidence carry <code>termination</code> beside
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">The Mission binding and Harness Evidence carry <code>termination</code> beside
 a <code>terminated</code> state. The stop-behavior matrix is keyed on
 <code>terminated</code> and <code>termination.reason</code>, with a row for an
 unrecognized or absent termination, and continuation by rebinding
 keys on reason <code>superseded</code> and follows <code>termination.successor</code>
-(#705).<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Interaction with Mission Containment keys the residual on the
-action class's containment property, not on a deployment's level.
-No requirement changed.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+(#705).<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1"><code>status_checked_at</code> is the harness's observation as its own clock
+          <p id="appendix-B-2.9.1">Interaction with Mission Containment keys the residual on the
+action class's containment property, not on a deployment's level.
+No requirement changed.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.10">
+          <p id="appendix-B-2.10.1"><code>status_checked_at</code> is the harness's observation as its own clock
 read it, preceding the relied-on status's <code>iat</code> by no more than the
 published maximum clock skew; <code>status_expires_at</code> is its reliance
 end, never later than a Mission Status Response's
-<code>mission.fresh_until</code>.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-B-2.11">
+          <p id="appendix-B-2.11.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -4015,13 +4306,13 @@ Context's <code>iss</code> and <code>id</code>, instead of <code>agent_instance_
 instance <code>sub</code>. The retired profile's
 guarantee that sub-agent chains cannot shed identity now depends on
 the harness's own durable association between each sub-agent handle
-and its instance.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+and its instance.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">Linked the limits of provenance-backed taint control to the Security
+        <li class="normal" id="appendix-B-2.12">
+          <p id="appendix-B-2.12.1">Linked the limits of provenance-backed taint control to the Security
 Model's Enforcement Perimeter and distinguished the per-channel
 egress disposition from the runtime profile's per-entry perimeter
-disposition; no taint requirement changed (#758).<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+disposition; no taint requirement changed (#758).<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
