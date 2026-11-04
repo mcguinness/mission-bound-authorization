@@ -1823,14 +1823,14 @@ These requirements apply to the rendering:
   (`authority_source.policy`).
 - When the AS holds an **implied-authority statement** for a rendered
   Authority Set entry, a statement of authority the entry carries
-  beyond what it names (for example, account recovery at the services
-  whose codes reach a mailbox the entry reads), the rendering MUST
-  present the statement with that entry as a disclosure of risk, never
-  as part of the derived Authority Set. The rendering attributes a
-  statement from the AS's local policy to the AS; one the client
-  supplied, such as the `implied_authority` member of Shaping Evidence
-  ({{I-D.draft-mcguinness-mission-shaping}}), is client-supplied text
-  under the rules below.
+  beyond what it names (for example, account recovery at each service
+  that sends reset links or one-time codes to a mailbox the entry
+  reads), the rendering MUST present the statement with that entry as
+  a disclosure of risk, never as part of the derived Authority Set.
+  The rendering attributes a statement from the AS's local policy to
+  the AS; one the client supplied, such as the `implied_authority`
+  member defined by {{I-D.draft-mcguinness-mission-shaping}}, is
+  client-supplied text under the rules below.
 - When the client submitted an authority proposal
   ({{authority-proposal}}), the rendering MUST distinguish the
   entries the client proposed from any narrowing or restructuring the
@@ -6655,9 +6655,9 @@ resolve before interoperating.
 
 **Behavior changes**
 
-- Approval: the rendering presents an implied-authority statement the
-  AS holds for an entry with that entry, as a disclosure of risk apart
-  from the derived Authority Set (#2046).
+- Approval: an implied-authority statement the AS holds for an entry
+  is rendered with that entry as a disclosure of risk, apart from the
+  derived Authority Set (#2046).
 {: spacing="compact"}
 
 -02

@@ -11314,7 +11314,7 @@
    "id": "core.rendering-safeguards.implied-authority-disclosed",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rendering-safeguards",
-   "text": "When the AS holds an **implied-authority statement** for a rendered Authority Set entry, a statement of authority the entry carries beyond what it names (for example, account recovery at the services whose codes reach a mailbox the entry reads), the rendering MUST present the statement with that entry as a disclosure of risk, never as part of the derived Authority Set.",
+   "text": "When the AS holds an **implied-authority statement** for a rendered Authority Set entry, a statement of authority the entry carries beyond what it names (for example, account recovery at each service that sends reset links or one-time codes to a mailbox the entry reads), the rendering MUST present the statement with that entry as a disclosure of risk, never as part of the derived Authority Set.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11337,7 +11337,7 @@
    "id": "core.rendering-safeguards.implied-authority-attributed",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rendering-safeguards",
-   "text": "The rendering attributes a statement from the AS's local policy to the AS; one the client supplied, such as the `implied_authority` member of Shaping Evidence ({{I-D.draft-mcguinness-mission-shaping}}), is client-supplied text under the rules below.",
+   "text": "The rendering attributes a statement from the AS's local policy to the AS; one the client supplied, such as the `implied_authority` member defined by {{I-D.draft-mcguinness-mission-shaping}}, is client-supplied text under the rules below.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
