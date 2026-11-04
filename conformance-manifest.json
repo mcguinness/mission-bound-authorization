@@ -40914,7 +40914,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "under the trifecta containment claim, an exposure-qualified egress proceeds without a taint-driven approval only where the exposure_establishment condition holds; an action to which the Irreversible action, External commitment, or Privileged administration class applies keeps the full taint response"
+    "normative": "under the trifecta containment claim, an exposure-qualified egress proceeds without a taint-driven approval only where the exposure_establishment condition holds; for an action to which the Irreversible action, External commitment, or Privileged administration class applies, exposure qualification supplies no exception: the taint rule applies as it otherwise would, and a fresh action-bound approval bound to the parameters satisfies it"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -112480,7 +112480,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a determination is attached to the one request whose bound parameters its composing context composed; presented with another request, or with parameters composed in an exposed context through a fresh worker, it yields no relief and the request reads as exposed"
+    "normative": "a determination is attached to the one request whose bound parameters its composing context composed; presented with another request, or with parameters an exposed context composed and handed to a fresh worker, it supplies no exception: the request reads as exposed and the taint rule applies as it otherwise would, a fresh action-bound approval bound to the parameters satisfying it"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -112506,7 +112506,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "where agent-compromise-resistant enforcement is claimed for a class that applies to the action, a tainted decision whose context.protected_data has exposed false and established_by harness gets no exposure-qualification relief: it is denied or returns approval_required"
+    "normative": "where agent-compromise-resistant enforcement is claimed for a class that applies to the action, a context.protected_data with exposed false and established_by harness reads as exposed and supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -112531,7 +112531,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "where the PDP applies the taint rule, a tainted decision with an unexposed determination gets no relief when the Enforcement Scope Statement does not declare exposure qualification for every class that applies to the action: it is denied or returns approval_required"
+    "normative": "where the PDP applies the taint rule and the Enforcement Scope Statement does not declare exposure qualification for every class that applies to the action, an unexposed determination supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -112553,7 +112553,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "where the harness enforces the taint rule itself, a tainted egress with an unexposed determination keeps the taint response when the execution-environment scope statement does not declare exposure qualification for every class that applies to the action"
+    "normative": "where the harness enforces the taint rule itself and the execution-environment scope statement does not declare exposure qualification for every class that applies to the action, an unexposed determination supplies no exception: the taint rule applies as it otherwise would, and a fresh action-bound approval bound to the parameters satisfies it. Positive control: the same tainted egress carrying an independently sufficient fresh action-bound approval proceeds"
    },
    "level": "unit",
    "coverage": "todo",
@@ -112578,7 +112578,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a tainted decision with an admissible unexposed determination gets no relief, and is denied or returns approval_required, when action.properties.external_communication is not true or when the Irreversible action, External commitment, or Privileged administration class applies to the action, as its assigned class or by predicate"
+    "normative": "when action.properties.external_communication is not true, or the Irreversible action, External commitment, or Privileged administration class applies to the action as its assigned class or by predicate, an admissible unexposed determination supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters, and an action outside the taint rule is decided as it would be without the determination. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -112600,7 +112600,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "where the harness enforces the taint rule itself, a tainted egress with an unexposed determination keeps the taint response when it is not an external-communication action or when the Irreversible action, External commitment, or Privileged administration class applies to it"
+    "normative": "where the harness enforces the taint rule itself and the egress is not an external-communication action, or the Irreversible action, External commitment, or Privileged administration class applies to it, an unexposed determination supplies no exception: the taint rule applies as it otherwise would (an action outside it is unaffected), and a fresh action-bound approval bound to the parameters satisfies it. Positive control: the same tainted egress carrying an independently sufficient fresh action-bound approval proceeds"
    },
    "level": "unit",
    "coverage": "todo",
@@ -112816,7 +112816,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a tainted in-scope decision whose context.protected_data is absent, or is not an object with a boolean exposed and an established_by of harness, pep or platform, gets no exposure-qualification relief: it is denied or returns approval_required as the taint rule requires, and is never denied taint_context_missing on that account"
+    "normative": "a context.protected_data that is absent, or is not an object with a boolean exposed and an established_by of harness, pep or platform, reads as exposed and supplies no exception: the decision is the one the otherwise applicable rules give, so a tainted action the taint rule covers is denied or returns approval_required without a fresh action-bound approval bound to its parameters, and the absent or malformed member is never itself a cause of a taint_context_missing denial. Positive control: the same tainted decision carrying an independently sufficient fresh action-bound approval bound to the parameters is permitted"
    },
    "level": "endpoint",
    "coverage": "todo",
