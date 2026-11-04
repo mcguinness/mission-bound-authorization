@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-04T18:42:22Z
-Source repository commit: 24731001d953f2490fd1d084feafb471dd4db271
+Generated: 2026-11-04T21:07:16Z
+Source repository commit: 624ef9fa33317e8688aac6cbb9b717b31e12181b
 Member count: 9
 
 Reading order:
@@ -21347,10 +21347,8 @@ Table of Contents
       the PEP resolves it into that action by substituting the item.
 
    route_to_principal:  The PEP withholds the item from the agent
-      component and delivers it to the delegating person of a user-
-      delegated Mission, the Approver, or another principal the
-      deployment authorizes for that Mission, through a surface the
-      agent component cannot read.
+      component and delivers it, through a surface the agent component
+      cannot read, to a recipient authorized to receive that item.
 
    A deployment that applies these dispositions MUST declare in its
    Enforcement Scope Statement (Section 5.2):
@@ -21388,6 +21386,16 @@ Table of Contents
    establishes that a detector recognizes every item of a class in every
    representation.
 
+   The PEP MUST deliver a routed item only to a recipient authorized to
+   receive that item, established independently of any routing
+   instruction the agent component supplies, for example from trusted
+   configuration or the deployment's authorization.  The delegating
+   person of a user-delegated Mission who holds the account the item
+   serves is one such recipient; authority to approve the Mission does
+   not by itself authorize receiving an item for another account.  Where
+   it establishes no authorized recipient, the PEP MUST withhold the
+   item.
+
    When it issues a surrogate, the PEP MUST record with it:
 
    *  the service at which the item is authority, from trusted
@@ -21403,7 +21411,17 @@ Table of Contents
       attributes one, its work item
       ([I-D.draft-mcguinness-mission-harness]); and
 
-   *  a lifetime and a use limit, neither exceeding the item's own.
+   *  a lifetime and a use limit: the finite cap the deployment
+      configures for the item's class, shortened to any expiry or use
+      limit the PEP knows the item to carry.  An unknown item limit
+      never leaves a surrogate unlimited.
+
+   The account and the operation MUST each be established by a trusted
+   source: trusted configuration, or service-specific transaction
+   information the PEP verifies.  The content, or an assertion of the
+   agent component, never establishes either alone.  The PEP MUST NOT
+   surrogate an item whose account or operation it cannot establish; it
+   withholds or routes that item.
 
    The PEP MUST resolve a surrogate only within its lifetime and use
    limit, only into an action that matches every other recorded element,
@@ -21418,10 +21436,16 @@ Table of Contents
    The decision and parameter binding (Section 8) MUST be evaluated over
    the surrogate form of the parameters, with the authorized and
    effective parameter digests computed over that form, so the binding
-   holds across substitution and no digest commits to the item.  The PEP
-   MUST substitute the item only after the permit.  The value of a
-   surrogated item MUST NOT appear in a redirect, a response to the
-   agent component, a log, or evidence.
+   holds across substitution and no digest commits to the item.  The
+   binding holds only while a handle names one item.  The PEP MUST fix a
+   surrogate's item and recorded binding when it issues the surrogate,
+   and MUST NOT reassign either: a changed item takes a new handle.  At
+   substitution, the PEP MUST check the recorded binding and limits
+   against the item it actually substitutes, and MUST refuse a handle
+   whose mapping it no longer holds.  The PEP MUST substitute the item
+   only after the permit.  The value of a surrogated item MUST NOT
+   appear in a redirect, a response to the agent component, a log, or
+   evidence.
 
    A credential that redeeming an item returns, such as a session
    cookie, an access token, or an authenticated browser session, is
@@ -22310,7 +22334,10 @@ Table of Contents
    runtime conformance.  The claim names exactly the set of classes it
    covers.  This claim additionally requires execution-environment
    attestation of the scope statement, the condition Section 9.5.2
-   states for both High-Assurance Agent claims.
+   states for both High-Assurance Agent claims.  Authority Carried in
+   Content (Section 5.10) attaches one further duty to this claim:
+   authority-bearing content in a covered read's response receives its
+   disposition.
 
    The guarantee is the conjunction of these conditions, not any one of
    them.  Mediated custody alone prevents only off-path presentation of
@@ -22867,8 +22894,8 @@ Table of Contents
 
    The disposition of authority-bearing content (Section 5.10) has its
    own observable form.  A deployment that applies the dispositions
-   SHOULD demonstrate the first outcome below, and every other outcome
-   wherever it issues surrogates:
+   SHOULD demonstrate each outcome below that its declared dispositions
+   reach:
 
      +======================================+========================+
      | Bypass attempt                       | Required outcome       |
@@ -22877,6 +22904,19 @@ Table of Contents
      | recognized item of a declared class  | or routed as declared; |
      |                                      | the item never reaches |
      |                                      | the agent component    |
+     +--------------------------------------+------------------------+
+     | An item is routed where no recipient | Withheld; never        |
+     | authorized to receive it is          | delivered on the       |
+     | established, or to a recipient the   | agent's instruction    |
+     | agent component names                |                        |
+     +--------------------------------------+------------------------+
+     | An item's account or operation       | Withheld or routed;    |
+     | cannot be established from a trusted | never surrogated       |
+     | source                               |                        |
+     +--------------------------------------+------------------------+
+     | A handle is presented whose mapping  | Refused                |
+     | the PEP no longer holds, or whose    |                        |
+     | item has changed                     |                        |
      +--------------------------------------+------------------------+
      | A surrogate is presented toward      | Refused                |
      | another service, another account at  |                        |
@@ -24003,13 +24043,17 @@ Appendix D.  Document History
       under either named claim and SHOULD otherwise.  A surrogate
       resolves only into an action matching its recorded service,
       account, operation, Mission, and limits and permitted within the
-      Effective Authority Set; the decision and parameter digests use
-      the surrogate form, a credential redemption returns stays at the
-      PEP, and the value appears in no redirect, response, log, or
-      evidence.  Detection coverage is declared in the Enforcement Scope
-      Statement.  Trifecta containment, its evidence table, Prompt
-      Injection and Exfiltration, and Negative Conformance Tests carry
-      the rule.
+      Effective Authority Set; its account and operation come from a
+      trusted source, its lifetime is a finite configured cap, and its
+      mapping never changes after issuance.  The decision and parameter
+      digests use the surrogate form, a credential redemption returns
+      stays at the PEP, and the value appears in no redirect, response,
+      log, or evidence.  A routed item goes only to a recipient
+      authorized to receive it, and is otherwise withheld.  Detection
+      coverage is declared in the Enforcement Scope Statement.  Agent-
+      Compromise-Resistant Enforcement, Trifecta containment and its
+      evidence table, Prompt Injection and Exfiltration, and Negative
+      Conformance Tests carry the rule.
 
    *  The History Input: an omitted record can deny a step or satisfy a
       predicate the complete history would not, not only deny it
@@ -28772,7 +28816,9 @@ Table of Contents
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
-   rule as denial reasons (Section 6.5).
+   rule as denial reasons (Section 6.5).  The harness profile defines
+   the coordinated type work_item_prerequisite_completed
+   ([I-D.draft-mcguinness-mission-harness]).
 
    The OPTIONAL context.mission_history request object carries only what
    the PEP can supply in support of the policy-selected predicates,
@@ -31183,6 +31229,9 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  History Context: names work_item_prerequisite_completed, the
+      harness profile's coordinated predicate type (#815).
+
    *  Changes a requirement (#1994): a mediated request carried with an
       action class other than the one the PDP's trusted declaration
       assigns its operation and phase has no class established, and the
@@ -31465,6 +31514,7 @@ Table of Contents
    6.  Mission Binding
      6.1.  Binding Inheritance
      6.2.  Work-Item Identity
+       6.2.1.  Work-Item Prerequisite
    7.  Resume Checks
      7.1.  Resume Algorithm
      7.2.  Interaction with the Orchestration Profile
@@ -32031,6 +32081,58 @@ Table of Contents
    but never required.  Attribution says which work item an action was
    requested for.  It proves neither that the action serves the item's
    purpose nor isolation between items in one process.
+
+6.2.1.  Work-Item Prerequisite
+
+   work_item_prerequisite_completed is a history predicate type
+   ([I-D.draft-mcguinness-mission-authzen], Section "History Context").
+   It requires that a named operation completed for the same work item,
+   operation target, and revision as the action being decided.  Policy
+   names the operation with two members: action, its identifier, and
+   action_class, a runtime action class name.  A predicate missing
+   either member cannot be established.
+
+   The predicate is satisfied when the PDP's evidence store holds, for
+   the established Mission, a Decision Evidence record with decision
+   permit that has a completion witness
+   ([I-D.draft-mcguinness-mission-authzen], Section "History Context"),
+   where:
+
+   *  the permit's action names the predicate's action, and the
+      predicate's class applied to the permit as it does for
+      action_class_completed; class membership alone does not show that
+      the named operation ran;
+
+   *  the permit and the witness each carry the request's qualified
+      work-item identifier as their work_item; and
+
+   *  the witness's result_summary carries the request's operation
+      target as operation_target and the request's revision as revision.
+
+   The request's operation target is its operation_target
+   ([I-D.draft-mcguinness-mission-authzen], Section "Operation Target").
+   The request's revision is a revision-granularity fact that the PEP
+   captures for that target from the resource's authoritative interface
+   ([I-D.draft-mcguinness-mission-runtime], Section "Evaluation-Context
+   Binding") and carries as the resource property revision
+   (resource.properties.revision).  A request without a work item or a
+   revision cannot establish the predicate.
+
+   The executing PEP or executor records in result_summary, as
+   operation_target, the operation target the effect was released for
+   and, as revision, the revision the resource reported when the effect
+   ran, never an agent argument.  When no witness satisfies the
+   predicate, it is not establishable if a permit matching the
+   operation, class, and work item has an undetermined completion, or
+   has a witness carrying that work item that lacks operation_target or
+   revision.
+
+   A prerequisite completed at an earlier revision does not satisfy a
+   request at a later one.  Where Evaluation-Context Binding covers the
+   operation being decided, a revision that differs when the PEP re-
+   reads it before release is refused before any effect.  That
+   reverification is the verified property; the predicate adds no atomic
+   check-and-effect.
 
 7.  Resume Checks
 
@@ -33466,6 +33568,15 @@ Appendix A.  Mapping to Durable-Execution Engines
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Work-Item Prerequisite: work_item_prerequisite_completed, a
+      history predicate requiring that a policy-named operation and
+      class completed for the same qualified work item, operation
+      target, and revision as the action being decided, through a
+      permit's completion witness whose result_summary carries the
+      operation_target the effect was released for and the revision the
+      resource reported; the request carries its revision as
+      resource.properties.revision (#815).
 
    *  Decision-API Composition: the PDP requires taint context on every
       action to which the External commitment class applies, not only
