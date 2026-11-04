@@ -1079,6 +1079,24 @@ Sub-agent fan-out abuse (Child Missions):
   the fan-out policy is the deployment's; a permissive delegation policy
   is consented but wide.
 
+Authority amplification through reads:
+: Addressed by the mediating PEP's disposition of authority-bearing
+  content, such as the one-time codes and reset links a mailbox
+  receives: each recognized item is withheld, routed to the Subject or
+  the Approver, or replaced by a surrogate that resolves only into an
+  action matching its recorded service, account, operation, Mission,
+  and limits and permitted within the Effective Authority Set, with any
+  credential the redemption returns held at the PEP
+  ({{I-D.draft-mcguinness-mission-runtime}}); and, before approval, by
+  the shaper narrowing a read entry that can return such content or
+  disclosing the authority the entry implies
+  ({{I-D.draft-mcguinness-mission-shaping}}). Residual: detection is
+  declared, not complete, so an item the detector misses reaches the
+  agent; a deployment that claims neither agent-compromise-resistant
+  enforcement nor trifecta containment applies the dispositions only as
+  a recommendation; and content outside the declared covered reads is
+  not inspected.
+
 One instance of a swarm is compromised (class-pinned multiplication):
 : Addressed by three kills that stay separable: revoke the one
   instance's credentials and its peers continue; disable the Agent
@@ -1631,6 +1649,12 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The adversary model adds authority amplification through reads:
+  content a read returns that is itself authority, addressed by the
+  runtime profile's dispositions and the shaper's narrowing and
+  disclosure, with declared, incomplete detection as its residual. No
+  requirement changed (#2045).
 
 - The Trusted Base gives a materialized policy view its own entry: it
   carries compiled authority, never Mission lifecycle state, and is no
