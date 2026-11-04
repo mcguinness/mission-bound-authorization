@@ -2191,9 +2191,30 @@ the fan-out policy is the deployment's; a permissive delegation policy
 is consented but wide.<a href="#section-9-3.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.29">One instance of a swarm is compromised (class-pinned multiplication):</dt>
+<dt id="section-9-3.29">Authority amplification through reads:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.30">
-          <p id="section-9-3.30.1">Addressed by three kills that stay separable: revoke the one
+          <p id="section-9-3.30.1">Addressed by the mediating PEP's disposition of authority-bearing
+content, such as the one-time codes and reset links a mailbox
+receives. Each recognized item is withheld; routed, through a
+surface the agent cannot read, only to a recipient authorized to
+receive that item; or replaced by a surrogate that resolves only into
+an action matching its recorded service, account, operation, Mission,
+and limits and permitted within the Effective Authority Set, with any
+credential the redemption returns held at the PEP
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Before
+approval, the shaper narrows a read entry that can return such
+content or discloses the authority the entry implies
+(<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>). Residual: detection is
+declared, not complete, so an item the detector misses reaches the
+agent; a deployment that claims neither agent-compromise-resistant
+enforcement nor trifecta containment applies the dispositions only as
+a recommendation; and content outside the declared covered reads is
+not inspected.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.31">One instance of a swarm is compromised (class-pinned multiplication):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.32">
+          <p id="section-9-3.32.1">Addressed by three kills that stay separable: revoke the one
 instance's credentials and its peers continue; disable the Agent
 Deployment at the registry, whose state the consuming decision
 point fails closed on
@@ -2206,12 +2227,12 @@ Residual: instance-grain attribution, and the narrowest kill,
 exist only where the instance substrate is deployed
 (<a href="#trusted-base" class="auto internal xref">Section 6</a>); without it attribution collapses to the shared
 <code>client_id</code>, and containment falls back to the Deployment and
-Mission kills.<a href="#section-9-3.30.1" class="pilcrow">¶</a></p>
+Mission kills.<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.31">Emergent authority through coordination (independent Missions):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.32">
-          <p id="section-9-3.32.1">Addressed by the non-transitive Mission-to-Mission handoff rule: a
+<dt id="section-9-3.33">Emergent authority through coordination (independent Missions):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.34">
+          <p id="section-9-3.34.1">Addressed by the non-transitive Mission-to-Mission handoff rule: a
 work product crossing into a Mission is input, re-evaluated under the
 receiving Mission's own Authority Set, so a producing Mission's
 authority never transfers with the information it wrote
@@ -2233,31 +2254,31 @@ lineage-keyed aggregate bounds are anticipated defense-in-depth, not
 yet specified (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>).
 Joint authorization across independent issuers is outside the
 family's scope (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>,
-Section "Mission Invariants").<a href="#section-9-3.32.1" class="pilcrow">¶</a></p>
+Section "Mission Invariants").<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.33">Injection steers discovery (the agent binds the attacker's resource):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.34">
-          <p id="section-9-3.34.1">Addressed by default-closed discovery (no consented ceiling, no
+<dt id="section-9-3.35">Injection steers discovery (the agent binds the attacker's resource):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.36">
+          <p id="section-9-3.36.1">Addressed by default-closed discovery (no consented ceiling, no
 binding), the tainted-session human floor for egress-capable
 bindings, resource identity pinning, the rule that
 self-declarations never classify consequences, and Discovery
 Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-discovery" class="cite xref">I-D.draft-mcguinness-mission-discovery</a>]</span>). Residual: an
 untainted session binding within an over-broad consented family;
-ceiling breadth is a consent-time decision.<a href="#section-9-3.34.1" class="pilcrow">¶</a></p>
+ceiling breadth is a consent-time decision.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.35">Offline sub-agent fan-out abuse:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.36">
-          <p id="section-9-3.36.1">Addressed by capability monotonicity (narrow-only) and the runtime
+<dt id="section-9-3.37">Offline sub-agent fan-out abuse:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.38">
+          <p id="section-9-3.38.1">Addressed by capability monotonicity (narrow-only) and the runtime
 kill-switch re-check on the carried chain. Residual: fan-out breadth
 is unobserved by the issuer; bounded by depth and policy, not by the
-issuer.<a href="#section-9-3.36.1" class="pilcrow">¶</a></p>
+issuer.<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.37">Materialized-capability containment escape (Mission Containment):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.38">
-          <p id="section-9-3.38.1">Addressed two ways. Issuance-side, containment gates every future
+<dt id="section-9-3.39">Materialized-capability containment escape (Mission Containment):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.40">
+          <p id="section-9-3.40.1">Addressed two ways. Issuance-side, containment gates every future
 derivation, delegation, cross-domain projection, and offline
 attenuation root against the Effective Authority Set, and
 propagates a contain transition to the child Missions the
@@ -2275,17 +2296,17 @@ origin Mission's overlay; each keeps producing authority for its
 own bounded lifetime, closed only by short grant and root
 lifetimes
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-9-3.38.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>).<a href="#section-9-3.40.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.39">Effective-ceiling composition (depth, cross-domain hops, and child</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.40">
-          <p id="section-9-3.40.1"></p><a href="#section-9-3.40" class="pilcrow">¶</a>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-9-3.41">generations):</dt>
+<dt id="section-9-3.41">Effective-ceiling composition (depth, cross-domain hops, and child</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.42">
-          <p id="section-9-3.42.1">Addressed by each dimension bounding itself: per-domain depth
+          <p id="section-9-3.42.1"></p><a href="#section-9-3.42" class="pilcrow">¶</a>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.43">generations):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.44">
+          <p id="section-9-3.44.1">Addressed by each dimension bounding itself: per-domain depth
 reset at a cross-domain hop, per-Mission <code>derivation_limit</code> that a
 child does not inherit from its parent, and issuer adjudication at
 each child generation
@@ -2304,32 +2325,32 @@ derivation limits distinctly and whether a finite aggregate is
 enforced; an aggregate consumption cap is the metering profile's
 role (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). Where a single
 approval's apparent bound must hold in practice, a deployment can
-impose a global cap out of band.<a href="#section-9-3.42.1" class="pilcrow">¶</a></p>
+impose a global cap out of band.<a href="#section-9-3.44.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.43">Approval surface exposed to the agent as a tool (self-approval):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.44">
-          <p id="section-9-3.44.1">Addressed by resolution being unavailable from the agent's tool plane or
+<dt id="section-9-3.45">Approval surface exposed to the agent as a tool (self-approval):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.46">
+          <p id="section-9-3.46.1">Addressed by resolution being unavailable from the agent's tool plane or
 agent-driven channels, with resolver identity and achieved authentication
 established by the approval surface, never caller input
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A distinct nominal Approver and
 isolated evidence signer do not suffice when the agent can invoke that
 Approver's resolution capability. Residual: reachability is a deployment
-property; a self-declared boundary still needs negative-path evidence.<a href="#section-9-3.44.1" class="pilcrow">¶</a></p>
+property; a self-declared boundary still needs negative-path evidence.<a href="#section-9-3.46.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.45">Operator surface abused (fleet management):</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.46">
-          <p id="section-9-3.46.1">Addressed by management Client authorization; dry-run-then-execute
+<dt id="section-9-3.47">Operator surface abused (fleet management):</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.48">
+          <p id="section-9-3.48.1">Addressed by management Client authorization; dry-run-then-execute
 with a bulk token pinning the evaluated membership; every call
 audited; never agent-facing. Residual: a compromised Management Client
 stops or resumes Missions fleet-wide and learns Mission existence; it
-cannot mint or widen authority.<a href="#section-9-3.46.1" class="pilcrow">¶</a></p>
+cannot mint or widen authority.<a href="#section-9-3.48.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.47">Agent's own credential as the Subject's only authentication root:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.48">
-          <p id="section-9-3.48.1">Addressed by keeping approval off that credential: the Approver is
+<dt id="section-9-3.49">Agent's own credential as the Subject's only authentication root:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.50">
+          <p id="section-9-3.50.1">Addressed by keeping approval off that credential: the Approver is
 established from the authenticated approval surface, never from
 client input (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), on a surface
 the agent cannot invoke (the self-approval move above), and an
@@ -2343,12 +2364,12 @@ workload principal, no person's authentication stands beside that
 credential, so its holder acts as the Subject in every Mission the
 agent can use and every activation its standing consents admit,
 until the credential is revoked; workload credential custody and
-rotation are the deployment's.<a href="#section-9-3.48.1" class="pilcrow">¶</a></p>
+rotation are the deployment's.<a href="#section-9-3.50.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.49">Mission bypass through source authority held outside any Mission:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.50">
-          <p id="section-9-3.50.1">Addressed by the downgrade-by-omission rules: no token issued
+<dt id="section-9-3.51">Mission bypass through source authority held outside any Mission:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.52">
+          <p id="section-9-3.52.1">Addressed by the downgrade-by-omission rules: no token issued
 outside a Mission, on any grant type, for a Mission-governed
 resource, whether the deployment classifies it or its authenticated
 metadata declares the requirement; its resource server rejecting a
@@ -2370,12 +2391,12 @@ and Mission state does not revoke a grant held outside any Mission;
 at a resource that is not Mission-governed, absent mandatory
 mediation, such a grant acts with no Mission state, revocation, or
 consent commitment,
-and only the client's own conformance closes that path.<a href="#section-9-3.50.1" class="pilcrow">¶</a></p>
+and only the client's own conformance closes that path.<a href="#section-9-3.52.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.51">Standing-authority creep through the source ceiling:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.52">
-          <p id="section-9-3.52.1">Addressed by the approval-time source check: approval activates only
+<dt id="section-9-3.53">Standing-authority creep through the source ceiling:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.54">
+          <p id="section-9-3.54.1">Addressed by the approval-time source check: approval activates only
 authority the source already holds, the AS verifies the derived
 Authority Set against it, and the rendering names the source and,
 for <code>organizational</code>, its governed policy
@@ -2388,12 +2409,12 @@ human approved at its exact version
 the ceiling is only as tight as the source. Provisioning a
 workload's authority or broadening a governed policy is entitlement
 governance outside the family, and each later Mission may draw on
-what accumulates there.<a href="#section-9-3.52.1" class="pilcrow">¶</a></p>
+what accumulates there.<a href="#section-9-3.54.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.53">No human at runtime, and operator change:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.54">
-          <p id="section-9-3.54.1">Addressed by action-bound approval where a deployment requires it:
+<dt id="section-9-3.55">No human at runtime, and operator change:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.56">
+          <p id="section-9-3.56.1">Addressed by action-bound approval where a deployment requires it:
 the PEP refuses such an action without a fresh approval from an
 independent Approver or policy authority, resolved on a surface the
 agent cannot invoke, and fails closed absent a usable approval
@@ -2409,37 +2430,37 @@ Residual: outside the classes held for action-bound approval no one
 watches the agent act, so in-scope misuse surfaces only through
 audit; Missions an operator approved keep that accountable principal
 and run until expiry or revocation after the operator leaves, and
-offboarding is the deployment's.<a href="#section-9-3.54.1" class="pilcrow">¶</a></p>
+offboarding is the deployment's.<a href="#section-9-3.56.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.55">Audit tampered, dropped, or reordered:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.56">
-          <p id="section-9-3.56.1">Addressed by transparency: append-only log, inclusion receipts,
+<dt id="section-9-3.57">Audit tampered, dropped, or reordered:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.58">
+          <p id="section-9-3.58.1">Addressed by transparency: append-only log, inclusion receipts,
 non-equivocation. Residual: single-service equivocation (per-service
 only; register with several); a producer can still log a false
-record.<a href="#section-9-3.56.1" class="pilcrow">¶</a></p>
+record.<a href="#section-9-3.58.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.57">Agent fabricates results or acts on false data:</dt>
-        <dd style="margin-left: 1.5em" id="section-9-3.58">
-          <p id="section-9-3.58.1">Addressed by not addressed. Residual: full: semantic and grounding
-verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.58.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-9-3.59">A trusted-base component is compromised:</dt>
+<dt id="section-9-3.59">Agent fabricates results or acts on false data:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.60">
-          <p id="section-9-3.60.1">Addressed by not addressed; evidence detects it after the fact.
-Residual: not prevented; degrades the specific guarantee per
-<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.60.1" class="pilcrow">¶</a></p>
+          <p id="section-9-3.60.1">Addressed by not addressed. Residual: full: semantic and grounding
+verification are a non-goal; pair with a grounding layer if needed.<a href="#section-9-3.60.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-9-3.61">Arbitrary code runs inside the agent's boundary:</dt>
+<dt id="section-9-3.61">A trusted-base component is compromised:</dt>
         <dd style="margin-left: 1.5em" id="section-9-3.62">
-          <p id="section-9-3.62.1">Addressed by the mediated boundary an effect crosses (an interpreter,
+          <p id="section-9-3.62.1">Addressed by not addressed; evidence detects it after the fact.
+Residual: not prevented; degrades the specific guarantee per
+<a href="#trusted-base" class="auto internal xref">Section 6</a>.<a href="#section-9-3.62.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.63">Arbitrary code runs inside the agent's boundary:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.64">
+          <p id="section-9-3.64.1">Addressed by the mediated boundary an effect crosses (an interpreter,
 a spawned process, or a generated script), parameter-bound permits,
 mediated credential custody, and the harness's isolation and channel
 enumeration. Residual: unrecorded computation and channels
-outside that perimeter (<a href="#perimeter" class="auto internal xref">Section 5</a>); sandboxing owns execution.<a href="#section-9-3.62.1" class="pilcrow">¶</a></p>
+outside that perimeter (<a href="#perimeter" class="auto internal xref">Section 5</a>); sandboxing owns execution.<a href="#section-9-3.64.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3213,99 +3234,106 @@ source set and on establishment under Residual. No requirement
 changed (#2044).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The Trusted Base gives a materialized policy view its own entry: it
-carries compiled authority, never Mission lifecycle state, and is no
-longer listed as a Mission state source, as the runtime core states
-(#1129).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.2.1">The adversary model adds authority amplification through reads:
+content a read returns that is itself authority, addressed by the
+runtime profile's dispositions and the shaper's narrowing and
+disclosure, with declared, incomplete detection as its residual. No
+requirement changed (#2045).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">The Untrusted Agent states the three legs of injection-driven
+          <p id="appendix-B-2.3.1">The Trusted Base gives a materialized policy view its own entry: it
+carries compiled authority, never Mission lifecycle state, and is no
+longer listed as a Mission state source, as the runtime core states
+(#1129).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">The Untrusted Agent states the three legs of injection-driven
 exfiltration and which of them issuance constrains; the bypass entry
 of the adversary model names a decision-time join as one realization
 of the OAuth binding's trusted enforcement path, and the
 effective-ceiling entry notes an out-of-band global cap. The OAuth
 binding's Security Considerations point here for this analysis. No
-requirement changed (#1892).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+requirement changed (#1892).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Mission bypass through source authority held outside any Mission
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Mission bypass through source authority held outside any Mission
 follows the OAuth binding's governed rule: no token outside a Mission
 on any grant type for a Mission-governed resource, classified by the
 deployment or by its authenticated metadata, with no open-ended
-exception (#1531).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Prose-member references follow the OAuth binding, which removed
-<code>success_criteria</code>: the inert-input assumption names <code>task_bounds</code>,
-and the prompt-injection entry names <code>goal</code> and <code>task_bounds</code>
-(replacing the retired <code>constraints</code>).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+exception (#1531).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">The inert-input assumption separates <code>purpose</code> from inert material:
-it selects candidate authority only as a configured-mapping lookup
-key, and any other use can only refuse or apply stricter treatment,
-as the OAuth binding states (#1102).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.6.1">Prose-member references follow the OAuth binding, which removed
+<code>success_criteria</code>: the inert-input assumption names <code>task_bounds</code>,
+and the prompt-injection entry names <code>goal</code> and <code>task_bounds</code>
+(replacing the retired <code>constraints</code>).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Revocation-to-Action Latency states that revoking a Mission does not
-prohibit equivalent authority under a separately approved Mission,
-and that preventing re-approval takes policy over the relevant
-approval paths.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.7.1">The inert-input assumption separates <code>purpose</code> from inert material:
+it selects candidate authority only as a configured-mapping lookup
+key, and any other use can only refuse or apply stricter treatment,
+as the OAuth binding states (#1102).<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">The emergent-authority residual points at the Architecture's
-statement that cross-issuer joint authorization is outside the
-family's scope.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.8.1">Revocation-to-Action Latency states that revoking a Mission does not
+prohibit equivalent authority under a separately approved Mission,
+and that preventing re-approval takes policy over the relevant
+approval paths.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">The effective-ceiling composition residual states that the
-per-Mission figures do not compose into a lifetime total, and
-points at the child-delegation profile's distinct-figures
-rendering.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.9.1">The emergent-authority residual points at the Architecture's
+statement that cross-issuer joint authorization is outside the
+family's scope.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">The issuance-only residuals state issuance-time bounding and
-per-request introspection rather than audit only.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.10.1">The effective-ceiling composition residual states that the
+per-Mission figures do not compose into a lifetime total, and
+points at the child-delegation profile's distinct-figures
+rendering.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">Client-instance references follow their successors:
+          <p id="appendix-B-2.11.1">The issuance-only residuals state issuance-time bounding and
+per-request introspection rather than audit only.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.12">
+          <p id="appendix-B-2.12.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id} and
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
 cited. The trusted-base note
-names the Client Attester and its endorsement.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.12">
-          <p id="appendix-B-2.12.1">Named agent-invokable approval resolution as a bypass distinct from
-evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
+names the Client Attester and its endorsement.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.13">
-          <p id="appendix-B-2.13.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
-adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.13.1">Named agent-invokable approval resolution as a bypass distinct from
+evidence forgery or nominal principal equality (#759).<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.14">
-          <p id="appendix-B-2.14.1">Pointed the Availability limit at Runtime's Operational Considerations
-for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.14.1">Added the three-ring Enforcement Perimeter, its arbitrary-code
+adversary entry, and the explicit unrecorded-compute residual (#758).<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.15">
-          <p id="appendix-B-2.15.1">Failure taxonomy crosswalk (#671): an informative subsection added
+          <p id="appendix-B-2.15.1">Pointed the Availability limit at Runtime's Operational Considerations
+for the dependency-conditional outage and ride-through semantics (#310).<a href="#appendix-B-2.15.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.16">
+          <p id="appendix-B-2.16.1">Failure taxonomy crosswalk (#671): an informative subsection added
 to <a href="#cross-cutting" class="auto internal xref">Section 7</a>, mapping the Mandate, Audit, Consent Evidence,
 and Transaction Authorization failure classes onto the
 fail-closed/fail-safe axis, and stating that the axis depends on how
 the artifact is used rather than on the class label alone. Every
 source document's terms are preserved. No normative content,
-guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.15.1" class="pilcrow">¶</a></p>
+guarantee, adversary-model row, mitigation, or residual changed.<a href="#appendix-B-2.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.16">
-          <p id="appendix-B-2.16.1">Controls taxonomy retirement (#636): the Approver-compromise row's
+        <li class="normal" id="appendix-B-2.17">
+          <p id="appendix-B-2.17.1">Controls taxonomy retirement (#636): the Approver-compromise row's
 <code>controls.acr</code> reference updated to the standard <code>acr_values</code>/<code>max_age</code>
 step-up request carriage; the effective-ceiling-composition row's
 <code>max_derivations</code> renamed <code>derivation_limit</code>. No adversary-model
-change.<a href="#appendix-B-2.16.1" class="pilcrow">¶</a></p>
+change.<a href="#appendix-B-2.17.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.17">
-          <p id="appendix-B-2.17.1">Editorial density pass on this Informational document: the
+        <li class="normal" id="appendix-B-2.18">
+          <p id="appendix-B-2.18.1">Editorial density pass on this Informational document: the
 Transparency Service entry of <a href="#trusted-base" class="auto internal xref">Section 6</a> kept as the one
 full statement of the single-service-equivocation point, with the
 Ten Residuals restatement compressed to a pointer at it; the
@@ -3316,14 +3344,14 @@ explicit citation to the Mission Mandate document it shares the
 issuer-key-compromise concern with. Several over-long paragraphs in
 <a href="#guarantees" class="auto internal xref">Section 8</a> split for one idea per paragraph. No normative
 content, anchor, or adversary-model row, mitigation, or residual
-changed.<a href="#appendix-B-2.17.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-B-2.18.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.18">
-          <p id="appendix-B-2.18.1">The adversary model adds four moves for an agent acting without a
+        <li class="normal" id="appendix-B-2.19">
+          <p id="appendix-B-2.19.1">The adversary model adds four moves for an agent acting without a
 delegating person: its own credential as the Subject's only
 authentication root, Mission bypass through source authority held
 outside any Mission, standing-authority creep through the source
-ceiling, and no human at runtime with operator change (#1196).<a href="#appendix-B-2.18.1" class="pilcrow">¶</a></p>
+ceiling, and no human at runtime with operator change (#1196).<a href="#appendix-B-2.19.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
