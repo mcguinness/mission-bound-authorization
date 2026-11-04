@@ -3019,49 +3019,52 @@ another person supplies to the session, instructions included; and<a href="#sect
 </li>
         </ul>
 <p id="section-14.1-4">The set is a floor: a deployment adds sources to it and removes none.
-Exposure's baseline is the reverse of taint's. Content from the
+The release rule can establish particular content as public, but
+retrieval from the web alone does not: an authenticated or
+personalized response can carry protected data.<a href="#section-14.1-4" class="pilcrow">¶</a></p>
+<p id="section-14.1-5">Exposure's baseline is the reverse of taint's. Content from the
 Approver or the delegating person does not taint (<a href="#session-taint" class="auto internal xref">Section 14</a>),
 but it is protected data: a trusted instruction can itself be
 confidential, and trusted provenance does not establish that content
-is public.<a href="#section-14.1-4" class="pilcrow">¶</a></p>
-<p id="section-14.1-5">A context is <strong>isolated</strong> when every input it holds reached it through
+is public.<a href="#section-14.1-5" class="pilcrow">¶</a></p>
+<p id="section-14.1-6">A context is <strong>isolated</strong> when every input it holds reached it through
 a path the establishing layer (<a href="#exposure-establishment" class="auto internal xref">Section 14.2</a>) observes,
 with no model context, memory, or working state shared outside those
 paths. A context is <strong>unexposed</strong> only when it is isolated and every
 input it has received is explicitly public or released under the
-release rule.<a href="#section-14.1-5" class="pilcrow">¶</a></p>
-<p id="section-14.1-6">An exposure determination concerns the composing context, not the
+release rule.<a href="#section-14.1-6" class="pilcrow">¶</a></p>
+<p id="section-14.1-7">An exposure determination concerns the composing context, not the
 process that executes the action. A worker that read no protected data
 does not establish an unexposed determination for parameters an
 exposed context composed and handed to it. A process-level label
 serves as a determination only where it propagates conservatively from
 the composing context: a process that receives anything an exposed
-context composed is labelled exposed.<a href="#section-14.1-6" class="pilcrow">¶</a></p>
-<p id="section-14.1-7">Exposure follows derivation as taint does (<a href="#session-taint" class="auto internal xref">Section 14</a>):<a href="#section-14.1-7" class="pilcrow">¶</a></p>
+context composed is labelled exposed.<a href="#section-14.1-7" class="pilcrow">¶</a></p>
+<p id="section-14.1-8">Exposure follows derivation as taint does (<a href="#session-taint" class="auto internal xref">Section 14</a>):<a href="#section-14.1-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-14.1-8.1">
-            <p id="section-14.1-8.1.1">a sub-agent session inherits the exposure of the context that
-composed its task and inputs;<a href="#section-14.1-8.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-14.1-9.1">
+            <p id="section-14.1-9.1.1">a sub-agent session inherits the exposure of the context that
+composed its task and inputs;<a href="#section-14.1-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-8.2">
-            <p id="section-14.1-8.2.1">a context seeded with a summary, a compaction, or working notes
-derived from an exposed context is exposed;<a href="#section-14.1-8.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.1-9.2">
+            <p id="section-14.1-9.2.1">a context seeded with a summary, a compaction, or working notes
+derived from an exposed context is exposed;<a href="#section-14.1-9.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-8.3">
-            <p id="section-14.1-8.3.1">content an exposed context writes to memory or to a store exposes a
-context that reads it back; and<a href="#section-14.1-8.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.1-9.3">
+            <p id="section-14.1-9.3.1">content an exposed context writes to memory or to a store exposes a
+context that reads it back; and<a href="#section-14.1-9.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-14.1-8.4">
-            <p id="section-14.1-8.4.1">a tool argument an exposed context composed exposes every context
-that receives it.<a href="#section-14.1-8.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-14.1-9.4">
+            <p id="section-14.1-9.4.1">a tool argument an exposed context composed exposes every context
+that receives it.<a href="#section-14.1-9.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-14.1-9">A determination covers the inputs the context held when it was made.
+<p id="section-14.1-10">A determination covers the inputs the context held when it was made.
 A later input invalidates it, and the context reads as exposed until a
 new determination covers every input it holds. Absent, unknown, or
 untracked exposure reads as exposed: a context that an input of
 unknown provenance has reached, or whose inputs the establishing
-layer cannot account for, is exposed.<a href="#section-14.1-9" class="pilcrow">¶</a></p>
+layer cannot account for, is exposed.<a href="#section-14.1-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="exposure-establishment">
@@ -3516,7 +3519,9 @@ decision, each a value from the harness execution states of
 <code>decision</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.26">
             <p id="section-15.1-2.26.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
-<code>handoff</code>.<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
+<code>handoff</code>. An <code>egress_qualified</code> record carries <code>continue</code>: it
+records continuation past the harness's taint gate, and is neither a
+resource authorization nor proof that the egress executed.<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.27">
@@ -4206,18 +4211,21 @@ exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
           <p id="appendix-B-2.1.1">Protected-Data Exposure, Establishment and Binding, and
 Exposure-Qualified Egress: exposure, the confidentiality counterpart
 of taint, attaches to the context that composed an action's bound
-parameters. Direct user content is protected by default, and absent,
-unknown or untracked exposure reads as exposed. The harness, or a
-layer below it separated from the agent-facing components,
-establishes the determination and binds it to the request; under
-agent-compromise-resistant enforcement a
-harness-established determination reads as exposed. Where the scope
-statement declares it, an external-communication egress whose
-composing context is unexposed is relieved of the taint response and
-nothing else, never for an Irreversible action, External commitment
-or Privileged administration class. <code>context.protected_data</code> carries
-the determination to the PDP, and Harness Evidence adds
-<code>egress_qualified</code> and <code>protected_data</code> (#2044).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+parameters. Direct user content is protected by default, web
+retrieval alone does not make content public, and absent, unknown or
+untracked exposure reads as exposed. The harness, or a layer below
+it separated from the agent-facing components, establishes the
+determination and binds it to the request; under
+agent-compromise-resistant enforcement a harness-established
+determination reads as exposed. Where a scope statement declares it,
+the Enforcement Scope Statement for the PDP path, an
+external-communication egress whose composing context is unexposed
+is relieved of the taint response and nothing else, never for an
+Irreversible action, External commitment or Privileged
+administration class. <code>context.protected_data</code> carries the
+determination to the PDP, and Harness Evidence adds
+<code>egress_qualified</code>, recorded with <code>decision</code> <code>continue</code>, and
+<code>protected_data</code> (#2044).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
           <p id="appendix-B-2.2.1">Work-Item Prerequisite: <code>work_item_prerequisite_completed</code>, a history
