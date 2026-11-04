@@ -1440,10 +1440,12 @@ pattern.
 Exposure qualification applies to a tainted action only when all of
 the following hold:
 
-- the execution-environment scope statement declares exposure
-  qualification for every class that applies to the action
-  ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action
-  Classification");
+- exposure qualification is declared for every class that applies to
+  the action ({{I-D.draft-mcguinness-mission-runtime}}, Section
+  "Action Classification"): in the Enforcement Scope Statement
+  ({{I-D.draft-mcguinness-mission-runtime}}) where the PDP applies the
+  taint rule, and in the execution-environment scope statement where
+  the harness applies it;
 - an unexposed determination for the action's composing context is
   present, made and bound as {{exposure-establishment}} requires; and
 - the action satisfies the external-communication predicate, and no
@@ -1477,13 +1479,19 @@ Where a deployment applies exposure qualification, the
 execution-environment scope statement ({{mediated-egress}}) MUST
 declare:
 
-- the classes for which exposure qualification is declared;
+- the classes for which the harness applies exposure qualification
+  itself;
 - the protected source set: the floor of {{protected-data-exposure}}
   and every source the deployment adds;
 - the release rule: what counts as explicitly public or released;
 - the establishing layer ({{exposure-establishment}}); and
 - the mechanism by which exposure is inherited and a determination
   invalidated.
+
+Where the PDP applies the taint rule, the Enforcement Scope Statement
+MUST declare the classes for which the PDP applies exposure
+qualification, as it declares PDP-enforced taint
+({{decision-api-composition}}).
 
 ## Decision-API Composition {#decision-api-composition}
 

@@ -112517,7 +112517,7 @@
    "id": "harness.exposure-qualification.undeclared-class-not-relieved",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "exposure-qualified-egress",
-   "text": "the execution-environment scope statement declares exposure qualification for every class that applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\");",
+   "text": "exposure qualification is declared for every class that applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\"): in the Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}}) where the PDP applies the taint rule, and in the execution-environment scope statement where the harness applies it;",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -112531,18 +112531,18 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a tainted decision with an unexposed determination gets no relief when the scope statement does not declare exposure qualification for every class that applies to the action: it is denied or returns approval_required"
+    "normative": "where the PDP applies the taint rule, a tainted decision with an unexposed determination gets no relief when the Enforcement Scope Statement does not declare exposure qualification for every class that applies to the action: it is denied or returns approval_required"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#2044. No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; authzen.context-taint.fail-closed-when-missing is todo)."
+   "notes": "#2044. Review re-quote: the PDP path keys on the Enforcement Scope Statement, as PDP-enforced taint does. No witness: the reference PDP does not evaluate context.taint (no taint handling in src/services/pdp/src; authzen.context-taint.fail-closed-when-missing is todo)."
   },
   {
    "id": "harness.exposure-qualification.undeclared-class-not-relieved-harness-enforced",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "exposure-qualified-egress",
-   "text": "the execution-environment scope statement declares exposure qualification for every class that applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\");",
+   "text": "exposure qualification is declared for every class that applies to the action ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Action Classification\"): in the Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}}) where the PDP applies the taint rule, and in the execution-environment scope statement where the harness applies it;",
    "role": "harness",
    "strength": "stated",
    "applicability": {
@@ -112553,12 +112553,12 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "where the harness enforces the taint rule itself, a tainted egress with an unexposed determination keeps the taint response when the scope statement does not declare exposure qualification for every class that applies to the action"
+    "normative": "where the harness enforces the taint rule itself, a tainted egress with an unexposed determination keeps the taint response when the execution-environment scope statement does not declare exposure qualification for every class that applies to the action"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#2044: harness-enforced twin of harness.exposure-qualification.undeclared-class-not-relieved. No witness: the reference harness has no session-taint logic (src/services/agent/src/harness-scope.ts names it deferred)."
+   "notes": "#2044: harness-enforced twin of harness.exposure-qualification.undeclared-class-not-relieved. Review re-quote: the harness path keys on the execution-environment scope statement. No witness: the reference harness has no session-taint logic (src/services/agent/src/harness-scope.ts names it deferred)."
   },
   {
    "id": "harness.exposure-qualification.excluded-class-not-relieved",
@@ -112680,7 +112680,7 @@
    "id": "harness.exposure-qualification.scope-statement-declares",
    "spec": "draft-mcguinness-mission-harness.md",
    "anchor": "exposure-qualified-egress",
-   "text": "Where a deployment applies exposure qualification, the execution-environment scope statement ({{mediated-egress}}) MUST declare: - the classes for which exposure qualification is declared; - the protected source set: the floor of {{protected-data-exposure}} and every source the deployment adds; - the release rule: what counts as explicitly public or released; - the establishing layer ({{exposure-establishment}}); and - the mechanism by which exposure is inherited and a determination invalidated.",
+   "text": "Where a deployment applies exposure qualification, the execution-environment scope statement ({{mediated-egress}}) MUST declare: - the classes for which the harness applies exposure qualification itself; - the protected source set: the floor of {{protected-data-exposure}} and every source the deployment adds; - the release rule: what counts as explicitly public or released; - the establishing layer ({{exposure-establishment}}); and - the mechanism by which exposure is inherited and a determination invalidated.",
    "role": "harness",
    "strength": "MUST",
    "applicability": {
@@ -112691,12 +112691,37 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a published execution-environment scope statement of a deployment that applies exposure qualification names the qualified classes, the protected source set (the floor and every addition), the release rule, the establishing layer, and the inheritance and invalidation mechanism"
+    "normative": "a published execution-environment scope statement of a deployment that applies exposure qualification names the classes for which the harness applies it itself, the protected source set (the floor and every addition), the release rule, the establishing layer, and the inheritance and invalidation mechanism, whichever party applies the taint rule"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#2044. No witness: the reference scope statement (src/services/agent/src/harness-scope.ts) carries the taint policy only as an opaque string and declares no exposure qualification."
+   "notes": "#2044. Review re-quote: the classes the PDP qualifies are declared in the Enforcement Scope Statement (harness.exposure-qualification.enforcement-scope-statement-declares-pdp-classes). No witness: the reference scope statement (src/services/agent/src/harness-scope.ts) carries the taint policy only as an opaque string and declares no exposure qualification."
+  },
+  {
+   "id": "harness.exposure-qualification.enforcement-scope-statement-declares-pdp-classes",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "exposure-qualified-egress",
+   "text": "Where the PDP applies the taint rule, the Enforcement Scope Statement MUST declare the classes for which the PDP applies exposure qualification, as it declares PDP-enforced taint ({{decision-api-composition}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "runtime.taint-enforcement",
+     "harness.exposure-qualification"
+    ]
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the PDP applies the taint rule and exposure qualification, the Enforcement Scope Statement names the classes for which the PDP applies exposure qualification, beside its PDP-enforced taint classes"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2044 review: the PDP path keys on the Enforcement Scope Statement, as PDP-enforced taint does. No witness: the reference Enforcement Scope Statement declares no PDP-enforced taint class and no exposure qualification."
   },
   {
    "id": "harness.decision-api.pep-protected-data-from-attachment-only",
