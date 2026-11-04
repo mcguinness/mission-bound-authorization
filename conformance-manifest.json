@@ -40859,12 +40859,12 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "under the trifecta containment claim, a tainted external-communication or external-commitment action obtains a fresh action-bound approval or is refused"
+    "normative": "under the trifecta containment claim, a tainted external-communication or external-commitment action obtains a fresh action-bound approval or is refused, except a send to a destination the Approver concretely named (pre-consented egress) and an egress the harness profile's exposure qualification relieves where the exposure_establishment condition holds"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "runtime.trifecta-containment is not implemented: no taint-tracking or tainted-content predicate exists anywhere in mcp-payments (`grep -rln \"taint\" src/services/mcp-payments/src` is empty). send_remittance_email and execute_wire_transfer are gated by ordinary classification and action-approval only, never by content provenance, so there is no tainted/untainted distinction for this row's MUST to act on. (The sibling condition, external-communication-mediated-condition, IS tested via the egress gate in services/agent -- a different component from mcp-payments -- but that covers mediation of the channel, not the taint predicate this row states.)"
+   "notes": "runtime.trifecta-containment is not implemented: no taint-tracking or tainted-content predicate exists anywhere in mcp-payments (`grep -rln \"taint\" src/services/mcp-payments/src` is empty). send_remittance_email and execute_wire_transfer are gated by ordinary classification and action-approval only, never by content provenance, so there is no tainted/untainted distinction for this row's MUST to act on. (The sibling condition, external-communication-mediated-condition, IS tested via the egress gate in services/agent -- a different component from mcp-payments -- but that covers mediation of the channel, not the taint predicate this row states.) #2044: the quoted clause is unchanged; the observation names the two carve-outs the bullet states after it, the exposure-qualified one in runtime.trifecta-containment.exposure-qualified-egress-not-gated."
   },
   {
    "id": "runtime.trifecta-containment.external-communication-mediated-condition",

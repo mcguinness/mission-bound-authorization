@@ -3285,10 +3285,15 @@ of its base-profile level:
   action-bound approval ({{action-approval}}) or is refused. The
   harness profile's pre-consented egress carve-out applies: a send to
   a destination the Approver concretely named at approval is not
-  human-gated on taint grounds alone, and for content-derived
-  destinations, those outside the approved set, the full polarity,
-  every tainted egress human-gated, remains a condition of this
-  claim. Where the decision-API binding carries taint context
+  human-gated on taint grounds alone. So does its exposure
+  qualification, where the `exposure_establishment` condition below
+  holds: an egress it relieves is not human-gated on taint grounds,
+  and the relief never reaches an action to which the Irreversible
+  action, External commitment, or Privileged administration class
+  applies. For content-derived destinations, those outside the
+  approved set, the full polarity, every other tainted egress
+  human-gated, remains a condition of this claim. Where the
+  decision-API binding carries taint context
   ({{I-D.draft-mcguinness-mission-authzen}}), the PDP enforces the
   rule; otherwise the harness does, and the scope statement says
   which.
@@ -3331,12 +3336,14 @@ the evidence is missing.
 | `path_completeness`: no unmediated path reaches the mediated classes or a fresh usable credential for them ({{compromise-resistant}}) | Negative tests ({{negative-conformance}}) and organizational topology audit | Every path to the classes claimed, deployment-wide | The auditor who ran or reviewed the tests and audit, an organizational anchor | Per the deployment's stated audit cadence | Untested, stale, or a found unmediated path makes the claim unavailable |
 | `least_exposure`: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission ({{trifecta-containment}}, {{least-exposure}}) | Signed configuration naming the exposure-scoping rule for the classes claimed, and negative tests demonstrating out-of-Mission context is withheld | The exposure-scoping rule's coverage over the classes claimed | The auditor reading the configuration, against the deployment's operator key | Current with the deployment's active exposure-scoping configuration version | Unknown, stale, or unverifiable configuration, or a found unscoped exposure, makes the claim unavailable |
 | `taint_egress_topology`: the taint policy and egress rule are enforced, and every egress channel is enumerated ({{trifecta-containment}}) | Topology audit (channel enumeration) and negative tests | Every egress channel available to the agent's execution environment | The auditor, an organizational anchor | Per audit cycle or channel-inventory change | A stale enumeration or a found unenumerated channel makes the claim unavailable |
+| `exposure_establishment`: an unexposed determination is established below the agent-facing harness, for the action's composing context, and bound to the request ({{trifecta-containment}}, {{I-D.draft-mcguinness-mission-harness}}) | Signed configuration naming the establishing layer and its inheritance rule, and negative tests showing that parameters composed in an exposed context and presented through a fresh worker get no relief | The establishing layer's determinations for the classes for which the scope statement declares exposure qualification | The auditor reading the configuration, against the deployment's operator key | Current with the deployment's active establishment configuration version | Absent, stale, or unverifiable evidence makes exposure qualification unavailable: every determination reads as exposed, and the claim rests on the full taint polarity |
 
 A deployment claiming either named property MUST bind its statement
 to the evidence this table names, for each condition its Enforcement
 Scope Statement claims. Evidence that is unknown, stale, or
 unverifiable for a required condition makes the named claim
-unavailable.
+unavailable, except for `exposure_establishment`, where it makes
+exposure qualification unavailable instead, as the table states.
 
 For each condition this table assigns to EAT evidence, the Enforcement
 Scope Statement MUST select the claim or profile identifiers the
@@ -3972,7 +3979,12 @@ or information-flow layer. A coarse session-level mitigation, downgrading
 egress authority once untrusted content has entered a session, is
 available at the harness layer
 ({{I-D.draft-mcguinness-mission-harness}}); it raises the bar but
-is not information-flow control.
+is not information-flow control. That layer's exposure qualification
+relieves a tainted egress of its approval when an established
+determination shows the context that composed it is unexposed; it
+never reaches an irreversible, external-commitment, or
+privileged-administration action, and it is only as sound as the
+protected source set and the establishment it rests on.
 
 ## Relationship to Inspection-Based Controls {#inspection-controls}
 
@@ -4320,6 +4332,16 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Changes a requirement (#2044, D1275): under trifecta containment, an
+  egress the harness profile's exposure qualification relieves is not
+  human-gated on taint grounds where the `exposure_establishment`
+  condition holds, and the relief never reaches an action to which the
+  Irreversible action, External commitment or Privileged administration
+  class applies. Missing, stale or unverifiable evidence for that
+  condition makes exposure qualification unavailable, not the claim.
+  Prompt Injection and Exfiltration notes the qualification and its
+  limit.
 
 - The History Input: an omitted record can deny a step or satisfy a
   predicate the complete history would not, not only deny it (#2029).
