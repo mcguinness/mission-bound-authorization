@@ -41064,7 +41064,7 @@
    "id": "runtime.security.no-overstate-exfiltration-guarantee",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "prompt-injection-exfiltration",
-   "text": "Two limits are inherent and a deployment MUST NOT overstate the guarantee.",
+   "text": "Three limits are inherent and a deployment MUST NOT overstate the guarantee.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -41076,7 +41076,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment's exfiltration-resistance claim never overstates the guarantee past PEP-placement completeness and the absence of information-flow control"
+    "normative": "a deployment's exfiltration-resistance claim never overstates the guarantee past PEP-placement completeness, the absence of information-flow control, and the declared, incomplete detection of authority-bearing content"
    },
    "level": "endpoint",
    "coverage": "todo",
