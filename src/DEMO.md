@@ -1,20 +1,67 @@
-# Mission Reference Implementation — Guided Demo
+# Mission Reference Implementation: Guided Demo
 
-## Seeing it work — three surfaces
+## The story: one Mission's life in seven steps
+
+`pnpm demo:serve`, then open the operator link it prints. The console opens
+in story mode: a bar at the bottom walks seven steps, each driven by real
+calls against the composed stack. Press the right arrow key (or the bar's
+main button) to run each step. A step that needs a person (Bob approving,
+the operator revoking) waits for it with no time limit; the same button
+performs that step, or click the highlighted button on the card.
+
+The agent starts with two Missions: a payments task and a read-only
+reconciliation task, both approved at boot. Every verdict on screen is the
+PDP's or the authorization server's own answer; raw responses and token
+claims sit one click away under each card.
+
+| # | Step | Say | Click | Notice |
+|---|---|---|---|---|
+| 1 | The question | Agents hold delegated authority for hours, across many systems. When something looks wrong, someone has to ask what this task may still do, and how to end it. Identity cannot answer a question about a task. Only a record of the task can. | (nothing) | The two Missions at the top: who each is for, who approved it, what it may do, when it ends. The access token lasts 5 minutes; the Mission lasts 61 days. |
+| 2 | The ask | Alice asks her agent to pay Acme and Globex invoices, up to $900. The agent's proposal is untrusted. | Check the proposal | Globex is struck out and the limit drops from $900 to $500. A compromised agent can propose more; it can never be granted more. |
+| 3 | The approval | Bob approves a task, not a list of scopes. | Send to Bob, then Approve as Bob | Bob's card: the goal, what the agent may do, until when, what policy already removed, and the sign-in check. The new Mission joins the top row as Acting. |
+| 4 | The work stays in bounds | Every tool call carries the Mission; the PDP checks it before anything moves. | Run the Mission | Decisions: $125 to Acme permitted; $900 refused `out_of_authority`, over the $500 limit; Globex refused, not a vendor the Mission names; the remittance waits for a person. |
+| 5 | A person, just in time | This approval binds one action and its exact parameters, and grants nothing else. | Approve the remittance | The card shows the parameter digest. The agent retries on its own and the remittance is permitted. |
+| 6 | Something looks wrong | It is 2 a.m. The operator asks the task's record what it may still do, then ends it. | Revoke the Mission | "What may this task still do? Nothing." The card is stamped Revoked. The same read is refused under the revoked Mission and permitted under the reconciliation Mission. Nobody went looking for tokens. |
+| 7 | The receipt | The task is over; its record is not. Every decision was signed and logged, and the console checks each one. | Alter one record | Every row verifies; after the rewrite, one row fails at step 5 (the evidence digest no longer matches). Close: identity answers who is acting, entitlements what a principal may hold, and a Mission what work was approved and whether it is still in force. |
+
+Presenter notes:
+
+- The operator session ends 30 minutes after the server starts, and the
+  console then says so; restart the server shortly before presenting.
+- Restart the server to replay: inv-1 settles once per process, so step 4
+  and the record rewrite in step 7 play differently on a second run in the
+  same process.
+- Approving a Mission that moves money needs Bob's login within 300 seconds
+  (`config/approval-floor.json`). Bob's card shows the check; past the bound
+  the card asks for a new login, and "Approve as Bob" logs in again first.
+  The login is simulated: the shared demo has no Approver identity provider.
+- The agent renews an access token about to lapse with its refresh token;
+  the Decisions feed shows each renewal. After a revoke the authorization
+  server refuses the renewal (`invalid_grant`), and a read under the revoked
+  Mission is refused `mission_inactive` or, once its token has lapsed,
+  `credential_invalid`.
+- Large text enlarges the console for a projector. Story hides the bar for
+  free exploration: the Request, Agent, Approvals and Operator views keep
+  every action, including reads and wires under a chosen Mission.
+- Two things are demo-only: the record rewrite in step 7
+  (`POST /bff/operator/missions/:id/tamper`, which edits one retained
+  execution record behind the transparency log) and the simulated login.
+  Everything else is the composed stack.
+
+## Seeing it work: three surfaces
 
 All three need OpenFGA up (`docker compose up -d`) and run from `src/`.
 
-1. **Live browser console** — `pnpm demo:serve`, then open
-   http://localhost:4407. A clickable dashboard driving the real stack: the
-   agent panel (catalog + action buttons: read, in-cap wire, over-cap wire,
-   out-of-vendor wire), the operator fleet with suspend/revoke/resume, and
-   the verified evidence timeline. Watch the catalog status and timeline
-   update as you act; a revoke flips `payments` from connected to
-   consent_required.
-2. **Terminal exhibit** — `pnpm exhibit`. A narrated end-to-end walk
-   (discovery → issuance → read → wire → bounds deny → vendor deny → revoke →
+1. **Live browser console**: `pnpm demo:serve`, then open the operator link
+   it prints. The story above, plus free exploration: the agent's Missions,
+   the catalog and action buttons (read, in-cap wire, over-cap wire,
+   out-of-vendor wire, the remittance that needs approval), Bob's
+   approvals, the operator fleet with suspend, revoke and resume, and the
+   verified evidence timeline.
+2. **Terminal exhibit**: `pnpm exhibit`. A narrated end-to-end walk
+   (discovery, issuance, read, wire, bounds deny, vendor deny, revoke,
    verified feed) printing the real wire artifacts at each step.
-3. **Distributed traces** — `pnpm demo:trace`, then open
+3. **Distributed traces**: `pnpm demo:trace`, then open
    http://localhost:16686 and select service `mission-demo`. Each action is
    one trace: `flow.wire → pep.enforce → pdp.evaluate → fga.check`.
 

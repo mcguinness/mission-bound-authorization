@@ -18,8 +18,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import { txnTaskId } from "@mission/access-request";
+import { evaluateApprovalFloor } from "@mission/authorization-server";
 import type { MissionBoundTokenFacts } from "@mission/mcp-payments";
-import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { APPROVAL_FLOOR, CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
 import { callWithTransactionCredential, composeStack } from "./stack.js";
 import { evidenceKeysFromEnv } from "./evidence-key-files.js";
@@ -29,6 +30,7 @@ import {
   clientAssertionSigner,
   dpopProofFor,
   submitMissionApproval,
+  tokenGrantRequest,
 } from "./oauth-client.js";
 import { completeMissionApproval, denyMissionApproval, issueMissionToken, logInAgain } from "./approval-console.js";
 import { installConsoleSessionBoundary } from "./console-session-boundary.js";
@@ -53,7 +55,7 @@ const keyed = (tool: string, args: Record<string, unknown>): Record<string, unkn
 /**
  * The seeded payable invoices the deterministic /agent/run planner attempts, in
  * order: inv-1 (acme $125, within cap -> commits), inv-2 (acme $900, over the
- * $500 cap -> parameter_violation), inv-3 (globex, off-vendor -> out_of_authority).
+ * $500 cap -> out_of_authority), inv-3 (globex, off-vendor -> out_of_authority).
  * inv-seed is excluded (already wired at boot). Reading the store would pull it
  * in as already-paid noise, so the demo set is fixed.
  */
@@ -176,6 +178,7 @@ export function proposalDiff(
 
 const PORT = Number(process.env.CONSOLE_BFF_PORT ?? TOPOLOGY.ports.console);
 const INDEX = fileURLToPath(new URL("../public/index.html", import.meta.url));
+const STORY_MODULE = fileURLToPath(new URL("../public/console-story.js", import.meta.url));
 
 /** Parse a JSON request body, tolerating an empty body. */
 const readJson = (c: Context): Promise<Record<string, unknown>> =>
@@ -194,6 +197,199 @@ export function demoMissionIntent(now: Date): string {
       expires_at: defaultMissionExpiry(now),
     },
   });
+}
+
+/**
+ * The second Mission the agent holds at boot: a read-only reconciliation task
+ * beside the payments one, so revoking one Mission visibly leaves the agent's
+ * other task working.
+ */
+export function reconciliationMissionIntent(now: Date): { missionIntent: string; authorizationDetails: string } {
+  return {
+    missionIntent: JSON.stringify({
+      intent: {
+        goal: "Reconcile Acme invoices (read-only)",
+        target_resources: [CANONICAL_RESOURCE],
+        expires_at: defaultMissionExpiry(now),
+      },
+    }),
+    authorizationDetails: JSON.stringify([
+      {
+        type: "mission_resource_access",
+        resource: CANONICAL_RESOURCE,
+        actions: ["payments:invoice.read", "payments:invoice.list"],
+        constraints: { vendors: ["acme"] },
+      },
+    ]),
+  };
+}
+
+/**
+ * The edit the console's tamper step makes to one retained Execution Evidence
+ * record: its outcome is rewritten from `completed` to `failed`, as an insider
+ * hiding a payment would. Returns the change made, with the action the
+ * record's operation key names (`op:<mission>:<action>:...`), or undefined
+ * when the record carries no completed outcome to rewrite. Display and demo
+ * only.
+ */
+export function rewriteExecutionOutcome(
+  evidence: Record<string, unknown>,
+): { path: string; from: string; to: string; action: string | null } | undefined {
+  const content = evidence.content as Record<string, unknown> | undefined;
+  if (!content || content.outcome !== "completed") return undefined;
+  content.outcome = "failed";
+  const action = typeof evidence.op_key === "string" ? (/^op:[^:]+:([^:]+:[^:]+):/.exec(evidence.op_key)?.[1] ?? null) : null;
+  return { path: "content.outcome", from: "completed", to: "failed", action };
+}
+
+/**
+ * The Mission an agent action runs under. An omitted `missionId` selects the
+ * active Mission; an explicit one must name a Mission the agent holds, and is
+ * refused otherwise, never replaced by the active one: a stale or mistyped id
+ * would otherwise run the action under another task's authority.
+ */
+export function selectBinding<B>(
+  requested: unknown,
+  bindings: ReadonlyMap<string, B>,
+  active: B,
+): { binding: B } | { status: 400 | 404; error: string } {
+  if (requested === undefined) return { binding: active };
+  if (typeof requested !== "string" || requested === "") {
+    return { status: 400, error: "missionId must be a non-empty string naming a Mission the agent holds" };
+  }
+  const binding = bindings.get(requested);
+  return binding === undefined ? { status: 404, error: `the agent holds no Mission ${requested}` } : { binding };
+}
+
+/**
+ * The Mission an approval retry runs under: the one its challenge was opened
+ * under, and no other. With no Mission recorded for the task, or one the
+ * agent no longer holds, there is none, and the retry is refused.
+ */
+export function challengedBinding<B>(
+  taskId: string,
+  challengedUnder: ReadonlyMap<string, string>,
+  bindings: ReadonlyMap<string, B>,
+): B | undefined {
+  const id = challengedUnder.get(taskId);
+  return id === undefined ? undefined : bindings.get(id);
+}
+
+/**
+ * POST /agent/act: select the Mission first, and refuse a bad selection
+ * before any token renewal or tool call; then renew, invoke the tool under
+ * that Mission, and report.
+ */
+export async function handleAgentAct<B>(
+  body: Record<string, unknown>,
+  deps: {
+    bindings: ReadonlyMap<string, B>;
+    active: B;
+    renew: (b: B) => Promise<unknown>;
+    invoke: (tool: string, args: Record<string, unknown>, b: B) => Promise<ToolResult>;
+    report: (tool: string, args: Record<string, unknown>, r: ToolResult, b: B, renewal: unknown) => Promise<Record<string, unknown>>;
+  },
+): Promise<{ status: 200 | 400 | 404; body: Record<string, unknown> }> {
+  const selected = selectBinding(body.missionId, deps.bindings, deps.active);
+  if (!("binding" in selected)) return { status: selected.status, body: { ok: false, error: selected.error } };
+  const tool = String(body.tool);
+  const args = keyed(tool, (body.args as Record<string, unknown>) ?? {});
+  const renewal = await deps.renew(selected.binding);
+  const r = await deps.invoke(tool, args, selected.binding);
+  return { status: 200, body: await deps.report(tool, args, r, selected.binding, renewal) };
+}
+
+/** A parked Mission approval, as {@link adjudicateMissionApproval} decides it. */
+export interface ParkedApproval {
+  /**
+   * `failed`: a decision was attempted and did not complete. The console
+   * cannot tell whether the authorization server's interaction is still open,
+   * so it stops using it; that is not a denial.
+   */
+  state: "pending" | "active" | "denied" | "failed";
+  missionId?: string;
+  error?: string;
+  /** The one decision in flight; a concurrent request observes its result. */
+  inflight?: Promise<AdjudicationResult>;
+}
+export interface AdjudicationResult {
+  status: 200 | 400 | 409;
+  body: Record<string, unknown>;
+}
+
+/**
+ * Decide a parked Mission approval once. Concurrent requests (a double click,
+ * the queue beside the story bar) share the decision in flight, whatever they
+ * asked for; a settled record answers with its state. An approval whose
+ * login the floor would refuse is refused first, before the interaction is
+ * touched, so the approver can log in again and still approve. A failed
+ * attempt never overwrites a record another attempt settled.
+ */
+export function adjudicateMissionApproval<I>(
+  rec: ParkedApproval,
+  decision: "approve" | "deny",
+  deps: {
+    floor: () => { outcome: string; reason?: string; unclassified?: true };
+    complete: () => Promise<I>;
+    adopt: (issued: I) => Promise<{ missionId: string; authority: unknown }>;
+    deny: () => Promise<void>;
+  },
+): Promise<AdjudicationResult> {
+  if (rec.inflight) return rec.inflight;
+  if (rec.state !== "pending") {
+    return Promise.resolve({
+      status: 200,
+      body: {
+        approved: rec.state === "active",
+        state: rec.state,
+        ...(rec.missionId ? { missionId: rec.missionId } : {}),
+        ...(rec.error ? { error: rec.error } : {}),
+      },
+    });
+  }
+  if (decision === "approve") {
+    const floor = deps.floor();
+    if (floor.outcome === "refused" && !floor.unclassified) {
+      return Promise.resolve({ status: 409, body: { approved: false, state: "pending", error: `log in again first: ${floor.reason}`, floor } });
+    }
+  }
+  const fail = (message: string): AdjudicationResult => {
+    if (rec.state === "pending") {
+      rec.state = "failed";
+      rec.error = message;
+    }
+    return { status: 400, body: { approved: false, state: rec.state, error: message } };
+  };
+  const run = async (): Promise<AdjudicationResult> => {
+    if (decision === "deny") {
+      try {
+        await deps.deny();
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+      rec.state = "denied";
+      return { status: 200, body: { approved: false, state: "denied" } };
+    }
+    let issued: I;
+    try {
+      issued = await deps.complete();
+    } catch (e) {
+      return fail((e as Error).message);
+    }
+    let adopted: { missionId: string; authority: unknown };
+    try {
+      adopted = await deps.adopt(issued);
+    } catch (e) {
+      return fail(`the Mission was issued, but the console could not bind it: ${(e as Error).message}`);
+    }
+    rec.state = "active";
+    rec.missionId = adopted.missionId;
+    return { status: 200, body: { approved: true, missionId: adopted.missionId, authority: adopted.authority } };
+  };
+  rec.inflight = run().finally(() => {
+    delete rec.inflight;
+  });
+  return rec.inflight;
 }
 
 /** Decode a compact JWS payload (base64url) without verifying, for display. */
@@ -255,15 +451,68 @@ async function main() {
   // Held mutably so an APPROVED mission approval can swap the whole set (facts +
   // the DPoP-bound token used for resource calls and the AROP transaction
   // endpoint) atomically, once the approver adjudicates it.
-  let active = { facts, missionId, issued };
+  type Binding = { facts: MissionBoundTokenFacts; missionId: string; issued: typeof issued; refreshToken: string | undefined };
+  const refreshTokenOf = (credential: typeof issued): string | undefined => {
+    const rt = credential.artifacts.token.response.refresh_token;
+    return typeof rt === "string" ? rt : undefined;
+  };
+  let active: Binding = { facts, missionId, issued, refreshToken: refreshTokenOf(issued) };
+  // Every Mission the agent holds, by id. An action names one, or runs under
+  // `active`; revoking one Mission leaves the others' credentials in force.
+  const bindings = new Map<string, Binding>([[missionId, active]]);
+  const factsFor = async (credential: typeof issued): Promise<MissionBoundTokenFacts> => {
+    const proof = await dpopProofFor(credential.dpopKeys, CANONICAL_RESOURCE, "POST", credential.accessToken);
+    return {
+      ...(await stack.server.validateToken(credential.accessToken, proof, CANONICAL_RESOURCE, "POST")),
+      clientInstanceId: "inst-1",
+    };
+  };
+  const bind = async (credential: typeof issued): Promise<Binding> => {
+    const bound = await factsFor(credential);
+    const b = { facts: bound, missionId: bound.mission.id, issued: credential, refreshToken: refreshTokenOf(credential) };
+    bindings.set(b.missionId, b);
+    return b;
+  };
+  const nowSeconds = () => Math.floor(stack.kernel.nowDate().getTime() / 1000);
+
+  // Access tokens live minutes; the Mission lives as long as its approval
+  // says. Like any OAuth client, the agent renews a token about to lapse with
+  // its refresh token, under the same DPoP key, before it acts. The AS refuses
+  // that renewal once the Mission is no longer active. Returns undefined when
+  // no renewal was due.
+  const RENEW_WITHIN_SECONDS = 60;
+  const renew = async (b: Binding): Promise<{ renewed: true } | { renewed: false; error: string } | undefined> => {
+    const exp = decodeClaims(b.issued.accessToken).exp;
+    if (typeof exp !== "number" || exp - nowSeconds() > RENEW_WITHIN_SECONDS || !b.refreshToken) return undefined;
+    const res = await tokenGrantRequest(asUrl, agentClientJwk, b.issued.dpopKeys, {
+      grant_type: "refresh_token",
+      refresh_token: b.refreshToken,
+    });
+    const accessToken = res.body.access_token;
+    if (res.status !== 200 || typeof accessToken !== "string") {
+      return { renewed: false, error: String(res.body.error ?? `HTTP ${res.status}`) };
+    }
+    b.issued = { ...b.issued, accessToken };
+    if (typeof res.body.refresh_token === "string") b.refreshToken = res.body.refresh_token;
+    b.facts = await factsFor(b.issued);
+    return { renewed: true };
+  };
+
+  // The agent's second task, read-only, issued the same way as the first.
+  const reconciliation = await bind(
+    await issueMissionToken(asUrl, agentClientJwk, reconciliationMissionIntent(stack.kernel.nowDate()), stack.authServer.approverConsole),
+  );
 
   // Seed evidence: one wire on inv-seed (keeps inv-1's single-use permit fresh
   // for the dashboard button), then publish it to the transparency log.
   await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, facts);
   await stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-seed", idempotency_key: idem() }, facts);
-  for (const ev of stack.evidence.forMission(missionId)) {
-    const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
-    await stack.publishEvidence(missionId, t, ev as unknown as Record<string, unknown>);
+  await stack.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, reconciliation.facts);
+  for (const mid of [missionId, reconciliation.missionId]) {
+    for (const ev of stack.evidence.forMission(mid)) {
+      const t = ev.kind === "decision" ? "decision-evidence" : ev.kind === "execution" ? "execution-evidence" : "refusal-record";
+      await stack.publishEvidence(mid, t, ev as unknown as Record<string, unknown>);
+    }
   }
 
   // Separate operator login: its random bootstrap secret is never served by
@@ -276,7 +525,9 @@ async function main() {
   // approval is approved, so track how much of each mission's evidence has been
   // published and flush
   // only the tail for whichever mission the caller names (default: active).
-  const publishedCounts = new Map<string, number>([[missionId, stack.evidence.forMission(missionId).length]]);
+  const publishedCounts = new Map<string, number>(
+    [missionId, reconciliation.missionId].map((mid) => [mid, stack.evidence.forMission(mid).length]),
+  );
   const publishNew = async (mid: string = active.missionId) => {
     const all = stack.evidence.forMission(mid);
     const already = publishedCounts.get(mid) ?? 0;
@@ -293,11 +544,11 @@ async function main() {
   // proves possession of the challenge's cnf key with a DPoP proof bound to
   // this endpoint. Polls carry `transaction_authorization_id` alone.
   const clientAssertion = await clientAssertionSigner(asUrl, stack.authServer.agentClientJwk);
-  const postTransaction = async (payload: Record<string, string>) => {
+  const postTransaction = async (payload: Record<string, string>, b: Binding = active) => {
     const res = await fetch(`${asUrl}/transaction`, {
       method: "POST",
       headers: {
-        dpop: await dpopProofFor(active.issued.dpopKeys, `${asUrl}/transaction`, "POST"),
+        dpop: await dpopProofFor(b.issued.dpopKeys, `${asUrl}/transaction`, "POST"),
         "content-type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
@@ -321,6 +572,9 @@ async function main() {
   // taskId -> transaction_authorization_id, so /agent/retry polls the AS by the
   // continuation handle (the challenge is presented only once, at act time).
   const txnHandles = new Map<string, string>();
+  // taskId -> the Mission the challenged action ran under, so the retry
+  // presents that Mission's credential.
+  const txnMissions = new Map<string, string>();
 
   // taskId -> challenge-derived JIT detail, stashed at initiation so the enriched
   // approver queue can show what the approver is deciding (tool + invoice + digest)
@@ -332,16 +586,30 @@ async function main() {
   // (the AS resolves an interaction from its cookie alone). state advances to
   // "active" (completed -> swapped in) or "denied" (interaction settled).
   type SubmittedApproval = Awaited<ReturnType<typeof submitMissionApproval>>;
-  interface MissionApproval {
+  interface MissionApproval extends ParkedApproval {
     submitted: SubmittedApproval;
     intent: string;
     goal: string;
+    proposed: AuthEntry[];
     derived: AuthEntry[];
+    diff: ReturnType<typeof proposalDiff>;
     subject: string;
-    state: "pending" | "active" | "denied";
-    missionId?: string;
   }
   const missionApprovals = new Map<string, MissionApproval>();
+
+  // The approval-authentication floor as the AS will apply it to this
+  // authority, against the approver's recorded login as it stands now
+  // (@spec mission#approval-authentication). Display only: the AS evaluates
+  // the floor again when the approver decides.
+  const floorFor = (derived: AuthEntry[]) =>
+    evaluateApprovalFloor(APPROVAL_FLOOR, derived as never, stack.approverLogin, { interactive: true, nowSeconds: nowSeconds() });
+  const loginState = () => ({
+    sub: stack.approverLogin.sub,
+    acr: stack.approverLogin.acr,
+    auth_time: stack.approverLogin.auth_time,
+    now: nowSeconds(),
+    max_age_seconds: Math.min(...APPROVAL_FLOOR.floors.map((f) => f.max_authentication_age_seconds)),
+  });
 
   // The approver's enriched queue, assembled in the DEMO server (console-bff is
   // untouched): JIT/AROP tasks (from the shared ARS + the stashed challenge
@@ -354,7 +622,15 @@ async function main() {
         id,
         type: "mission" as const,
         subject: r.subject,
-        context: { goal: r.goal, derived: r.derived, subject: r.subject },
+        context: {
+          goal: r.goal,
+          expires_at: (JSON.parse(r.intent) as { intent: { expires_at?: string } }).intent.expires_at ?? null,
+          proposed: r.proposed,
+          derived: r.derived,
+          diff: r.diff,
+          subject: r.subject,
+          floor: floorFor(r.derived),
+        },
       }));
     const jit = stack.bff.approverQueue(session).map((t) => {
       const d = jitDetails.get(t.id);
@@ -417,12 +693,13 @@ async function main() {
   // a Challenge-Issuing Resource, never globally), and return the pending
   // fields the UI/JIT retry wire on. Shared by /agent/act and /agent/run so both
   // open the AROP task through identical logic.
-  const initiateArop = async (challenge: string, tool: string, invoiceId?: string) => {
+  const initiateArop = async (challenge: string, tool: string, invoiceId?: string, b: Binding = active) => {
     const challengeClaims = decodeClaims(challenge);
     const txn = challengeClaims.txn as string | undefined;
     const resource = challengeClaims.iss as string | undefined;
     const taskId = txn && resource ? txnTaskId(resource, txn) : undefined;
     if (taskId) {
+      txnMissions.set(taskId, b.missionId);
       // Stash the challenge-derived detail keyed by taskId so the enriched queue
       // can show tool + invoice + digest for this pending approval.
       jitDetails.set(taskId, {
@@ -431,11 +708,14 @@ async function main() {
         ...(challengeClaims.parameter_digest ? { parameter_digest: challengeClaims.parameter_digest as string } : {}),
       });
     }
-    const pending = await postTransaction({
-      transaction_challenge: challenge,
-      subject_token: active.issued.accessToken,
-      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-    });
+    const pending = await postTransaction(
+      {
+        transaction_challenge: challenge,
+        subject_token: b.issued.accessToken,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      },
+      b,
+    );
     if (taskId && pending.body.transaction_authorization_id) {
       txnHandles.set(taskId, pending.body.transaction_authorization_id);
     }
@@ -457,6 +737,9 @@ async function main() {
   const index = (c: Context) => c.html(readFileSync(INDEX, "utf8"));
   app.get("/", index);
   app.get("/index.html", index);
+  // The story's revocation proof, an ES module the dashboard imports.
+  app.get("/console-story.js", (c) =>
+    c.body(readFileSync(STORY_MODULE, "utf8"), 200, { "content-type": "text/javascript; charset=utf-8" }));
 
   // Display-only label maps (single source of truth: demo/src/labels.ts). The
   // dashboard fetches these once to gloss machine ids with human names; no wire
@@ -467,6 +750,23 @@ async function main() {
   app.get("/bff/session", (c) => c.json({ sub: session.sub, roles: session.roles, csrf: session.csrf, missionId: active.missionId }));
   app.get("/bff/operator/fleet", (c) => c.json(stack.bff.fleet(session)));
   app.get("/bff/operator/missions/:id/timeline", async (c) => c.json(await stack.bff.timeline(session, c.req.param("id"))));
+  // Demo only: rewrite one retained Execution Evidence record of the Mission
+  // (its outcome, completed -> failed) behind the transparency log's back.
+  // The log and receipts are untouched, so the timeline's five-step
+  // verification fails that row.
+  app.post("/bff/operator/missions/:id/tamper", async (c) => {
+    const id = c.req.param("id");
+    for (const row of await stack.bff.timeline(session, id)) {
+      if (row.evidence_type !== "execution-evidence" || !row.verified) continue;
+      const changes: Array<NonNullable<ReturnType<typeof rewriteExecutionOutcome>>> = [];
+      stack.alterRetainedEvidence(row.digest, (ev) => {
+        const change = rewriteExecutionOutcome(ev);
+        if (change) changes.push(change);
+      });
+      if (changes[0]) return c.json({ digest: row.digest, evidence_type: row.evidence_type, change: changes[0] });
+    }
+    return c.json({ error: "no verified execution record to alter" }, 409);
+  });
   app.post("/bff/operator/missions/:id/lifecycle", async (c) => {
     const body = await readJson(c);
     return c.json(stack.bff.lifecycle(session, c.req.param("id"), body.operation as never, session.csrf));
@@ -481,9 +781,12 @@ async function main() {
   // approval more than the floor's age bound after the last login refuses
   // until this is called.
   app.post("/bff/approver/login", (c) => {
-    logInAgain(stack.approverLogin);
-    return c.json({ sub: stack.approverLogin.sub, acr: stack.approverLogin.acr, auth_time: stack.approverLogin.auth_time });
+    logInAgain(stack.approverLogin, nowSeconds());
+    return c.json(loginState());
   });
+  // The approver's recorded login and the floor's age bound, so the approval
+  // card can say when a fresh login is needed before it is refused.
+  app.get("/bff/approver/login", (c) => c.json(loginState()));
   // Approver adjudicates EITHER a parked mission approval (approvalId in
   // missionApprovals) or a pending AROP/JIT task on the shared ARS.
   app.post("/bff/approver/adjudicate", async (c) => {
@@ -492,47 +795,32 @@ async function main() {
     const decision = (body.decision as "approve" | "deny") ?? "deny";
     const rec = missionApprovals.get(id);
     if (rec) {
-      // Guard against a double-fire (the poll + the queue button both refresh):
-      // once settled, echo the terminal state rather than re-deciding the jar.
-      if (rec.state !== "pending") {
-        return c.json({ approved: rec.state === "active", state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}) });
-      }
-      if (decision === "deny") {
-        await denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar }, stack.authServer!.approverConsole);
-        rec.state = "denied";
-        return c.json({ approved: false, state: "denied" });
-      }
-      // Approve: complete the interaction (decide -> code -> token), rebuild
-      // TokenFacts (mirroring the boot path), and swap the ACTIVE mission. Only
-      // now does the mission become a kernel record visible in the fleet.
-      let issuedMission: Awaited<ReturnType<typeof completeMissionApproval>>;
-      try {
-        issuedMission = await completeMissionApproval(asUrl, agentClientJwk, {
-          uid: rec.submitted.uid,
-          jar: rec.submitted.jar,
-          par: rec.submitted.par,
-        }, stack.authServer!.approverConsole);
-      } catch (e) {
-        return c.json({ approved: false, error: (e as Error).message }, 400);
-      }
-      const proof = await dpopProofFor(issuedMission.dpopKeys, CANONICAL_RESOURCE, "POST", issuedMission.accessToken);
-      // Same as above: validateToken() returns MissionBoundTokenFacts, no
-      // assertion needed.
-      const newFacts: MissionBoundTokenFacts = {
-        ...(await stack.server.validateToken(issuedMission.accessToken, proof, CANONICAL_RESOURCE, "POST")),
-        clientInstanceId: "inst-1",
-      };
-      const newId = newFacts.mission.id;
-      active = { facts: newFacts, missionId: newId, issued: issuedMission };
-      // Active-mission swap: prior JIT continuation handles belong to the OLD
-      // mission, so drop them (a stale /agent/retry must not execute against the
-      // new mission). The frontend also guards its poll by mission id.
-      txnHandles.clear();
-      publishedCounts.set(newId, stack.evidence.forMission(newId).length);
-      await publishNew();
-      rec.state = "active";
-      rec.missionId = newId;
-      return c.json({ approved: true, missionId: newId, authority: stack.kernel.get(newId)?.authority_set ?? [] });
+      // One decision per approval, however many requests arrive (the poll and
+      // the queue button both refresh); see adjudicateMissionApproval.
+      const approver = stack.authServer!.approverConsole;
+      const result = await adjudicateMissionApproval(rec, decision, {
+        floor: () => floorFor(rec.derived),
+        // Approve: complete the interaction (decide -> code -> token). Only
+        // now does the mission become a kernel record visible in the fleet.
+        complete: () =>
+          completeMissionApproval(asUrl, agentClientJwk, { uid: rec.submitted.uid, jar: rec.submitted.jar, par: rec.submitted.par }, approver),
+        adopt: async (issuedMission) => {
+          // The new Mission joins the agent's set and becomes the one it acts
+          // under; the Missions it already held stay bound.
+          active = await bind(issuedMission);
+          const newId = active.missionId;
+          // Active-mission swap: prior JIT continuation handles belong to the
+          // OLD mission, so drop them (a stale /agent/retry must not execute
+          // against the new mission). The frontend also guards its poll.
+          txnHandles.clear();
+          txnMissions.clear();
+          publishedCounts.set(newId, stack.evidence.forMission(newId).length);
+          await publishNew();
+          return { missionId: newId, authority: stack.kernel.get(newId)?.authority_set ?? [] };
+        },
+        deny: () => denyMissionApproval(asUrl, { uid: rec.submitted.uid, jar: rec.submitted.jar }, approver),
+      });
+      return c.json(result.body, result.status);
     }
     // JIT/AROP task on the shared ARS.
     return c.json(await stack.bff.adjudicateTask(session, id, decision, session.csrf));
@@ -544,6 +832,39 @@ async function main() {
   // Which mission the agent currently acts under (Agent console binding).
   app.get("/agent/mission", (c) =>
     c.json({ missionId: active.missionId, authority: stack.kernel.get(active.missionId)?.authority_set ?? [] }));
+
+  // Every Mission the agent holds, read from the kernel at request time: its
+  // observed state, the approved and the effective Authority Set, the
+  // Mission's own expiry, and the decoded claims of the access token bound to
+  // it (never the token itself). Display only.
+  app.get("/agent/missions", (c) =>
+    c.json({
+      active: active.missionId,
+      missions: [...bindings.values()].map((b) => {
+        const rec = stack.kernel.get(b.missionId);
+        if (!rec) return { id: b.missionId, state: "unknown" };
+        const observed = stack.kernel.applyExpiry(rec);
+        const claims = decodeClaims(b.issued.accessToken);
+        return {
+          id: rec.id,
+          goal: rec.intent.goal,
+          state: observed.state,
+          ...(observed.termination ? { termination: observed.termination } : {}),
+          version: observed.version,
+          subject: rec.subject.sub,
+          approver: rec.approval_basis.consent_principal.sub,
+          origin: rec.id === missionId || rec.id === reconciliation.missionId ? "seeded" : "approved",
+          expires_at: rec.intent.expires_at,
+          authority: rec.authority_set,
+          effective: observed.state === "active" ? stack.kernel.effectiveAuthoritySet(observed) : [],
+          token: {
+            claims,
+            expires_at: typeof claims.exp === "number" ? new Date(claims.exp * 1000).toISOString() : null,
+            renewable: b.refreshToken !== undefined,
+          },
+        };
+      }),
+    }));
 
   // ---- Shaper -> Mission Proposal -> Issue ----------------------------------
   // The shaper is UNTRUSTED client input: it only PROPOSES a Mission Intent from
@@ -624,6 +945,7 @@ async function main() {
     // Validate + derive up front (same as /agent/propose) so the queue can show
     // the approver the goal and the authority they are about to grant.
     let goal: string;
+    let proposed: AuthEntry[];
     let derived: AuthEntry[];
     let missionIntent: string;
     try {
@@ -632,6 +954,7 @@ async function main() {
         ? stack.kernel.validateProposal(authorizationDetails, parsed.target_resources)
         : undefined;
       derived = stack.kernel.derive(parsed, proposal) as unknown as AuthEntry[];
+      proposed = (proposal ?? []) as unknown as AuthEntry[];
       goal = String((parsed as unknown as { goal?: unknown }).goal ?? "");
       missionIntent = JSON.stringify({ intent: parsed });
     } catch (e) {
@@ -647,45 +970,63 @@ async function main() {
       return c.json({ error: (e as Error).message }, 400);
     }
     const approvalId = `apv_${crypto.randomUUID()}`;
-    missionApprovals.set(approvalId, { submitted, intent: missionIntent, goal, derived, subject: "alice", state: "pending" });
+    missionApprovals.set(approvalId, {
+      submitted,
+      intent: missionIntent,
+      goal,
+      proposed,
+      derived,
+      diff: proposalDiff(proposed, derived),
+      subject: "alice",
+      state: "pending",
+    });
     return c.json({ pending: true, approvalId, derived });
   });
 
   // Poll a parked mission approval: pending (awaiting the approver), active
-  // (completed + swapped in, with its missionId), or denied. `unknown` is a
-  // terminal answer for an id the server no longer tracks (never a poll loop).
+  // (completed + swapped in, with its missionId), denied, or failed (a
+  // decision that did not complete, with its error). `unknown` is a terminal
+  // answer for an id the server no longer tracks (never a poll loop).
   app.get("/agent/approval-status", (c) => {
     const rec = missionApprovals.get(c.req.query("id") ?? "");
     if (!rec) return c.json({ state: "unknown" });
-    return c.json({ state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}) });
+    return c.json({ state: rec.state, ...(rec.missionId ? { missionId: rec.missionId } : {}), ...(rec.error ? { error: rec.error } : {}) });
   });
   // Agent action: attempt a tool call and report the enforcement outcome. When
   // a gated action yields a transaction_challenge, the server redeems it at the
   // AS transaction endpoint on the agent's behalf, opening an approval task on
   // the shared ARS, and hands the pending txn back to the agent.
   app.post("/agent/act", async (c) => {
-    const body = await readJson(c);
-    const tool = String(body.tool);
-    const args = keyed(tool, (body.args as Record<string, unknown>) ?? {});
-    const r = TX_TOOLS.has(tool)
-      ? await stack.server.callTransactionTool(tool, args, active.facts, undefined, ACCEPT_CHALLENGE)
-      : await stack.server.callReadTool(tool, args, active.facts);
-    await publishNew();
-    // Structured detail for the log renderer, ADDED alongside the existing
-    // fields (ok/denial_reason/... stay for the JIT UI + /agent/retry contract).
-    const detail = stepDetail(tool, args, r, active.missionId);
-    const ch = (r as ToolResult).transaction_challenge;
-    if (!r.ok && ch) {
-      // The ARS task id is derived from the challenge's issuer and txn (a `txn`
-      // is unique within the resource), so the approver queue + retry correlate
-      // on it while
-      // the client polls the AS by the continuation handle. `arop` is spread
-      // AFTER `r` so its decoded challenge overrides the raw one; `detail` carries
-      // no transaction_challenge/taskId, so it never clobbers those.
-      const arop = await initiateArop(ch, tool, args.invoice_id as string | undefined);
-      return c.json({ ...r, ...arop, ...detail });
-    }
-    return c.json({ ...r, ...detail });
+    // The Mission the action runs under: the one named, else the active one;
+    // a named Mission the agent does not hold is refused (handleAgentAct).
+    const result = await handleAgentAct(await readJson(c), {
+      bindings,
+      active,
+      renew,
+      invoke: (tool, args, b) =>
+        TX_TOOLS.has(tool)
+          ? stack.server.callTransactionTool(tool, args, b.facts, undefined, ACCEPT_CHALLENGE)
+          : stack.server.callReadTool(tool, args, b.facts),
+      report: async (tool, args, r, b, renewal) => {
+        await publishNew(b.missionId);
+        // Structured detail for the log renderer, ADDED alongside the existing
+        // fields (ok/denial_reason/... stay for the JIT UI + /agent/retry contract).
+        const detail = stepDetail(tool, args, r, b.missionId);
+        const ch = r.transaction_challenge;
+        if (!r.ok && ch) {
+          // The ARS task id is derived from the challenge's issuer and txn (a
+          // `txn` is unique within the resource), so the approver queue + retry
+          // correlate on it while the client polls the AS by the continuation
+          // handle. `arop` is spread AFTER `r` so its decoded challenge
+          // overrides the raw one; `detail` carries no transaction_challenge or
+          // taskId, so it never clobbers those.
+          const arop = await initiateArop(ch, tool, args.invoice_id as string | undefined, b);
+          return { ...r, ...arop, ...detail, ...(renewal ? { renewal } : {}) };
+        }
+        return { ...r, ...detail, ...(renewal ? { renewal } : {}) };
+      },
+    });
+    return c.json(result.body, result.status);
   });
   // Agent retries a JIT-gated call after approval: poll the AS transaction
   // endpoint by the continuation handle for the txn-token, then re-present it to
@@ -702,7 +1043,12 @@ async function main() {
     if (!handle || !task || task.state === "pending") {
       return c.json({ ok: false, pending: true, state: task?.state ?? "unknown" });
     }
-    const issuedTxn = await postTransaction({ transaction_authorization_id: handle });
+    // The retry presents the credential of the Mission the challenge was
+    // opened under, and no other: with no Mission recorded, it is refused.
+    const b = challengedBinding(taskId, txnMissions, bindings);
+    if (!b) return c.json({ ok: false, error: "no Mission the agent holds is recorded for this approval task" }, 409);
+    await renew(b);
+    const issuedTxn = await postTransaction({ transaction_authorization_id: handle }, b);
     const txnToken = issuedTxn.body.access_token;
     // §5.3 poll shape: 400 authorization_pending -> still pending; a terminal
     // access_denied/expired_token reaps the handle and surfaces the denial.
@@ -721,14 +1067,15 @@ async function main() {
     const r = await callWithTransactionCredential(
       stack.server,
       String(txnToken),
-      active.issued.dpopKeys,
+      b.issued.dpopKeys,
       tool,
       args,
     );
     if (!r.ok && r.refusal_reason?.startsWith("txn_")) txnHandles.delete(taskId);
-    await publishNew();
+    await publishNew(b.missionId);
     txnHandles.delete(taskId);
-    return c.json(r);
+    txnMissions.delete(taskId);
+    return c.json({ ...r, missionId: b.missionId });
   });
 
   // One-click autonomous run: a DETERMINISTIC planner (no LLM, no API key) that
@@ -740,6 +1087,7 @@ async function main() {
   // step is the paused JIT one carrying the taskId the retry button wires on.
   app.post("/agent/run", async (c) => {
     const steps: Array<StepDetail & { taskId?: string | undefined; transaction_authorization_id?: string | undefined }> = [];
+    const renewal = await renew(active);
     for (const invoice_id of RUN_INVOICES) {
       const args = { invoice_id, idempotency_key: idem() };
       const r = await stack.server.callTransactionTool("execute_wire_transfer", args, active.facts, undefined, ACCEPT_CHALLENGE);
@@ -759,13 +1107,14 @@ async function main() {
     } else {
       steps.push(jitDetail);
     }
-    return c.json({ steps });
+    return c.json({ steps, ...(renewal ? { renewal } : {}) });
   });
 
   serve({ fetch: app.fetch, port: PORT }, () => {
     console.log(`\nMission demo console (operator-only login link): http://localhost:${PORT}/#console-login=${session.id}`);
     console.log(`Seeded mission ${missionId} (subject alice, approver bob), one wire executed with evidence.`);
-    console.log("Operator: fleet + lifecycle + verified evidence timeline. Agent: catalog + act. Approver: queue.\n");
+    console.log(`Seeded mission ${reconciliation.missionId} (read-only reconciliation), one read with evidence.`);
+    console.log("Story mode walks the narrated run; the Request, Agent, Approver and Operator views stay open for exploring.\n");
   });
 }
 

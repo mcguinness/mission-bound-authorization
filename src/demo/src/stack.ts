@@ -361,6 +361,15 @@ export interface DemoStack {
   viewFor: (missionId: string) => MissionView | undefined;
   /** Register evidence to the transparency log + retain it for the timeline. */
   publishEvidence: (missionId: string, evidenceType: string, evidence: Record<string, unknown>) => Promise<void>;
+  /**
+   * Demo only: replace the retained copy of the evidence a published
+   * statement names with `edit`'s result, as an insider with write access to
+   * the evidence store could. The transparency log and its receipts are
+   * untouched, so the operator timeline's verification reports the change.
+   * `edit` receives a mutable copy. Returns false when no retained evidence
+   * has that digest.
+   */
+  alterRetainedEvidence: (digest: string, edit: (evidence: Record<string, unknown>) => void) => boolean;
   /** Install a PEP observer to capture the AuthZEN envelope + PDP decision (demo). */
   onEnforce: (fn: PepDeps["observe"]) => void;
   /** Real-issuance + cross-domain extras; only set when withAuthServer is true. */
@@ -1765,6 +1774,15 @@ export async function composeStack(opts: {
     receipts.set(stmt.jws, await transparency.register(stmt));
     retainedEvidence.set(stmt.digest, ev);
   };
+  const alterRetainedEvidence = (digest: string, edit: (evidence: Record<string, unknown>) => void): boolean => {
+    const held = retainedEvidence.get(digest);
+    if (held === undefined) return false;
+    // Retained records are deep-frozen; the edit lands on a copy that replaces them.
+    const copy = structuredClone(held) as Record<string, unknown>;
+    edit(copy);
+    retainedEvidence.set(digest, copy);
+    return true;
+  };
 
   const bff = new ConsoleBff({
     kernel,
@@ -1829,6 +1847,7 @@ export async function composeStack(opts: {
     pdpMode: mode,
     viewFor,
     publishEvidence,
+    alterRetainedEvidence,
     onEnforce: (fn) => {
       observer = fn;
     },

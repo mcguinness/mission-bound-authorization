@@ -53,6 +53,7 @@ export const REASON_LABELS: Record<string, string> = {
   target_drift: "The target changed after the decision (a bound evaluation-context fact moved)",
   view_inconsistent: "Token's mission view doesn't match the authorization server",
   invalid_credential: "Missing or invalid mission credential",
+  credential_invalid: "The Mission's access token is no longer valid",
   mission_not_active: "Mission is not active (suspended or terminated)",
   mission_inactive: "Mission is not active (suspended or terminated)",
   permit_consumed: "Single-use permit already consumed",
