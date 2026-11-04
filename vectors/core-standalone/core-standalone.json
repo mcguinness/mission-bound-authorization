@@ -1,0 +1,281 @@
+{
+  "format": "mission-core-standalone-fixture/1",
+  "scenario": "core-standalone",
+  "refs": [
+    "#2009",
+    "notes/audits/2026-10-31-core-independence/PLAN.md, P4"
+  ],
+  "reproduces_binding_vectors": [
+    "intent_hash",
+    "authority_hash",
+    "intent_hash",
+    "authority_hash",
+    "proposal_hash",
+    "entry_digest"
+  ],
+  "example_type": {
+    "type": "payment_initiation",
+    "source": "RFC 9396, Section 2, Figure 2",
+    "status": "illustrative API type; not a Mission type or a standardized payment API",
+    "transformation": "none: RFC 9396's payment fields define no subset relation, so the one proposed entry is approved unchanged"
+  },
+  "mission": {
+    "issuer": "https://as.example.com",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
+    "id_label": "core-standalone/mission"
+  },
+  "cast": {
+    "client_id": "pq7Lm2Xz9K",
+    "subject": {
+      "iss": "https://idp.example.com",
+      "sub": "user_5Tn8qW2xK7mR4vBc"
+    },
+    "approver": {
+      "iss": "https://idp.example.com",
+      "sub": "user_5Tn8qW2xK7mR4vBc"
+    },
+    "identity_provider": "https://idp.example.com",
+    "resource": "https://example.com/payments"
+  },
+  "submission": {
+    "mission_intent": {
+      "intent": {
+        "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A with reference Ref Number Merchant, and check or cancel it.",
+        "target_resources": [
+          "https://example.com/payments"
+        ],
+        "expires_at": "2026-11-02T13:00:00Z"
+      }
+    },
+    "authorization_details": [
+      {
+        "type": "payment_initiation",
+        "actions": [
+          "initiate",
+          "status",
+          "cancel"
+        ],
+        "locations": [
+          "https://example.com/payments"
+        ],
+        "instructedAmount": {
+          "currency": "EUR",
+          "amount": "123.50"
+        },
+        "creditorName": "Merchant A",
+        "creditorAccount": {
+          "iban": "DE02100100109307118603"
+        },
+        "remittanceInformationUnstructured": "Ref Number Merchant"
+      }
+    ]
+  },
+  "anchors": {
+    "intent_hash": "sha-256:Vo-xrC5HtrAUS9ZAPSWhhpLd7fr43eQsbH6AMiooa5Y",
+    "proposal_hash": "sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg",
+    "authority_hash": "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY"
+  },
+  "commitments": [
+    {
+      "anchor": "intent_hash",
+      "typ": "mission-intent",
+      "iss": "https://as.example.com",
+      "value_source": "record.intent",
+      "envelope": {
+        "typ": "mission-intent",
+        "iss": "https://as.example.com",
+        "value": {
+          "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A with reference Ref Number Merchant, and check or cancel it.",
+          "target_resources": [
+            "https://example.com/payments"
+          ],
+          "expires_at": "2026-11-02T13:00:00Z"
+        }
+      },
+      "jcs": "{\"iss\":\"https://as.example.com\",\"typ\":\"mission-intent\",\"value\":{\"expires_at\":\"2026-11-02T13:00:00Z\",\"goal\":\"Initiate a credit transfer of EUR 123.50 to Merchant A with reference Ref Number Merchant, and check or cancel it.\",\"target_resources\":[\"https://example.com/payments\"]}}",
+      "digest": "sha-256:Vo-xrC5HtrAUS9ZAPSWhhpLd7fr43eQsbH6AMiooa5Y"
+    },
+    {
+      "anchor": "proposal_hash",
+      "typ": "mission-proposed-authority",
+      "iss": "https://as.example.com",
+      "value_source": "record.proposed_authority",
+      "envelope": {
+        "typ": "mission-proposed-authority",
+        "iss": "https://as.example.com",
+        "value": [
+          {
+            "type": "payment_initiation",
+            "actions": [
+              "initiate",
+              "status",
+              "cancel"
+            ],
+            "locations": [
+              "https://example.com/payments"
+            ],
+            "instructedAmount": {
+              "currency": "EUR",
+              "amount": "123.50"
+            },
+            "creditorName": "Merchant A",
+            "creditorAccount": {
+              "iban": "DE02100100109307118603"
+            },
+            "remittanceInformationUnstructured": "Ref Number Merchant"
+          }
+        ]
+      },
+      "jcs": "{\"iss\":\"https://as.example.com\",\"typ\":\"mission-proposed-authority\",\"value\":[{\"actions\":[\"initiate\",\"status\",\"cancel\"],\"creditorAccount\":{\"iban\":\"DE02100100109307118603\"},\"creditorName\":\"Merchant A\",\"instructedAmount\":{\"amount\":\"123.50\",\"currency\":\"EUR\"},\"locations\":[\"https://example.com/payments\"],\"remittanceInformationUnstructured\":\"Ref Number Merchant\",\"type\":\"payment_initiation\"}]}",
+      "digest": "sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg"
+    },
+    {
+      "anchor": "authority_hash",
+      "typ": "mission-authority-set",
+      "iss": "https://as.example.com",
+      "value_source": "record.authority_set",
+      "envelope": {
+        "typ": "mission-authority-set",
+        "iss": "https://as.example.com",
+        "value": [
+          {
+            "type": "payment_initiation",
+            "actions": [
+              "initiate",
+              "status",
+              "cancel"
+            ],
+            "locations": [
+              "https://example.com/payments"
+            ],
+            "instructedAmount": {
+              "currency": "EUR",
+              "amount": "123.50"
+            },
+            "creditorName": "Merchant A",
+            "creditorAccount": {
+              "iban": "DE02100100109307118603"
+            },
+            "remittanceInformationUnstructured": "Ref Number Merchant"
+          }
+        ]
+      },
+      "jcs": "{\"iss\":\"https://as.example.com\",\"typ\":\"mission-authority-set\",\"value\":[{\"actions\":[\"initiate\",\"status\",\"cancel\"],\"creditorAccount\":{\"iban\":\"DE02100100109307118603\"},\"creditorName\":\"Merchant A\",\"instructedAmount\":{\"amount\":\"123.50\",\"currency\":\"EUR\"},\"locations\":[\"https://example.com/payments\"],\"remittanceInformationUnstructured\":\"Ref Number Merchant\",\"type\":\"payment_initiation\"}]}",
+      "digest": "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY"
+    }
+  ],
+  "record": {
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
+    "issuer": "https://as.example.com",
+    "state": "active",
+    "intent": {
+      "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A with reference Ref Number Merchant, and check or cancel it.",
+      "target_resources": [
+        "https://example.com/payments"
+      ],
+      "expires_at": "2026-11-02T13:00:00Z"
+    },
+    "proposed_authority": [
+      {
+        "type": "payment_initiation",
+        "actions": [
+          "initiate",
+          "status",
+          "cancel"
+        ],
+        "locations": [
+          "https://example.com/payments"
+        ],
+        "instructedAmount": {
+          "currency": "EUR",
+          "amount": "123.50"
+        },
+        "creditorName": "Merchant A",
+        "creditorAccount": {
+          "iban": "DE02100100109307118603"
+        },
+        "remittanceInformationUnstructured": "Ref Number Merchant"
+      }
+    ],
+    "authority_set": [
+      {
+        "type": "payment_initiation",
+        "actions": [
+          "initiate",
+          "status",
+          "cancel"
+        ],
+        "locations": [
+          "https://example.com/payments"
+        ],
+        "instructedAmount": {
+          "currency": "EUR",
+          "amount": "123.50"
+        },
+        "creditorName": "Merchant A",
+        "creditorAccount": {
+          "iban": "DE02100100109307118603"
+        },
+        "remittanceInformationUnstructured": "Ref Number Merchant"
+      }
+    ],
+    "authority_hash": "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY",
+    "intent_hash": "sha-256:Vo-xrC5HtrAUS9ZAPSWhhpLd7fr43eQsbH6AMiooa5Y",
+    "proposal_hash": "sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg",
+    "subject": {
+      "iss": "https://idp.example.com",
+      "sub": "user_5Tn8qW2xK7mR4vBc"
+    },
+    "approval_basis": {
+      "type": "direct",
+      "consent_principal": {
+        "iss": "https://idp.example.com",
+        "sub": "user_5Tn8qW2xK7mR4vBc"
+      }
+    },
+    "authority_source": {
+      "type": "user_delegated"
+    },
+    "client_id": "pq7Lm2Xz9K",
+    "approval_event_id": "ape_3Hq8Lm2Vx7Rz9Tc4",
+    "created_at": "2026-11-02T12:00:00Z",
+    "expires_at": "2026-11-02T13:00:00Z"
+  },
+  "member_presence": {
+    "present": [
+      "id",
+      "issuer",
+      "state",
+      "intent",
+      "proposed_authority",
+      "authority_set",
+      "authority_hash",
+      "intent_hash",
+      "proposal_hash",
+      "subject",
+      "approval_basis",
+      "authority_source",
+      "client_id",
+      "approval_event_id",
+      "created_at",
+      "expires_at"
+    ],
+    "implied": {
+      "approval_basis.activation": {
+        "approval_event_id": "ape_3Hq8Lm2Vx7Rz9Tc4"
+      },
+      "approval_basis.activation_actor": {
+        "iss": "https://idp.example.com",
+        "sub": "user_5Tn8qW2xK7mR4vBc"
+      },
+      "approval_basis.root_commitment": "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY"
+    },
+    "absent": {
+      "termination": "state is active",
+      "submission_evidence": "the submission carried no evidence",
+      "policy_version": "OPTIONAL; no feature this example uses depends on versioned derivation-policy identification",
+      "approval_basis.adjudication": "OPTIONAL; the direct type fixes the mechanism",
+      "approval_basis.approved_at": "absent for direct"
+    }
+  }
+}
