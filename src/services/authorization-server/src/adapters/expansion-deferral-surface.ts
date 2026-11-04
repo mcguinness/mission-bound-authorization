@@ -57,6 +57,20 @@ export interface DeferralContext {
    */
   child_derivation: { successor: RetainedChildMaximum[]; reconsent: RetainedChildMaximum[] | null };
   /**
+   * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+   * (#2040 review P2): the per-child disclosure the page showed for each
+   * delegable entry of the successor and of the re-consent offer
+   * ({@link deferralChildGrants}): its lines, the rule and maximum a
+   * `child_creation_policy` snapshot states included, and, where one could
+   * not be shown, why. A policy held, withdrawn, restored or edited between
+   * the rendering and the decision changes it, so the decision is refused
+   * `approval_context_changed` and only a fresh rendering, which shows the
+   * disclosure as it now is, can be approved: a rendering that could not
+   * show a figure never approves it. Absent where the page showed no
+   * delegable entry.
+   */
+  child_grants?: DeferralChildGrants;
+  /**
    * @spec mission-template#instance-composition, metering#capacity-across-missions
    * (#813, #816, D877): for a successor in a standing-payment lineage, the
    * counters it continues (the dispatched instance's and the shared budget's)
@@ -102,11 +116,19 @@ export function deciding(kernel: MissionKernel, review: DeferralReview, rendered
   return decisionExpiry(kernel, review.intent.expires_at, rendered, { predecessor: review.predecessor.expires_at });
 }
 
-/** The context a deferral's rendering shows, and its commitment. */
+/** The per-child disclosure of a deferral's page ({@link deferralChildGrants}). */
+export type DeferralChildGrants = { successor: ChildGrantDisclosure[]; reconsent: ChildGrantDisclosure[] };
+
+/**
+ * The context a deferral's rendering shows, and its commitment. The approval
+ * surface passes `childGrants`, the per-child disclosure it renders, at the
+ * rendering and again, read afresh, at the decision.
+ */
 export function deferralContext(
   review: DeferralReview,
   expiresAt: string,
   budgetExposure: DeferralBudgetExposure | null = null,
+  childGrants: DeferralChildGrants | null = null,
 ): { context: DeferralContext; commitment: string } {
   const issuer = review.predecessor.issuer;
   const { disclosure } = review;
@@ -136,6 +158,7 @@ export function deferralContext(
       : null,
     carryover: review.carryover ? contentDigest(review.carryover) : null,
     child_derivation: review.child_derivation,
+    ...(childGrants && (childGrants.successor.length || childGrants.reconsent.length) ? { child_grants: childGrants } : {}),
     ...(budgetExposure ? { budget_exposure: budgetExposure } : {}),
   };
   return { context, commitment: contentDigest(context) };
@@ -155,7 +178,7 @@ export function deferralChildGrants(
     held: Parameters<typeof childGrantDisclosures>[1]["held"];
     asyncDelegation: boolean;
   },
-): { successor: ChildGrantDisclosure[]; reconsent: ChildGrantDisclosure[] } {
+): DeferralChildGrants {
   const shown = (entries: readonly AuthorityEntry[], figures: readonly RetainedChildMaximum[]) =>
     childGrantDisclosures(entries, {
       ...(opts.derivationLimits ? {} : { derivationLimits: false }),

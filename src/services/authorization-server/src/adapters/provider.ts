@@ -6511,6 +6511,23 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           templateCeiling(proposed.ceiling, kernel.authoritySourceOptions().capabilityResolver),
           kernel.resourceContracts(),
         );
+        // @spec derivation-limits#approval-rendering (#2040 review): a
+        // delegable ceiling entry whose committed child_creation_policy is not
+        // held at its digest, or states a malformed maximum, could never be
+        // shown, so the proposal is refused here: no later restoration of the
+        // policy makes approvable a consent no page could show when proposed.
+        if (enabled("derivation-limits")) {
+          const undisclosed = childGrantDisclosures(ceiling, {
+            figures: [],
+            held: (ref) => verifiedActivationPolicy(opts.issuer, kernel.activationPolicies(), ref),
+            asyncDelegation: opts.familyStore !== undefined,
+          }).find((g) => g.undisclosed)?.undisclosed;
+          if (undisclosed) {
+            ctx.status = 400;
+            ctx.body = { error: "invalid_request", error_description: undisclosed };
+            return;
+          }
+        }
         const proposal = templateProposals.propose(
           { ...proposed, ceiling },
           pinDispatchPolicy(opts.issuer, opts.dispatchPolicies, proposed.dispatch_policy),
@@ -6823,7 +6840,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         );
         return;
       }
-      const rendered = deferralContext(review, shownExpiry(kernel, review), exposure);
+      // @spec derivation-limits#approval-rendering (#2040 review P2): the
+      // per-child disclosure this page shows, committed with the rendering.
+      const childGrants = deferralChildGrants(review, deferralChildGrantInputs());
+      const rendered = deferralContext(review, shownExpiry(kernel, review), exposure, childGrants);
       const revision = retainRenderRevision<DeferralContext>(
         provider,
         code,
@@ -6841,7 +6861,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
         // (#2040): each delegable entry's per-child rule, at the figure the
         // rendering commits and the decision retains.
-        childGrants: deferralChildGrants(review, deferralChildGrantInputs()),
+        childGrants,
         ...(csrf ? { csrf } : {}),
         changed: ctx.query.changed === "1",
         ...(client?.clientName ? { clientName: String(client.clientName) } : {}),
@@ -6968,7 +6988,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(503, "temporarily_unavailable", `the standing-payment budget this successor continues cannot be read (${e.message}); nothing is approved`);
         return;
       }
-      const current = deferralContext(review, deciding(kernel, review, rendered.context.expires_at), decidingExposure);
+      // @spec derivation-limits#approval-rendering (#2040 review P2): the
+      // per-child disclosure read afresh, so a policy restored, withdrawn or
+      // edited since the rendering asks for a fresh one.
+      const decidingGrants = deferralChildGrants(review, deferralChildGrantInputs());
+      const current = deferralContext(
+        review,
+        deciding(kernel, review, rendered.context.expires_at),
+        decidingExposure,
+        decidingGrants,
+      );
       if (current.commitment !== rendered.commitment) {
         retireRenderRevision(provider, code, principalKey as string, rendered.revision);
         if (form) {
@@ -7001,8 +7030,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // decision, recording nothing. Only where the deployment implements
       // Derivation Limits (#2018).
       if (enabled("derivation-limits")) {
-        const grants = deferralChildGrants(review, deferralChildGrantInputs());
-        const undisclosed = [...grants.successor, ...(reconsent ? grants.reconsent : [])].find((g) => g.undisclosed)?.undisclosed;
+        const undisclosed = [...decidingGrants.successor, ...(reconsent ? decidingGrants.reconsent : [])].find((g) => g.undisclosed)
+          ?.undisclosed;
         if (undisclosed) {
           refuse(403, "access_denied", undisclosed);
           return;
