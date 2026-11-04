@@ -105,7 +105,7 @@ async function deploy(port: number, opts: { malformedB?: boolean; derivationLimi
   const ceiling = DERIVATION_POLICY.ceiling.map((entry, i) => {
     const e = entry as unknown as AuthorityEntry;
     if (e.resource === PAYMENTS && i === 0) {
-      const children = (e.delegation as { children: Record<string, unknown> }).children;
+      const children = (e.delegation as unknown as { children: Record<string, unknown> }).children;
       return { ...e, delegation: { ...e.delegation, children: { ...children, child_creation_policy: aRef } } };
     }
     if (e.resource === PLAIN) return { ...e, delegation: { max_depth: 1, children: { max_children: 2, child_creation_policy: bRef } } };
