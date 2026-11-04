@@ -19,12 +19,12 @@
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "604492561e93b21e31aa7139c06d6b670eff60b0",
-    "content_sha256": "77e3ab33edb21e3870cb28700434b4795aab34cbb183e8600306e2da68cc727b"
+    "revision": "e3be60288cf916a8610db66daa9160f0e2c88388",
+    "content_sha256": "1616b2961df62b4d985ac5e9a8fc6bd3941af146b70e7b43ad572a13d3bf9bde"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "0c6e50212de7a5078b5598d241a77dc61c54dc6d",
-    "content_sha256": "6f4951f567f9451fc1e49af90cb77f2661a2f77d78896f446a92410535015ff1"
+    "revision": "8718b08145792642827f8fe1ccfb3ae265c8e90a",
+    "content_sha256": "e7c8f5a9f76cf1dc98f7d6a29284c7965c1a462a60630a6fbb997ce1be1395bf"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "aa284101326ff8dce48925418b3c8c6f858ea264",
@@ -333,6 +333,8 @@
    "harness.work-item-attachment",
    "harness.work-item-prerequisite",
    "runtime.work-item-attribution",
+   "runtime.authority-content-disposition",
+   "runtime.authority-content-surrogate",
    "template.standing-payment",
    "metering.exact-budget",
    "metering.child-accounting",
@@ -35487,6 +35489,549 @@
    "notes": "Tested for the tool catalog; the broader exposure surface (prompts, retrieved documents, memory, schemas, downstream responses) is not."
   },
   {
+   "id": "runtime.authority-content.scope-statement-declaration",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "A deployment that applies these dispositions MUST declare in its Enforcement Scope Statement ({{runtime-conformance}}):",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment that applies authority-bearing content dispositions declares in its Enforcement Scope Statement the declared classes (every baseline class included under either named claim), the covered reads, the disposition of each class, the detection mechanism and its supported representations, the handling of uncertain classification and detector failure, and the residual false negatives it accepts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference Enforcement Scope Statement declares authority-bearing content classes, covered reads, dispositions, or detection coverage, and its validator has no such member."
+  },
+  {
+   "id": "runtime.authority-content.disposition-under-named-claims",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "each item of a declared class that the PEP recognizes in the response to a covered mediated consequential read MUST receive its disposition before the response reaches the agent component.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.compromise-resistant",
+     "runtime.trifecta-containment"
+    ]
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "under agent-compromise-resistant enforcement or trifecta containment, an item the PEP recognizes as a declared class in a covered read's response is withheld, surrogated, or routed as declared, and never reaches the agent component; a test injects the recognized item, independent of the detector"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP recognizes authority-bearing content or gives it a disposition. mcp-payments's mediated consequential reads (get_invoice, lookup_vendor, list_invoices) return content to the agent component through the PEP and could host a mailbox-style fixture."
+  },
+  {
+   "id": "runtime.authority-content.disposition-should-outside-claims",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "A deployment that makes neither claim SHOULD apply the dispositions to each mediated consequential read whose response can carry authority-bearing content.",
+   "role": "PEP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "outside the named claims, a mediated consequential read whose response can carry authority-bearing content has the dispositions applied; a justified departure is recorded, not failed"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP recognizes authority-bearing content or gives it a disposition. mcp-payments's mediated consequential reads (get_invoice, lookup_vendor, list_invoices) return content to the agent component through the PEP and could host a mailbox-style fixture."
+  },
+  {
+   "id": "runtime.authority-content.routing-recipient-authorized",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The PEP MUST deliver a routed item only to a recipient authorized to receive that item, established independently of any routing instruction the agent component supplies, for example from trusted configuration or the deployment's authorization.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-disposition"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a routed item reaches only a recipient authorized to receive that item, established independently of agent-supplied routing instructions; a recipient the agent component names, or one authorized only to approve the Mission, does not receive an item for another account"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP routes authority-bearing content or establishes a recipient authorized to receive an item."
+  },
+  {
+   "id": "runtime.authority-content.routing-no-recipient-withheld",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "Where it establishes no authorized recipient, the PEP MUST withhold the item.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-disposition"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an item routed where no authorized recipient is established is withheld: it reaches neither the agent component nor any other recipient"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP routes authority-bearing content or establishes a recipient authorized to receive an item."
+  },
+  {
+   "id": "runtime.authority-content.surrogate-binding-recorded",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "When it issues a surrogate, the PEP MUST record with it:",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at issuance the PEP records, with each surrogate, the service, the principal or account, the operation, the Mission and any attributed work item, and a lifetime and use limit at most the class's finite configured cap; the record is observed through the refusals of runtime.authority-content.surrogate-resolution-bound"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.service-from-trusted-configuration",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "the service at which the item is authority, from trusted configuration keyed to the read's source, never from a URL or other value in the content;",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the service a surrogate is bound to comes from trusted configuration keyed to the read's source; a surrogate whose content names another service (a link or other value pointing elsewhere) is refused toward that service"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.surrogate-lifetime-capped",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "a lifetime and a use limit: the finite cap the deployment configures for the item's class, shortened to any expiry or use limit the PEP knows the item to carry. An unknown item limit never leaves a surrogate unlimited.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a surrogate is refused once its class's finite configured lifetime or use cap is reached, or earlier where the item's known expiry or use limit is shorter, including when the item states no limit of its own"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.account-operation-trusted-source",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The account and the operation MUST each be established by a trusted source: trusted configuration, or service-specific transaction information the PEP verifies.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the account and the operation a surrogate binds come from trusted configuration or verified service-specific transaction information; an account or operation that only the content or an agent-component assertion names is never recorded as the binding"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.no-surrogate-without-trusted-binding",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The PEP MUST NOT surrogate an item whose account or operation it cannot establish; it withholds or routes that item.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an item whose account or operation cannot be established from a trusted source is withheld or routed, never surrogated"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.surrogate-resolution-bound",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The PEP MUST resolve a surrogate only within its lifetime and use limit, only into an action that matches every other recorded element, not the service alone,",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a surrogate presented after its lifetime, beyond its use limit, toward another service, toward another account at the same service, for another operation, or under another Mission or work item is refused, with no substitution"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.surrogate-resolution-within-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "and only when the decision ({{decision}}) permits that action within the current Effective Authority Set ({{input-authority}}).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a surrogate presented for an action the decision does not permit within the current Effective Authority Set is refused, with no substitution, even when the action matches the surrogate's recorded binding"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.no-recovery-without-explicit-grant",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "It MUST NOT resolve a surrogate for an item that resets or recovers an account, such as a `password_reset_link` or `recovery_code` item, unless an entry of the Effective Authority Set explicitly grants account recovery at that service: authority to read the source together with a generic HTTP or browsing entry does not.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a surrogate for a reset link or recovery code is refused under mailbox-read authority plus a generic HTTP or browsing entry, and resolves only where an Effective Authority Set entry explicitly grants account recovery at that service"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.decision-over-surrogate-form",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The decision and parameter binding ({{parameter-binding}}) MUST be evaluated over the surrogate form of the parameters, with the authorized and effective parameter digests computed over that form,",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the decision request carries the surrogate form of the parameters, and the authorized and effective parameter digests are computed over that form, so reverification holds across substitution and no digest commits to the item"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.surrogate-mapping-immutable",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The PEP MUST fix a surrogate's item and recorded binding when it issues the surrogate, and MUST NOT reassign either: a changed item takes a new handle.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a handle names one item and one recorded binding for its whole life; a changed item is issued a new handle, and the earlier handle never resolves to the new item or binding"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.substitution-checks-actual-item",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "At substitution, the PEP MUST check the recorded binding and limits against the item it actually substitutes,",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a substitution whose actual item does not match the handle's recorded binding or limits is refused, with no value released to the resource"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.unknown-handle-refused",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "and MUST refuse a handle whose mapping it no longer holds.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a handle whose mapping the PEP no longer holds (expired, evicted, or lost across a restart) is refused, never resolved by inference"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.substitute-only-after-permit",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The PEP MUST substitute the item only after the permit.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the item is substituted into the action only after a permit; a denied or undecided action carries no substituted value to the resource"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.surrogated-value-absent",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The value of a surrogated item MUST NOT appear in a redirect, a response to the agent component, a log, or evidence.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a surrogated item's value is absent from every redirect, every response to the agent component, the PEP's logs, and every evidence record"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.resulting-credential-held",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The PEP MUST hold it and give the agent component at most a further surrogate, and each later use of it is a mediated action decided on its own.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a credential that redeeming an item returns (a session cookie, an access token, an authenticated browser session) stays at the PEP; the agent component receives at most a further surrogate, and each later use is a mediated action with its own decision"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.no-surrogate-without-custody",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "Where the PEP cannot hold what redeeming a class's items returns, as when the agent component drives the browser session itself, it MUST NOT issue surrogates for that class, and withholds or routes that class's items.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a class whose redemption result the PEP cannot hold, the PEP issues no surrogate and withholds or routes the class's items"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.read-execution-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "For a mediated action whose response received a disposition, the PEP MUST produce Execution Evidence ({{I-D.draft-mcguinness-mission-runtime-evidence}}), even where the action's class otherwise requires none, carrying the coordinated extension member `authority_content`:",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a mediated action whose response received a disposition (a covered read, or a redemption whose returned credential the PEP holds) produces Execution Evidence whatever its class's evidence tier, with an authority_content entry per item naming its class and disposition, and the handle of each surrogate"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP recognizes authority-bearing content or gives it a disposition. mcp-payments's mediated consequential reads (get_invoice, lookup_vendor, list_invoices) return content to the agent component through the PEP and could host a mailbox-style fixture."
+  },
+  {
+   "id": "runtime.authority-content.substitution-execution-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "The Execution Evidence of an action into which a surrogate resolved MUST record the substitution as an `authority_content` entry with the disposition `substitute` and the surrogate's handle.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-content-surrogate"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Execution Evidence of an action a surrogate resolved into carries an authority_content entry with disposition substitute and the surrogate's handle, joining it to the read that issued the surrogate"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
+   "id": "runtime.authority-content.no-value-or-unkeyed-digest-in-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "authority-content",
+   "text": "These records MUST NOT carry the item's value or an unkeyed digest of it",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "Execution Evidence recording an authority-bearing item's disposition or substitution carries neither the item's value nor an unkeyed digest of it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP recognizes authority-bearing content or gives it a disposition. mcp-payments's mediated consequential reads (get_invoice, lookup_vendor, list_invoices) return content to the agent component through the PEP and could host a mailbox-style fixture."
+  },
+  {
    "id": "runtime.rs-profile.must-publish",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "rs-runtime-profile",
@@ -40843,6 +41388,30 @@
    "tests": []
   },
   {
+   "id": "runtime.trifecta-containment.authority-content-condition",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "Each item of a declared authority-bearing class that the PEP recognizes in a covered read's response receives its disposition",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.trifecta-containment"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "under the trifecta containment claim, each recognized item of a declared authority-bearing class in a covered read's response receives its disposition before it reaches the agent component"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The claim's condition list points at runtime.authority-content.disposition-under-named-claims, which states the same duty. No witness: no reference PEP recognizes authority-bearing content or gives it a disposition. mcp-payments's mediated consequential reads (get_invoice, lookup_vendor, list_invoices) return content to the agent component through the PEP and could host a mailbox-style fixture."
+  },
+  {
    "id": "runtime.trifecta-containment.untrusted-content-egress-condition",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "trifecta-containment",
@@ -41164,6 +41733,31 @@
    "notes": "This is the negative-conformance table's own row for the Enforcement Scope Statement: src/services/pdp/src/enforcement-scope.ts's validator and claimsWithinScope predicate, exercised at unit level against hand-built statements. It does not itself prove that any live deployment's own published statement matches what it actually mediates (an audit property the closing prose after the table names explicitly); see runtime.conformance.no-claim-outside-declared-scope and runtime.conformance.remote-channel-trust-mode-declared for that broader MUST's own (partial) coverage."
   },
   {
+   "id": "runtime.negative-conformance.authority-content-should-demonstrate",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "negative-conformance",
+   "text": "A deployment that applies the dispositions SHOULD demonstrate each outcome below that its declared dispositions reach:",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment applying authority-bearing content dispositions demonstrates, with an injected recognized item independent of the detector, each outcome its declared dispositions reach: a recognized declared item never reaches the agent component; a routed item with no established authorized recipient, or one the agent names, is withheld; an item whose account or operation cannot be established from a trusted source is never surrogated; and, where it issues surrogates, that a surrogate is refused toward another service, account, operation, Mission or work item, after its lifetime, beyond its use limit, outside the Effective Authority Set, when its mapping is no longer held or its item changed, that mailbox-read plus generic HTTP authority cannot redeem a reset link, that a redemption's session credential stays at the PEP, and that the item's value is absent from redirects, responses, logs, and evidence"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP recognizes authority-bearing content or gives it a disposition. mcp-payments's mediated consequential reads (get_invoice, lookup_vendor, list_invoices) return content to the agent component through the PEP and could host a mailbox-style fixture. No witness: no reference PEP issues or resolves surrogates for authority-bearing content, or holds a credential a redemption returns."
+  },
+  {
    "id": "runtime.decision-api-binding.custom-binding-must-be-specified",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "authzen",
@@ -41189,7 +41783,7 @@
    "id": "runtime.security.no-overstate-exfiltration-guarantee",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "prompt-injection-exfiltration",
-   "text": "Two limits are inherent and a deployment MUST NOT overstate the guarantee.",
+   "text": "Three limits are inherent and a deployment MUST NOT overstate the guarantee.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -41201,7 +41795,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment's exfiltration-resistance claim never overstates the guarantee past PEP-placement completeness and the absence of information-flow control"
+    "normative": "a deployment's exfiltration-resistance claim never overstates the guarantee past PEP-placement completeness, the absence of information-flow control, and the declared, incomplete detection of authority-bearing content"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -41504,6 +42098,33 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "runtime.named-claims.authority-content-disposition-evidence",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "trifecta-containment",
+   "text": "Unknown, stale, or unverifiable configuration, or a recognized item of a declared class found reaching the agent component, makes the claim unavailable",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.compromise-resistant",
+     "runtime.trifecta-containment"
+    ]
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming agent-compromise-resistant enforcement or trifecta containment binds the authority_content_disposition condition to signed configuration declaring the classes, covered reads, representations, detection mechanism, and dispositions, and to negative tests; unknown, stale, or unverifiable configuration, or a recognized declared item found reaching the agent component, makes the claim unavailable"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: the reference makes neither named claim and publishes no authority-bearing content configuration."
   },
   {
    "id": "runtime.inspection-controls.advisory-signal-no-widen",
@@ -111752,6 +112373,31 @@
     }
    ],
    "notes": "The PEP suppression and executor completion records are witnessed. A late completion recorded by claim reconciliation copies the work item its Decision Evidence recorded and has no witness."
+  },
+  {
+   "id": "evidence.extensions.authority-content-required-submembers",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "Each entry has `class` (REQUIRED, a string, the item's declared class), `disposition` (REQUIRED, a string: `withhold`, `surrogate`, `route_to_principal`, or `substitute`), and `handle` (a string, the surrogate's handle, REQUIRED when `disposition` is `surrogate` or `substitute` and absent otherwise).",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.authority-content-disposition",
+     "runtime.authority-content-surrogate"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every authority_content entry carries class and one of the four disposition values, and carries handle exactly when the disposition is surrogate or substitute"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No witness: no reference PEP recognizes authority-bearing content or gives it a disposition. mcp-payments's mediated consequential reads (get_invoice, lookup_vendor, list_invoices) return content to the agent component through the PEP and could host a mailbox-style fixture."
   },
   {
    "id": "evidence.execution-error.work-item-mismatch",

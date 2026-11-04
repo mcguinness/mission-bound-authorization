@@ -1200,10 +1200,12 @@ failed, or was suppressed, linked to the Decision Evidence by
 `evaluation_id`. A record is emitted once a final outcome exists, not
 for the attempt in progress; `attempted_at` carries the attempt's
 timing without asserting an `attempted` outcome. Emission follows
-the runtime profile's class rule: Execution Evidence is required for
-the high-consequence classes and for every further class the
+the runtime profile's rules: Execution Evidence is required for
+the high-consequence classes, for every further class the
 deployment claims under the runtime profile's transaction-assurance
-tier ({{I-D.draft-mcguinness-mission-runtime}}).
+tier, and for the dispositions and surrogate resolutions of that
+profile's Section "Authority Carried in Content"
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## Members
 
@@ -1423,7 +1425,8 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 An Execution Evidence Object is closed to uncoordinated extension
 under the same rule as Decision Evidence ({{evidence-extensions}}):
 coordinated companion members (for example, the metering companion's
-`measured_duration`) are permitted, any other extension MUST use a
+`measured_duration`, or the runtime profile's `authority_content`) are
+permitted, any other extension MUST use a
 collision-resistant name, and a consumer MUST ignore members it does
 not understand.
 
@@ -2294,6 +2297,19 @@ a common wire carrier.
   `work_item` carry the same pair. The AuthZEN profile is one wire
   carrier ({{I-D.draft-mcguinness-mission-authzen}}).
 
+`authority_content`:
+: OPTIONAL. An array of objects, recorded at the top level of
+  Execution Evidence: one entry per authority-bearing item the
+  execution gave a disposition or resolved a surrogate into. Each entry
+  has `class` (REQUIRED, a string, the item's declared class),
+  `disposition` (REQUIRED, a string: `withhold`, `surrogate`,
+  `route_to_principal`, or `substitute`), and `handle` (a string, the
+  surrogate's handle, REQUIRED when `disposition` is `surrogate` or
+  `substitute` and absent otherwise). Registered and owned by the
+  runtime profile ({{I-D.draft-mcguinness-mission-runtime}}, Section
+  "Authority Carried in Content"), which defines when it is REQUIRED
+  and forbids recording the item's value or an unkeyed digest of it.
+
 # Conformance {#conformance}
 
 This document defines conformance for four roles: a PRODUCER that
@@ -2757,6 +2773,12 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Extension Members and Execution Evidence: `authority_content`, owned
+  by the runtime profile, records on Execution Evidence each
+  authority-bearing item a read's response gave a disposition and each
+  surrogate an action resolved, by class, disposition, and handle,
+  never the item's value (#2045).
 
 - Decision Evidence: `action_classes` records every class whose
   requirements the PDP applied, when more than one applies;
