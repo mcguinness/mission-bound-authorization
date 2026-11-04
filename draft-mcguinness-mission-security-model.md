@@ -1083,13 +1083,12 @@ Authority amplification through reads:
 : Addressed by the mediating PEP's disposition of authority-bearing
   content, such as the one-time codes and reset links a mailbox
   receives. Each recognized item is withheld; routed, through a
-  surface the agent cannot read, to the delegating person of a
-  user-delegated Mission, the Approver, or another principal the
-  deployment authorizes for that Mission; or replaced by a surrogate
-  that resolves only into an action matching its recorded service,
-  account, operation, Mission, and limits and permitted within the
-  Effective Authority Set, with any credential the redemption returns
-  held at the PEP ({{I-D.draft-mcguinness-mission-runtime}}). Before
+  surface the agent cannot read, only to a recipient authorized to
+  receive that item; or replaced by a surrogate that resolves only into
+  an action matching its recorded service, account, operation, Mission,
+  and limits and permitted within the Effective Authority Set, with any
+  credential the redemption returns held at the PEP
+  ({{I-D.draft-mcguinness-mission-runtime}}). Before
   approval, the shaper narrows a read entry that can return such
   content or discloses the authority the entry implies
   ({{I-D.draft-mcguinness-mission-shaping}}). Residual: detection is

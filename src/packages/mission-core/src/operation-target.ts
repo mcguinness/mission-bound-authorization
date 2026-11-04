@@ -582,6 +582,19 @@ export function establishOperationTarget(
 }
 
 /**
+ * @spec resource-access#resource-matching, harness#work-item-prerequisite
+ * (#815): the one argument an argument-derived contract expands into its
+ * target, or `undefined` for a service-level contract, a list of contracts,
+ * or any template outside the supported form. An operation that acts on the
+ * object an argument names checks that its contract binds that same argument,
+ * so the target and the object it reads cannot name different things.
+ */
+export function contractArgument(contract: unknown): string | undefined {
+  if (!isSingleMember(contract, "template")) return undefined;
+  return parseTemplate(contract.template)?.varname;
+}
+
+/**
  * @spec authzen#pdp-request consistency check 11 (#1276, D457): whether
  * `target` is a value `contract` establishes for some argument, so a PDP can
  * hold a PEP to the targets its registered operation contracts establish. A

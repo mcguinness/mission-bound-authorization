@@ -264,6 +264,53 @@ export const PAYMENTS_FACT_RESOLVERS: Readonly<Record<string, FactResolver>> = O
 });
 
 /**
+ * @spec runtime#evaluation-context-binding (#815): one revisioned record of a
+ * resource this PEP enforces for, as its authoritative interface reports it
+ * now: its type, its identifier and its current revision, an opaque version
+ * tag (the `revision` granularity).
+ */
+export interface RevisionedRecord {
+  type: string;
+  id: string;
+  revision: string;
+}
+
+/**
+ * @spec runtime#evaluation-context-binding (#815): the authoritative interface
+ * of a resource whose records an Operation Profile entry acts on by type and
+ * identifier (`ActionMapping.record`), beside the payments store. `read`
+ * answers from the resource now, or `undefined` where the record does not
+ * resolve; it never answers from a request value.
+ */
+export interface RevisionedRecordSource {
+  read(type: string, id: string): RevisionedRecord | undefined;
+}
+
+/**
+ * The resolvers a revisioned record serves, keyed by the resolver a
+ * descriptor fact names, each with the granularity and normalization it
+ * produces. A fact naming any other resolver does not resolve on a record
+ * crossing, and no payments resolver serves one.
+ */
+const RECORD_FACT_RESOLVERS: Readonly<
+  Record<string, { granularity: EvaluationContextGranularity; normalization: string; resolve: (r: RevisionedRecord) => JsonValue | undefined }>
+> = Object.freeze({
+  "record:revision": {
+    granularity: "revision",
+    normalization: "opaque-string",
+    resolve: (r) => (typeof r.revision === "string" && r.revision.length > 0 ? r.revision : undefined),
+  },
+});
+
+/** A record crossing's subject: the record it names, read from `source`, or `read` where the caller already read it. */
+export interface RecordSubject {
+  type: string;
+  id: string;
+  source?: RevisionedRecordSource;
+  read?: RevisionedRecord;
+}
+
+/**
  * The target identities this resource resolves, by declared target type: from
  * the store records, or from the committed wire's record for a compensate
  * crossing (the invoice and vendor that wire paid).
@@ -304,6 +351,8 @@ export interface HeldEvaluationContext {
   operation: ContextOperation;
   /** For a compensate crossing: the committed wire its facts are read from (#252). */
   compensates?: CompensatedWireRef;
+  /** For a record crossing: the record its facts are re-read from at use (#815). */
+  record?: { type: string; id: string };
 }
 
 /**
@@ -319,8 +368,11 @@ export interface HeldEvaluationContext {
  * here, as recomputation at use always does.
  */
 interface ContextSubject {
-  invoiceId: string;
+  /** The invoice an ordinary crossing names; absent on a record crossing. */
+  invoiceId?: string;
   payments: PaymentsStore;
+  /** A record crossing's record (#815): its facts come from the record's source alone. */
+  record?: RecordSubject;
   compensates?: CompensatedWireRef;
   committedEffects?: CommittedEffectSource;
   records?: StoreRecords;
@@ -362,6 +414,7 @@ function resolutionSources(subject: ContextSubject): ResolutionSources | undefin
     if (!records || records.invoice.id !== wire.invoiceId || records.vendor.id !== wire.vendorId) return undefined;
     return { kind: "committed_wire", wire, reverses: subject.compensates.opKey, ...records };
   }
+  if (subject.invoiceId === undefined) return undefined;
   const records = subject.records ?? readStoreRecords(subject.payments, subject.invoiceId);
   if (!records || records.invoice.id !== subject.invoiceId) return undefined;
   return { kind: "store", ...records };
@@ -396,6 +449,27 @@ function commit(
     saltVersion: string;
   },
 ): { ok: true; digest: string } | { ok: false; reason: ContextUnavailable } {
+  const resolved = input.record ? recordContext(input.descriptor, input.record) : storeContext(input);
+  if (!resolved.ok) return resolved;
+  const { targets, facts } = resolved;
+  const committed = {
+    descriptor: { id: input.reference.id, version: input.reference.version, digest: input.reference.digest },
+    mission: { issuer: input.mission.issuer, id: input.mission.id },
+    operation: { action: input.operation.action, ...(input.operation.phase !== undefined ? { phase: input.operation.phase } : {}) },
+    targets,
+    facts,
+    salt: input.salt,
+    salt_version: input.saltVersion,
+  };
+  return { ok: true, digest: canonicalDigest(committed as unknown as JsonValue) };
+}
+
+type ResolvedContext =
+  | { ok: true; targets: Array<{ type: string; id: string }>; facts: Record<string, JsonValue> }
+  | { ok: false; reason: ContextUnavailable };
+
+/** The targets and facts of an invoice or compensate crossing, from the records its subject resolves to. */
+function storeContext(input: ContextSubject & { descriptor: EvaluationContextDescriptor }): ResolvedContext {
   const sources = resolutionSources(input);
   if (!sources) return { ok: false, reason: "target_unresolvable" };
   const targets: Array<{ type: string; id: string }> = [];
@@ -419,16 +493,35 @@ function commit(
     if (value === undefined) return { ok: false, reason: "fact_unresolvable" };
     facts[fact.name] = value;
   }
-  const committed = {
-    descriptor: { id: input.reference.id, version: input.reference.version, digest: input.reference.digest },
-    mission: { issuer: input.mission.issuer, id: input.mission.id },
-    operation: { action: input.operation.action, ...(input.operation.phase !== undefined ? { phase: input.operation.phase } : {}) },
-    targets,
-    facts,
-    salt: input.salt,
-    salt_version: input.saltVersion,
-  };
-  return { ok: true, digest: canonicalDigest(committed as unknown as JsonValue) };
+  return { ok: true, targets, facts };
+}
+
+/**
+ * @spec runtime#evaluation-context-binding (#815): the targets and facts of a
+ * record crossing, from the record as its source reports it (or as the caller
+ * already read it, at capture). The descriptor's one target type is the
+ * record's type; every fact is a record resolver's. A record that no longer
+ * resolves, or resolves to another record, leaves the context unestablished.
+ */
+function recordContext(descriptor: EvaluationContextDescriptor, subject: RecordSubject): ResolvedContext {
+  const record = subject.read ?? subject.source?.read(subject.type, subject.id);
+  if (!record || record.type !== subject.type || record.id !== subject.id) return { ok: false, reason: "target_unresolvable" };
+  const targets: Array<{ type: string; id: string }> = [];
+  for (const type of descriptor.targets) {
+    if (type !== record.type) return { ok: false, reason: "target_unresolvable" };
+    targets.push({ type, id: record.id });
+  }
+  const facts: Record<string, JsonValue> = {};
+  for (const fact of descriptor.facts) {
+    const resolver = RECORD_FACT_RESOLVERS[fact.resolver];
+    if (!resolver || resolver.granularity !== fact.granularity || resolver.normalization !== fact.normalization) {
+      return { ok: false, reason: "fact_unresolvable" };
+    }
+    const value = resolver.resolve(record);
+    if (value === undefined) return { ok: false, reason: "fact_unresolvable" };
+    facts[fact.name] = value;
+  }
+  return { ok: true, targets, facts };
 }
 
 /**
@@ -462,12 +555,13 @@ export function captureEvaluationContext(
     reference: input.descriptor,
     mission: input.mission,
     operation: input.operation,
-    invoiceId: input.invoiceId,
+    ...(input.invoiceId !== undefined ? { invoiceId: input.invoiceId } : {}),
     payments: input.payments,
     ...(input.compensates ? { compensates: input.compensates } : {}),
     ...(input.committedEffects ? { committedEffects: input.committedEffects } : {}),
     ...(input.records ? { records: input.records } : {}),
     ...(input.wire ? { wire: input.wire } : {}),
+    ...(input.record ? { record: input.record } : {}),
     salt,
     saltVersion,
   });
@@ -482,6 +576,7 @@ export function captureEvaluationContext(
       mission: { issuer: input.mission.issuer, id: input.mission.id },
       operation: { ...input.operation },
       ...(input.compensates ? { compensates: { ...input.compensates } } : {}),
+      ...(input.record ? { record: { type: input.record.type, id: input.record.id } } : {}),
     },
     declaredParameters: declaredParameterMembers(resolved.document),
   };
@@ -506,10 +601,13 @@ export function recomputeEvaluationContext(input: {
   held: HeldEvaluationContext;
   declarations: EvaluationContextBindingDeclarations;
   salts: EvaluationContextSalts;
-  invoiceId: string;
+  /** The invoice an ordinary crossing names; absent on a record crossing. */
+  invoiceId?: string;
   payments: PaymentsStore;
   /** The committed-effect records a compensate crossing's binding re-reads (#252). */
   committedEffects?: CommittedEffectSource;
+  /** The source a record crossing's binding re-reads its record from (#815). */
+  records?: RevisionedRecordSource;
 }): { ok: true; digest: string } | { ok: false; reason: ContextUnavailable } {
   const resolved = input.declarations.descriptor(input.held.reference);
   if (!resolved.ok) return { ok: false, reason: "descriptor_unrecoverable" };
@@ -522,8 +620,11 @@ export function recomputeEvaluationContext(input: {
     reference: input.held.reference,
     mission: input.held.mission,
     operation: input.held.operation,
-    invoiceId: input.invoiceId,
+    ...(input.invoiceId !== undefined ? { invoiceId: input.invoiceId } : {}),
     payments: input.payments,
+    // A record crossing's binding re-reads its record from the source now; a
+    // record that no longer answers leaves it unestablished.
+    ...(input.held.record ? { record: { ...input.held.record, ...(input.records ? { source: input.records } : {}) } } : {}),
     // A compensate crossing's binding re-reads the committed wire it was
     // captured from; a record that no longer answers leaves it unestablished.
     ...(input.held.compensates ? { compensates: input.held.compensates } : {}),

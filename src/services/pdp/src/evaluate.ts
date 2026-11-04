@@ -289,6 +289,16 @@ export interface EvaluationRequest {
        * `resource` (./projections.ts).
        */
       resource_contract?: ResourceContractRef;
+      /**
+       * @spec runtime#evaluation-context-binding, harness#work-item-prerequisite
+       * (#815): a deployment-defined attribute, the `revision`-granularity
+       * fact the PEP captured for the operation target from the resource's
+       * authoritative interface ("authoritative facts remain available to
+       * the PDP wherever policy needs their values"), never an agent
+       * argument. `work_item_prerequisite_completed` joins on it; absent, that
+       * predicate cannot be established.
+       */
+      revision?: string;
     };
   };
   action: {
@@ -1728,8 +1738,18 @@ async function evaluateInner(
   // established, each selected predicate is evaluated against the retained
   // evidence, verified and linked, for this Mission. Recorded on every
   // decision from here; the deny is taken after Resource policy (step 6c).
+  // @spec harness#work-item-prerequisite (#815): the request's own join
+  // keys, as validated here: the operation target, the well-formed work item,
+  // and the revision the PEP captured for the target, carried as the
+  // deployment-defined `resource.properties.revision`. They select which
+  // retained records can satisfy a predicate; none asserts an outcome.
   if (opts.history && history.selected.length > 0) {
-    history.results = await evaluateHistory(opts.history, history.selected, { id: view.id, issuer: view.issuer });
+    const revision = req.resource.properties?.revision;
+    history.results = await evaluateHistory(opts.history, history.selected, { id: view.id, issuer: view.issuer }, {
+      operationTarget,
+      ...(workItem !== undefined ? { workItem } : {}),
+      ...(typeof revision === "string" && revision.length > 0 ? { revision } : {}),
+    });
   }
 
   // 1a. Credential facts (@spec authzen#pdp-request rule 6, authzen#context-

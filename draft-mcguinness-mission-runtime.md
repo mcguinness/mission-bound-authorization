@@ -2494,10 +2494,9 @@ class:
   resolves it into that action by substituting the item.
 
 `route_to_principal`:
-: The PEP withholds the item from the agent component and delivers it
-  to the delegating person of a user-delegated Mission, the Approver,
-  or another principal the deployment authorizes for that Mission,
-  through a surface the agent component cannot read.
+: The PEP withholds the item from the agent component and delivers it,
+  through a surface the agent component cannot read, to a recipient
+  authorized to receive that item.
 
 A deployment that applies these dispositions MUST declare in its
 Enforcement Scope Statement ({{runtime-conformance}}):
@@ -2530,6 +2529,15 @@ declares, never inferred from tests: no finite test set establishes
 that a detector recognizes every item of a class in every
 representation.
 
+The PEP MUST deliver a routed item only to a recipient authorized to
+receive that item, established independently of any routing
+instruction the agent component supplies, for example from trusted
+configuration or the deployment's authorization. The delegating person
+of a user-delegated Mission who holds the account the item serves is
+one such recipient; authority to approve the Mission does not by
+itself authorize receiving an item for another account. Where it
+establishes no authorized recipient, the PEP MUST withhold the item.
+
 When it issues a surrogate, the PEP MUST record with it:
 
 - the service at which the item is authority, from trusted
@@ -2541,7 +2549,17 @@ When it issues a surrogate, the PEP MUST record with it:
 - the Mission under which the read ran and, where the harness
   attributes one, its work item
   ({{I-D.draft-mcguinness-mission-harness}}); and
-- a lifetime and a use limit, neither exceeding the item's own.
+- a lifetime and a use limit: the finite cap the deployment configures
+  for the item's class, shortened to any expiry or use limit the PEP
+  knows the item to carry. An unknown item limit never leaves a
+  surrogate unlimited.
+
+The account and the operation MUST each be established by a trusted
+source: trusted configuration, or service-specific transaction
+information the PEP verifies. The content, or an assertion of the
+agent component, never establishes either alone. The PEP MUST NOT
+surrogate an item whose account or operation it cannot establish; it
+withholds or routes that item.
 
 The PEP MUST resolve a surrogate only within its lifetime and use
 limit, only into an action that matches every other recorded element,
@@ -2557,9 +2575,14 @@ The decision and parameter binding ({{parameter-binding}}) MUST be
 evaluated over the surrogate form of the parameters, with the
 authorized and effective parameter digests computed over that form, so
 the binding holds across substitution and no digest commits to the
-item. The PEP MUST substitute the item only after the permit. The value
-of a surrogated item MUST NOT appear in a redirect, a response to the
-agent component, a log, or evidence.
+item. The binding holds only while a handle names one item. The PEP
+MUST fix a surrogate's item and recorded binding when it issues the
+surrogate, and MUST NOT reassign either: a changed item takes a new
+handle. At substitution, the PEP MUST check the recorded binding and
+limits against the item it actually substitutes, and MUST refuse a
+handle whose mapping it no longer holds. The PEP MUST substitute the
+item only after the permit. The value of a surrogated item MUST NOT appear in a
+redirect, a response to the agent component, a log, or evidence.
 
 A credential that redeeming an item returns, such as a session cookie,
 an access token, or an authenticated browser session, is
@@ -2574,8 +2597,8 @@ For a mediated action whose response received a disposition, the PEP
 MUST produce Execution Evidence
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}), even where the
 action's class otherwise requires none, carrying the coordinated
-extension member `authority_content`: each item's class and disposition, and the
-handle of each surrogate. The Execution Evidence of an action into
+extension member `authority_content`: each item's class and
+disposition, and the handle of each surrogate. The Execution Evidence of an action into
 which a surrogate resolved MUST record the substitution as an
 `authority_content` entry with the disposition `substitute` and the
 surrogate's handle. These records MUST NOT carry the item's value or
@@ -3371,7 +3394,9 @@ runtime conformance. The claim names exactly the set of classes it
 covers. This claim additionally requires execution-environment
 attestation of the scope statement, the condition
 {{trifecta-containment}} states for both High-Assurance Agent
-claims.
+claims. Authority Carried in Content ({{authority-content}}) attaches
+one further duty to this claim: authority-bearing content in a covered
+read's response receives its disposition.
 
 The guarantee is the conjunction of these conditions, not any one of
 them. Mediated custody alone prevents only off-path presentation of
@@ -3750,12 +3775,15 @@ audit, and path-completeness property.
 
 The disposition of authority-bearing content ({{authority-content}})
 has its own observable form. A deployment that applies the
-dispositions SHOULD demonstrate the first outcome below, and every
-other outcome wherever it issues surrogates:
+dispositions SHOULD demonstrate each outcome below that its declared
+dispositions reach:
 
 | Bypass attempt | Required outcome |
 |---|---|
 | A covered read's response carries a recognized item of a declared class | Withheld, surrogated, or routed as declared; the item never reaches the agent component |
+| An item is routed where no recipient authorized to receive it is established, or to a recipient the agent component names | Withheld; never delivered on the agent's instruction |
+| An item's account or operation cannot be established from a trusted source | Withheld or routed; never surrogated |
+| A handle is presented whose mapping the PEP no longer holds, or whose item has changed | Refused |
 | A surrogate is presented toward another service, another account at the same service, another operation, or another Mission or work item | Refused |
 | A surrogate is presented after its lifetime or beyond its use limit | Refused |
 | A surrogate is presented for an action outside the Effective Authority Set | Refused |
@@ -4499,12 +4527,16 @@ worked example shows the concrete record
   either named claim and SHOULD otherwise. A surrogate resolves only
   into an action matching its recorded service, account, operation,
   Mission, and limits and permitted within the Effective Authority
-  Set; the decision and parameter digests use the surrogate form, a
-  credential redemption returns stays at the PEP, and the value appears
-  in no redirect, response, log, or evidence. Detection coverage is
-  declared in the Enforcement Scope Statement. Trifecta containment,
-  its evidence table, Prompt Injection and Exfiltration, and Negative
-  Conformance Tests carry the rule.
+  Set; its account and operation come from a trusted source, its
+  lifetime is a finite configured cap, and its mapping never changes
+  after issuance. The decision and parameter digests use the surrogate
+  form, a credential redemption returns stays at the PEP, and the value
+  appears in no redirect, response, log, or evidence. A routed item
+  goes only to a recipient authorized to receive it, and is otherwise
+  withheld. Detection coverage is declared in the Enforcement Scope
+  Statement. Agent-Compromise-Resistant Enforcement, Trifecta
+  containment and its evidence table, Prompt Injection and
+  Exfiltration, and Negative Conformance Tests carry the rule.
 
 - The History Input: an omitted record can deny a step or satisfy a
   predicate the complete history would not, not only deny it (#2029).

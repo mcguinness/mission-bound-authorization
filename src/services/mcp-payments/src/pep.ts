@@ -22,6 +22,7 @@ import {
   type ConstraintFacts,
   type CredentialAuthorityEntry,
   collectionMemberConstraintFacts,
+  contractArgument,
   coveringCredentialEntries,
   credentialEntriesFromAuthority,
   entryMatchesTarget,
@@ -113,6 +114,7 @@ import {
   type HeldEvaluationContext,
   readStoreRecords,
   recomputeEvaluationContext,
+  type RevisionedRecordSource,
   type StoreRecords,
 } from "./evaluation-context.js";
 import type { PaymentsStore } from "./payments-store.js";
@@ -423,6 +425,19 @@ export interface ActionMapping {
    */
   target?: OperationContract | readonly OperationContract[];
   needsInvoice: boolean;
+  /**
+   * @spec runtime#evaluation-context-binding, harness#work-item-prerequisite
+   * (#815): the crossing acts on one revisioned record of
+   * {@link PepDeps.revisionedRecords}, of `type`, named by the validated
+   * argument `argument`, the one argument the entry's argument-derived
+   * operation contract binds; an entry whose contract binds another argument,
+   * or none, is refused. The PEP reads the record from that source before the
+   * decision request, refuses one that does not resolve, carries its current
+   * revision as `resource.properties.revision`, and, where the crossing is
+   * covered, captures its declared facts from the record alone. No shipped
+   * profile entry declares it.
+   */
+  record?: { type: string; argument: string };
   /**
    * @spec runtime#idempotency, authzen#parameter-digest (#917, #918): the
    * Operation Profile defines an idempotency key for this operation: a
@@ -1052,6 +1067,13 @@ export interface PepDeps {
    * phase and refuses rather than releasing an effect.
    */
   operationProfile?: () => Record<string, ActionMapping>;
+  /**
+   * @spec runtime#evaluation-context-binding (#815): the authoritative
+   * interface of the revisioned records an Operation Profile entry's
+   * `record` crossing acts on, resolved on EVERY lookup. Absent, no record
+   * crossing resolves, and each is refused before any decision request.
+   */
+  revisionedRecords?: () => RevisionedRecordSource;
   /**
    * @spec runtime#evaluation-context-binding (#773): the Evaluation-Context
    * Binding claim and declaration this PEP captures and re-resolves under,
@@ -1735,9 +1757,14 @@ export interface ExecutionAttempt {
 /** @spec runtime#evaluation-context-binding (#773): what an attempt holds for its context check. */
 export interface AttemptEvaluationContext {
   held: HeldEvaluationContext;
-  decided: Readonly<EffectiveParams>;
   declaredParameters: ReadonlySet<string>;
-  effective: EffectiveParams;
+  /**
+   * The parameters the permit was decided on, and the ones about to be used:
+   * absent on a record crossing (#815), which binds no parameters and whose
+   * context the record source re-reads ({@link HeldEvaluationContext.record}).
+   */
+  decided?: Readonly<EffectiveParams>;
+  effective?: EffectiveParams;
 }
 
 /**
@@ -1970,6 +1997,8 @@ type TargetObject = {
     data_classification?: string;
     /** @spec resource-access#initial-common-constraints (#1266): a collection read's members, each with its own facts. */
     members?: CollectionMemberFacts[];
+    /** @spec harness#work-item-prerequisite (#815): a record crossing's current revision, from the record source. */
+    revision?: string;
   };
 };
 
@@ -2291,13 +2320,15 @@ export class Pep {
   observeEffectiveContextDigest(attempt: ExecutionAttempt): string | undefined {
     const bound = attempt.evaluationContext;
     if (!bound) return undefined;
+    const records = this.deps.revisionedRecords?.();
     const fresh = recomputeEvaluationContext({
       held: bound.held,
       declarations: this.contextDeclarations(),
       salts: this.contextSalts(),
-      invoiceId: bound.effective.invoice_id,
+      ...(bound.effective ? { invoiceId: bound.effective.invoice_id } : {}),
       payments: this.deps.payments,
       ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
+      ...(records ? { records } : {}),
     });
     return fresh.ok ? fresh.digest : undefined;
   }
@@ -2339,8 +2370,9 @@ export class Pep {
     }
     const observed = this.observeEffectiveContextDigest(attempt);
     if (observed === undefined) return "target_drift";
-    const current = this.freshEffectiveParams(bound.effective, bound.held.compensates);
-    if (current && deviatingParameterMembers(bound.decided as EffectiveParams, current).some((m) => !bound.declaredParameters.has(m))) {
+    // A record crossing binds no parameters (#815): only its context is compared.
+    const current = bound.effective ? this.freshEffectiveParams(bound.effective, bound.held.compensates) : undefined;
+    if (current && bound.decided && deviatingParameterMembers(bound.decided as EffectiveParams, current).some((m) => !bound.declaredParameters.has(m))) {
       return "parameter_mismatch";
     }
     // A missing condition, or one other than the binding this PEP sent.
@@ -2848,6 +2880,51 @@ export class Pep {
       // versions the parameter digest binds move with any change to them, so
       // a changed fact refuses at reverification.
       resourceObj = { type: "invoice", id: invoice.id, properties: liveResourceProperties(records) };
+    } else if (mapping.record) {
+      // @spec runtime#evaluation-context-binding, harness#work-item-prerequisite
+      // (#815): a crossing over one revisioned record, named by the validated
+      // argument its profile entry names and read from the record source, the
+      // resource's authoritative interface, never from an argument. A record
+      // that does not resolve has no target to act on: refused before any
+      // decision request. Its current revision rides the request as the
+      // deployment-defined `resource.properties.revision`, the same
+      // observation a covered crossing's context commits ("authoritative facts
+      // remain available to the PDP wherever policy needs their values").
+      // The record is the object the operation target names: the entry's
+      // contract must be argument-derived and bind the very argument the
+      // record is read by, so the target the request carries and the record
+      // whose revision it carries cannot name different objects. An entry
+      // whose template binds another argument, or a service-level contract,
+      // is refused before any decision request.
+      const named = args[mapping.record.argument];
+      const source = this.deps.revisionedRecords?.();
+      const bound = contractArgument(mapping.target) === mapping.record.argument;
+      const record = bound && typeof named === "string" && source ? source.read(mapping.record.type, named) : undefined;
+      if (!record || record.type !== mapping.record.type || record.id !== named || typeof record.revision !== "string" || record.revision.length === 0) {
+        return await this.refuse(boundary, token, "operation_target_unresolvable", mapping.action, view);
+      }
+      if (contextCovered) {
+        const descriptor = this.contextDescriptorFor(performedContract, mapping.action, mapping.phase);
+        const captured =
+          descriptor === undefined || source === undefined
+            ? undefined
+            : captureEvaluationContext({
+                declarations: contextDeclarations,
+                salts: this.contextSalts(),
+                mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
+                operation: { action: mapping.action, ...(mapping.phase !== undefined ? { phase: mapping.phase } : {}) },
+                descriptor,
+                payments: this.deps.payments,
+                record: { type: record.type, id: record.id, source, read: record },
+              });
+        if (!captured?.ok) {
+          return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
+            resource: { type: record.type, id: record.id },
+          });
+        }
+        contextCapture = { held: captured.held, declaredParameters: captured.declaredParameters };
+      }
+      resourceObj = { type: record.type, id: record.id, properties: { revision: record.revision } };
     } else if (mapping.bindsVendorScope) {
       // @spec runtime#read-binding — "a consequential read whose parameters
       // ... request a bulk or export-like result ... MUST bind those
@@ -3642,7 +3719,12 @@ export class Pep {
               effective,
             },
           }
-        : {}),
+        : contextCapture && contextCapture.held.record
+          ? {
+              // A record crossing (#815): no parameters, the record re-read at use.
+              evaluationContext: { held: contextCapture.held, declaredParameters: contextCapture.declaredParameters },
+            }
+          : {}),
       ...(conditionsOf(decision)?.evaluation_context_digest !== undefined
         ? { permitEvaluationContextDigest: conditionsOf(decision)?.evaluation_context_digest }
         : {}),
@@ -4059,7 +4141,19 @@ export class Pep {
    */
   async completeExecution(
     attempt: ExecutionAttempt,
-    opts: { effectiveParameterDigest?: string; effectiveEvaluationContextDigest?: string } = {},
+    opts: {
+      effectiveParameterDigest?: string;
+      effectiveEvaluationContextDigest?: string;
+      /**
+       * @spec runtime-evidence#execution-evidence-object `result_summary`,
+       * harness#work-item-prerequisite (#815): the revision the resource
+       * reported when the effect ran, from the executor that performed it,
+       * never an agent argument. Given, the record carries `result_summary`
+       * with `operation_target`, the operation target this attempt released
+       * the effect for, and `revision`, this value.
+       */
+      actedOnRevision?: string;
+    } = {},
   ): Promise<SuppressOutcome> {
     return this.recordDisposition(attempt, {
       outcome: "completed",
@@ -4067,6 +4161,7 @@ export class Pep {
       ...(opts.effectiveEvaluationContextDigest !== undefined
         ? { effectiveEvaluationContextDigest: opts.effectiveEvaluationContextDigest }
         : {}),
+      ...(opts.actedOnRevision !== undefined ? { actedOnRevision: opts.actedOnRevision } : {}),
     });
   }
 
@@ -4079,7 +4174,12 @@ export class Pep {
     attempt: ExecutionAttempt,
     disposition:
       | { outcome: "suppressed"; error: string }
-      | { outcome: "completed"; effectiveParameterDigest?: string; effectiveEvaluationContextDigest?: string },
+      | {
+          outcome: "completed";
+          effectiveParameterDigest?: string;
+          effectiveEvaluationContextDigest?: string;
+          actedOnRevision?: string;
+        },
     opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
   ): Promise<SuppressOutcome> {
     const observed =
@@ -4150,6 +4250,12 @@ export class Pep {
         : {}),
       outcome: disposition.outcome,
       ...(disposition.outcome === "suppressed" ? { error: disposition.error } : {}),
+      // @spec harness#work-item-prerequisite (#815): the target this attempt
+      // released the effect for, and the revision the executor reports the
+      // resource held when the effect ran.
+      ...(disposition.outcome === "completed" && disposition.actedOnRevision !== undefined
+        ? { result_summary: { operation_target: attempt.operationTarget, revision: disposition.actedOnRevision } }
+        : {}),
       ...(obligationOutcomes ? { obligation_outcomes: obligationOutcomes } : {}),
       ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),
       // @spec runtime-evidence#evidence-extensions `work_item` (#815):
