@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-03T05:45:09Z
-Source repository commit: 3234389a2cd4a77efa200fd5e85dc8e4f8de4f06
+Generated: 2026-11-04T17:13:25Z
+Source repository commit: 07f805c25fd84ccc5f1bfe2fdb3e34ebff3045d9
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           3 November 2026
-Expires: 7 May 2027
+Intended status: Informational                           4 November 2026
+Expires: 8 May 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -6854,8 +6854,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
                      Mission Substrate Requirements
@@ -6913,7 +6913,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -8465,8 +8465,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -8525,7 +8525,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -16109,8 +16109,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16162,7 +16162,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -18704,8 +18704,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18764,7 +18764,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -24064,8 +24064,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
                         Mission Runtime Evidence
@@ -24115,7 +24115,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -27224,8 +27224,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -27274,7 +27274,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -28502,7 +28502,9 @@ Table of Contents
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
-   rule as denial reasons (Section 6.5).
+   rule as denial reasons (Section 6.5).  The harness profile defines
+   the coordinated type work_item_prerequisite_completed
+   ([I-D.draft-mcguinness-mission-harness]).
 
    The OPTIONAL context.mission_history request object carries only what
    the PEP can supply in support of the policy-selected predicates,
@@ -30913,6 +30915,9 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  History Context: names work_item_prerequisite_completed, the
+      harness profile's coordinated predicate type (#815).
+
    *  Changes a requirement (#1994): a mediated request carried with an
       action class other than the one the PDP's trusted declaration
       assigns its operation and phase has no class established, and the
@@ -31114,8 +31119,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -31167,7 +31172,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -31195,6 +31200,7 @@ Table of Contents
    6.  Mission Binding
      6.1.  Binding Inheritance
      6.2.  Work-Item Identity
+       6.2.1.  Work-Item Prerequisite
    7.  Resume Checks
      7.1.  Resume Algorithm
      7.2.  Interaction with the Orchestration Profile
@@ -31761,6 +31767,58 @@ Table of Contents
    but never required.  Attribution says which work item an action was
    requested for.  It proves neither that the action serves the item's
    purpose nor isolation between items in one process.
+
+6.2.1.  Work-Item Prerequisite
+
+   work_item_prerequisite_completed is a history predicate type
+   ([I-D.draft-mcguinness-mission-authzen], Section "History Context").
+   It requires that a named operation completed for the same work item,
+   operation target, and revision as the action being decided.  Policy
+   names the operation with two members: action, its identifier, and
+   action_class, a runtime action class name.  A predicate missing
+   either member cannot be established.
+
+   The predicate is satisfied when the PDP's evidence store holds, for
+   the established Mission, a Decision Evidence record with decision
+   permit that has a completion witness
+   ([I-D.draft-mcguinness-mission-authzen], Section "History Context"),
+   where:
+
+   *  the permit's action names the predicate's action, and the
+      predicate's class applied to the permit as it does for
+      action_class_completed; class membership alone does not show that
+      the named operation ran;
+
+   *  the permit and the witness each carry the request's qualified
+      work-item identifier as their work_item; and
+
+   *  the witness's result_summary carries the request's operation
+      target as operation_target and the request's revision as revision.
+
+   The request's operation target is its operation_target
+   ([I-D.draft-mcguinness-mission-authzen], Section "Operation Target").
+   The request's revision is a revision-granularity fact that the PEP
+   captures for that target from the resource's authoritative interface
+   ([I-D.draft-mcguinness-mission-runtime], Section "Evaluation-Context
+   Binding") and carries as the resource property revision
+   (resource.properties.revision).  A request without a work item or a
+   revision cannot establish the predicate.
+
+   The executing PEP or executor records in result_summary, as
+   operation_target, the operation target the effect was released for
+   and, as revision, the revision the resource reported when the effect
+   ran, never an agent argument.  When no witness satisfies the
+   predicate, it is not establishable if a permit matching the
+   operation, class, and work item has an undetermined completion, or
+   has a witness carrying that work item that lacks operation_target or
+   revision.
+
+   A prerequisite completed at an earlier revision does not satisfy a
+   request at a later one.  Where Evaluation-Context Binding covers the
+   operation being decided, a revision that differs when the PEP re-
+   reads it before release is refused before any effect.  That
+   reverification is the verified property; the predicate adds no atomic
+   check-and-effect.
 
 7.  Resume Checks
 
@@ -33197,6 +33255,15 @@ Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Work-Item Prerequisite: work_item_prerequisite_completed, a
+      history predicate requiring that a policy-named operation and
+      class completed for the same qualified work item, operation
+      target, and revision as the action being decided, through a
+      permit's completion witness whose result_summary carries the
+      operation_target the effect was released for and the revision the
+      resource reported; the request carries its revision as
+      resource.properties.revision (#815).
+
    *  Decision-API Composition: the PDP requires taint context on every
       action to which the External commitment class applies, not only
       one whose assigned class is external_commitment (#1994).
@@ -33278,8 +33345,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -33334,7 +33401,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 

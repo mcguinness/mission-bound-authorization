@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         3 November 2026
-Expires: 7 May 2027
+Intended status: Standards Track                         4 November 2026
+Expires: 8 May 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 8 May 2027.
 
 Copyright Notice
 
@@ -1282,7 +1282,9 @@ Table of Contents
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
-   rule as denial reasons (Section 6.5).
+   rule as denial reasons (Section 6.5).  The harness profile defines
+   the coordinated type work_item_prerequisite_completed
+   ([I-D.draft-mcguinness-mission-harness]).
 
    The OPTIONAL context.mission_history request object carries only what
    the PEP can supply in support of the policy-selected predicates,
@@ -3692,6 +3694,9 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  History Context: names work_item_prerequisite_completed, the
+      harness profile's coordinated predicate type (#815).
 
    *  Changes a requirement (#1994): a mediated request carried with an
       action class other than the one the PDP's trusted declaration
