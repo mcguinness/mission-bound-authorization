@@ -330,6 +330,7 @@ export {
   type HistoryPolicy,
   type HistoryPredicate,
   type HistoryPredicateResult,
+  type HistoryRequestFacts,
   type HistorySelectionInput,
   type UnauthorizedExecutionFlag,
 } from "./history.js";

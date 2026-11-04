@@ -11,8 +11,8 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "604492561e93b21e31aa7139c06d6b670eff60b0",
-    "content_sha256": "927cd9750d2d50410d05c3fb02c428ffc147d9501493cad1795819a23a9d9c0d"
+    "revision": "a35ab59a708ddc5eda517e61794e436c0e87bfb1",
+    "content_sha256": "d01e2af222f5324dc1ad6332dc61c553787c57031f6e4d31ba631622c946854a"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
@@ -159,8 +159,8 @@
     "content_sha256": "a73a267a1da167dd2cb76a976c5e0bca75d8a056d0b44d9723bae39e0263793a"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "66964c562e28368d092490adb796037b983b7d1a",
-    "content_sha256": "1a73f641a725f5bc4b92dd227af7ae7209092b44a0bbc5e8050214ad629c74ca"
+    "revision": "dd734cdadf47e726f0fdf3aa04d4a4b60822c519",
+    "content_sha256": "a2596ca80ba9395f323afcca48bacc512474a60087757a386e1fd375f91f6a2c"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
     "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
@@ -331,6 +331,7 @@
    "core.dpop-nonce",
    "runtime.authority-dependency",
    "harness.work-item-attachment",
+   "harness.work-item-prerequisite",
    "runtime.work-item-attribution",
    "template.standing-payment",
    "metering.exact-budget",
@@ -111807,6 +111808,362 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "harness.work-item-prerequisite.members-required",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "A predicate missing either member cannot be established.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a work_item_prerequisite_completed predicate that lacks action or action_class, or names no runtime action class, is not establishable: it is recorded unavailable, never evaluated",
+    "local": "the reference denies history_not_satisfied, as the AuthZEN History Context requires of a predicate that cannot be established"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > cannot be established without its members, the request's work item or revision, or a readable acted-on target and revision",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the action check records not_satisfied for the predicate without action (U-member-action); dropping the class check does the same for the predicate without action_class (U-member-class)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.operation-and-class",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "the permit's `action` names the predicate's `action`, and the predicate's class applied to the permit as it does for `action_class_completed`; class membership alone does not show that the named operation ran",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "only a permit whose action names the predicate's operation, and to which the predicate's class applied (listed in action_classes, else its action_class), can satisfy the predicate; a completed operation of the same class under another identifier does not"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > matches the named operation, not its class alone: a completed export of the same class, target, revision and work item does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when only another operation of the backup's class completed for that work item, target and revision",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > deletes after the work item's completed backup of that database at its revision, recorded as acted on",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the operation match lets the completed export satisfy, so the delete completes and the database is gone (E-op; the zero-deletion assertion fails alone with the denial and mission_history assertions removed) and the unit export case permits (U-op); treating every permit's class as applied permits the unit backup of another class (U-class). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.work-item-join",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "the permit and the witness each carry the request's qualified work-item identifier as their `work_item`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the predicate counts only a permit and its completion witness that each carry, as work_item, the request's qualified work-item identifier, issuer and id: another work item's backup, a permit decided for another work item, a witness attributed to no work item, and the same id under another issuer, on the permit or on the witness, do not satisfy"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > joins the work item on the permit and on the execution: another work item's backup, or an execution attributed to none, does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > joins the qualified work item: the same id under another issuer, on the permit or on the execution, does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the completed backup was another work item's",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping both work-item joins lets work-2's backup satisfy work-1's delete, which completes and deletes the database (E-wi; the zero-deletion assertion fails alone); dropping only the permit-side join permits the permit decided for work-2 (U-wi-permit); dropping only the execution-side join permits the execution attributed to none (U-wi-execution); comparing only the id on the permit permits the permit decided for the other harness's item (U-issuer-permit), and comparing only the id on the execution permits the execution attributed to it (U-issuer-execution). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.target-and-revision-join",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "the witness's `result_summary` carries the request's operation target as `operation_target` and the request's revision as `revision`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the predicate is satisfied only by a completion witness whose result_summary.operation_target and result_summary.revision equal the request's operation target and the revision the PEP captured for it: a backup of another target, or of an earlier revision of the same target, does not satisfy"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > joins the target and the revision the execution acted on: another database, or another revision of this one, does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the completed backup was of another database",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the database changed after the backup: the fresh revision finds no backup",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The draft's \"A prerequisite completed at an earlier revision does not satisfy a request at a later one\" restates this join and is witnessed by the changed-revision case (the PEP captures the fresh revision r2 and the backup acted on r1). Mutation-proved (#815): dropping the target comparison lets the backup of ledger satisfy the delete of orders (E-target); dropping the revision comparison lets the r1 backup satisfy the delete at r2 (E-rev); in both the delete completes and the zero-deletion assertion fails alone; the unit witness fails under each (U-target, U-revision). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.authorized-completion",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "a Decision Evidence record with `decision` `permit` that has a completion witness",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "only a permit with a completion witness, as the AuthZEN History Context defines it, satisfies the predicate: a failed or suppressed execution of the prerequisite, or a completed one whose effective digest differs from its authorized digest, is no witness",
+    "local": "the reference reads the History Context's verified, linked records (#2015): the unauthorized execution is flagged through onUnauthorizedExecution, and a malformed member of a record leaves the whole history unestablished"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > keeps the History reader's rules: a failed, suppressed or unauthorized backup never satisfies, and a malformed work item or result_summary leaves the history unestablished",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): counting any linked execution permits beside a failed backup (U-completion); counting a completed execution whose effective digest deviates permits it (U-unauthorized). The same witness holds the History reader's fail-closed reading for this predicate's members: a permit with no readable action name, a malformed work_item, or a result_summary that is not an object, beside a satisfying backup, leaves the history unestablished (U-action-name, U-decision-wi, U-execution-wi, U-result-summary)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.pep-captures-revision",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "The request's revision is a `revision`-granularity fact that the PEP captures for that target from the resource's authoritative interface",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "the revision the decision request carries as resource.properties.revision is the one the PEP read for the operation target from the resource's authoritative interface, never an agent-supplied value",
+    "local": "the reference reads a record crossing's record from PepDeps.revisionedRecords, by the one argument its argument-derived contract binds (an entry binding another argument is refused before any decision request), and carries its revision as resource.properties.revision beside the evaluation context it captures from the same read"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > deletes after the work item's completed backup of that database at its revision, recorded as acted on",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > takes the request's revision from the database, never from an agent argument",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the database changed after the backup: the fresh revision finds no backup",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses a record crossing whose contract binds another argument than the record's, before any decision and with no deletion",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): reading an agent-supplied revision argument ahead of the record source carries r9 instead of r1 (E-revision-from-record); admitting an entry whose template binds another argument than the record's lets the request carry the ledger's target with the orders record's revision, so the orders database is deleted on the ledger's backup (E-record-tie; the zero-deletion assertion fails alone). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.request-facts-required",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "A request without a work item or a revision cannot establish the predicate.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision request carrying no work item, or no usable revision, records the predicate unavailable"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > cannot be established without its members, the request's work item or revision, or a readable acted-on target and revision",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the work-item check records not_satisfied for the request without one (U-request-workitem); dropping the revision checks does the same for a request without a revision (U-request-revision)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.acted-on-recorded",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "The executing PEP or executor records in `result_summary`, as `operation_target`, the operation target the effect was released for and, as `revision`, the revision the resource reported when the effect ran, never an agent argument.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a completed Execution Evidence record of a prerequisite operation carries result_summary.operation_target, the operation target the effect was released for, and result_summary.revision, the revision the resource reported when the effect ran, never an agent argument",
+    "local": "the reference PEP records result_summary itself when the executor reports the revision (Pep.completeExecution's actedOnRevision): operation_target is the attempt's operation target, the one the permit was decided on and the use checks re-derive"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > deletes after the work item's completed backup of that database at its revision, recorded as acted on",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > takes the request's revision from the database, never from an agent argument",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial. The target clause is the reference PEP's and is witnessed: the backup's completed record carries operation_target equal to the target the attempt released the effect for; dropping result_summary from the disposition writer fails the positive witness (E-acted-recorded), and recording another value as operation_target fails it too (E-acted-target). The revision clause is the executor's: the reference PEP records the revision its caller reports, and in this composition that caller is the test-only resource adapter, which passes the revision the simulated database reported for its backup (an agent-supplied revision argument notwithstanding). The reference ships no executor for record crossings, so the revision's sourcing has no reference witness. The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.unreadable-completion",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "When no witness satisfies the predicate, it is not establishable if a permit matching the operation, class, and work item has an undetermined completion, or has a witness carrying that work item that lacks `operation_target` or `revision`.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with no satisfying witness, the predicate is unavailable when a permit matching the operation, class and work item has an undetermined completion, or has a witness carrying that work item without a readable result_summary.operation_target or result_summary.revision; one satisfying witness establishes it",
+    "local": "the reference is stricter for an undetermined completion: a completed record missing an effective digest its authorized digest requires leaves the whole history unestablished (#2017), so every selected predicate is unavailable"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > cannot be established without its members, the request's work item or revision, or a readable acted-on target and revision",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): skipping an unreadable witness as if it did not match records not_satisfied (U-unreadable); treating an unreadable witness as decisive records unavailable beside a satisfying one (U-existential); dropping the reader's missing-effective-digest check lets a backup with an undetermined completion satisfy (U-undetermined)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.drift-refused-at-use",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "Where Evaluation-Context Binding covers the operation being decided, a revision that differs when the PEP re-reads it before release is refused before any effect.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a permitted, covered operation whose target's revision differs when the PEP re-reads it before release is refused, with no effect",
+    "local": "the reference records the refusal as Execution Evidence suppressed / target_drift, the Runtime Evidence classification of a context that differs at use"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > suppresses the permitted delete, target_drift, when the database changes after the decision and before release",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the effective-context comparison at use releases the delete at r2 under the permit decided at r1, so the database is gone (E-drift; the zero-deletion assertion fails alone with the outcome and error assertions removed). The \"with no effect\" clause rests on the test-only executor's release order, as acted-on-recorded's revision clause does: the PEP refuses the permit and records suppressed / target_drift at its release-time use check, and the test's resource adapter releases nothing after that refusal; the reference ships no executor for record crossings. This is the verified property only: the delete compares no revision at the resource, and runtime.evaluation-context.atomic-enforced-property stays todo. The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
   },
   {
    "id": "harness.decision-api.taint-required-where-external-commitment-applies",
