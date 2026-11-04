@@ -13409,9 +13409,105 @@
      "name": "the Mission Template consent page renders the per-child rule the template retains (#2040; @spec derivation-limits#approval-rendering, mission-template#template-consent) > a per-child figure changed since the proposal is neither rendered nor consented to: the page states why, the decision creates no template, and once restored the same proposal is approved",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a consented ceiling gates the Mission approval (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#progressive-authorization) > a consented ceiling whose child creation policy is not held is refused access_denied, committing no Mission, while the same offer left unselected approves the Mission without a ceiling",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a consented ceiling gates the Mission approval (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#progressive-authorization) > a consented ceiling whose child creation policy states a malformed maximum is refused access_denied, committing no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a consented ceiling gates the Mission approval (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#progressive-authorization) > a held, valid child creation policy: the page renders the rule and maximum it states for the ceiling entry, and the consent commits the Mission with the ceiling (control)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a consented ceiling gates the Mission approval (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#progressive-authorization) > a policy restored after a rendering that could not show it approves nothing on that rendering: the decision is refused approval_context_changed, committing no Mission, and a fresh rendering shows the rule and is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion successor gates the decision (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, expansion#completion-modes) > a successor entry whose child creation policy is not held is refused access_denied, recording nothing and leaving the deferral pending",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion successor gates the decision (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, expansion#completion-modes) > a successor entry whose child creation policy states a malformed maximum is refused access_denied, recording nothing and leaving the deferral pending",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion successor gates the decision (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, expansion#completion-modes) > a held, valid child creation policy: the page renders the rule and maximum it states, the decision approves, and a child under the added authority records it (control)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion successor gates the decision (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, expansion#completion-modes) > a rendering that could not show the successor's rule approves nothing once the policy is restored: a decision after a refused one, and a first decision, on that rendering are refused approval_context_changed naming child_grants, the deferral stays pending, and a fresh rendering shows the rule and is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion's ceiling re-consent gates the re-consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#ceiling-reconsent) > a re-consent of a ceiling whose child creation policy is not held is refused access_denied, recording nothing, while the same deferral approved without re-consenting completes with the predecessor's ceiling unchanged",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion's ceiling re-consent gates the re-consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#ceiling-reconsent) > a re-consent of a ceiling whose child creation policy states a malformed maximum is refused access_denied, recording nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion's ceiling re-consent gates the re-consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#ceiling-reconsent) > a held, valid child creation policy: the re-consent block renders the rule and maximum it states, and the re-consent is recorded with the successor's ceiling (control)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of an Expansion's ceiling re-consent gates the re-consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, progressive#ceiling-reconsent) > a rendering that could not show the re-consent's rule approves no re-consent once the policy is restored: the decision on that rendering is refused approval_context_changed naming child_grants, and a fresh rendering shows the rule and is re-consented",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a delegable Template Ceiling entry gates the template consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, mission-template#template-consent) > a proposal whose delegable ceiling entry commits a child creation policy not held is refused at the proposal, creating no proposal; once held, the same body is proposed and its page renders the rule",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a delegable Template Ceiling entry gates the template consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, mission-template#template-consent) > a proposal whose delegable ceiling entry commits a child creation policy stating a malformed maximum is refused at the proposal",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a delegable Template Ceiling entry gates the template consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, mission-template#template-consent) > a policy withdrawn after the proposal refuses the page and the decision, creating no template and keeping the proposal pending; restored, a fresh rendering shows the rule and the consent is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-refusal-endpoint.test.ts",
+     "name": "the per-child disclosure of a delegable Template Ceiling entry gates the template consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, mission-template#template-consent) > a held, valid child creation policy: the page renders the rule and maximum it states, and the consent creates the template (control)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). #2040 (D1260 ruling 3): the per-child rule and maximum for each delegable entry with no child_creation_policy are witnessed at the other human approvals that admit policy-created children (consent-per-child-rule-endpoint.test.ts): the Progressive ceiling consent on the approval page (a block per delegable ceiling entry, whose figure the approval retains with the ceiling), the Expansion deferral page (a block per delegable successor entry at the figure the approval retains, and per entry of the ceiling re-consent it offers), and the Template consent page (a block per delegable ceiling entry). Each decision approves the figure rendered: the deferral's render revision commits the figures, so a change between rendering and decision is refused approval_context_changed naming child_derivation; the template proposal pins the figure and refuses the consent once it has changed; and the Mission approval is bound to the derivation policy content it rendered (#1446). An approval whose per-child figure cannot be disclosed (an unheld or malformed child_creation_policy) is refused on the new surfaces too; that refusal is witnessed only at the parent's approval. Not witnessed: the governed_policy basis, which has no HTTP consent surface and renders no per-child rule, so its instances still take the deployment's figure at activation (D1260 ruling 1, provisional). The Progressive basis's own successor-limit statement is progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails). #2040 proved by mutation: dropping the ceiling block, the deferral page's blocks or the template's blocks fails each surface's page witness; dropping the figures from the deferral's committed context fails the binding witness; and dropping the template's changed-figure refusal fails the pin witness."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). #2040 (D1260 ruling 3): the per-child rule and maximum for each delegable entry with no child_creation_policy are witnessed at the other human approvals that admit policy-created children (consent-per-child-rule-endpoint.test.ts): the Progressive ceiling consent on the approval page (a block per delegable ceiling entry, whose figure the approval retains with the ceiling), the Expansion deferral page (a block per delegable successor entry at the figure the approval retains, and per entry of the ceiling re-consent it offers), and the Template consent page (a block per delegable ceiling entry). Each decision approves the figure rendered: the deferral's render revision commits the figures, so a change between rendering and decision is refused approval_context_changed naming child_derivation; the template proposal pins the figure and refuses the consent once it has changed; and the Mission approval is bound to the derivation policy content it rendered (#1446). #2040 review (ruling 4, consent-per-child-refusal-endpoint.test.ts): an approval whose per-child figure cannot be disclosed (a child_creation_policy not held at its digest, or stating a malformed maximum) is refused at a consented ceiling (an offered but unselected ceiling is not), an Expansion successor, an Expansion ceiling re-consent (only when selected) and a Template proposal (at the proposal, and at its page and decision if the policy is withdrawn later), committing nothing and leaving a deferral or proposal pending; a held, valid policy renders its rule and is approved; and recovery is a fresh rendering that shows the restored rule. With Derivation Limits off nothing is refused for it (controls, not cited). Review P2: the deferral's render revision commits child_grants, the per-child disclosure the page showed, and the Mission approval's commits the held activation policies (#1446), so a rendering that could not show a figure never approves it once the policy is restored, before a first decision or after a refused one. Proved by mutation: dropping child_grants from the deferral's commitment, or the held policies from the Mission approval's, fails the stale-rendering witnesses; dropping each surface's refusal fails its refusal witnesses; refusing an unselected offer or re-consent fails the unselected halves; and ignoring the Derivation Limits switch fails the off controls. Not witnessed: the governed_policy basis, which has no HTTP consent surface and renders no per-child rule, so its instances still take the deployment's figure at activation (D1260 ruling 1, provisional). The Progressive basis's own successor-limit statement is progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails). #2040 proved by mutation: dropping the ceiling block, the deferral page's blocks or the template's blocks fails each surface's page witness; dropping the figures from the deferral's committed context fails the binding witness; and dropping the template's changed-figure refusal fails the pin witness."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
