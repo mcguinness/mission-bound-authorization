@@ -11,8 +11,8 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "604492561e93b21e31aa7139c06d6b670eff60b0",
-    "content_sha256": "927cd9750d2d50410d05c3fb02c428ffc147d9501493cad1795819a23a9d9c0d"
+    "revision": "a35ab59a708ddc5eda517e61794e436c0e87bfb1",
+    "content_sha256": "d01e2af222f5324dc1ad6332dc61c553787c57031f6e4d31ba631622c946854a"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
@@ -159,8 +159,8 @@
     "content_sha256": "a73a267a1da167dd2cb76a976c5e0bca75d8a056d0b44d9723bae39e0263793a"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "66964c562e28368d092490adb796037b983b7d1a",
-    "content_sha256": "1a73f641a725f5bc4b92dd227af7ae7209092b44a0bbc5e8050214ad629c74ca"
+    "revision": "dd734cdadf47e726f0fdf3aa04d4a4b60822c519",
+    "content_sha256": "a2596ca80ba9395f323afcca48bacc512474a60087757a386e1fd375f91f6a2c"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
     "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
@@ -331,6 +331,7 @@
    "core.dpop-nonce",
    "runtime.authority-dependency",
    "harness.work-item-attachment",
+   "harness.work-item-prerequisite",
    "runtime.work-item-attribution",
    "runtime.authority-content-surrogate",
    "template.standing-payment",
@@ -4601,6 +4602,36 @@
     }
    ],
    "notes": "The resolver tests witness the missing, ambiguous and duplicate-entry cases of the mapping; the continuation test witnesses the token-endpoint error mapping. The reference implementation has no HTTP surface for the base refresh-token-mode grant exchange (the demo calls issueCrossDomainGrant directly), so the continuation exchange is the endpoint witness."
+  },
+  {
+   "id": "cross-domain.cross-domain-grant.sender-constrained",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "MUST be sender-constrained ({{RFC7800}}) to the presenting client by the proof-of-possession mechanism the cross-domain grant profile defines",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every cross-domain grant the Mission Issuer mints carries a `cnf` binding it to the key the presenting client proved on the exchange (for the ID-JAG profile, the `jkt` of its DPoP key), never no binding",
+    "local": "the continuation exchange binds the jkt of the verified token-endpoint DPoP proof, which must equal the ICA's cnf.jkt; the base grant is minted in process from a caller-supplied jkt, since the reference serves no refresh-token-mode exchange"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > happy path: mints a Mission-rooted ID-JAG with a fresh handle, deterministic sub, collapsed act, and carried envelope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: deleting the grant's cnf at the mint lets the exchange answer with an unbound grant, and the happy-path test fails at the grant's cnf.jkt. Witnessed on the wire for the continuation exchange only; the base refresh-token-mode grant shares the mint but has no token-endpoint route in the reference."
   },
   {
    "id": "cross-domain.error-responses.unresolved-subject-invalid-request",
@@ -18424,6 +18455,100 @@
     }
    ],
    "notes": "#1503 finding 3 (D620): the introspection half of the issuer checks that core.rs-enforcement.mission-issuer-trusted, core.rs-enforcement.mission-issuer-equals-iss and core.rs-enforcement.mission-issuer-invalid-token witness for JWT acceptance. Partial, not twinned: both halves quote this one sentence, and a twin for the refusal half would need an applicability for an introspecting route whose issuer is not trusted for Mission-bound authorization, which the model does not define. Witnessed: the trust check on introspection, where an estate route refuses an active response carrying `mission` with 401 `invalid_token` and no PEP entry or evidence, while the same response without it opens a session. Proved by mutation: removing the adapter's `mission` refusal fails the test on the status, and with the status and body assertions removed, the PEP-entry spy assertion and the no-evidence assertion each fail alone. Not witnessed: acceptance of a Mission-bound opaque token with the issuer and `mission.issuer` checks, since no reference resource server accepts one (core.introspected-consumption is unclaimed)."
+  },
+  {
+   "id": "core.rs-enforcement.authorization-details-authoritative",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST treat `authorization_details` as the authoritative expression of authority and enforce each applicable entry according to that entry's own type specification.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server authorizes a request only from the token's `authorization_details`, enforcing each applicable entry under its own type's rules; a validly presented token none of whose entries admits the request under those rules is refused",
+    "local": "the SaaS resource enforces `mission_resource_access` from the token alone: the entry's `resource` under its matching mode, its `actions`, and each `constraints` key (`vendors`); it reads no `scope`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource enforces vendors against the vendor the operation addresses (@spec resource-access#rs-enforcement) > permits a journal write for a listed vendor and refuses one for an unlisted vendor, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > out-of-scope tool at the SaaS server is denied token-only",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers, one behavior at a time, each making a request the entry's type does not admit succeed: the vendors gate made always true fails the vendors test; dropping the actions check fails the out-of-scope-tool test; dropping the resource match fails the operation-target test. Item 3 (scope never broader than the entry) is a separate rule with no row; no test here presents a competing `scope`."
+  },
+  {
+   "id": "core.rs-enforcement.entries-alternative-grants",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "Where more than one carried entry applies, entries are alternative grants of authority, not conjunctive filters, unless the entry's type states otherwise.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where several carried entries apply, a request one of them covers on its own is authorized whatever the others carry, unless the entry's type states otherwise",
+    "local": "no type the reference implements states otherwise, so the exception is not exercised"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > authorizes through an unconstrained covering entry beside one it cannot enforce",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only an entry it cannot enforce covers, while another entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only parts of two enforceable entries together cover",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > authorizes a journal write through a clean covering entry listed after one carrying a member it does not recognize",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: the decision made conjunctive (`.some` to `.every`) fails all four on their permit assertions, refusing a request one entry covers on its own."
   },
   {
    "id": "core.introspection.composite-active",
@@ -67959,6 +68084,131 @@
    "notes": "#1374, #1180. The clause binds only a Resource AS that issues delegated tokens of its own, so the row is gated on cross-domain.resource-as-delegated-issuance, which no deployment claims. core.delegation does not gate it, because the reference implements that capability at the originating AS, not at the Resource AS. The reference Resource AS lacks the capability: in src/services/ras/src/index.ts, redeem() mints one local token per grant and returns only access_token and expires_in, metadata() advertises only the JWT-bearer grant, and the class has no token exchange or other delegation path. No witness exists, so the row stays todo."
   },
   {
+   "id": "cross-domain.resource-as.verifies-sender-constraint",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST verify the grant's sender-constraint by the proof-of-possession mechanism the cross-domain grant profile defines.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS redeems a cross-domain grant only for a presenter that proves the key the grant's `cnf` names, by the profile's mechanism (for ID-JAG, a DPoP proof for its token endpoint)",
+    "local": "redeem() compares the grant's cnf.jkt with the presenter thumbprint its caller supplies; the reference RAS has no token endpoint and verifies no DPoP proof itself"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant sender-constraint (@spec cross-domain#validation-at-resource-as, #2033) > a grant bound to one key is invalid_grant for another key the same client registered, and still redeems for its bound key",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Partial: the comparison against the grant's cnf.jkt is proven by disabling it (removing the presenter-key check lets a second key of the same registered client redeem the grant), but the reference Resource AS has no token endpoint, so the DPoP proof that establishes the presenter's thumbprint is verified by its caller, not here. The existing \"presenter-key mismatch is rejected (sender-constraint)\" test (mcp-saas cross-domain) is not cited: it presents a key no client registered, so removing the check still refuses it as invalid_client."
+  },
+  {
+   "id": "cross-domain.resource-as.refuses-unbound-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "It MUST reject with `invalid_grant` a cross-domain grant that is not sender-constrained or whose proof-of-possession does not verify. A bearer grant MUST NOT be accepted",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a cross-domain grant carrying no `cnf`, or whose proof-of-possession does not verify (for the ID-JAG profile, a DPoP proof that fails verification or proves a key other than the one its `cnf` names), is refused with invalid_grant and yields no local token",
+    "local": "redeem() refuses a grant with no cnf.jkt, and one whose cnf.jkt differs from the presenter thumbprint its caller supplies; the reference Resource AS has no token endpoint and verifies no DPoP proof itself"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant sender-constraint (@spec cross-domain#validation-at-resource-as, #2033) > a grant bound to one key is invalid_grant for another key the same client registered, and still redeems for its bound key",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant sender-constraint (@spec cross-domain#validation-at-resource-as, #2033) > a bearer grant, carrying no cnf, is invalid_grant and yields no local token",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Partial (owner review of #2042, F1): the two cited tests prove refusal of a grant with no cnf (a bearer grant) and of a grant presented with another registered key of the same client, each by disabling the code it covers: removing the presenter-key check lets the other key redeem (the first test fails); removing both cnf checks lets the bearer grant mint a local token (the second fails). Removing only the absence check is not a proof: the comparison then throws a TypeError instead of permitting. Not witnessed: refusal when the proof itself fails verification (for example, a DPoP proof with the expected key but an invalid signature). redeem() takes the presenter's thumbprint directly, so no such proof can reach it; the reference Resource AS has no token endpoint (see cross-domain.resource-as.verifies-sender-constraint)."
+  },
+  {
+   "id": "cross-domain.resource-as.local-token-sender-constrained",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST be sender-constrained ({{RFC7800}}), like the grant it derives from;",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a local token minted from a cross-domain grant carries a `cnf` binding it to the key the grant was bound to and the presenter proved"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: deleting the local token's cnf lets redemption mint a bearer local token, and the end-to-end test fails at the local token's cnf.jkt."
+  },
+  {
+   "id": "cross-domain.resource-as.local-token-not-bearer",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST NOT be issued as a bearer token;",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no local token minted from a cross-domain grant is usable without proof of its bound key",
+    "local": "the binding is the local token's cnf.jkt, which the SaaS resource requires with a matching DPoP proof"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2033 (D1266). The same witness and mutation as cross-domain.resource-as.local-token-sender-constrained: without the cnf the minted token is a bearer token, and the end-to-end test fails at its cnf.jkt."
+  },
+  {
    "id": "cross-domain.revocation.late-redemption-bounded-by-grant",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "cross-domain-revocation",
@@ -95049,6 +95299,48 @@
    "notes": "#1962 (D1119, D1150). Witnessed at PAR with a fixture evidence type, since the reference registers no shipped type: one entry, within the size and count bounds, whose verification would take one unit past the bound is refused invalid_request with exactly the bound's work done, and one at the bound is accepted. The real request-provenance verifier, once registered, charges its own further work. #939 slice 2a-2 (D1151): the real mission-request-provenance verifier performs exactly one signature verification, fetches no key and walks no chain, so it charges nothing beyond the dispatch's unit: one entry verifies at PAR at a bound of 1, and at a bound of 0 the push is refused invalid_request with no signature verified (the verifier's calls are counted). A resume at a later step verifies nothing and is charged nothing, even at a bound of 0 (unit). Mutations: charging a further unit refuses the entry at a bound of 1; charging a resume fails the unit test."
   },
   {
+   "id": "submission-evidence.required-evidence.absent-type-refused",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "required-evidence",
+   "text": "When a required type is absent from the submission, the AS MUST refuse the submission with the `invalid_mission_intent_evidence` error code.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission that presents no entry of a type the applicable policy requires, whether it carries no evidence or only other types, is refused with invalid_mission_intent_evidence",
+    "local": "required types are the deployment-global requiredIntentEvidenceTypes unioned with the client's registered required_intent_evidence_types; the check runs on every carrier's verification"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "stage-2 verification (@spec mission#intent-submission-evidence) > anti-downgrade: a policy-REQUIRED type absent from the submission refuses",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > anti-downgrade on the wire: a required type absent refuses the PAR submission; presenting it proceeds",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#2033 (D1266). Proven by disabling the code it covers: making the absent-type check false accepts the submission, and all three cited tests fail. Witnessed at PAR with the deployment-global option and a test-only evidence type: no test sets required types on the token-endpoint carriers, dispatch, device authorization or deferred activation, or through per-client metadata, and the shipped configuration requires none (D1151, D1157)."
+  },
+  {
    "id": "request-provenance.trust.no-header-key",
    "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
    "anchor": "trust-configuration",
@@ -112000,6 +112292,362 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "harness.work-item-prerequisite.members-required",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "A predicate missing either member cannot be established.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a work_item_prerequisite_completed predicate that lacks action or action_class, or names no runtime action class, is not establishable: it is recorded unavailable, never evaluated",
+    "local": "the reference denies history_not_satisfied, as the AuthZEN History Context requires of a predicate that cannot be established"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > cannot be established without its members, the request's work item or revision, or a readable acted-on target and revision",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the action check records not_satisfied for the predicate without action (U-member-action); dropping the class check does the same for the predicate without action_class (U-member-class)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.operation-and-class",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "the permit's `action` names the predicate's `action`, and the predicate's class applied to the permit as it does for `action_class_completed`; class membership alone does not show that the named operation ran",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "only a permit whose action names the predicate's operation, and to which the predicate's class applied (listed in action_classes, else its action_class), can satisfy the predicate; a completed operation of the same class under another identifier does not"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > matches the named operation, not its class alone: a completed export of the same class, target, revision and work item does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when only another operation of the backup's class completed for that work item, target and revision",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > deletes after the work item's completed backup of that database at its revision, recorded as acted on",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the operation match lets the completed export satisfy, so the delete completes and the database is gone (E-op; the zero-deletion assertion fails alone with the denial and mission_history assertions removed) and the unit export case permits (U-op); treating every permit's class as applied permits the unit backup of another class (U-class). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.work-item-join",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "the permit and the witness each carry the request's qualified work-item identifier as their `work_item`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the predicate counts only a permit and its completion witness that each carry, as work_item, the request's qualified work-item identifier, issuer and id: another work item's backup, a permit decided for another work item, a witness attributed to no work item, and the same id under another issuer, on the permit or on the witness, do not satisfy"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > joins the work item on the permit and on the execution: another work item's backup, or an execution attributed to none, does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > joins the qualified work item: the same id under another issuer, on the permit or on the execution, does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the completed backup was another work item's",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping both work-item joins lets work-2's backup satisfy work-1's delete, which completes and deletes the database (E-wi; the zero-deletion assertion fails alone); dropping only the permit-side join permits the permit decided for work-2 (U-wi-permit); dropping only the execution-side join permits the execution attributed to none (U-wi-execution); comparing only the id on the permit permits the permit decided for the other harness's item (U-issuer-permit), and comparing only the id on the execution permits the execution attributed to it (U-issuer-execution). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.target-and-revision-join",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "the witness's `result_summary` carries the request's operation target as `operation_target` and the request's revision as `revision`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the predicate is satisfied only by a completion witness whose result_summary.operation_target and result_summary.revision equal the request's operation target and the revision the PEP captured for it: a backup of another target, or of an earlier revision of the same target, does not satisfy"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > joins the target and the revision the execution acted on: another database, or another revision of this one, does not satisfy",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the completed backup was of another database",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the database changed after the backup: the fresh revision finds no backup",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The draft's \"A prerequisite completed at an earlier revision does not satisfy a request at a later one\" restates this join and is witnessed by the changed-revision case (the PEP captures the fresh revision r2 and the backup acted on r1). Mutation-proved (#815): dropping the target comparison lets the backup of ledger satisfy the delete of orders (E-target); dropping the revision comparison lets the r1 backup satisfy the delete at r2 (E-rev); in both the delete completes and the zero-deletion assertion fails alone; the unit witness fails under each (U-target, U-revision). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.authorized-completion",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "a Decision Evidence record with `decision` `permit` that has a completion witness",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "only a permit with a completion witness, as the AuthZEN History Context defines it, satisfies the predicate: a failed or suppressed execution of the prerequisite, or a completed one whose effective digest differs from its authorized digest, is no witness",
+    "local": "the reference reads the History Context's verified, linked records (#2015): the unauthorized execution is flagged through onUnauthorizedExecution, and a malformed member of a record leaves the whole history unestablished"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > keeps the History reader's rules: a failed, suppressed or unauthorized backup never satisfies, and a malformed work item or result_summary leaves the history unestablished",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): counting any linked execution permits beside a failed backup (U-completion); counting a completed execution whose effective digest deviates permits it (U-unauthorized). The same witness holds the History reader's fail-closed reading for this predicate's members: a permit with no readable action name, a malformed work_item, or a result_summary that is not an object, beside a satisfying backup, leaves the history unestablished (U-action-name, U-decision-wi, U-execution-wi, U-result-summary)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.pep-captures-revision",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "The request's revision is a `revision`-granularity fact that the PEP captures for that target from the resource's authoritative interface",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "the revision the decision request carries as resource.properties.revision is the one the PEP read for the operation target from the resource's authoritative interface, never an agent-supplied value",
+    "local": "the reference reads a record crossing's record from PepDeps.revisionedRecords, by the one argument its argument-derived contract binds (an entry binding another argument is refused before any decision request), and carries its revision as resource.properties.revision beside the evaluation context it captures from the same read"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > deletes after the work item's completed backup of that database at its revision, recorded as acted on",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > takes the request's revision from the database, never from an agent argument",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when the database changed after the backup: the fresh revision finds no backup",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses a record crossing whose contract binds another argument than the record's, before any decision and with no deletion",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): reading an agent-supplied revision argument ahead of the record source carries r9 instead of r1 (E-revision-from-record); admitting an entry whose template binds another argument than the record's lets the request carry the ledger's target with the orders record's revision, so the orders database is deleted on the ledger's backup (E-record-tie; the zero-deletion assertion fails alone). The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.request-facts-required",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "A request without a work item or a revision cannot establish the predicate.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision request carrying no work item, or no usable revision, records the predicate unavailable"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > cannot be established without its members, the request's work item or revision, or a readable acted-on target and revision",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the work-item check records not_satisfied for the request without one (U-request-workitem); dropping the revision checks does the same for a request without a revision (U-request-revision)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.acted-on-recorded",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "The executing PEP or executor records in `result_summary`, as `operation_target`, the operation target the effect was released for and, as `revision`, the revision the resource reported when the effect ran, never an agent argument.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a completed Execution Evidence record of a prerequisite operation carries result_summary.operation_target, the operation target the effect was released for, and result_summary.revision, the revision the resource reported when the effect ran, never an agent argument",
+    "local": "the reference PEP records result_summary itself when the executor reports the revision (Pep.completeExecution's actedOnRevision): operation_target is the attempt's operation target, the one the permit was decided on and the use checks re-derive"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > deletes after the work item's completed backup of that database at its revision, recorded as acted on",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > takes the request's revision from the database, never from an agent argument",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial. The target clause is the reference PEP's and is witnessed: the backup's completed record carries operation_target equal to the target the attempt released the effect for; dropping result_summary from the disposition writer fails the positive witness (E-acted-recorded), and recording another value as operation_target fails it too (E-acted-target). The revision clause is the executor's: the reference PEP records the revision its caller reports, and in this composition that caller is the test-only resource adapter, which passes the revision the simulated database reported for its backup (an agent-supplied revision argument notwithstanding). The reference ships no executor for record crossings, so the revision's sourcing has no reference witness. The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
+  },
+  {
+   "id": "harness.work-item-prerequisite.unreadable-completion",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "When no witness satisfies the predicate, it is not establishable if a permit matching the operation, class, and work item has an undetermined completion, or has a witness carrying that work item that lacks `operation_target` or `revision`.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with no satisfying witness, the predicate is unavailable when a permit matching the operation, class and work item has an undetermined completion, or has a witness carrying that work item without a readable result_summary.operation_target or result_summary.revision; one satisfying witness establishes it",
+    "local": "the reference is stricter for an undetermined completion: a completed record missing an effective digest its authorized digest requires leaves the whole history unestablished (#2017), so every selected predicate is unavailable"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815) > cannot be established without its members, the request's work item or revision, or a readable acted-on target and revision",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Mutation-proved (#815): skipping an unreadable witness as if it did not match records not_satisfied (U-unreadable); treating an unreadable witness as decisive records unavailable beside a satisfying one (U-existential); dropping the reader's missing-effective-digest check lets a backup with an undetermined completion satisfy (U-undetermined)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.drift-refused-at-use",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "Where Evaluation-Context Binding covers the operation being decided, a revision that differs when the PEP re-reads it before release is refused before any effect.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a permitted, covered operation whose target's revision differs when the PEP re-reads it before release is refused, with no effect",
+    "local": "the reference records the refusal as Execution Evidence suppressed / target_drift, the Runtime Evidence classification of a context that differs at use"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > suppresses the permitted delete, target_drift, when the database changes after the decision and before release",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Mutation-proved (#815): dropping the effective-context comparison at use releases the delete at r2 under the permit decided at r1, so the database is gone (E-drift; the zero-deletion assertion fails alone with the outcome and error assertions removed). The \"with no effect\" clause rests on the test-only executor's release order, as acted-on-recorded's revision clause does: the PEP refuses the permit and records suppressed / target_drift at its release-time use check, and the test's resource adapter releases nothing after that refusal; the reference ships no executor for record crossings. This is the verified property only: the delete compares no revision at the resource, and runtime.evaluation-context.atomic-enforced-property stays todo. The cross-component witnesses run the reference PEP, an ephemeral in-process decision point (createEphemeralDecisionPoint) with the history binding, and the PEP's evidence store, over a test-only revisioned database (backup, export and delete as record crossings in the PEP's injectable Operation Profile, under a test-only Evaluation-Context Binding declaration with the verified property); nothing of that operation set ships."
   },
   {
    "id": "harness.decision-api.taint-required-where-external-commitment-applies",

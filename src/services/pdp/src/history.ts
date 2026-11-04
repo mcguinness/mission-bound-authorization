@@ -19,6 +19,14 @@
  * suffix (the most recent records) or a stream missing entirely, so the
  * sequence check is no proof that the history is complete.
  *
+ * `work_item_prerequisite_completed` (@spec harness#work-item-prerequisite,
+ * #815) reads the same verified history and joins it to the request being
+ * decided: the policy-named operation and class, the request's work item, its
+ * operation target and the revision the PEP captured for that target, each
+ * matched against a linked permit and its authorized completion, whose
+ * acted-on target and revision the executing PEP recorded in
+ * `result_summary`.
+ *
  * Cost and reach: each decision that selects a predicate reads the Mission's
  * whole retained history and verifies every record, one signature each,
  * uncached, so its cost grows linearly with the Mission's records. One record
@@ -33,14 +41,16 @@ import {
   type EvidenceKeyResolver,
   verifyEvidenceEnvelope,
 } from "./runtime-evidence-integrity.js";
+import { parseWorkItem, sameWorkItem, type WorkItemRef } from "./work-item.js";
 
 /** @spec runtime-evidence#evidence-extensions `mission_history`: an evaluated predicate's outcome. */
 export type HistoryOutcome = "satisfied" | "not_satisfied" | "unavailable";
 
 /**
  * A policy-selected history predicate: its `predicate` type and the members
- * that type defines (`action_class` for `action_class_completed`). The PDP's
- * own policy supplies it; an unrecognized type is refused as not establishable.
+ * that type defines (`action_class` for `action_class_completed`; `action`
+ * and `action_class` for `work_item_prerequisite_completed`). The PDP's own
+ * policy supplies it; an unrecognized type is refused as not establishable.
  */
 export interface HistoryPredicate {
   predicate: string;
@@ -66,6 +76,22 @@ export interface HistorySelectionInput {
   operationTarget: string;
   audience: string;
   mission: { id: string; issuer: string };
+}
+
+/**
+ * @spec harness#work-item-prerequisite (#815): the request being decided, as
+ * this PDP validated it, which `work_item_prerequisite_completed` joins the
+ * retained evidence to. `operationTarget` is the validated
+ * `resource.properties.operation_target`; `workItem` the request's
+ * well-formed `context.work_item`; `revision` the `revision`-granularity fact
+ * the PEP captured for that target and carries as
+ * `resource.properties.revision`, a deployment-defined attribute. None is a
+ * predicate outcome: each only selects which retained records can satisfy.
+ */
+export interface HistoryRequestFacts {
+  operationTarget: string;
+  workItem?: WorkItemRef;
+  revision?: string;
 }
 
 /** The PDP's own policy naming the history predicates an operation requires. */
@@ -214,11 +240,15 @@ const RUNTIME_ACTION_CLASSES: ReadonlySet<string> = new Set([
 const HIGH_CONSEQUENCE_CLASSES: ReadonlySet<string> = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
 /** The predicate types this PDP recognizes. */
-export const RECOGNIZED_HISTORY_PREDICATES: ReadonlySet<string> = new Set(["action_class_completed"]);
+export const RECOGNIZED_HISTORY_PREDICATES: ReadonlySet<string> = new Set(["action_class_completed", "work_item_prerequisite_completed"]);
 
 interface VerifiedDecision {
   evaluation_id: string;
   decision: "permit" | "deny";
+  /** The record's `action.name`: the operation decided. */
+  action: string;
+  /** The record's `work_item`, where it carries one. */
+  work_item: WorkItemRef | undefined;
   audience: string;
   /** The digests the decision was bound to, where it carries them. */
   parameter_digest: string | undefined;
@@ -247,6 +277,10 @@ interface VerifiedExecution {
   effective_parameter_digest: string | undefined;
   effective_evaluation_context_digest: string | undefined;
   outcome: unknown;
+  /** The record's `work_item` as the executing PEP attributed it, where it carries one. */
+  work_item: WorkItemRef | undefined;
+  /** The record's `result_summary`, where it carries one: the deployment-defined facts of what the effect acted on. */
+  result_summary: Record<string, unknown> | undefined;
   /**
    * An authorized completion: `completed`, with each effective digest equal
    * to its authorized digest. Set once the record's link is validated.
@@ -376,6 +410,16 @@ async function verifiedHistory(
       // strings, "`action_class` among them".
       const decision = record.decision;
       if (decision !== "permit" && decision !== "deny") return undefined;
+      // @spec runtime-evidence#decision-evidence-object `action` (REQUIRED)
+      // and runtime-evidence#evidence-extensions `work_item`: the operation a
+      // prerequisite names and the work item it joins on (#815). A record
+      // without a readable operation, or with a malformed work item, would
+      // drop out of the permits a predicate counts, so it leaves the history
+      // unestablished.
+      const actionName = objectOf(record.action)?.name;
+      if (typeof actionName !== "string" || actionName.length === 0) return undefined;
+      const decisionWorkItem = record.work_item === undefined ? undefined : parseWorkItem(record.work_item);
+      if (record.work_item !== undefined && decisionWorkItem === undefined) return undefined;
       const actionClass = record.action_class;
       if (typeof actionClass !== "string") return undefined;
       const actionClasses = record.action_classes;
@@ -419,6 +463,8 @@ async function verifiedHistory(
       decisions.set(record.evaluation_id, {
         evaluation_id: record.evaluation_id,
         decision,
+        action: actionName,
+        work_item: decisionWorkItem,
         audience,
         parameter_digest: parameterDigest,
         evaluation_context_digest: contextDigest,
@@ -454,6 +500,14 @@ async function verifiedHistory(
       ) {
         return undefined;
       }
+      // @spec runtime-evidence#evidence-extensions `work_item`,
+      // runtime-evidence#execution-evidence-object `result_summary` (#815): a
+      // malformed work item, or a `result_summary` that is not an object,
+      // leaves the history unestablished rather than uncounted.
+      const executionWorkItem = record.work_item === undefined ? undefined : parseWorkItem(record.work_item);
+      if (record.work_item !== undefined && executionWorkItem === undefined) return undefined;
+      const resultSummary = record.result_summary === undefined ? undefined : objectOf(record.result_summary);
+      if (record.result_summary !== undefined && resultSummary === undefined) return undefined;
       const content = signedContent(record);
       const prior = executions.get(executionId);
       if (prior !== undefined) {
@@ -469,6 +523,8 @@ async function verifiedHistory(
         effective_parameter_digest: effectiveParameterDigest,
         effective_evaluation_context_digest: effectiveContextDigest,
         outcome: record.outcome,
+        work_item: executionWorkItem,
+        result_summary: resultSummary,
         completion: false,
         content,
       });
@@ -582,19 +638,73 @@ function classApplied(decision: VerifiedDecision, actionClass: string): boolean 
 }
 
 /**
+ * @spec harness#work-item-prerequisite (#815): `work_item_prerequisite_completed`
+ * over the verified history. It names the prerequisite operation (`action`)
+ * and its class (`action_class`), both REQUIRED. It is satisfied by a
+ * verified permit whose `action.name` is that operation, to which that class
+ * applied, and which carries the request's work item, with a linked
+ * authorized completion carrying the same work item whose `result_summary`
+ * records, as the target and revision its effect acted on, the request's
+ * operation target and revision. Class membership alone never satisfies it:
+ * another operation of the same class is not the prerequisite.
+ *
+ * Not establishable (`unavailable`): a missing or malformed member, a request
+ * without a work item or revision, or, where no completion satisfies it, a
+ * candidate completion whose acted-on target or revision cannot be read. One
+ * readable satisfying completion establishes it whatever else is retained.
+ */
+function prerequisiteOutcome(
+  p: HistoryPredicate,
+  history: { decisions: VerifiedDecision[]; executions: VerifiedExecution[] },
+  request: HistoryRequestFacts | undefined,
+): HistoryOutcome {
+  const action = p.action;
+  const actionClass = p.action_class;
+  if (typeof action !== "string" || action.length === 0) return "unavailable";
+  if (typeof actionClass !== "string" || !RUNTIME_ACTION_CLASSES.has(actionClass)) return "unavailable";
+  const workItem = request?.workItem;
+  const target = request?.operationTarget;
+  const revision = request?.revision;
+  if (workItem === undefined || typeof target !== "string" || typeof revision !== "string" || revision.length === 0) {
+    return "unavailable";
+  }
+  const permits = new Set(
+    history.decisions
+      .filter((d) => d.decision === "permit" && d.action === action && classApplied(d, actionClass) && sameWorkItem(d.work_item, workItem))
+      .map((d) => d.evaluation_id),
+  );
+  let unreadable = false;
+  for (const e of history.executions) {
+    if (!e.completion || !permits.has(e.evaluation_id) || !sameWorkItem(e.work_item, workItem)) continue;
+    const actedTarget = e.result_summary?.operation_target;
+    const actedRevision = e.result_summary?.revision;
+    if (typeof actedTarget !== "string" || typeof actedRevision !== "string") {
+      unreadable = true;
+      continue;
+    }
+    if (actedTarget === target && actedRevision === revision) return "satisfied";
+  }
+  return unreadable ? "unavailable" : "not_satisfied";
+}
+
+/**
  * Evaluate the policy-selected predicates for the established Mission. Each
- * outcome comes from verified, linked evidence; nothing is read from the
- * request. An empty selection reads nothing.
+ * outcome comes from verified, linked evidence; no outcome is read from the
+ * request, whose validated facts (`request`) only select which records a
+ * `work_item_prerequisite_completed` predicate can be satisfied by. An empty
+ * selection reads nothing.
  */
 export async function evaluateHistory(
   binding: HistoryBinding,
   selected: ReadonlyArray<HistoryPredicate>,
   mission: { id: string; issuer: string },
+  request?: HistoryRequestFacts,
 ): Promise<HistoryPredicateResult[]> {
   if (selected.length === 0) return [];
   const history = await verifiedHistory(binding, mission);
   if (history === undefined) return unavailableHistory(selected);
   return selected.map((p) => {
+    if (p.predicate === "work_item_prerequisite_completed") return recordedEntry(p, prerequisiteOutcome(p, history, request));
     if (p.predicate !== "action_class_completed") return recordedEntry(p, "unavailable");
     const actionClass = p.action_class;
     if (typeof actionClass !== "string" || !RUNTIME_ACTION_CLASSES.has(actionClass)) return recordedEntry(p, "unavailable");

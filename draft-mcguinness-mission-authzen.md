@@ -1318,7 +1318,9 @@ Completeness").
 
 An extension predicate type MUST be either a collision-resistant name
 or a name coordinated within this document family, under the same rule
-as denial reasons ({{runtime-denial-classification}}).
+as denial reasons ({{runtime-denial-classification}}). The harness
+profile defines the coordinated type `work_item_prerequisite_completed`
+({{I-D.draft-mcguinness-mission-harness}}).
 
 The OPTIONAL `context.mission_history` request object carries only what
 the PEP can supply in support of the policy-selected predicates, never
@@ -3248,6 +3250,9 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- History Context: names `work_item_prerequisite_completed`, the
+  harness profile's coordinated predicate type (#815).
 
 - Changes a requirement (#1994): a mediated request carried with an
   action class other than the one the PDP's trusted declaration assigns
