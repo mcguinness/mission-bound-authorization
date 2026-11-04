@@ -2495,8 +2495,9 @@ class:
 
 `route_to_principal`:
 : The PEP withholds the item from the agent component and delivers it
-  to the Subject or the Approver through a surface the agent component
-  cannot read.
+  to the delegating person of a user-delegated Mission, the Approver,
+  or another principal the deployment authorizes for that Mission,
+  through a surface the agent component cannot read.
 
 A deployment that applies these dispositions MUST declare in its
 Enforcement Scope Statement ({{runtime-conformance}}):
