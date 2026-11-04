@@ -67671,10 +67671,11 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a cross-domain grant carrying no `cnf`, or presented with a key other than the one its `cnf` names, is refused with invalid_grant and yields no local token"
+    "normative": "a cross-domain grant carrying no `cnf`, or whose proof-of-possession does not verify (for the ID-JAG profile, a DPoP proof that fails verification or proves a key other than the one its `cnf` names), is refused with invalid_grant and yields no local token",
+    "local": "redeem() refuses a grant with no cnf.jkt, and one whose cnf.jkt differs from the presenter thumbprint its caller supplies; the reference Resource AS has no token endpoint and verifies no DPoP proof itself"
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
@@ -67689,7 +67690,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#2033 (D1266). Proven by disabling the code it covers, each alone: removing the presenter-key check lets the other key redeem (the first test fails); removing both cnf checks lets the bearer grant mint a local token (the second fails). Removing only the absence check is not a proof: the comparison then throws a TypeError instead of permitting."
+   "notes": "#2033 (D1266). Partial (owner review of #2042, F1): the two cited tests prove refusal of a grant with no cnf (a bearer grant) and of a grant presented with another registered key of the same client, each by disabling the code it covers: removing the presenter-key check lets the other key redeem (the first test fails); removing both cnf checks lets the bearer grant mint a local token (the second fails). Removing only the absence check is not a proof: the comparison then throws a TypeError instead of permitting. Not witnessed: refusal when the proof itself fails verification (for example, a DPoP proof with the expected key but an invalid signature). redeem() takes the presenter's thumbprint directly, so no such proof can reach it; the reference Resource AS has no token endpoint (see cross-domain.resource-as.verifies-sender-constraint)."
   },
   {
    "id": "cross-domain.resource-as.local-token-sender-constrained",
