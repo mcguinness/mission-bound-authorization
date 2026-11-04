@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-04T17:13:24Z
-Source repository commit: 07f805c25fd84ccc5f1bfe2fdb3e34ebff3045d9
+Generated: 2026-11-04T22:43:15Z
+Source repository commit: 8c6e60a91cdf54c25bface145dc5f1586ee644d1
 Member count: 7
 
 Reading order:
@@ -10314,6 +10314,18 @@ Table of Contents
       organizational, the governed policy it draws on
       (authority_source.policy).
 
+   *  When the AS holds an *implied-authority statement* for a rendered
+      Authority Set entry, a statement of authority the entry carries
+      beyond what it names (for example, account recovery at each
+      service that sends reset links or one-time codes to a mailbox the
+      entry reads), the rendering MUST present the statement with that
+      entry as a disclosure of risk, never as part of the derived
+      Authority Set. The rendering attributes a statement from the AS's
+      local policy to the AS; one the client supplied, such as the
+      implied_authority member defined by
+      [I-D.draft-mcguinness-mission-shaping], is client-supplied text
+      under the rules below.
+
    *  When the client submitted an authority proposal (Section 4.3), the
       rendering MUST distinguish the entries the client proposed from
       any narrowing or restructuring the AS applied.
@@ -15897,6 +15909,14 @@ Appendix E.  Document History
 
    [[ To be removed from the final specification ]]
 
+   -03
+
+   *Behavior changes*
+
+   *  Approval: an implied-authority statement the AS holds for an entry
+      is rendered with that entry as a disclosure of risk, apart from
+      the derived Authority Set (#2046).
+
    -02
 
    *Behavior changes*
@@ -18819,6 +18839,7 @@ Table of Contents
      5.7.  Credential Custody and Mediated Execution
      5.8.  Agent-Isolated Evidence Emission
      5.9.  Least Exposure
+     5.10. Authority Carried in Content
    6.  Resource Server Runtime Profile
    7.  The Runtime Decision
      7.1.  Materialized Policy View
@@ -20525,11 +20546,13 @@ Table of Contents
    together with the agent-isolated evidence-emission condition's per-
    emitter declaration where that condition is claimed (Section 11,
    Section 5.8); the per-row EAT evidence selections a High-Assurance
-   Agent claim rests on (Section 9.5.1, Section 9.5.2); and the
-   reconciliation window, responsible component, and alerting obligation
-   for outcome reconciliation (Section 11).  A deployment claiming none
-   of these carries only the baseline declaration above; the baseline
-   declaration is never optional.
+   Agent claim rests on (Section 9.5.1, Section 9.5.2); the classes,
+   covered reads, dispositions, and detection coverage of authority-
+   bearing content (Section 5.10); and the reconciliation window,
+   responsible component, and alerting obligation for outcome
+   reconciliation (Section 11).  A deployment claiming none of these
+   carries only the baseline declaration above; the baseline declaration
+   is never optional.
 
    A deployment MUST NOT claim runtime enforcement for a resource,
    action class, authority-entry type, or execution path outside that
@@ -21126,7 +21149,10 @@ Table of Contents
    egress path itself: content-level controls this profile does not
    define (data-loss prevention, redaction, payload policy) compose
    naturally at the mediating PEP, the one component that sees the full
-   payload after the decision and before presentation.
+   payload after the decision and before presentation.  The same PEP
+   sees a mediated read's response before the agent component does,
+   which is where Section 5.10 places the disposition of authority-
+   bearing content.
 
 5.8.  Agent-Isolated Evidence Emission
 
@@ -21274,6 +21300,172 @@ Table of Contents
    laundering can draw from; it is not information-flow control, and an
    exposure filter, like a tool-catalog filter (Section 5.4), never
    replaces per-action authorization.
+
+5.10.  Authority Carried in Content
+
+   Least exposure and custody keep issued credential material out of the
+   agent component (Section 5.9, Section 5.7).  A read can deliver
+   authority by another path. *Authority-bearing content* is content an
+   authorized read returns that is itself authority at some service.
+   Read authority over a primary mailbox reaches the one-time codes and
+   reset links that arrive there, and with them the ability to sign in
+   as the Subject, or recover the Subject's account, at each service
+   that sends them.
+
+   The baseline classes are:
+
+   one_time_code:  A one-time code or passcode, such as a sign-in or
+      verification code.
+
+   sign_in_link:  A link that signs in whoever follows it.
+
+   password_reset_link:  A link that resets a password or another
+      authentication factor.
+
+   recovery_code:  An account recovery code.
+
+   bearer_credential:  A reusable bearer credential, such as an access
+      token or a session cookie.
+
+   api_key:  An API key.
+
+   A deployment can declare further classes, such as invitation links,
+   each under a collision-resistant name.
+
+   A disposition is what the mediating PEP does with an item of a
+   declared class, and the Enforcement Scope Statement declares one per
+   class:
+
+   withhold:  The PEP removes the item from the response before the
+      response reaches the agent component.
+
+   surrogate:  The PEP replaces the item with a surrogate: an opaque
+      handle from which the item cannot be derived.  The agent component
+      passes the handle as a parameter of a later mediated action, and
+      the PEP resolves it into that action by substituting the item.
+
+   route_to_principal:  The PEP withholds the item from the agent
+      component and delivers it, through a surface the agent component
+      cannot read, to a recipient authorized to receive that item.
+
+   A deployment that applies these dispositions MUST declare in its
+   Enforcement Scope Statement (Section 5.2):
+
+   *  the declared classes, which include every baseline class where the
+      deployment makes either named claim below;
+
+   *  the covered reads: the resources and read operations whose
+      responses the PEP inspects;
+
+   *  the disposition of each class;
+
+   *  the detection mechanism and the representations it supports (for
+      example plain text, HTML, links, attachments, or images);
+
+   *  how it handles uncertain classification and detector failure; and
+
+   *  the residual false negatives it accepts.
+
+   Where the deployment claims agent-compromise-resistant enforcement
+   (Section 9.5.1) or trifecta containment (Section 9.5.2), each item of
+   a declared class that the PEP recognizes in the response to a covered
+   mediated consequential read MUST receive its disposition before the
+   response reaches the agent component.  A deployment that makes
+   neither claim SHOULD apply the dispositions to each mediated
+   consequential read whose response can carry authority-bearing
+   content.
+
+   An item is recognized when the declared detection mechanism
+   classifies it as a declared class.  Detection and disposition fail
+   differently: a detector that misses an item leaves a coverage gap,
+   and a PEP that mishandles an item it recognized has an enforcement
+   defect.  The requirement above binds enforcement.  Coverage is what
+   the statement declares, never inferred from tests: no finite test set
+   establishes that a detector recognizes every item of a class in every
+   representation.
+
+   The PEP MUST deliver a routed item only to a recipient authorized to
+   receive that item, established independently of any routing
+   instruction the agent component supplies, for example from trusted
+   configuration or the deployment's authorization.  The delegating
+   person of a user-delegated Mission who holds the account the item
+   serves is one such recipient; authority to approve the Mission does
+   not by itself authorize receiving an item for another account.  Where
+   it establishes no authorized recipient, the PEP MUST withhold the
+   item.
+
+   When it issues a surrogate, the PEP MUST record with it:
+
+   *  the service at which the item is authority, from trusted
+      configuration keyed to the read's source, never from a URL or
+      other value in the content;
+
+   *  the principal or account at that service the item serves;
+
+   *  the operation the item serves there, such as sign-in,
+      verification, or password reset;
+
+   *  the Mission under which the read ran and, where the harness
+      attributes one, its work item
+      ([I-D.draft-mcguinness-mission-harness]); and
+
+   *  a lifetime and a use limit: the finite cap the deployment
+      configures for the item's class, shortened to any expiry or use
+      limit the PEP knows the item to carry.  An unknown item limit
+      never leaves a surrogate unlimited.
+
+   The account and the operation MUST each be established by a trusted
+   source: trusted configuration, or service-specific transaction
+   information the PEP verifies.  The content, or an assertion of the
+   agent component, never establishes either alone.  The PEP MUST NOT
+   surrogate an item whose account or operation it cannot establish; it
+   withholds or routes that item.
+
+   The PEP MUST resolve a surrogate only within its lifetime and use
+   limit, only into an action that matches every other recorded element,
+   not the service alone, and only when the decision (Section 7) permits
+   that action within the current Effective Authority Set
+   (Section 2.7.1).  It MUST NOT resolve a surrogate for an item that
+   resets or recovers an account, such as a password_reset_link or
+   recovery_code item, unless an entry of the Effective Authority Set
+   explicitly grants account recovery at that service: authority to read
+   the source together with a generic HTTP or browsing entry does not.
+
+   The decision and parameter binding (Section 8) MUST be evaluated over
+   the surrogate form of the parameters, with the authorized and
+   effective parameter digests computed over that form, so the binding
+   holds across substitution and no digest commits to the item.  The
+   binding holds only while a handle names one item.  The PEP MUST fix a
+   surrogate's item and recorded binding when it issues the surrogate,
+   and MUST NOT reassign either: a changed item takes a new handle.  At
+   substitution, the PEP MUST check the recorded binding and limits
+   against the item it actually substitutes, and MUST refuse a handle
+   whose mapping it no longer holds.  The PEP MUST substitute the item
+   only after the permit.  The value of a surrogated item MUST NOT
+   appear in a redirect, a response to the agent component, a log, or
+   evidence.
+
+   A credential that redeeming an item returns, such as a session
+   cookie, an access token, or an authenticated browser session, is
+   authority-bearing content in that action's response.  The PEP MUST
+   hold it and give the agent component at most a further surrogate, and
+   each later use of it is a mediated action decided on its own.  Where
+   the PEP cannot hold what redeeming a class's items returns, as when
+   the agent component drives the browser session itself, it MUST NOT
+   issue surrogates for that class, and withholds or routes that class's
+   items.
+
+   For a mediated action whose response received a disposition, the PEP
+   MUST produce Execution Evidence
+   ([I-D.draft-mcguinness-mission-runtime-evidence]), even where the
+   action's class otherwise requires none, carrying the coordinated
+   extension member authority_content: each item's class and
+   disposition, and the handle of each surrogate.  The Execution
+   Evidence of an action into which a surrogate resolved MUST record the
+   substitution as an authority_content entry with the disposition
+   substitute and the surrogate's handle.  These records MUST NOT carry
+   the item's value or an unkeyed digest of it: a digest of a six-digit
+   code reveals the code.
 
 6.  Resource Server Runtime Profile
 
@@ -22140,7 +22332,10 @@ Table of Contents
    runtime conformance.  The claim names exactly the set of classes it
    covers.  This claim additionally requires execution-environment
    attestation of the scope statement, the condition Section 9.5.2
-   states for both High-Assurance Agent claims.
+   states for both High-Assurance Agent claims.  Authority Carried in
+   Content (Section 5.10) attaches one further duty to this claim:
+   authority-bearing content in a covered read's response receives its
+   disposition.
 
    The guarantee is the conjunction of these conditions, not any one of
    them.  Mediated custody alone prevents only off-path presentation of
@@ -22206,7 +22401,9 @@ Table of Contents
    *  *Private-data exposure.* Least exposure (Section 5.9) is applied:
       the context surfaced to the agent is scoped to the active Mission,
       and credential material stays out of the agent for every mediated
-      class (Section 5.7).
+      class (Section 5.7).  Each item of a declared authority-bearing
+      class that the PEP recognizes in a covered read's response
+      receives its disposition (Section 5.10).
 
    *  *Untrusted content.* A taint policy for untrusted content, as the
       harness profile defines one
@@ -22253,105 +22450,117 @@ Table of Contents
    against, the freshness the evidence must carry, and the behavior when
    the evidence is missing.
 
-   +=======================+==============================================+===========+==============+=============+==============+
-   |Condition              |Evidence producer/type                        |Covered    |Verifier /    |Freshness    |Failure       |
-   |                       |                                              |scope      |trust anchor  |             |behavior      |
-   +=======================+==============================================+===========+==============+=============+==============+
-   |key_custody: the       |EAT ([RFC9711])                               |The        |The relying   |The nonce,   |Absent, stale,|
-   |sender-constraint key  |                                              |mediating  |party, against|timestamp, or|or            |
-   |is held and generated  |                                              |PEP's key- |the attester  |session-     |unverifiable  |
-   |in the mediating PEP,  |                                              |holding    |identity and  |binding rule |evidence, or a|
-   |never transferred to   |                                              |component  |appraisal     |the statement|missing       |
-   |the agent              |                                              |           |policy the    |selects for  |selection this|
-   |(Section 9.5.1,        |                                              |           |Enforcement   |this row,    |row requires, |
-   |Section 5.7)           |                                              |           |Scope         |current at   |makes the     |
-   |                       |                                              |           |Statement     |the session  |claim         |
-   |                       |                                              |           |selects for   |or credential|unavailable   |
-   |                       |                                              |           |this row      |issuance the |              |
-   |                       |                                              |           |              |claim covers |              |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |isolation_boundary: the|EAT ([RFC9711])                               |The        |The relying   |The freshness|Absent, stale,|
-   |execution environment  |                                              |boundary   |party, against|rule the     |or            |
-   |separates the agent    |                                              |between the|the attester  |statement    |unverifiable  |
-   |component from the     |                                              |agent      |identity and  |selects for  |evidence, or a|
-   |mediating PEP, approval|                                              |component  |appraisal     |this row,    |missing       |
-   |service, and rendering |                                              |and each   |policy the    |current at   |selection this|
-   |component, and         |                                              |isolated   |statement     |the session  |row requires, |
-   |credential material    |                                              |component  |selects for   |the claim    |makes the     |
-   |stays out of the agent |                                              |           |this row      |covers       |claim         |
-   |(Section 9.5.1,        |                                              |           |              |             |unavailable   |
-   |Section 9.5.2,         |                                              |           |              |             |              |
-   |Section 5.7)           |                                              |           |              |             |              |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |workload_measurement:  |EAT ([RFC9711])                               |Each       |The relying   |The freshness|Absent, stale,|
-   |the attested component |                                              |component  |party, against|rule the     |or            |
-   |runs the software the  |                                              |the        |the attester  |statement    |unverifiable  |
-   |Enforcement Scope      |                                              |statement  |identity,     |selects for  |evidence, or a|
-   |Statement declares     |                                              |names as   |appraisal     |this row,    |missing       |
-   |(Section 9.5.1,        |                                              |isolated or|policy, and   |current at   |selection this|
-   |Section 5.2)           |                                              |mediating  |reference     |attestation  |row requires, |
-   |                       |                                              |           |values the    |time         |makes the     |
-   |                       |                                              |           |statement     |             |claim         |
-   |                       |                                              |           |selects for   |             |unavailable   |
-   |                       |                                              |           |this row      |             |              |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |approval_policy: each  |Signed configuration, or independent service  |The        |The auditor   |Current with |Unknown or    |
-   |action in the claimed  |evidence from the approval service            |approval   |reading the   |the approval |unverifiable  |
-   |classes requires       |                                              |service's  |configuration,|service's    |configuration |
-   |action-bound approval  |                                              |enforcement|against the   |active policy|makes the     |
-   |(Section 9.5.1,        |                                              |over the   |approval      |version      |claim         |
-   |Section 5.5)           |                                              |classes    |service's     |             |unavailable   |
-   |                       |                                              |claimed    |operator key  |             |              |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |rendering_independence:|Independent service evidence, the committed   |The        |The party     |Per action-  |An action-    |
-   |the disclosure is      |Consent Evidence where available              |rendering  |evaluating the|bound        |bound approval|
-   |derived from the bound |                                              |component's|evidence,     |approval     |lacking this  |
-   |normalized parameters, |                                              |output for |against the   |             |evidence      |
-   |never composed by the  |                                              |the action-|rendering     |             |cannot be     |
-   |agent (Section 9.5.1,  |                                              |bound      |component's or|             |counted toward|
-   |Section 5.5)           |                                              |approval   |Consent       |             |the claim; a  |
-   |                       |                                              |claimed    |Evidence      |             |class with no |
-   |                       |                                              |           |signer's key  |             |such approval |
-   |                       |                                              |           |              |             |verified does |
-   |                       |                                              |           |              |             |not carry the |
-   |                       |                                              |           |              |             |claim         |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |freshness_sourcing: the|Signed configuration naming the state source  |The state  |The auditor   |The published|A stale or    |
-   |Mission state source is|and its staleness bound                       |source used|reading the   |staleness    |unverifiable  |
-   |an active freshness    |([I-D.draft-mcguinness-mission-architecture]),|for the    |Deployment    |bound        |state source  |
-   |mechanism, not token-  |or independent evidence from the state source |classes    |Profile,      |             |makes the     |
-   |lifetime expiry        |                                              |claimed    |against the   |             |claim         |
-   |(Section 9.5.1,        |                                              |           |state source's|             |unavailable   |
-   |Section 2.5)           |                                              |           |operator key  |             |              |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |path_completeness: no  |Negative tests (Section 12) and organizational|Every path |The auditor   |Per the      |Untested,     |
-   |unmediated path reaches|topology audit                                |to the     |who ran or    |deployment's |stale, or a   |
-   |the mediated classes or|                                              |classes    |reviewed the  |stated audit |found         |
-   |a fresh usable         |                                              |claimed,   |tests and     |cadence      |unmediated    |
-   |credential for them    |                                              |deployment-|audit, an     |             |path makes the|
-   |(Section 9.5.1)        |                                              |wide       |organizational|             |claim         |
-   |                       |                                              |           |anchor        |             |unavailable   |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |least_exposure: the    |Signed configuration naming the exposure-     |The        |The auditor   |Current with |Unknown,      |
-   |context surfaced to the|scoping rule for the classes claimed, and     |exposure-  |reading the   |the          |stale, or     |
-   |agent (prompts,        |negative tests demonstrating out-of-Mission   |scoping    |configuration,|deployment's |unverifiable  |
-   |retrieved documents,   |context is withheld                           |rule's     |against the   |active       |configuration,|
-   |memory, tool catalogs, |                                              |coverage   |deployment's  |exposure-    |or a found    |
-   |schemas, and downstream|                                              |over the   |operator key  |scoping      |unscoped      |
-   |responses) is scoped to|                                              |classes    |              |configuration|exposure,     |
-   |the active Mission     |                                              |claimed    |              |version      |makes the     |
-   |(Section 9.5.2,        |                                              |           |              |             |claim         |
-   |Section 5.9)           |                                              |           |              |             |unavailable   |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
-   |taint_egress_topology: |Topology audit (channel enumeration) and      |Every      |The auditor,  |Per audit    |A stale       |
-   |the taint policy and   |negative tests                                |egress     |an            |cycle or     |enumeration or|
-   |egress rule are        |                                              |channel    |organizational|channel-     |a found       |
-   |enforced, and every    |                                              |available  |anchor        |inventory    |unenumerated  |
-   |egress channel is      |                                              |to the     |              |change       |channel makes |
-   |enumerated             |                                              |agent's    |              |             |the claim     |
-   |(Section 9.5.2)        |                                              |execution  |              |             |unavailable   |
-   |                       |                                              |environment|              |             |              |
-   +-----------------------+----------------------------------------------+-----------+--------------+-------------+--------------+
+   +==============================+==============================================+=============+==============+=============+==============+
+   |Condition                     |Evidence producer/type                        |Covered scope|Verifier /    |Freshness    |Failure       |
+   |                              |                                              |             |trust anchor  |             |behavior      |
+   +==============================+==============================================+=============+==============+=============+==============+
+   |key_custody: the sender-      |EAT ([RFC9711])                               |The mediating|The relying   |The nonce,   |Absent, stale,|
+   |constraint key is held and    |                                              |PEP's key-   |party, against|timestamp, or|or            |
+   |generated in the mediating    |                                              |holding      |the attester  |session-     |unverifiable  |
+   |PEP, never transferred to the |                                              |component    |identity and  |binding rule |evidence, or a|
+   |agent (Section 9.5.1,         |                                              |             |appraisal     |the statement|missing       |
+   |Section 5.7)                  |                                              |             |policy the    |selects for  |selection this|
+   |                              |                                              |             |Enforcement   |this row,    |row requires, |
+   |                              |                                              |             |Scope         |current at   |makes the     |
+   |                              |                                              |             |Statement     |the session  |claim         |
+   |                              |                                              |             |selects for   |or credential|unavailable   |
+   |                              |                                              |             |this row      |issuance the |              |
+   |                              |                                              |             |              |claim covers |              |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |isolation_boundary: the       |EAT ([RFC9711])                               |The boundary |The relying   |The freshness|Absent, stale,|
+   |execution environment         |                                              |between the  |party, against|rule the     |or            |
+   |separates the agent component |                                              |agent        |the attester  |statement    |unverifiable  |
+   |from the mediating PEP,       |                                              |component and|identity and  |selects for  |evidence, or a|
+   |approval service, and         |                                              |each isolated|appraisal     |this row,    |missing       |
+   |rendering component, and      |                                              |component    |policy the    |current at   |selection this|
+   |credential material stays out |                                              |             |statement     |the session  |row requires, |
+   |of the agent (Section 9.5.1,  |                                              |             |selects for   |the claim    |makes the     |
+   |Section 9.5.2, Section 5.7)   |                                              |             |this row      |covers       |claim         |
+   |                              |                                              |             |              |             |unavailable   |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |workload_measurement: the     |EAT ([RFC9711])                               |Each         |The relying   |The freshness|Absent, stale,|
+   |attested component runs the   |                                              |component the|party, against|rule the     |or            |
+   |software the Enforcement Scope|                                              |statement    |the attester  |statement    |unverifiable  |
+   |Statement declares            |                                              |names as     |identity,     |selects for  |evidence, or a|
+   |(Section 9.5.1, Section 5.2)  |                                              |isolated or  |appraisal     |this row,    |missing       |
+   |                              |                                              |mediating    |policy, and   |current at   |selection this|
+   |                              |                                              |             |reference     |attestation  |row requires, |
+   |                              |                                              |             |values the    |time         |makes the     |
+   |                              |                                              |             |statement     |             |claim         |
+   |                              |                                              |             |selects for   |             |unavailable   |
+   |                              |                                              |             |this row      |             |              |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |approval_policy: each action  |Signed configuration, or independent service  |The approval |The auditor   |Current with |Unknown or    |
+   |in the claimed classes        |evidence from the approval service            |service's    |reading the   |the approval |unverifiable  |
+   |requires action-bound approval|                                              |enforcement  |configuration,|service's    |configuration |
+   |(Section 9.5.1, Section 5.5)  |                                              |over the     |against the   |active policy|makes the     |
+   |                              |                                              |classes      |approval      |version      |claim         |
+   |                              |                                              |claimed      |service's     |             |unavailable   |
+   |                              |                                              |             |operator key  |             |              |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |rendering_independence: the   |Independent service evidence, the committed   |The rendering|The party     |Per action-  |An action-    |
+   |disclosure is derived from the|Consent Evidence where available              |component's  |evaluating the|bound        |bound approval|
+   |bound normalized parameters,  |                                              |output for   |evidence,     |approval     |lacking this  |
+   |never composed by the agent   |                                              |the action-  |against the   |             |evidence      |
+   |(Section 9.5.1, Section 5.5)  |                                              |bound        |rendering     |             |cannot be     |
+   |                              |                                              |approval     |component's or|             |counted toward|
+   |                              |                                              |claimed      |Consent       |             |the claim; a  |
+   |                              |                                              |             |Evidence      |             |class with no |
+   |                              |                                              |             |signer's key  |             |such approval |
+   |                              |                                              |             |              |             |verified does |
+   |                              |                                              |             |              |             |not carry the |
+   |                              |                                              |             |              |             |claim         |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |freshness_sourcing: the       |Signed configuration naming the state source  |The state    |The auditor   |The published|A stale or    |
+   |Mission state source is an    |and its staleness bound                       |source used  |reading the   |staleness    |unverifiable  |
+   |active freshness mechanism,   |([I-D.draft-mcguinness-mission-architecture]),|for the      |Deployment    |bound        |state source  |
+   |not token-lifetime expiry     |or independent evidence from the state source |classes      |Profile,      |             |makes the     |
+   |(Section 9.5.1, Section 2.5)  |                                              |claimed      |against the   |             |claim         |
+   |                              |                                              |             |state source's|             |unavailable   |
+   |                              |                                              |             |operator key  |             |              |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |path_completeness: no         |Negative tests (Section 12) and organizational|Every path to|The auditor   |Per the      |Untested,     |
+   |unmediated path reaches the   |topology audit                                |the classes  |who ran or    |deployment's |stale, or a   |
+   |mediated classes or a fresh   |                                              |claimed,     |reviewed the  |stated audit |found         |
+   |usable credential for them    |                                              |deployment-  |tests and     |cadence      |unmediated    |
+   |(Section 9.5.1)               |                                              |wide         |audit, an     |             |path makes the|
+   |                              |                                              |             |organizational|             |claim         |
+   |                              |                                              |             |anchor        |             |unavailable   |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |least_exposure: the context   |Signed configuration naming the exposure-     |The exposure-|The auditor   |Current with |Unknown,      |
+   |surfaced to the agent         |scoping rule for the classes claimed, and     |scoping      |reading the   |the          |stale, or     |
+   |(prompts, retrieved documents,|negative tests demonstrating out-of-Mission   |rule's       |configuration,|deployment's |unverifiable  |
+   |memory, tool catalogs,        |context is withheld                           |coverage over|against the   |active       |configuration,|
+   |schemas, and downstream       |                                              |the classes  |deployment's  |exposure-    |or a found    |
+   |responses) is scoped to the   |                                              |claimed      |operator key  |scoping      |unscoped      |
+   |active Mission (Section 9.5.2,|                                              |             |              |configuration|exposure,     |
+   |Section 5.9)                  |                                              |             |              |version      |makes the     |
+   |                              |                                              |             |              |             |claim         |
+   |                              |                                              |             |              |             |unavailable   |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |taint_egress_topology: the    |Topology audit (channel enumeration) and      |Every egress |The auditor,  |Per audit    |A stale       |
+   |taint policy and egress rule  |negative tests                                |channel      |an            |cycle or     |enumeration or|
+   |are enforced, and every egress|                                              |available to |organizational|channel-     |a found       |
+   |channel is enumerated         |                                              |the agent's  |anchor        |inventory    |unenumerated  |
+   |(Section 9.5.2)               |                                              |execution    |              |change       |channel makes |
+   |                              |                                              |environment  |              |             |the claim     |
+   |                              |                                              |             |              |             |unavailable   |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
+   |authority_content_disposition:|Signed configuration declaring the classes,   |The mediated |The auditor   |Current with |Unknown,      |
+   |each item of a declared       |covered reads, representations, detection     |consequential|reading the   |the active   |stale, or     |
+   |authority-bearing class that  |mechanism, and dispositions, and negative     |reads the    |configuration |configuration|unverifiable  |
+   |the PEP recognizes in a       |tests (Section 12)                            |statement    |and the tests,|version and  |configuration,|
+   |covered read's response       |                                              |covers       |against the   |the audit    |or a          |
+   |receives its disposition      |                                              |             |deployment's  |cycle        |recognized    |
+   |before the response reaches   |                                              |             |operator key  |             |item of a     |
+   |the agent component           |                                              |             |              |             |declared class|
+   |(Section 5.10, Section 9.5.1, |                                              |             |              |             |found reaching|
+   |Section 9.5.2)                |                                              |             |              |             |the agent     |
+   |                              |                                              |             |              |             |component,    |
+   |                              |                                              |             |              |             |makes the     |
+   |                              |                                              |             |              |             |claim         |
+   |                              |                                              |             |              |             |unavailable   |
+   +------------------------------+----------------------------------------------+-------------+--------------+-------------+--------------+
 
                                   Table 8
 
@@ -22681,6 +22890,65 @@ Table of Contents
    prove the absence of a hidden bypass, which remains an attestation,
    audit, and path-completeness property.
 
+   The disposition of authority-bearing content (Section 5.10) has its
+   own observable form.  A deployment that applies the dispositions
+   SHOULD demonstrate each outcome below that its declared dispositions
+   reach:
+
+     +======================================+========================+
+     | Bypass attempt                       | Required outcome       |
+     +======================================+========================+
+     | A covered read's response carries a  | Withheld, surrogated,  |
+     | recognized item of a declared class  | or routed as declared; |
+     |                                      | the item never reaches |
+     |                                      | the agent component    |
+     +--------------------------------------+------------------------+
+     | An item is routed where no recipient | Withheld; never        |
+     | authorized to receive it is          | delivered on the       |
+     | established, or to a recipient the   | agent's instruction    |
+     | agent component names                |                        |
+     +--------------------------------------+------------------------+
+     | An item's account or operation       | Withheld or routed;    |
+     | cannot be established from a trusted | never surrogated       |
+     | source                               |                        |
+     +--------------------------------------+------------------------+
+     | A handle is presented whose mapping  | Refused                |
+     | the PEP no longer holds, or whose    |                        |
+     | item has changed                     |                        |
+     +--------------------------------------+------------------------+
+     | A surrogate is presented toward      | Refused                |
+     | another service, another account at  |                        |
+     | the same service, another operation, |                        |
+     | or another Mission or work item      |                        |
+     +--------------------------------------+------------------------+
+     | A surrogate is presented after its   | Refused                |
+     | lifetime or beyond its use limit     |                        |
+     +--------------------------------------+------------------------+
+     | A surrogate is presented for an      | Refused                |
+     | action outside the Effective         |                        |
+     | Authority Set                        |                        |
+     +--------------------------------------+------------------------+
+     | A surrogate for a reset link is      | Refused                |
+     | presented under mailbox-read         |                        |
+     | authority and a generic HTTP or      |                        |
+     | browsing entry                       |                        |
+     +--------------------------------------+------------------------+
+     | Redeeming an item returns a session  | The credential stays   |
+     | credential                           | at the PEP; the agent  |
+     |                                      | component receives at  |
+     |                                      | most a surrogate       |
+     +--------------------------------------+------------------------+
+     | The item's value is sought in        | Absent from each       |
+     | redirects, responses to the agent    |                        |
+     | component, logs, and evidence        |                        |
+     +--------------------------------------+------------------------+
+
+                                  Table 11
+
+   These tests inject an item the PEP recognizes, independent of the
+   detector: they demonstrate enforcement, not detection coverage, which
+   the Enforcement Scope Statement declares.
+
    The Remote Decision Channel's baseline requirements (Section 2.4) are
    not a claimed extension: they apply to every PEP/PDP boundary that is
    not co-resident.  A deployment with such a boundary SHOULD
@@ -22716,7 +22984,7 @@ Table of Contents
       | as the response to a different request | the decision      |
       +----------------------------------------+-------------------+
 
-                                 Table 11
+                                 Table 12
 
    A co-resident PDP and PEP satisfy Section 2.4 structurally and need
    no separate channel mechanism; these tests apply only where the
@@ -22751,7 +23019,7 @@ Table of Contents
    | outside the declared scope     |                                 |
    +--------------------------------+---------------------------------+
 
-                                 Table 12
+                                 Table 13
 
    These tests exercise the statement's own validator and the scope
    predicate a claim is checked against; they do not by themselves prove
@@ -22862,7 +23130,7 @@ Table of Contents
    |                     | barrier              |                      |
    +---------------------+----------------------+----------------------+
 
-                                  Table 13
+                                  Table 14
 
    The rows follow Section 9.2, Section 9.3, the metering companion,
    whose counters can be keyed across Missions (a lineage, Subject, or
@@ -22958,7 +23226,7 @@ Table of Contents
    |               | reliance            | controls      |             |
    +---------------+---------------------+---------------+-------------+
 
-                                  Table 14
+                                  Table 15
 
    Every cell is conditional on dependency topology.  An issuer outage
    does not imply that an independently operated authoritative state
@@ -23159,7 +23427,7 @@ Table of Contents
    injected agent can read and what within-scope laundering can draw
    from, without changing the limits below.
 
-   Two limits are inherent and a deployment MUST NOT overstate the
+   Three limits are inherent and a deployment MUST NOT overstate the
    guarantee.  First, it is exactly as strong as PEP-placement
    completeness: every exfiltration channel an agent runtime offers
    (DNS, logs, error strings, a write to a store another process reads)
@@ -23177,6 +23445,11 @@ Table of Contents
    untrusted content has entered a session, is available at the harness
    layer ([I-D.draft-mcguinness-mission-harness]); it raises the bar but
    is not information-flow control.
+
+   Third, the disposition of authority-bearing content (Section 5.10)
+   reaches only the items its detector recognizes.  Detection coverage
+   is declared, not complete, and an item the detector misses reaches
+   the agent component with the authority it carries.
 
 17.4.  Relationship to Inspection-Based Controls
 
@@ -23759,6 +24032,26 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Authority Carried in Content (#2045): content a read returns that
+      is itself authority (baseline: one-time codes, sign-in and
+      password-reset links, recovery codes, reusable bearer credentials,
+      and API keys) receives a declared disposition at the mediating
+      PEP, withhold, surrogate, or route_to_principal, which is MUST
+      under either named claim and SHOULD otherwise.  A surrogate
+      resolves only into an action matching its recorded service,
+      account, operation, Mission, and limits and permitted within the
+      Effective Authority Set; its account and operation come from a
+      trusted source, its lifetime is a finite configured cap, and its
+      mapping never changes after issuance.  The decision and parameter
+      digests use the surrogate form, a credential redemption returns
+      stays at the PEP, and the value appears in no redirect, response,
+      log, or evidence.  A routed item goes only to a recipient
+      authorized to receive it, and is otherwise withheld.  Detection
+      coverage is declared in the Enforcement Scope Statement.  Agent-
+      Compromise-Resistant Enforcement, Trifecta containment and its
+      evidence table, Prompt Injection and Exfiltration, and Negative
+      Conformance Tests carry the rule.
 
    *  The History Input: an omitted record can deny a step or satisfy a
       predicate the complete history would not, not only deny it
@@ -25192,9 +25485,11 @@ Table of Contents
    by evaluation_id.  A record is emitted once a final outcome exists,
    not for the attempt in progress; attempted_at carries the attempt's
    timing without asserting an attempted outcome.  Emission follows the
-   runtime profile's class rule: Execution Evidence is required for the
-   high-consequence classes and for every further class the deployment
-   claims under the runtime profile's transaction-assurance tier
+   runtime profile's rules: Execution Evidence is required for the high-
+   consequence classes, for every further class the deployment claims
+   under the runtime profile's transaction-assurance tier, and for the
+   dispositions and surrogate resolutions of that profile's
+   Section "Authority Carried in Content"
    ([I-D.draft-mcguinness-mission-runtime]).
 
 5.1.  Members
@@ -25397,9 +25692,9 @@ Table of Contents
    An Execution Evidence Object is closed to uncoordinated extension
    under the same rule as Decision Evidence (Section 9): coordinated
    companion members (for example, the metering companion's
-   measured_duration) are permitted, any other extension MUST use a
-   collision-resistant name, and a consumer MUST ignore members it does
-   not understand.
+   measured_duration, or the runtime profile's authority_content) are
+   permitted, any other extension MUST use a collision-resistant name,
+   and a consumer MUST ignore members it does not understand.
 
 5.2.  Worked example
 
@@ -26375,6 +26670,19 @@ Table of Contents
       profile is one wire carrier
       ([I-D.draft-mcguinness-mission-authzen]).
 
+   authority_content:  OPTIONAL.  An array of objects, recorded at the
+      top level of Execution Evidence: one entry per authority-bearing
+      item the execution gave a disposition or resolved a surrogate
+      into.  Each entry has class (REQUIRED, a string, the item's
+      declared class), disposition (REQUIRED, a string: withhold,
+      surrogate, route_to_principal, or substitute), and handle (a
+      string, the surrogate's handle, REQUIRED when disposition is
+      surrogate or substitute and absent otherwise).  Registered and
+      owned by the runtime profile
+      ([I-D.draft-mcguinness-mission-runtime], Section "Authority
+      Carried in Content"), which defines when it is REQUIRED and
+      forbids recording the item's value or an unkeyed digest of it.
+
 10.  Conformance
 
    This document defines conformance for four roles: a PRODUCER that
@@ -27064,6 +27372,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Extension Members and Execution Evidence: authority_content, owned
+      by the runtime profile, records on Execution Evidence each
+      authority-bearing item a read's response gave a disposition and
+      each surrogate an action resolved, by class, disposition, and
+      handle, never the item's value (#2045).
 
    *  Decision Evidence: action_classes records every class whose
       requirements the PDP applied, when more than one applies;
