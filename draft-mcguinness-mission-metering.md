@@ -1049,11 +1049,12 @@ Execution Evidence's `evaluation_id`.
 
 The settlement transport is the runtime evidence companion's
 Execution Evidence delivery contract, profiled rather than a second
-channel: exactly one Execution Evidence Object exists per final
-disposition of a permit, delivery is at-least-once, and the receiver
-deduplicates on `execution_id`
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). This profile
-adds:
+channel: exactly one Execution Evidence Object exists per execution,
+delivery is at-least-once, and the receiver deduplicates on
+`execution_id` ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+An execution is the final disposition of one presentation of a
+permit, so a presentation the PEP refuses is a `suppressed` execution
+of its own. This profile adds:
 
 - **Intake and audience.** The deployment MUST name the settlement
   intake, the PDP evidence-submission path or the event or evidence
@@ -1074,7 +1075,18 @@ adds:
   idempotent on `evaluation_id`, so a redelivered settlement neither
   double-commits the consumption nor double-releases the
   reservation.
-- **Conflicting redelivery.** A record naming an `evaluation_id`
+- **Replay record.** A record whose `error` is `permit_consumed`
+  records a refused presentation of a consumed single-use permit, not
+  the execution that took its use
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}). It is not a
+  settlement: in either delivery order, the intake MUST neither commit
+  nor release a reservation on it, and it is not a conflicting record
+  for its `evaluation_id`. It remains evidence of the refused
+  presentation. Only `permit_consumed` is set apart this way: a
+  `suppressed` record of a presentation that held a use is
+  affirmative non-execution ({{settlement-states}}).
+- **Conflicting redelivery.** Other than a replay record (above), a
+  record naming an `evaluation_id`
   whose settlement is applied but differing in settlement-relevant
   content (`outcome`, `measured_duration`, or a `metering` entry),
   or a second `execution_id` for the same `evaluation_id`, MUST fail
@@ -1104,7 +1116,9 @@ A reservation settles on the evidence state, never on a generic
 failure signal:
 
 - **Affirmative non-execution** (`outcome` `suppressed`): the action
-  was permitted but affirmatively not attempted. The PDP releases
+  was permitted but affirmatively not attempted, as recorded for a
+  presentation that held a use of the permit; a replay record
+  ({{settlement-contract}}) is not one. The PDP releases
   the reservation and returns the quantity to the counter. It
   releases an exclusivity latch only when, within the strongly
   consistent latch domain, every permitted action that matched the
@@ -1386,6 +1400,13 @@ this registry.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Changes a requirement (#2039, D1257): the settlement transport is
+  one Execution Evidence record per execution, matching the runtime
+  evidence companion. A `permit_consumed` replay record settles
+  nothing in either delivery order: it neither commits nor releases a
+  reservation and is not a conflicting record. A `suppressed` record of
+  a presentation that held a use remains affirmative non-execution.
 
 - Changes a requirement (#813, #816, D830): a standing-consent budget
   is an aggregate a human approves in a Mission Template's Dispatch
