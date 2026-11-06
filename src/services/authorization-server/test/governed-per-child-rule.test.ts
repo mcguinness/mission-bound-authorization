@@ -77,6 +77,9 @@ const SCOPE =
   "This maximum is local to each child Mission: it is not a budget across the Missions this consent admits, their descendants, or their lifetimes.";
 const GOVERNED =
   "Each governed Mission created under this consent establishes its own derivation limit from its own request; no finite maximum is guaranteed.";
+const GOVERNED_SCOPE =
+  "This maximum is local to each governed Mission: it is not a budget across the Missions this consent admits, their descendants, or their lifetimes.";
+const ASYNC = "The refreshes of an async delegation family are not counted against this limit.";
 
 const rootDoc = (ceiling: AuthorityEntry[]): GovernedPolicyRoot => ({
   admits: { clients: ["svc-agent"], subjects: ["svc-reconciler"], authority_sources: ["service_owned"] },
@@ -223,10 +226,20 @@ describe("a governed root's disclosure renders the per-child rule its consent co
     expect(finite.child_grants[0]?.lines).toEqual(expect.arrayContaining([RULE(3), SCOPE]));
     expect(finite.child_grants[1]?.lines).toContain(RULE(4));
     expect(finite.child_derivation_maxima).toEqual([{ finite: 3 }, null]);
+    expect(finite.instance).toContain(GOVERNED_SCOPE);
+    expect(finite.instance).not.toContain(ASYNC);
     const none = disclose(open(null));
     expect(none.child_grants[0]?.lines).toContain(NO_FINITE);
     expect(none.child_derivation_maxima).toEqual([{ finite: null }, null]);
     expect(none.commitment).not.toBe(finite.commitment);
+  });
+
+  it("states that refreshes of an async delegation family are not counted, for the activated Missions and each delegable entry, where the governance surface supports that transport; the statement does not change the commitment", () => {
+    const k = store({ withDocs: true }).open(3);
+    const withAsync = governedPolicyConsentDisclosure(k, ROOT, { asyncDelegation: true });
+    expect(withAsync.instance).toContain(ASYNC);
+    for (const grant of withAsync.child_grants) expect(grant.lines).toContain(ASYNC);
+    expect(withAsync.commitment).toBe(disclose(k).commitment);
   });
 });
 
