@@ -2226,7 +2226,9 @@ a common wire carrier.
 `mission_history`:
 : OPTIONAL. An array of objects, recorded on Decision Evidence: the
   policy-selected history predicates the PDP evaluated, each with its
-  `predicate` (and `action_class`, where applicable) and an `outcome`
+  `predicate` (and `action_class`, where applicable), its `action`
+  where its type selects an operation (a string identifying that
+  operation), and an `outcome`
   member (`satisfied`, `not_satisfied` for an established-false
   predicate, or `unavailable` for a predicate that could not be
   established, including an unrecognized `predicate` value or an
@@ -2782,6 +2784,10 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Extension Members: a `mission_history` entry carries `action`, the
+  identifier of the operation its predicate selects, where the
+  predicate's type selects one (#2048).
 
 - Extension Members: `protected_data`, owned by the harness profile,
   records on Decision Evidence the exposure determination a decision
