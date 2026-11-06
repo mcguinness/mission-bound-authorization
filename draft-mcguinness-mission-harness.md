@@ -632,7 +632,9 @@ It requires that a named operation completed for the same work item,
 operation target, and revision as the action being decided. Policy
 names the operation with two members: `action`, its identifier, and
 `action_class`, a runtime action class name. A predicate missing
-either member cannot be established.
+either member cannot be established. Its `mission_history` entry in
+Decision Evidence carries its `action` as well as its `action_class`
+({{I-D.draft-mcguinness-mission-authzen}}, Section "History Context").
 
 The predicate is satisfied when the PDP's evidence store holds, for
 the established Mission, a Decision Evidence record with `decision`
@@ -2165,6 +2167,10 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Work-Item Prerequisite: the predicate's `mission_history` entry
+  carries its `action` as well as its `action_class`, so prerequisites
+  of one class for different operations are told apart (#2048).
 
 - Protected-Data Exposure, Establishment and Binding, and
   Exposure-Qualified Egress: exposure, the confidentiality counterpart
