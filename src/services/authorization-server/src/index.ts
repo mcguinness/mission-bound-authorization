@@ -723,6 +723,8 @@ export {
   type GovernedPolicyApprovalConfig,
   GovernedPolicyConfigError,
   type GovernedPolicyConsent,
+  type GovernedPolicyConsentDisclosure,
+  governedPolicyConsentDisclosure,
   GovernedPolicyConsentStore,
   type GovernedPolicyDecision,
   GovernedPolicyError,

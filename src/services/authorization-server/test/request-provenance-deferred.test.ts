@@ -37,6 +37,7 @@ import {
   InMemoryRequestProvenanceStore,
   type MissionRecord,
   type RegisteredActivationPolicy,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
 } from "../src/index.js";
 import { verifyRequestProvenance } from "../src/kernel/request-provenance.js";
@@ -120,6 +121,8 @@ beforeAll(async () => {
     root: { id, version: "1" },
     approver: { iss: ISSUER, sub: "dana" },
     consentEventId: `gpce-${id}`,
+    // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+    disclosure: governedPolicyConsentDisclosure(as.kernel, { id, version: "1" }).commitment,
   });
 });
 
