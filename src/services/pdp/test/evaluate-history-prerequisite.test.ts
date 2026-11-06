@@ -18,6 +18,7 @@
  */
 
 import { generateKeyPairSync } from "node:crypto";
+import { canonicalDigest } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import {
@@ -225,9 +226,11 @@ const options = (history: HistoryBinding): EvaluateOptions =>
 const historyOf = (decision: { context: Record<string, unknown> }) =>
   (decision.context.decision_evidence as DecisionEvidenceObject).mission_history;
 
-const SATISFIED = [{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", outcome: "satisfied" }];
-const NOT_SATISFIED = [{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", outcome: "not_satisfied" }];
-const UNAVAILABLE = [{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", outcome: "unavailable" }];
+/** A recorded `work_item_prerequisite_completed` entry: its class, the operation it selects, and its outcome. */
+const entry = (action: string, outcome: string) => ({ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", action, outcome });
+const SATISFIED = [entry(BACKUP, "satisfied")];
+const NOT_SATISFIED = [entry(BACKUP, "not_satisfied")];
+const UNAVAILABLE = [entry(BACKUP, "unavailable")];
 
 describe("work_item_prerequisite_completed joins the request to a verified permit and its authorized completion (@spec harness#work-item-prerequisite, #815)", () => {
   it("is a recognized predicate type, satisfied by a completed backup of the request's target at its revision for its work item", async () => {
@@ -395,5 +398,81 @@ describe("work_item_prerequisite_completed joins the request to a verified permi
       expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
       expect(historyOf(decision), label).toEqual(UNAVAILABLE);
     }
+  });
+});
+
+/** The export of the same class, selected beside the backup. */
+const EXPORT_COMPLETED: HistoryPredicate = { predicate: "work_item_prerequisite_completed", action: EXPORT, action_class: "consequential_write" };
+
+describe("a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048)", () => {
+  it("records two prerequisites of one class for distinct operations as two entries, each naming its own action beside its own outcome, in either selection order", async () => {
+    const backupDone = [await permit({ evaluation_id: "p1", action: BACKUP }), await execution({ evaluation_id: "p1" })];
+    const exportDone = [await permit({ evaluation_id: "p1", action: EXPORT }), await execution({ evaluation_id: "p1" })];
+    for (const [label, records, selected, expected] of [
+      ["backup completed, backup selected first", backupDone, [BACKUP_COMPLETED, EXPORT_COMPLETED], [entry(BACKUP, "satisfied"), entry(EXPORT, "not_satisfied")]],
+      ["backup completed, export selected first", backupDone, [EXPORT_COMPLETED, BACKUP_COMPLETED], [entry(EXPORT, "not_satisfied"), entry(BACKUP, "satisfied")]],
+      ["export completed, backup selected first", exportDone, [BACKUP_COMPLETED, EXPORT_COMPLETED], [entry(BACKUP, "not_satisfied"), entry(EXPORT, "satisfied")]],
+      ["export completed, export selected first", exportDone, [EXPORT_COMPLETED, BACKUP_COMPLETED], [entry(EXPORT, "satisfied"), entry(BACKUP, "not_satisfied")]],
+    ] as const) {
+      const decision = await evaluate(request(), options(historyBinding(records, [...selected])));
+      expect(decision.decision, label).toBe(false);
+      expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
+      expect(historyOf(decision), label).toEqual(expected);
+    }
+    // Both completed: both satisfied, each entry still naming its own operation, in either order.
+    const bothDone = [...backupDone, await permit({ evaluation_id: "p2", action: EXPORT, sequence: 1 }), await execution({ evaluation_id: "p2" })];
+    for (const [label, selected, expected] of [
+      ["both completed, backup selected first", [BACKUP_COMPLETED, EXPORT_COMPLETED], [entry(BACKUP, "satisfied"), entry(EXPORT, "satisfied")]],
+      ["both completed, export selected first", [EXPORT_COMPLETED, BACKUP_COMPLETED], [entry(EXPORT, "satisfied"), entry(BACKUP, "satisfied")]],
+    ] as const) {
+      const decision = await evaluate(request(), options(historyBinding(bothDone, [...selected])));
+      expect(decision.decision, `${label}: ${JSON.stringify(decision.context)}`).toBe(true);
+      expect(historyOf(decision), label).toEqual(expected);
+    }
+  });
+
+  it("records no action on an action_class_completed entry, which selects by class alone, even where policy gave it one, whether evaluated or unavailable", async () => {
+    const classCompleted: HistoryPredicate = { predicate: "action_class_completed", action_class: "consequential_write", action: EXPORT };
+    const classEntry = (outcome: string) => ({ predicate: "action_class_completed", action_class: "consequential_write", outcome });
+    const records = [await permit({ evaluation_id: "b1" }), await execution({ evaluation_id: "b1" })];
+    const decision = await evaluate(request(), options(historyBinding(records, [BACKUP_COMPLETED, classCompleted])));
+    expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
+    expect(historyOf(decision)).toEqual([entry(BACKUP, "satisfied"), classEntry("satisfied")]);
+    expect(historyOf(decision)?.[1]).not.toHaveProperty("action");
+    // The store cannot be consulted: every entry is unavailable, and the shape is the same.
+    const down = {
+      ...historyBinding([], [BACKUP_COMPLETED, classCompleted]),
+      reader: {
+        records: async () => {
+          throw new Error("evidence store unavailable");
+        },
+      },
+    };
+    const unavailable = await evaluate(request(), options(down));
+    expect(unavailable.decision).toBe(false);
+    expect(unavailable.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(unavailable)).toEqual([entry(BACKUP, "unavailable"), classEntry("unavailable")]);
+    expect(historyOf(unavailable)?.[1]).not.toHaveProperty("action");
+  });
+
+  it("signs an entry's action as a string and refuses to sign one that is not", async () => {
+    const signer = emitter();
+    const input = {
+      mission: { id: MISSION, issuer: ISSUER, policy_view_id: "pv_prereq" },
+      subject: { id: "alice" },
+      resource: { type: "database", id: "orders" },
+      action: { name: DELETE },
+      action_class: "irreversible_action" as const,
+      audience: AUDIENCE,
+      evaluation_id: "evaluation",
+      decision: "deny" as const,
+      denial_reason: "history_not_satisfied" as const,
+      evaluated_at: NOW.toISOString(),
+      evaluation_request_digest: canonicalDigest({ request: true }),
+    };
+    const malformed = { predicate: "work_item_prerequisite_completed", action_class: "consequential_write", action: 7, outcome: "unavailable" };
+    await expect(signer.emit({ ...input, mission_history: [malformed as never] })).rejects.toThrow("mission_history action must be a string");
+    const record = await signer.emit({ ...input, mission_history: [entry(BACKUP, "unavailable") as never] });
+    expect(record.mission_history).toEqual([entry(BACKUP, "unavailable")]);
   });
 });

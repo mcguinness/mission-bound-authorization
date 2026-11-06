@@ -57,10 +57,17 @@ export interface HistoryPredicate {
   readonly [member: string]: unknown;
 }
 
-/** @spec runtime-evidence#evidence-extensions `mission_history`: one recorded entry. */
+/**
+ * @spec runtime-evidence#evidence-extensions `mission_history`,
+ * authzen#context-history (#2048): one recorded entry. `action` is the
+ * identifier of the operation the predicate selects, recorded only for a type
+ * that selects one, so entries for predicates of one class that select
+ * different operations stay distinct.
+ */
 export interface HistoryPredicateResult {
   predicate: string;
   action_class?: string;
+  action?: string;
   outcome: HistoryOutcome;
 }
 
@@ -242,6 +249,15 @@ const HIGH_CONSEQUENCE_CLASSES: ReadonlySet<string> = new Set(["irreversible_act
 /** The predicate types this PDP recognizes. */
 export const RECOGNIZED_HISTORY_PREDICATES: ReadonlySet<string> = new Set(["action_class_completed", "work_item_prerequisite_completed"]);
 
+/**
+ * @spec authzen#context-history, harness#work-item-prerequisite (#2048): the
+ * recognized types that select an operation, each mapped to the predicate
+ * member naming it. Its recorded entry carries that identifier as `action`.
+ * `action_class_completed` selects by class alone, so its entry carries none,
+ * even where policy gave it a stray `action` member.
+ */
+const OPERATION_SELECTORS: ReadonlyMap<string, string> = new Map([["work_item_prerequisite_completed", "action"]]);
+
 interface VerifiedDecision {
   evaluation_id: string;
   decision: "permit" | "deny";
@@ -338,9 +354,12 @@ function signedContent(record: Record<string, unknown>): string {
 }
 
 function recordedEntry(p: HistoryPredicate, outcome: HistoryOutcome): HistoryPredicateResult {
+  const selector = typeof p.predicate === "string" ? OPERATION_SELECTORS.get(p.predicate) : undefined;
+  const action = selector !== undefined ? p[selector] : undefined;
   return {
     predicate: typeof p.predicate === "string" ? p.predicate : String(p.predicate),
     ...(typeof p.action_class === "string" ? { action_class: p.action_class } : {}),
+    ...(typeof action === "string" ? { action } : {}),
     outcome,
   };
 }
