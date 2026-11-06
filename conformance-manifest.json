@@ -11,16 +11,16 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "cad628f2660524f9a9c282d5e05087f2e9222a62",
-    "content_sha256": "5fc7bf6168359ea3ac1fa124c5ea387084a4178fd827f59f9f1a94abb85e6c45"
+    "revision": "d079de256b593c87a12ef666aa2c7abf43171213",
+    "content_sha256": "9df93323ab50beb9a07a5b12675c8c409d518338e8a97780ba058ee55aace22f"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
-    "content_sha256": "9bf8e198efbb2f419c9350376403611ccfb5e7633e035be3727b8ecf4cca54d1"
+    "revision": "b7d73a3ebfac4d8fb246e416d997156e52cb3bc4",
+    "content_sha256": "8f74d04e972f5e656b8421c2b3ab5ee21b25fb7eb195f2df0f400c808740e82e"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
@@ -159,8 +159,8 @@
     "content_sha256": "a73a267a1da167dd2cb76a976c5e0bca75d8a056d0b44d9723bae39e0263793a"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "48bcb9db1b0fd525d3971595790b0f07b34db51b",
-    "content_sha256": "99cc188fd7f669f5c0fd5b4af8389a0839ca44811014caef4b639e611b4c3245"
+    "revision": "7cebe1624ea7406db4212a9b85882e9334cfb305",
+    "content_sha256": "0e40820c2dbbd7d2e20c5f99bf13adefcfd6a13449e0096d57a12372bf49a6a9"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
     "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
@@ -45846,6 +45846,43 @@
    "notes": "Mutation-proved (#2015): omitting mission_history from Decision Evidence fails every recording assertion (M8), including the owner-review witnesses (#2017) that record not_satisfied for a permit whose only completion was unauthorized and satisfied for a single-use permit beside a suppressed replay."
   },
   {
+   "id": "authzen.context-history.entry-records-operation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "Where a predicate's type selects an operation, its entry carries that operation's identifier as `action`; an `action_class_completed` entry, which selects by class alone, carries none.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Decision Evidence entry for a predicate whose type selects an operation carries that operation's identifier as action, so two selected predicates of one class for different operations are recorded as two entries, each naming its own operation beside its own outcome, in either selection order; an action_class_completed entry carries no action, including where policy gave the predicate an action member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records two prerequisites of one class for distinct operations as two entries, each naming its own action beside its own outcome, in either selection order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records no action on an action_class_completed entry, which selects by class alone, even where policy gave it one, whether evaluated or unavailable",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) or from the signed entry (M3) fails the pair witness by its recorded-entry assertion; dropping the operation match (M5) records the export satisfied beside the backup, failing the same assertion with the decision assertions removed; recording any string action whatever the type (M2) fails the omission witness. The selector types are a per-type table in the reference PDP: work_item_prerequisite_completed selects by action, action_class_completed by class alone."
+  },
+  {
    "id": "authzen.context-history.action-class-completed-applied-class",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
@@ -57934,6 +57971,49 @@
     }
    ],
    "notes": "Mutation-proved (#2015): recording nothing until the Mission is established leaves a decision denied before it without mission_history (M13); omitting the member fails every recording assertion (M8). Outcomes are satisfied, not_satisfied and unavailable."
+  },
+  {
+   "id": "evidence.extensions.mission-history-entry-action",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "each with its `predicate` (and `action_class`, where applicable), its `action` where its type selects an operation (a string identifying that operation), and an `outcome`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a recorded mission_history entry carries action, a string identifying the operation its predicate selects, where the predicate's type selects one, and no action where the type selects by class alone"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records two prerequisites of one class for distinct operations as two entries, each naming its own action beside its own outcome, in either selection order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records no action on an action_class_completed entry, which selects by class alone, even where policy gave it one, whether evaluated or unavailable",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > signs an entry's action as a string and refuses to sign one that is not",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) or from the signed entry (M3) fails the pair witness; recording any string action whatever the type (M2) records the stray action on the action_class_completed entry; removing the emitter's type check (M4) signs a numeric action. The member is owned by the AuthZEN profile (authzen.context-history.entry-records-operation)."
   },
   {
    "id": "evidence.extensions.hop-reference-required-submembers",
@@ -112917,6 +112997,41 @@
     }
    ],
    "notes": "Mutation-proved (#815): dropping the action check records not_satisfied for the predicate without action (U-member-action); dropping the class check does the same for the predicate without action_class (U-member-class)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.entry-records-action",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "Its `mission_history` entry in Decision Evidence carries its `action` as well as its `action_class`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a work_item_prerequisite_completed entry in Decision Evidence carries the predicate's action and action_class, so prerequisites of one class for different operations, such as a backup and an export, are recorded as distinct entries, each with its own outcome"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records two prerequisites of one class for distinct operations as two entries, each naming its own action beside its own outcome, in either selection order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when only another operation of the backup's class completed for that work item, target and revision",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) fails the unit pair witness and the cross-component witness, whose delete records the backup prerequisite not_satisfied with its action while only an export of the same class completed; dropping the operation match (M5) fails the pair witness's recorded outcomes with the decision assertions removed. The cross-component witness runs the reference PEP, an ephemeral in-process decision point with the history binding, and the PEP's evidence store over the test-only revisioned database; nothing of that operation set ships."
   },
   {
    "id": "harness.work-item-prerequisite.operation-and-class",
