@@ -827,6 +827,20 @@ export interface MissionRecord {
    */
   ceiling_audiences?: string[][];
   /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040, D1260 ruling 3): for each ceiling entry whose policy-created
+   * children take the deployment's per-child figure, index-aligned with
+   * `authority_ceiling`, the figure the ceiling consent rendered and the
+   * Approver accepted (`{ finite: n }`, or `{ finite: null }` for no finite
+   * maximum); `null` for every other entry. Retained at the consent, carried
+   * with the ceiling and never re-read from a later policy, so authority a
+   * drawdown adds takes it. The same state as `child_derivation_maxima`:
+   * outside `ceiling_hash`, never on the wire. Absent (a ceiling consented
+   * before it was retained) or misaligned, it retains no figure, and no child
+   * is created under authority a drawdown adds from it.
+   */
+  ceiling_child_derivation_maxima?: ({ finite: number | null } | null)[];
+  /**
    * @spec progressive#progressive-authorization: the activation policy
    * reference under which the Mission Issuer MAY adjudicate an in-ceiling
    * expansion by policy. Present only beside `authority_ceiling`.

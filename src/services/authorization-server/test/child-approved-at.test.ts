@@ -153,7 +153,12 @@ describe("a child's approved_at follows the root its authority traces to (@spec 
         approval_event_id: `tmpl-ev-${seq++}`,
         expires_at: "2026-12-01T00:00:00Z",
       } as never,
-      { ...kernel.authoritySourceOptions(), dispatchPolicies: registry },
+      {
+        ...kernel.authoritySourceOptions(),
+        dispatchPolicies: registry,
+        // The per-child figure a consent at this instant renders and retains (#2040).
+        ceilingChildMaxima: (entries) => kernel.establishedChildMaxima(entries),
+      },
     );
     at(1);
     const instance = dispatchFromTemplate(kernel, store, {

@@ -32,6 +32,7 @@ import {
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
+import { renderedChildMaxima } from "../src/kernel/standing-consent-limit.js";
 import { CreationIdempotencyStore } from "../src/kernel/creation-idempotency.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -99,7 +100,7 @@ const ceilEntry = (actions: string[], maxAmount = "200.00"): AuthorityEntry => (
   constraints: { max_amount: { amount: maxAmount, currency: "USD" }, vendors: ["acme"] },
 });
 
-const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
+const mkTemplate = (over: Partial<CreateTemplateInput> = {}, options: Partial<Parameters<typeof createTemplate>[2]> = {}) =>
   createTemplate(store, {
     template_version: "tmpl-v1",
     issuer: ISS,
@@ -115,7 +116,7 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
     approval_event_id: `tmpl-ev-${tmplSeq++}`,
     expires_at: "2026-12-01T00:00:00Z",
     ...over,
-  }, { ...kernel.authoritySourceOptions(), dispatchPolicies: REGISTRY });
+  }, { ...kernel.authoritySourceOptions(), dispatchPolicies: REGISTRY, ...options });
 
 /** An untrusted Intent proposing the given actions (default max_amount 500,
  *  which is exactly the policy ceiling, so any narrower final is attributable). */
@@ -1097,12 +1098,16 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
       }
     });
 
-    it("an instance's own children keep the per-child figure the deployment stated at its dispatch: after the ceiling is removed or raised under the same policy_version and a restart, a child of the earlier instance still records it", () => {
+    it("an instance's own children take the per-child figure the template consent rendered: after the ceiling is removed or raised under the same policy_version and a restart, an instance dispatched before or after it retains that figure, and their children record it (#2040)", () => {
       const delegable: AuthorityEntry = {
         ...ceilEntry(["payments:invoice.read"]),
         delegation: { max_depth: 2, children: { max_children: 5, allowed_child_actors: [{ sub_profile: "ai_agent" }] } },
       };
-      const t = mkTemplate({ ceiling: [delegable], max_active: 20, rate_per_min: 20 });
+      // The consent rendered 3, the deployment's figure at the consent (#2040).
+      const t = mkTemplate(
+        { ceiling: [delegable], max_active: 20, rate_per_min: 20 },
+        { ceilingChildMaxima: (entries) => renderedChildMaxima(entries, 3) },
+      );
       const childProposal: AuthorityEntry[] = [
         {
           type: "mission_resource_access",
@@ -1128,6 +1133,9 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
         const after = onFile(file, next);
         try {
           expect(childOf(after, instance).derivation_limit, String(next)).toBe(3);
+          const later = dispatchOn(after, t.id);
+          expect(later.child_derivation_maxima, String(next)).toEqual([{ finite: 3 }]);
+          expect(childOf(after, later).derivation_limit, String(next)).toBe(3);
         } finally {
           after.close();
         }

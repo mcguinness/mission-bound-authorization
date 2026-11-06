@@ -302,7 +302,12 @@ describe("a template ceiling that grants children without allowed_child_actors d
         approval_event_id: `tmpl-ev-${events++}`,
         expires_at: daysAfter(FAR_EXPIRES_AT, -31),
       } as never,
-      { ...kernel.authoritySourceOptions(), dispatchPolicies: registry },
+      {
+        ...kernel.authoritySourceOptions(),
+        dispatchPolicies: registry,
+        // The per-child figure a consent at this instant renders and retains (#2040).
+        ceilingChildMaxima: (entries) => kernel.establishedChildMaxima(entries),
+      },
     );
     return dispatchFromTemplate(kernel, store, {
       templateId: template.id,

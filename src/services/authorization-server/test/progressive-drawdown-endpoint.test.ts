@@ -2842,7 +2842,9 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
     try {
       const stale = await decide(code, bob, { decision: "approve", render_revision: first.revision });
       expect(stale.status, JSON.stringify(stale.json)).toBe(409);
-      expect(stale.json.changed).toEqual(["successor_hash"]);
+      // The successor and the per-child disclosure the page showed for its
+      // delegable entries, labelled by their actions (#2040 review P2).
+      expect(stale.json.changed).toEqual(["successor_hash", "child_grants"]);
       expect((await poll(code)).body.error).toBe("authorization_pending");
     } finally {
       DERIVATION_POLICY.ceiling.forEach((e, i) => Object.assign(e, structuredClone(given[i])));
