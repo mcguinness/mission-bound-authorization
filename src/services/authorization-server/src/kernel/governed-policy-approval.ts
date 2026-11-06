@@ -973,7 +973,7 @@ function disclosureOf(
   const committed = canonicalize({ root: ref, derivation_limits: derivationLimits, per_child: perChild } as unknown as JsonValue);
   return {
     root: ref,
-    instance: derivationLimits ? standingConsentLines(NO_FINITE_MAXIMUM, "Mission this policy activates", { asyncDelegation }) : [],
+    instance: derivationLimits ? standingConsentLines(NO_FINITE_MAXIMUM, "governed Mission", { asyncDelegation }) : [],
     child_grants,
     child_derivation_maxima: figures,
     commitment: `sha-256:${createHash("sha256").update(committed).digest("base64url")}`,
