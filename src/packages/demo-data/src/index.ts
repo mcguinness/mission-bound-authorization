@@ -3114,10 +3114,20 @@ export const APPROVAL_FLOOR_ACTION_CLASSES = [
 ] as const;
 export type ApprovalFloorActionClass = (typeof APPROVAL_FLOOR_ACTION_CLASSES)[number];
 
+/**
+ * @spec mission#approval-authentication (#2032): the binding's fourth
+ * high-risk class, a cumulative consumption bound. It is carried in the
+ * Mission Intent, never by an action, so a floor's `applies_to` may name it
+ * but the classification may not give it to an action.
+ */
+export const CONSUMPTION_BOUND_CLASS = "consumption_bound" as const;
+/** A class a floor's `applies_to` may name: every action class, and the consumption bound. */
+export type ApprovalFloorClass = ApprovalFloorActionClass | typeof CONSUMPTION_BOUND_CLASS;
+
 /** One published floor: the classes that invoke it, and what satisfies it. */
 export interface ApprovalFloor {
   id: string;
-  applies_to: ApprovalFloorActionClass[];
+  applies_to: ApprovalFloorClass[];
   /** The only approval surface whose achieved context can satisfy it. */
   approval_surface: "browser";
   /** Accepted achieved `acr` values, by exact match; no ordering among them. */
@@ -3196,8 +3206,8 @@ export function loadApprovalFloor(
     if (floorIds.has(id)) throw new ConfigError(file, `${ctx}.id ${id} is not unique`);
     floorIds.add(id);
     const appliesTo = reqStringArray(file, f, "applies_to", ctx);
-    if (appliesTo.length === 0 || !appliesTo.every(isClass)) {
-      throw new ConfigError(file, `${ctx}.applies_to must name one or more known action classes`);
+    if (appliesTo.length === 0 || !appliesTo.every((c) => isClass(c) || c === CONSUMPTION_BOUND_CLASS)) {
+      throw new ConfigError(file, `${ctx}.applies_to must name one or more known action classes or ${CONSUMPTION_BOUND_CLASS}`);
     }
     const acr = reqStringArray(file, f, "accepted_acr", ctx);
     if (acr.length === 0 || acr.some((a) => a.length === 0) || new Set(acr).size !== acr.length) {
@@ -3212,7 +3222,7 @@ export function loadApprovalFloor(
     }
     return {
       id,
-      applies_to: appliesTo as ApprovalFloorActionClass[],
+      applies_to: appliesTo as ApprovalFloorClass[],
       approval_surface: reqEnum(file, f, "approval_surface", ctx, ["browser"] as const),
       accepted_acr: acr,
       max_authentication_age_seconds: age,

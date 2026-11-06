@@ -4,7 +4,7 @@
   "floors": [
     {
       "id": "high-risk-authority",
-      "applies_to": ["irreversible_action", "external_commitment", "privileged_administration"],
+      "applies_to": ["irreversible_action", "external_commitment", "privileged_administration", "consumption_bound"],
       "approval_surface": "browser",
       "accepted_acr": ["mfa"],
       "max_authentication_age_seconds": 300

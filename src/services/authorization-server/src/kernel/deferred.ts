@@ -31,7 +31,7 @@ import type { AudienceReference } from "./approved-audience.js";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { DEFERRAL_EXPIRES_IN } from "./deferral-lifetime.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
-import { evaluateApprovalFloor } from "./approval-floor.js";
+import { carriesConsumptionBound, evaluateApprovalFloor } from "./approval-floor.js";
 import { authorityHash, type ContainmentSelector, isSubsetSetUnderIgnoringCapabilitySources, type JsonValue } from "@mission/core";
 import {
   createExpansion,
@@ -964,7 +964,14 @@ export class ExpansionDeferralStore {
         this.approvalFloor,
         [...successor, ...ceilingEntries],
         authentication ? { acr: authentication.acr, auth_time: authentication.auth_time } : {},
-        { interactive: authentication?.surface === "browser", nowSeconds: Math.floor(this.now().getTime() / 1000) },
+        {
+          interactive: authentication?.surface === "browser",
+          nowSeconds: Math.floor(this.now().getTime() / 1000),
+          // @spec mission#approval-authentication (#2032): a successor whose
+          // Intent keeps a consumption bound (a standing-payment lineage's
+          // max_budget) is held to the floor whatever its Authority Set.
+          consumptionBound: carriesConsumptionBound(recorded.i),
+        },
       );
       if (floor.outcome === "refused") throw new ApprovalFloorRefusedError(floor.reason);
       if (approval.ceiling && predecessor) {

@@ -18,13 +18,16 @@
  * headless approval service's registration is not an authentication of the
  * Approver, so a headless approval of floor-invoking authority refuses.
  *
- * Consumption bounds: this AS admits none. `derive()` refuses every
- * constraint key outside `SUPPORTED_CONSTRAINT_KEYS`, none of which is a
- * consumption bound, so no derived entry can carry one to classify.
+ * Consumption bounds (#2032): a cumulative consumption bound is carried in the
+ * Mission Intent, not in a derived entry (`derive()` refuses every constraint
+ * key outside `SUPPORTED_CONSTRAINT_KEYS`, none of which is one). The caller
+ * states whether the Intent carries one (`ctx.consumptionBound`), and that
+ * invokes every floor whose `applies_to` names `consumption_bound`. A bound no
+ * published floor names refuses: like unclassified authority, it fails closed.
  */
 
 import { entryOverlapsResource, resourceWithin } from "@mission/core";
-import type { ApprovalFloorClassification, ApprovalFloorPolicy } from "@mission/demo-data";
+import { CONSUMPTION_BOUND_CLASS, type ApprovalFloorClassification, type ApprovalFloorPolicy } from "@mission/demo-data";
 import type { AuthorityEntry } from "./types.js";
 
 /**
@@ -80,6 +83,19 @@ export function crossDomainAt(policy: ApprovalFloorPolicy, entry: AuthorityEntry
   return (classificationsFor(policy, entry) ?? []).some((c) => c.cross_domain === true);
 }
 
+/**
+ * @spec mission#approval-authentication, mission-metering (#2032): the
+ * cumulative consumption bounds Mission Metering defines as Mission Intent
+ * members. Any of them makes the Intent carry high-risk authority.
+ */
+export const CONSUMPTION_BOUND_MEMBERS = ["max_budget", "max_calls", "max_duration", "max_egress_volume"] as const;
+
+/** Whether a Mission Intent carries a cumulative consumption bound. */
+export function carriesConsumptionBound(intent: unknown): boolean {
+  if (!intent || typeof intent !== "object" || Array.isArray(intent)) return false;
+  return CONSUMPTION_BOUND_MEMBERS.some((m) => Object.hasOwn(intent, m));
+}
+
 /** The achieved authentication context the approval surface supplied. */
 export interface AchievedApproverContext {
   acr?: unknown;
@@ -100,13 +116,16 @@ export type ApprovalFloorOutcome =
 
 /**
  * Classify every action of the derived entries, then evaluate each floor the
- * classes invoke against the Approver's achieved context.
+ * classes invoke against the Approver's achieved context. `consumptionBound`
+ * states that the Mission Intent carries a cumulative consumption bound
+ * ({@link carriesConsumptionBound}), which invokes the `consumption_bound`
+ * floors (#2032).
  */
 export function evaluateApprovalFloor(
   policy: ApprovalFloorPolicy,
   derived: readonly AuthorityEntry[],
   achieved: AchievedApproverContext,
-  ctx: { interactive: boolean; nowSeconds: number },
+  ctx: { interactive: boolean; nowSeconds: number; consumptionBound?: boolean },
 ): ApprovalFloorOutcome {
   const invoked = new Set<string>();
   for (const entry of derived) {
@@ -130,6 +149,20 @@ export function evaluateApprovalFloor(
         }
       }
     }
+  }
+  if (ctx.consumptionBound === true) {
+    // @spec mission#approval-authentication (#2032): the floor covers
+    // high-risk authority the Mission Intent carries, not only the derived
+    // Authority Set; a bound no published floor names fails closed.
+    const boundFloors = policy.floors.filter((f) => f.applies_to.includes(CONSUMPTION_BOUND_CLASS));
+    if (boundFloors.length === 0) {
+      return {
+        outcome: "refused",
+        reason: "the Mission Intent carries a cumulative consumption bound, a high-risk class no published approval-authentication floor names; it is refused",
+        unclassified: true,
+      };
+    }
+    for (const floor of boundFloors) invoked.add(floor.id);
   }
   if (invoked.size === 0) return { outcome: "not_applicable" };
   if (!ctx.interactive) {

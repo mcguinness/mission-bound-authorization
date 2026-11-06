@@ -45,7 +45,7 @@ import {
   initSigningKeyRing,
   STANDING_PAYMENT_OPERATION,
 } from "../src/index.js";
-import { floorApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, FIXTURE_LOGIN_TIME, floorApprovalHeaders } from "./approval-fixture.js";
 import { FakeBudgetCounters } from "./budget-exposure.helper.js";
 import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
@@ -321,8 +321,14 @@ async function dispatched(templateId: string): Promise<{ accessToken: string; mi
   return { accessToken: body.access_token as string, missionId: missionId as string };
 }
 
-/** Open a deferred expansion of the instance that keeps its max_budget; returns the deferral code. */
-async function expansionDeferral(accessToken: string): Promise<string> {
+/**
+ * Open a deferred expansion of the instance that keeps its max_budget; returns
+ * the deferral code. `actions` are the successor entry's actions.
+ */
+async function expansionDeferral(
+  accessToken: string,
+  actions: readonly string[] = [STANDING_PAYMENT_OPERATION, "payments:invoice.read"],
+): Promise<string> {
   const { status, body } = await token({
     grant_type: TOKEN_EXCHANGE,
     subject_token: accessToken,
@@ -340,7 +346,7 @@ async function expansionDeferral(accessToken: string): Promise<string> {
       {
         type: "mission_resource_access",
         resource: RESOURCE,
-        actions: [STANDING_PAYMENT_OPERATION, "payments:invoice.read"],
+        actions: [...actions],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
     ]),
@@ -692,6 +698,23 @@ describe("budget exposure on a standing-payment successor's approval (@spec temp
     expect(as.expansionDeferrals.pendingRequest(code)).toBeDefined();
     const again = await deferralPage(code, headers);
     const approved = await decideDeferral(code, headers, again.revision);
+    expect(approved.status, JSON.stringify(approved.body)).toBe(200);
+    expect(approved.body.state).toBe("approved");
+  });
+
+  it("holds a successor whose Intent keeps max_budget to the approval-authentication floor although its Authority Set carries no high-risk class: a password approval is refused and approves nothing, and an approval at the floor succeeds (@spec mission#approval-authentication, #2032)", async () => {
+    const templateId = await consented("alice");
+    const { accessToken } = await dispatched(templateId);
+    const code = await expansionDeferral(accessToken, ["payments:invoice.read"]);
+    const password = browserApprovalHeaders(SESSIONS, code, { sub: "bob", acr: "password", auth_time: FIXTURE_LOGIN_TIME }, "");
+    const shown = await deferralPage(code, password);
+    const refused = await decideDeferral(code, password, shown.revision);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(403);
+    expect(refused.body.error).toBe("access_denied");
+    expect(as.expansionDeferrals.pendingRequest(code)).toBeDefined();
+    const atFloor = login(code, "bob");
+    const again = await deferralPage(code, atFloor);
+    const approved = await decideDeferral(code, atFloor, again.revision);
     expect(approved.status, JSON.stringify(approved.body)).toBe(200);
     expect(approved.body.state).toBe("approved");
   });
