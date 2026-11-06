@@ -1373,7 +1373,10 @@ runtime profile fixes the fail-closed posture and the evidence
 store's freshness discipline
 ({{I-D.draft-mcguinness-mission-runtime}}). The PDP MUST record the
 evaluated predicates and their outcomes in Decision Evidence
-({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). Where a
+predicate's type selects an operation, its entry carries that
+operation's identifier as `action`; an `action_class_completed` entry,
+which selects by class alone, carries none.
 
 ## Canonical Projections {#projections}
 
@@ -3263,6 +3266,10 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- History Context: where a predicate's type selects an operation, its
+  `mission_history` entry carries that operation's identifier as
+  `action`; an `action_class_completed` entry carries none (#2048).
 
 - Protected-Data Context: `context.protected_data` is a harness-owned
   extension point carrying the exposure determination that the harness
