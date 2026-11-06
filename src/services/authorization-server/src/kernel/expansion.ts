@@ -19,7 +19,11 @@ import {
   selectorOverlapsEntry,
 } from "@mission/core";
 import { type AudienceReference, audienceReferences, derivedAudiences, derivesFrom } from "./approved-audience.js";
-import { childMaximumReferences, inheritedChildMaxima } from "./standing-consent-limit.js";
+import {
+  childMaximumReferences,
+  inheritedChildMaxima,
+  type StandingConsentMaximum,
+} from "./standing-consent-limit.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { resolvedAnchors } from "./anchors.js";
 import { entriesMayOverlap } from "./derive.js";
@@ -103,6 +107,16 @@ export interface ExpansionInput {
    * applies.
    */
   decidedAudiences?: readonly AudienceReference[];
+  /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040, D1260 ruling 3): the per-child figure the Approver's decision
+   * rendered and retained for the authority this Expansion adds (the
+   * deployment's at that decision, `ExpansionDeferralStore.approve`), read at
+   * completion, never the one current now. Absent, the decision retained none
+   * (a deferral approved before it was retained), so that authority's figure
+   * is unknown and no child is created under it until a fresh approval.
+   */
+  decidedChildMaximum?: StandingConsentMaximum;
 }
 
 /**
@@ -273,17 +287,18 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     // @spec child-delegation#fanout (#1304): the successor's own child-actor
     // origins, from the same fresh derivation.
     child_actor_provenance: derived.childActorProvenance,
-    // @spec derivation-limits#effective-limit (#2026, D1249; review F1): the
-    // Expansion approval surface renders no per-child figure, so an entry that
-    // may carry authority of the predecessor's entries, widened or regrouped
-    // included, keeps the strictest figure they retain, and stays unknown
-    // where any of them is unknown. Only authority this approval adds takes
-    // the figure the deployment states at this approval event: provisionally
-    // (ruling 1), and never above a carried one.
+    // @spec derivation-limits#effective-limit (#2026, D1249; review F1): an
+    // entry that may carry authority of the predecessor's entries, widened or
+    // regrouped included, keeps the strictest figure they retain, and stays
+    // unknown where any of them is unknown. @spec
+    // derivation-limits#approval-rendering (#2040): authority this approval
+    // adds takes the figure its decision rendered and retained, never one
+    // read at completion, and never above a carried one; with none retained
+    // it is unknown.
     child_derivation_maxima: inheritedChildMaxima(
       authoritySet,
       childMaximumReferences(predecessor.authority_set, predecessor.child_derivation_maxima),
-      { deploymentFigure: kernel.resolveDerivationLimit(undefined) },
+      input.decidedChildMaximum ? { retained: input.decidedChildMaximum } : { unknown: true },
     ),
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),

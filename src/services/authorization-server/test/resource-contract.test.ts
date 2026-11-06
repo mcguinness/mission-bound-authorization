@@ -380,10 +380,11 @@ describe("template consent assembles the ceiling's references and Dispatch prese
     const proposals = new TemplateConsentProposals(() => NOW.getTime());
     const pinned = pinDispatchPolicy(TISS, POLICIES, { id: "rc", version: "1" });
     const disclose = (ceiling: AuthorityEntry[], resourceContracts: ResourceContractDeclarations) =>
-      templateConsentDisclosure(proposals.propose({ ...body(ceiling) } as never, pinned), POLICIES, {
+      templateConsentDisclosure(proposals.propose({ ...body(ceiling) } as never, pinned, { finite: null }), POLICIES, {
         issuer: TISS,
         asyncDelegation: false,
         resourceContracts,
+        perChild: { figure: { finite: null }, held: () => undefined },
       });
     // As proposed: assembled under REQUIRED, rendered under REQUIRED.
     const assembled = templateContracts(proposal(), REQUIRED);

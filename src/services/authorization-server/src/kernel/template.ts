@@ -70,6 +70,9 @@ import { assembleResourceContracts, assertCarriedContractsResolvable } from "./r
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
+  childMaximumReferences,
+  inheritedChildMaxima,
+  type RetainedChildMaximum,
   STANDING_CONSENT_LIMIT_MEMBER,
   standingConsentMaximumOf,
 } from "./standing-consent-limit.js";
@@ -437,6 +440,15 @@ export function createTemplate(
      */
     entryAudiences?: (entries: readonly AuthorityEntry[]) => string[][] | undefined;
     /**
+     * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+     * (#2040, D1260 ruling 3): the per-child derivation figure this consent
+     * rendered for each ceiling entry (`renderedChildMaxima` over the figure
+     * the approval surface showed), retained with the template. Absent, or
+     * returning undefined, the template retains no figure, so no child is
+     * created under an instance entry whose children take one.
+     */
+    ceilingChildMaxima?: (entries: readonly AuthorityEntry[]) => RetainedChildMaximum[] | undefined;
+    /**
      * @spec mission-template#prohibited-classes (#813): present exactly where
      * the `standing-payment-dispatch` capability is on. A template whose
      * Dispatch Policy designates the standing payment is then created only
@@ -513,6 +525,9 @@ export function createTemplate(
   // consent is the approval event every instance draws on, so the ceiling's
   // association is retained here, outside `template_hash`.
   const ceiling_audiences = options.entryAudiences?.(ceiling);
+  // @spec derivation-limits#approval-rendering (#2040): likewise the per-child
+  // figure the consent rendered for each delegable ceiling entry.
+  const ceiling_child_derivation_maxima = options.ceilingChildMaxima?.(ceiling);
   const create: TemplateCreate = {
     ...input,
     ceiling,
@@ -522,6 +537,7 @@ export function createTemplate(
     authority_source,
     source_bindings,
     ...(ceiling_audiences ? { ceiling_audiences } : {}),
+    ...(ceiling_child_derivation_maxima ? { ceiling_child_derivation_maxima } : {}),
     ...(consent_provenance ? { consent_provenance } : {}),
   };
   return store.create(create);
@@ -1255,15 +1271,17 @@ export function dispatchFromTemplate(
     authority_set: final,
     eligibility_provenance: provenance,
     child_actor_provenance: childActorProvenance,
-    // @spec derivation-limits#effective-limit (#2026, D1249 ruling 1): the
-    // template consent renders and retains no per-child figure (only the
-    // per-instance maximum its Dispatch Policy states), and an instance
-    // carries no earlier Mission's authority, so an instance entry whose
-    // policy-created children take the deployment's figure retains the one
-    // the deployment states at this dispatch. That figure is provisional
-    // reference behavior, not a rendered maximum or conformance evidence; the
-    // instance's children never read a later policy for it.
-    child_derivation_maxima: kernel.establishedChildMaxima(final),
+    // @spec derivation-limits#effective-limit, derivation-limits#approval-rendering
+    // (#2026, #2040, D1260 ruling 3): an instance carries no earlier Mission's
+    // authority; all of it is added from the template ceiling, so each entry
+    // whose policy-created children take the deployment's figure takes the
+    // strictest figure the template consent rendered and retained for the
+    // ceiling entries it falls in, never one read at this dispatch. Under a
+    // template consented before the figure was retained it is unknown, so no
+    // child is created under it until a fresh consent.
+    child_derivation_maxima: inheritedChildMaxima(final, [], {
+      references: childMaximumReferences(template.ceiling, template.ceiling_child_derivation_maxima),
+    }),
     intent_hash: intentHash(template.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(template.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),

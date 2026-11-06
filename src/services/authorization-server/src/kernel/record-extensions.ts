@@ -57,6 +57,7 @@ const RECOGNIZED: Record<keyof MissionRecord, true> = {
   discharged: true,
   authority_ceiling: true,
   ceiling_audiences: true,
+  ceiling_child_derivation_maxima: true,
   drawdown_policy: true,
   ceiling_hash: true,
   ceiling_consent_hash: true,
