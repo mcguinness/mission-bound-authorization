@@ -533,6 +533,23 @@ describe("the History Context evaluates policy-selected predicates against verif
     expect(historyOf(unreadable)?.[0]?.outcome).toBe("unavailable");
   });
 
+  it("takes no witness from a single-use permit's matching completion beside a deviating one, in either record order: the history is unestablished and the deviation is flagged", async () => {
+    // From the owner's review counterexample on PR #2034 (D1257 P1): the first completion deviates and the
+    // second matches, and nothing at the PDP says which took the single use, so the matching one creates no witness.
+    const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", overrides: { conditions: SINGLE_USE, parameter_digest: DIGEST_A } });
+    const deviating = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_deviated", sequence: 0, overrides: { authorized_parameter_digest: DIGEST_A, effective_parameter_digest: DIGEST_B } });
+    const matching = await executionRecord({ evaluation_id: "w1", outcome: "completed", execution_id: "exe_w1_matching", sequence: 1, overrides: { authorized_parameter_digest: DIGEST_A, effective_parameter_digest: DIGEST_A } });
+    for (const records of [[permit, deviating, matching], [permit, matching, deviating]]) {
+      const label = records[1] === deviating ? "deviating first" : "matching first";
+      const flags: UnauthorizedExecutionFlag[] = [];
+      const decision = await evaluate(request(), options(flagging(historyBinding(records), flags)));
+      expect(decision.decision, label).toBe(false);
+      expect(decision.context.denial_reason, label).toBe("history_not_satisfied");
+      expect(historyOf(decision)?.[0]?.outcome, label).toBe("unavailable");
+      expect(flags.map((f) => f.execution_id), label).toEqual(["exe_w1_deviated"]);
+    }
+  });
+
   it("fails closed when Decision Evidence records with different content share an evaluation_id, in either order", async () => {
     const permit = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", sequence: 0 });
     const deny = await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write", decision: "deny", sequence: 1 });

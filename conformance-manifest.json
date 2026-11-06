@@ -45618,9 +45618,46 @@
     "normative": "action_class_completed is satisfied only when at least one permit Decision Evidence record the named class applied to exists and every such permit has a linked completed Execution Evidence record in which each authorized digest present has an equal effective counterpart; otherwise it is not_satisfied, or unavailable where some permit's completion is undetermined and no permit is plainly unwitnessed"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > permits when a verified consequential_write permit has a linked completed execution, reads only the established Mission's history, and records the outcome",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a completed execution whose effective digests equal its authorized digests in both families",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied, recording not_satisfied, when no permit of the class is retained",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > denies history_not_satisfied when a permit of the class has no completed execution: one failed, one with none",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts no completed execution whose effective digest differs from its authorized one, in either family: it is flagged as an unauthorized execution and the permit stays not_satisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > leaves completion unestablishable when a completed execution lacks the effective digest its authorized digest requires, in either family",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2029 audit (D1285), witnessed by #2017's merged History tests. Satisfied with a witness, with and without digests (both families equal); not_satisfied with no permit, with a failed-only permit, with one permit witnessed beside another with no execution, and with a deviating completion; unavailable for a permit whose only completion lacks an effective digest, no permit being plainly unwitnessed. Mutation-proved, each alone: a failed record counted as a completion (M1) and one witnessed permit sufficing (M2) fail the unwitnessed test; no permit satisfying (M3) fails the no-permit test; a digest-bearing record never counting (M4) fails the digests-equal test. Partial: where one permit is plainly unwitnessed and another's completion is undetermined, the text records not_satisfied and the reader records unavailable (a missing effective digest leaves the whole history unestablished), so that outcome has no witness; a stricter denial witnesses no required not_satisfied. The single-use cases belong to authzen.context-history.single-use-witness."
   },
   {
    "id": "authzen.context-history.action-class-completed-per-permit",
@@ -45642,9 +45679,22 @@
     "normative": "a permit with a completion witness stays witnessed when another of its executions is also retained (a failed use of a multi-use permit, or a replay suppressed as permit_consumed, under a distinct execution_id): that permit counts as completed"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a single-use permit's completed use although a later replay was suppressed permit_consumed, in either record order",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts a multi-use permit's completed use beside a failed one, in either record order",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2029 audit (D1285), witnessed by #2017's merged History tests: a single-use permit's witness stands beside a replay suppressed as permit_consumed, and a multi-use permit's beside a failed use, each under a distinct execution_id and in either record order, the predicate satisfied. Mutation-proved: requiring every use of a permit to complete (M5) fails both."
   },
   {
    "id": "authzen.context-history.single-use-witness",
@@ -45666,9 +45716,16 @@
     "normative": "for a use_limit 1 permit with two completed records and no trusted source naming the one that took the use, one deviating and one matching in either arrival order, the permit's completion is undetermined (the predicate unavailable, denied history_not_satisfied), so the matching completion creates no witness; two matching completions leave the permit witnessed"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2029 (D1257 P1). todo: PR #2017 (#2015) can witness only the branch without a trusted source, since the PEP's record of which execution took the single use (mcp-payments recordRedeemingAttempt) never reaches the PDP's evidence; the witness should present the deviating-then-matching counterexample in both arrival orders."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > takes no witness from a single-use permit's matching completion beside a deviating one, in either record order: the history is unestablished and the deviation is flagged",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2029 audit (D1285). Witnessed: the owner's counterexample (D1257 P1), a use_limit 1 permit with one deviating and one matching completion, records unavailable and denies history_not_satisfied in either arrival order, the deviation flagged. Mutation-proved: not enforcing use_limit (M8) lets the matching completion witness the permit, failing the deviating-first order, and the matching-first order when the loop is reversed. The reader reaches unavailable through its count of attempted uses (completed and failed) against use_limit, not through the text's each-alone fallback. Partial: the text keeps a single-use permit with two matching completions witnessed, and the reader records unavailable (more attempted uses than use_limit), a stricter denial that witnesses no required satisfied; and the trusted-source branch stays uncovered while the PDP cannot establish which execution consumed the permit (the PEP's recordRedeemingAttempt never reaches it)."
   },
   {
    "id": "authzen.context-history.unauthorized-execution-not-a-witness",
@@ -45690,9 +45747,16 @@
     "normative": "a completed execution whose effective parameter or evaluation-context digest differs from its authorized digest does not satisfy action_class_completed for its permit"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > counts no completed execution whose effective digest differs from its authorized one, in either family: it is flagged as an unauthorized execution and the permit stays not_satisfied",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2029 audit (D1285), witnessed by #2017's merged History test: a completed execution whose effective parameter digest, and one whose effective evaluation-context digest, differs from its authorized digest leaves its permit not_satisfied (and is flagged). Mutation-proved per family: ignoring a parameter deviation (M6a) fails the parameter case, and ignoring an evaluation-context deviation (M6b) the evaluation_context case after the parameter case passes."
   },
   {
    "id": "authzen.context-history.missing-effective-digest-not-establishable",
@@ -45714,9 +45778,16 @@
     "normative": "a permit whose only completed records carry an authorized digest without its effective counterpart makes the predicate unavailable (denied history_not_satisfied), unless another permit has neither a witness nor such a record, which makes it not_satisfied"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2029 (D1251). todo: PR #2017 (#2015) builds the History Context reader; its fixes for the owner's review findings F1 and F2 (D1246) are the intended witnesses."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > leaves completion unestablishable when a completed execution lacks the effective digest its authorized digest requires, in either family",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2029 audit (D1285), witnessed by #2017's merged History test: a permit whose only completed record lacks the effective parameter digest, or the effective evaluation-context digest, its authorized digest requires makes the predicate unavailable, denied history_not_satisfied. Mutation-proved per family: accepting a missing parameter digest (M7a) fails the parameter case, and a missing evaluation-context digest (M7b) the evaluation_context case. Partial: where another permit has neither a witness nor such a record, the text records not_satisfied and the reader records unavailable (a missing effective digest leaves the whole history unestablished), so the 'unless' clause has no witness at its required outcome."
   },
   {
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",
