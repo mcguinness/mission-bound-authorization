@@ -50,7 +50,8 @@ What is adopted (D284):
   ([operation-profile-payments-v1.md](operation-profile-payments-v1.md)) is
   this target's resource contract.
 - **State source (D293):** the declared local committed read is accepted for
-  this co-located target (§4). #1101 owns a separated realization.
+  this co-located target (§4). A separated configuration reads signed Mission
+  Status with the PDP (§4, #1101, D1258).
 
 What the reference asserts: one named extension. The published Enforcement
 Scope Statement (`config/enforcement-scope.json`) carries `claims:
@@ -186,7 +187,7 @@ Residuals:
   Status or per-decision introspection at the AS holding the Mission, with no
   silent fallback or re-stamped observation (#1101). State alone supplies
   neither current effective authority nor independent Resource policy.
-- **Source.** `loadView` (`stack.ts:1016-1023`) returns the kernel's committed state and version with `mode: "fresh"` and `freshness_at` set to now. Each read happens inside the request, so the bounds below bind only injected observations in tests: `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness`.
+- **Source.** `loadView` in `composeStack` (`stack.ts`) returns the kernel's committed state and version with `mode: "fresh"` and `freshness_at` set to now. Each read happens inside the request, so the bounds below bind only injected observations in tests: `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness`.
 - **Per-class bounds** (`config/enforcement-scope.json:15-26`): 300 s for `consequential_read`, `consequential_write` and `non_consequential`; 30 s for `irreversible_action` and `privileged_administration`; 60 s for `external_commitment`; none for `audit_only`; beyond the bound, deny; issuer ceiling 300 s. An operation several classes apply to takes the tightest of their bounds: `send_remittance_email` is assigned `external_commitment`, and the statement also declares `irreversible_action` for it (`additional_action_classes`), so its bound is 30 s (#1994). The commit phase of `execute_wire_transfer` and the compensate phase of `reverse_wire_transfer` are assigned `irreversible_action` with `external_commitment` declared beside it, so their bound stays 30 s and their Decision Evidence lists both classes; a request whose class differs from the one the statement declares for its operation and phase is refused `action_class_missing` before evaluation. The loader refuses any other mode: `published runtime posture (@spec runtime#runtime-operational, status#status-operational) > refuses unsupported modes, malformed or missing bounds, and bounds exceeding the issuer ceiling`.
 - **Clock skew.** An observation up to 5 s in the future is accepted (`evaluate.ts:120`), and clamped to the decision instant for the permit cap: `permit deadline (@spec runtime#state-freshness) > clamps a skew-tolerated future observation to the decision instant, so skew cannot lengthen a permit`.
 - **Permit lifetime.** 120 s where `irreversible_action` applies (`send_remittance_email` included), 300 s otherwise (`evaluate.ts:1849`), capped by the observation plus the class bound, a reported expiry, a signed `fresh_until`, and 300 s for the two keyed writes (`evaluate.ts:1879-1910`). The high-consequence classes get `use_limit` 1: `a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > caps valid_until at the state observation plus the class staleness bound`.
@@ -210,6 +211,61 @@ profile's run-to-completion rule;
 `callTransactionTool` does not re-read Mission state after `enforce`
 (`server.ts:1548-1888`): [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > runs an admitted wire to completion once when the Mission is revoked after its permit, with completed Execution Evidence, and refuses the next decision mission_inactive (#253)`. The next call decides afresh:
 `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare`.
+
+### Separated configuration (#1101, D1258)
+
+`config/as-native-separated.json` names a second configuration of this
+target, demonstrating D293's separated path. The co-located target, its
+capability set, its state source and its witnesses above are unchanged.
+
+- **Topology.** The authorization server runs in its own process
+  (`demo/src/as-native-separated/as-serve.ts`) with the co-located target's
+  capability set plus `status` (`AS_NATIVE_SEPARATED_CAPABILITIES`), the
+  payments Transaction Authorization Server (`paymentsTransactionAuthorization`)
+  and the upstream Approver login. It alone holds the Missions. The payments
+  resource side is the assembly the co-located target runs
+  (`assemblePaymentsResource`, `demo/src/payments-resource.ts`), composed with
+  no kernel (`demo/src/as-native-separated/compose.ts`). It reaches the AS over
+  HTTP alone: tokens under its `jwks_uri`, state at its Mission Status
+  endpoint, and the TAS resolves the resource's challenge keys at the
+  listener the configuration names.
+- **Source and placement.** The PDP owns the read. As the client
+  `pdp_client_id`, authenticated by private-key JWT and holding
+  `mission_status` with the `provenance` disclosure, it reads each Mission's
+  signed Mission Status (`ownReadDecide`, `@mission/pdp`). The statement
+  declares that source with `placement: "pdp"`; the loader refuses any other
+  placement, and the composition refuses a remote PDP hop. The PEP awaits one
+  read per enforcement through the same resolver (`statusViewSource`,
+  `@mission/mcp-payments`) and forwards no observation. Each decision reads
+  within its action class's window and every commit phase reads now. The
+  signed `iat` is the observation point, and the read's reliance bound
+  (`fresh_until`, `exp`, `iat` plus `mission_max_stale_seconds` and, for
+  `active`, the Mission's `expires_at`) caps the permit. The AS signs a 60 s
+  window, so a permit relying on a read ends inside it though the read class
+  allows 300 s. A Status client without `provenance` establishes no state:
+  the PDP's view commits `authority_hash`.
+- **Authority views.** The PDP decides over the Status response's
+  audience-scoped `authorization_details`, the Mission's current effective
+  set. An action the AS no longer lists for the audience denies
+  `out_of_authority`, where the co-located target, which reads containment as
+  a delta, denies `authority_contained`. The PEP keeps the credential's own
+  authority as a separate bound, checked before any decision, and the token
+  and its DPoP proof are validated as at the co-located target. Independently
+  administered Resource policy is the same OpenFGA store.
+- **No fallback.** A read that establishes nothing leaves the decision no
+  state. The PEP refuses `state_unavailable` (`unknown_mission` where the AS
+  answers not-found) with its signed Refusal Record before any decision, and
+  the PDP denies `stale_state` though the PEP holds a read inside its bounds.
+- **Not selected or outstanding.** Introspection is not selected for this
+  configuration; it keeps its existing purposes (§9). PEP-forwarded
+  observations (`pep` placement carrying a Status assertion), a remote PDP
+  hop that reads Status itself, and an operator launcher for the two
+  processes stay with #1101. This capability set serves no suspension or
+  containment at the Lifecycle endpoint, so the witnesses apply them in the
+  AS's kernel through its test harness. There is no budget binding source,
+  since this target never meters (D830), and the cross-domain RAS and SaaS
+  objects the co-located launcher constructs are not composed. The
+  run-to-completion bound above is unchanged and is not witnessed again here.
 
 ## 5. Policy conjunction
 
@@ -516,7 +572,7 @@ That test uses another member; no test names `max_budget`.
 - Token authority (D411) and Resource policy (#828 closed, D436) are met for this target. High-risk approval rests on the upstream Approver login (#1320, D496), witnessed on the assembled target (§11, §12); D513 records #253's high-risk approval gate met.
 - Acceptance pack (#253 step 3): #1105 is closed, so the pack runs on the launcher's composition (§10, §12); its AS capability set is D332's (§2). The request-time vectors, run to completion, emission failure and the write-reservation restart are witnessed on the assembled path; revoke during issuance is witnessed at the AS, below the stack, and the cases the release fence does not reach stay with #250 (§10).
 - Disclosed residuals, no claim made: the launcher still constructs the cross-domain RAS and SaaS objects in process, unexposed (`provider-integration-port.md` §6 item 10; #253, pending #1331); the launcher wrappers have no tests (§12, #1330).
-- Separated deployment only: #1101 (state source under D293).
+- Separated deployment: #1101's first slice demonstrates the separated configuration over PDP-owned signed Mission Status (§4, §10). PEP-forwarded observations, a remote PDP hop and an operator launcher stay with #1101; introspection is not selected.
 - Also open: #831 (keys and verifier refresh), #250 (control-plane atomicity; the revoke-versus-issue cases the release fence does not reach), #1863 (approval record/code atomicity: the record commits with its authorization code; the file-backed crash residual is declared), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are resolved by #1103 and #1080.
 - #826 is closed (D438): Approver and Subject stay separate identities, and the published approval-authentication floor (D425) is enforced. #916 is closed (D461): the approval decision's ordering and retry safety are accepted, and full record/code atomicity stayed #250's and is now #1863's.
@@ -549,8 +605,8 @@ no pin.
 `draft-mcguinness-oauth-mission-status.md` `dece8ac1` defines the Effective
 Authority Set, the lifecycle states, `mission_max_stale_seconds` and the
 floor's `revoke`. Its Mission Status operation is not this co-located
-target's state source (D293, §4); a separated realization uses it or core
-introspection (#1101).
+target's state source (D293, §4). The separated configuration (§4) reads it
+as its PDP's state source, at this pin (#1101).
 
 **Conditional, not triggered:**
 
@@ -603,6 +659,28 @@ records that gate met.
 | Permit replay | [FGA] `M5 transaction-assurance tier > the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands` | |
 | Phase mismatch | `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit` | |
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
+
+### Separated configuration acceptance (#1101, D1258)
+
+The separated configuration (§4) runs in `demo/test/as-native-separated.test.ts`:
+the AS in its own process, the PEP and PDP in the test's with no kernel,
+Missions approved through the real flow (PAR, the Approver's upstream login,
+the token endpoint, DPoP-bound) and requests over HTTP MCP with DPoP. One
+controlled clock is kept in both processes, and Resource policy is stubbed:
+these witnesses bear on the state source, and the co-located target's
+witnesses above carry Resource policy. Witnessed at `a244464c`; seven guards
+were disabled one at a time, each failing its witness.
+
+| #1101 acceptance | Witness | Bound or gap |
+|---|---|---|
+| A named configuration obtains Mission state over the selected surface, with no in-process kernel | `the separated AS-native configuration: its declared shape (#1101, D1258) > enables status beside the co-located target's capability set, which stays without it, and the AS serves and advertises Mission Status`; `the separated AS-native configuration: its declared shape (#1101, D1258) > declares its state source with the PDP, and the composition holds no kernel`; `the separated AS-native configuration: the AS stops and starts (#1101) > with the AS down, a commit decision denies stale_state though the PEP's read is within its bounds, and an expired read refuses state_unavailable; restarted on its key ring and store, it reads again` | |
+| Wrong issuer or Mission, unauthorized or unauthenticated source, invalid signed Status, malformed or missing state, unknown state, stale observation and unavailable source cannot authorize; no business effect; the evidence carrier | `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a Status answer for another Mission establishes no state: state_unavailable before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a Mission the AS does not hold is unknown_mission before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > an unauthenticated read (no client assertion) establishes no state: state_unavailable before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a client the AS has not authorized for Mission Status (its Lifecycle console) gets the not-found an unknown Mission gets: unknown_mission before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a key the AS never registered establishes no state: state_unavailable before any decision`; `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > establishes no state through a Status client the AS grants no provenance: the PDP's view must commit authority_hash, so state_unavailable before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a signed Status the AS never published a key for establishes no state: state_unavailable before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > an issuer answering unavailable or rate_limited establishes no state: state_unavailable before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a malformed answer establishes no state: state_unavailable before any decision`; `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a source slower than its deadline establishes no state: state_unavailable before any decision, within the deadline`; `the separated AS-native configuration: the AS stops and starts (#1101) > with the AS down, a commit decision denies stale_state though the PEP's read is within its bounds, and an expired read refuses state_unavailable; restarted on its key ring and store, it reads again` | resolver-level, below the stack: a response naming another issuer is refused though the issuer's own Status key signed it, since the expected issuer is the resolver's configuration (`MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response naming another issuer throughout, though the issuer's own Status key signed it: the expected issuer is the resolver's configuration, never the response's (@spec status#mission-status, #1724 D5)`, on `status.response.consumer-issuer-binding`); a missing, malformed or unknown state in a verified response is refused (`MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a missing, malformed or unknown state`). Across the process boundary, the malformed witness is a body that is not a signed response |
+| Status caches keep source freshness and cannot mint a permit past the signed valid-through or a tighter bound | `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > permits a read on the signed Status view: the PEP forwards no observation, the decision commits the AS's state, and the permit ends inside the signed window`; `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > relies on a cached read at its signed observation point, never re-stamped, and caps every permit on it at the same signed bound`; `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > ages each observation against its action class's window, apart from the signed bound: past a 20 s read window the PDP reads again though the signed 60 s window has not passed (test statement)` | the class window is shortened in a test statement, since no shipped non-commit class is shorter than the signed window |
+| Introspection, if selected | not selected for this configuration | introspection keeps its existing purposes |
+| Revocation and suspension observed within the declared bound; a fresh commit-phase decision refuses after prepare | `the separated AS-native configuration: revocation and suspension at the AS (#1101) > observes a revocation at the Lifecycle endpoint within the signed bound: relied on until its fresh_until, then mission_inactive`; `the separated AS-native configuration: revocation and suspension at the AS (#1101) > observes a suspension the same way: then mission_inactive`; `the separated AS-native configuration: revocation and suspension at the AS (#1101) > refuses the commit of a Mission revoked after its prepare: the commit-phase decision reads the AS now, and nothing executes` | suspension is applied through the harness (§4); run to completion is unchanged (§4) |
+| PDP placement follows its declared ownership with no silent fallback | `the separated AS-native configuration: its declared shape (#1101, D1258) > refuses an undeclared placement at load and a remote PDP hop at composition, before anything connects`; `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > permits a read on the signed Status view: the PEP forwards no observation, the decision commits the AS's state, and the permit ends inside the signed window`; `the separated AS-native configuration: the AS stops and starts (#1101) > with the AS down, a commit decision denies stale_state though the PEP's read is within its bounds, and an expired read refuses state_unavailable; restarted on its key ring and store, it reads again` | PEP-forwarded observations stay with #1101 |
+| Source timeout, restart and expired caches; observation freshness apart from authority-view freshness | `the separated AS-native configuration: a source that establishes nothing authorizes nothing (#1101) > a source slower than its deadline establishes no state: state_unavailable before any decision, within the deadline`; `the separated AS-native configuration: the AS stops and starts (#1101) > with the AS down, a commit decision denies stale_state though the PEP's read is within its bounds, and an expired read refuses state_unavailable; restarted on its key ring and store, it reads again`; `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > ages each observation against its action class's window, apart from the signed bound: past a 20 s read window the PDP reads again though the signed 60 s window has not passed (test statement)`; `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > decides over the Status response's audience-scoped authorization_details: an action the AS contained denies out_of_authority at the PDP though the credential still carries it, and the credential's own authority stays a separate bound` | the authority view is the Status response's effective set, the credential's authority a separate bound |
+| Credential validity and presenter proof stay separately enforced | `the separated AS-native configuration: the credential and its presenter stay separately enforced (#1101) > refuses a token presented under another holder's DPoP key though its Mission is active, before any decision`; `the separated AS-native configuration: the PDP decides on its own signed Status read (#1101) > decides over the Status response's audience-scoped authorization_details: an action the AS contained denies out_of_authority at the PDP though the credential still carries it, and the credential's own authority stays a separate bound` | |
 | Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver`; on the assembled path, without `openid`: [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)`; with `openid`, PAR refuses `invalid_scope` because OIDC is off on this target: [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses every optional AS capability outside the D332 set with its standard error: one probe for each of the 15, and no Mission touched` | |
 | High-risk approval below the published floor | `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa` and `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session`; on the assembled path, through the upstream Approver login (#1320): [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)`, [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)` and [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a login whose ID Token does not verify against the upstream provider's keys, a password-only login rewritten to claim mfa: no login is recorded, and no Mission or code exists (#1320)`, and the admitted case [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)` | |
 | Revoke during issuance | below the stack, at the AS, on each path this target issues on: `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers`, `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > refresh: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same refresh without it delivers`, `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > a revocation committed while the request-path drain runs, the last awaited step before release, is still refused invalid_grant with mission_error revoked and no token member`, `the release fence at the transaction endpoint (@spec mission#issuance-gating, txn-authorization#challenge-redemption, #250) > a Mission revoked during the transaction token's mint is refused access_denied with no token member, and a later poll is refused too, never served the stored token; the same poll without it delivers` and `the release fence at the transaction endpoint (@spec mission#issuance-gating, txn-authorization#challenge-redemption, #250) > a Mission revoked while the request-path drain runs, after the mint and the issuance record, is refused access_denied with no token member`; a suspension at the same point delivers: `the release fence refuses only an ended Mission (@spec mission#issuance-gating, #250) > a suspension committed at the same point, after the gate and the signature, still delivers the code exchange's tokens` and `the release fence at the transaction endpoint (@spec mission#issuance-gating, txn-authorization#challenge-redemption, #250) > a suspension committed during the mint still delivers the transaction token` | not on the assembled path: a commit placed inside one issuing request needs a hook the launcher does not expose. The guarantee is for one process. Still #250's: a crash after the count, a lost response, the replay of a lost response, the window between the approval commit and the code (#916), the refund of a fenced derivation's count (#935), and multi-process issuance (#641) |
@@ -932,6 +1010,10 @@ Sessions a client never ends stay open until the process stops.
 shared demo composition (`src/DEMO.md`), which also starts the MAS join route
 and other surfaces.
 
+The separated configuration (§4) has no operator launcher: its witnesses
+start the AS process (`demo/src/as-native-separated/as-process.ts`) and
+compose the resource side (#1101).
+
 ## 13. Status
 
 Adopted (D284) as the first runtime reference target; not a conformance
@@ -956,6 +1038,10 @@ remaining acceptance items are met, each within a stated bound:
    D609, its acceptance met box by box (#1352, #1361, #1387, #1400, #1408,
    #1435, #1456, #1466). Join Assertions and the Enterprise tier continue in
    #1454.
+
+A separated configuration (§4, §10) demonstrates D293's separated path over
+PDP-owned signed Mission Status (#1101, D1258); its outstanding portions stay
+with #1101.
 
 Disclosed residuals that make no claim: the launcher wrappers' tests (#1330)
 and the unused RAS and SaaS objects the launcher constructs (#253, pending

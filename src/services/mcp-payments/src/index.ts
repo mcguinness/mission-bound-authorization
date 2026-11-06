@@ -1,6 +1,12 @@
 export { defaultRemittanceAddress, PaymentsStore, type Invoice, type ResolvedRecipients, type Vendor } from "./payments-store.js";
 export { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
-export { type MissionViewSource, type ViewPreparation, type ViewSourceRefusal } from "./view-source.js";
+export {
+  type MissionViewSource,
+  statusLoadedView,
+  statusViewSource,
+  type ViewPreparation,
+  type ViewSourceRefusal,
+} from "./view-source.js";
 export {
   type KeyAlgorithms,
   type KeyRole,

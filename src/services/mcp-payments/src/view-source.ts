@@ -14,7 +14,8 @@
  */
 
 import type { PropagatedMissionReference } from "@mission/core";
-import { type MissionView, viewHoldsCommittedSet } from "@mission/pdp";
+import { type MissionStatusResolver, type MissionView, type ResolvedMission, viewHoldsCommittedSet } from "@mission/pdp";
+import type { LoadedView } from "./pep.js";
 
 /**
  * Why the read established no view, in the PEP's refusal diagnostics.
@@ -71,4 +72,45 @@ export function absenceMeansNeverGranted(source: MissionViewSource | undefined, 
 /** The refusal for a view miss: the remote read's reason where it failed, else the in-process `unknown_mission`. */
 export function viewMissRefusal(prepared: ViewPreparation | undefined): ViewSourceRefusal {
   return prepared !== undefined && !prepared.ok ? prepared.refusal : "unknown_mission";
+}
+
+const iso = (ms: number) => new Date(ms).toISOString();
+
+/**
+ * @spec status#mission-status-caching (#818 slice 4b; #1101): the PEP's
+ * loaded view from a signed Mission Status read: the resolver's answer, with
+ * the observation of the read that produced it (its signed `iat` and its
+ * reliance bound), in `cached` mode.
+ */
+export function statusLoadedView(read: ResolvedMission): LoadedView {
+  return {
+    view: read.view as MissionView,
+    observation: {
+      state: read.view.state,
+      version: read.view.version,
+      mode: "cached",
+      freshness_at: iso(read.observedAtMs),
+      mission_status_issued_at: iso(read.observedAtMs),
+      mission_status_expires_at: iso(read.relianceBoundMs),
+    },
+  };
+}
+
+/**
+ * @spec authzen#failure-condition-coverage (#818 slice 4b; #1101): the PEP's
+ * one read per enforcement, through a signed Mission Status resolver. A
+ * Mission the issuer does not hold, or will not show this client, is
+ * `unknown_mission`; every other failure leaves "Mission state not
+ * establishable at the PEP", `state_unavailable`, including the issuer
+ * refusing this client's own credential, for which no code of its own is
+ * named.
+ */
+export function statusViewSource(resolver: Pick<MissionStatusResolver, "resolve">): MissionViewSource {
+  return {
+    prepare: async (ref) => {
+      const read = await resolver.resolve(ref);
+      if (read.ok) return { ok: true };
+      return { ok: false, refusal: read.reason === "not_found" ? "unknown_mission" : "state_unavailable" };
+    },
+  };
 }

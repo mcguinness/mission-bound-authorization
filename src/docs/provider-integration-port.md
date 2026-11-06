@@ -1331,7 +1331,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 |---|---|---|---|---|---|---|---|
 | Credential validation | Yes. Met (D411): the PEP and the PDP each enforce the credential's own authority, and introspection, which this path does not consume, validates as the resource does (D402) | HTTP: `validateCredential` with a DPoP proof, then `verifyDpopBoundToken`. In-process mediated channel: `validateCredential` without one, then `validateMissionToken`. Both: `missionBoundFactsFrom`, `readMissionAccessClaims`, the PEP's credential-authority check, and the `context.credential` carrier the PDP enforces (§5.1) | In request, before any claim is a decision input | None | The DPoP replay cache is per boot. With per-boot AS keys a pre-restart token fails validation; with a key ring it validates, and its Mission, lost with the in-memory kernel, refuses `unknown_mission` (§5.1, §5.3) | HTTP transport, PEP- and PDP-level (§5.1) | The mediated channel proves no possession, so high-consequence claims hold on HTTP only (§5.1) |
 | Independent Resource policy | Yes, met (#828 closed, D436) | The decision point's bound `ResourcePolicy`, OpenFGA stored entitlements in `stack.ts` (§5.2) | In the decision | None | Entitlements are stored in OpenFGA; startup attaches or bootstraps a development store (§5.2) | PDP- and PEP-level, [FGA] (§5.2) | Live witnesses CI-only (§5.2) |
-| Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read only (D293); a separated source is #1101's; run to completion inside the permit (§5.3) |
+| Protected state and lifecycle | Yes | `loadView`, forwarded at `context.mission_state_observation`; the PDP's own view (§5.3) | Read per decision, inside the request; a fresh decision at each commit phase | None | Reads the floor's kernel (§4.5); no cache | PEP- and PDP-level (§5.3) | Local committed read (D293); the separated configuration reads signed Mission Status with the PDP, and PEP-forwarded observations and a remote PDP hop stay with #1101 (§5.3); run to completion inside the permit (§5.3) |
 | Target and parameter binding | Yes | `Pep.intake` (closed schema, NFC) before any decision work; `buildEffectiveParams`, `parameterDigest`; at use, `verifyPermitAtUse` (phase, expiry), `reverifyCapability`, and `reverify` or `reverifyList` (digest) (§5.4) | Read paths write nothing before the effect; a write path writes nothing before the effect except a single-use permit's consumed identifier, recorded after the digest check; the transaction tier redeems the permit, writing operation state, before the digest check (§5.4) | None | The payments store is reseeded per boot; a crash after redemption leaves a claim that closes `indeterminate` | Server-level and MCP channel, [FGA] (§5.4) | A single-record read re-derives no digest at use (§5.4) |
 | Permit redemption | Transaction tier, keyed writes, and single-use permits on the unkeyed write path | The PDP's Exact claim; `TransactionEngine.redeemPermit`; the PEP write reservation; `takeSingleUse` (§5.5) | Claim insert in one PDP transaction; then redemption, effect, evidence and settlement as separate writes. A keyed write is one local transaction. An unkeyed-write redemption is one insert, immediately before the effect; a keyed retrieval's is one insert before anything is disclosed (D342) | None; settlement is awaited | Claim, reservation and consumed-identifier records survive, but a restarted PEP cannot reconcile a prior claim (§5.7); engine redemption records are lost (§5.5) | Server- and PDP-level, [FGA] (§5.5) | One redemption per operation key per process (§5.5) |
 | Evidence | Yes | The PDP's emitter; `recordRefusal`, `suppressExecution`; the executor's `completed` write (§5.6) | Synchronous in the request; Decision Evidence is verified before release | None | Retention is in memory and lost at restart | PEP-level (§5.6) | A `completed` write that fails twice after a connector commit is reported (`gap: "emission_failed"`), and the running reconciler settles its claim from the ledger (§5.7); no Execution Evidence on a successful call outside the transaction tier (§5.6) |
@@ -1469,7 +1469,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 
 ### 5.3 Protected state and lifecycle
 
-- **Hook.** `loadView` (`stack.ts:1016-1023`) reads the kernel's committed state
+- **Hook.** `loadView` in `composeStack` (`stack.ts`) reads the kernel's committed state
   and version for each decision, with `mode: "fresh"` and `freshness_at` set
   to now. Under PEP placement the PEP forwards that observation at
   `context.mission_state_observation`, and the PDP's own view wins on
@@ -1489,8 +1489,16 @@ drives an AS-issued Mission-bound token through that assembled path.
   - `the PEP sends the AuthZEN profile's members (@spec authzen#context-audience-freshness, #1004) > under PEP placement, carries the loader's observation at context.mission_state_observation, with state, mode and freshness_at, and no context.freshness` (PEP-level)
   - `AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins` (PDP-level)
   - `compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare` (server-level)
-- **Residual.** A PEP or PDP separated from the AS has no demonstrated source;
-  #1101 owns the authenticated Status or introspection adapter. A Mission the
+- **Separated configuration (#1101, D1258).** The PDP reads each Mission's
+  signed Mission Status at the AS as `pdp_client_id` (`ownReadDecide`), and the
+  PEP awaits one read per enforcement through the same resolver
+  (`statusViewSource`); `loadView` answers from that resolver's cache. The
+  placement is `pdp`, every commit phase reads now, and the read's reliance
+  bound caps the permit. Witnessed across the process boundary in
+  `demo/test/as-native-separated.test.ts` (the contract's §4 and §10).
+- **Residual.** For a separated PEP or PDP, PEP-forwarded observations and a
+  remote PDP hop that reads Status itself stay with #1101; introspection is
+  not selected. A Mission the
   loader does not find has no test on the Mission-bound path (#1329). The
   run-to-completion interval is witnessed on the assembled path (D483; the
   contract's §4).
@@ -1778,7 +1786,9 @@ validates a token as the resource does (D402, §3.8).
 Runtime overlay:
 
 7. A state source for a PEP or PDP separated from the AS (#1101). This target
-   uses the declared local read (D293). §5.3.
+   uses the declared local read (D293); the separated configuration reads
+   signed Mission Status with the PDP, and PEP-forwarded observations and a
+   remote PDP hop stay open. §5.3.
 10. An assembled deployment of exactly the contract's components. What
     `pnpm as-native` enables and exposes: the AS, on its port, with the D332
     capability set (the issuance profile, with Introspection, Revocation

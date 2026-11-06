@@ -1,0 +1,6 @@
+{
+  "authorization_server": { "host": "localhost", "port": 4420 },
+  "pdp_client_id": "payments-pdp",
+  "txn_challenge_metadata": { "host": "127.0.0.1", "port": 4421 },
+  "state_source": { "placement": "pdp", "timeout_ms": 2000, "max_response_bytes": 65536 }
+}
