@@ -15,8 +15,8 @@
     "content_sha256": "5fc7bf6168359ea3ac1fa124c5ea387084a4178fd827f59f9f1a94abb85e6c45"
    },
    "draft-mcguinness-mission-metering.md": {
-    "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
-    "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
+    "revision": "0edb7cd2d05085d69405ea227b58850359c443ad",
+    "content_sha256": "87d8821fc93dd0988c5ca8143236d834effe2b951bb56f14973c4bda33d3bc17"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
@@ -50676,7 +50676,7 @@
    "surface": "evidence-emission",
    "assertion": "replay",
    "observation": {
-    "normative": "a settlement for an already settled evaluation_id with a different outcome, measured_duration or metering entry, or under a second execution_id, leaves the applied settlement unchanged, is retained as evidence, and raises an audit alarm",
+    "normative": "a settlement for an already settled evaluation_id with a different outcome, measured_duration or metering entry, or under a second execution_id, leaves the applied settlement unchanged, is retained as evidence, and raises an audit alarm; a permit_consumed replay record is not such a record (metering.settlement-contract.replay-record-not-conflict)",
     "local": "In the reference a verified conflicting completed record from the permit's own PEP and redemption-store epoch commits a released or held reservation under Metering's Exact qualification, raising the overspend alert where the commit passes a counter's limit, and any other conflicting record moves no counter. The refusal stays already_settled. The alarm is raised after the retaining transaction commits, so a crash between them loses the alarm while the retained record survives. The reference also counts the record's error as settlement-relevant (D907), and a claim settled before the measures column matches no redelivery (D1143)."
    },
    "level": "endpoint",
@@ -50782,6 +50782,83 @@
    "notes": "#816, D830. The capability is enabled only in the shared demo composition with the AS (D1122, D1143); the issuance-only deployment, the as-native target, the MAS pilot and the standalone AS do not claim it. Also homes the settlement-states 'Conflicting settlement' item. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a record conflicting with the applied settlement (a second execution_id, or the applied attempt with another outcome) is refused already_settled, never acknowledged as the duplicate, leaves the applied claim settlement unchanged (read from the claim file), is retained once per distinct record, and raises one settlement_conflict alarm, also on the composed stack's alert path; a redelivered conflict retains and alarms nothing new. Once a settlement is applied, a non-completed record reaches the conflict check whatever the redemption owner answers and moves no counter; an applied failed record's later same-attempt suppressed record leaves the reservation held; a conflicting completed record commits a held or released reservation only from the permit's own PEP and epoch, and never one released because no permit left the PDP. Not retaining (X2), not alarming (X3), not committing a conflicting completed (X4), overwriting the applied settlement (X5; MD on the stack), re-alarming a redelivery (X6), moving counters for a non-completed conflict (X7, alone), acknowledging the same attempt's other outcome as a duplicate (X1), keeping the redeemer gate on a settled claim (RF1), committing only released reservations (MC), applying a non-completed conflict's own effect (ME), dropping the epoch or no-permit guard (RF5a, RF5b, RF5c), keying retention without the error (RF7) and leaving the stack's alarm unwired (X8) each fail their witness. #1771 review (D907; impl/816-pdp-slice4 at 7bb6835e, with the failed record's replaced-error case at 4c237470 and the null-error normalization at c136037a; mutation rerun at c136037a): the claim keeps the applied record's error, so the applied attempt with the same outcome and another error is a conflict too. An applied suppressed record's changed error, and an applied failed record's error added where it carried none or replaced by another, are each refused already_settled, never acknowledged as the duplicate, retained and alarmed once, with the applied settlement, its stored error and the counters unchanged; an identical redelivery carrying an error is acknowledged as the duplicate and retains and alarms nothing. Dropping the error from the duplicate check (M1) fails the first two, and at 4c237470, with that case run first, fails the replaced-error case on its own; storing NULL instead of the applied error (M2), or leaving the error out of the settling UPDATE (M3, the same stored state), fails all three; storing an empty string for an absent error (M4) fails the second; treating a stored NULL as matching any error (M5) fails the second alone. D1143 (owner review of #1972; fix/816-settlement-metering-conflict at 29e73504, mutation at the same commit): the claim keeps the applied record's measures, its metering entries and measured_duration as JCS canonical JSON ({} for none; an absent or null member counts as none), and each retained conflict is keyed by its own measures too (claim schema v7, which rebuilds the conflict table), so the same attempt, outcome and error with another metering entry or duration is a conflict. The owner's probe (the applied suppressed record re-signed with a metering entry added) is refused already_settled, never acknowledged as the duplicate, retained and alarmed once, with the applied settlement, its measures and both counters unchanged. Records of the applied completed attempt that differ only in their metering entries (another consumed amount, or none), and records of the applied failed attempt that differ only in measured_duration (another, or none), are each retained and alarmed once, and a redelivery of any retains nothing new. On a claim file from before the column, a settled claim keeps NULL measures and acknowledges no redelivery as its duplicate (fail closed: refused already_settled, retained and alarmed once per distinct record, no counter moved), and a conflict retained there takes its record's measures at the next open, so its redelivery retains nothing new. Dropping the measures comparison (M1) fails the probe, metering-only, duration-only and legacy witnesses; comparing metering presence only (M2) fails the metering-only and duration-only ones; leaving the measures out of the retention key, in the UNIQUE constraint (M3) or the INSERT (M11), fails the metering-only and duration-only ones; dropping metering (M10) from the measures fails the probe and the metering-only witness, and dropping measured_duration (M9) the duration-only one; reading a legacy NULL as none (M6) or skipping the legacy backfill (M7) fails the legacy witness. Metering entries compare in order, as array order is significant under the family's canonicalization; member order within an entry does not."
   },
   {
+   "id": "metering.settlement-contract.replay-record-not-settlement",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "settlement-contract",
+   "text": "in either delivery order, the intake MUST neither commit nor release a reservation on it",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a suppressed Execution Evidence record whose error is permit_consumed neither commits nor releases a reservation, whether it arrives before or after the completion of the execution that took the permit's use: delivered first, the reservation stays charged and the later completion commits; delivered after the completion, the committed settlement is unchanged",
+    "local": "In the reference the intake refuses such a record as not_a_settling_outcome before the audience check, even when the redemption owner names the replay's own execution, so the intake moves no counter and retains nothing for it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a suppressed record from a replay refused permit_consumed settles nothing: the reservation stays charged and is held once the lease elapses (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a permit_consumed replay delivered before the completion settles nothing, and the completion then commits with no conflict retained or alarmed (@spec metering#settlement-contract, metering#settlement-states, #2039)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a permit_consumed replay delivered after the completion leaves the committed settlement unchanged and is no conflict: nothing is retained or alarmed (@spec metering#settlement-contract, metering#settlement-states, #2039)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#2039 (D1257 ruling 1). Mutation-proved: removing permit_consumed from NON_REDEEMING_ERRORS (src/services/pdp/src/idempotency-claims.ts) fails all three witnesses: delivered alone or before the completion, the replay is accepted as a settlement; delivered after it, the replay goes to the conflict check (already_settled) instead of being refused not_a_settling_outcome."
+  },
+  {
+   "id": "metering.settlement-contract.replay-record-not-conflict",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "settlement-contract",
+   "text": "it is not a conflicting record for its `evaluation_id`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a permit_consumed replay record is never retained as a settlement conflict and raises no conflict alarm, in either delivery order, and the completion of the execution that took the use settles without a conflict"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a permit_consumed replay delivered before the completion settles nothing, and the completion then commits with no conflict retained or alarmed (@spec metering#settlement-contract, metering#settlement-states, #2039)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a permit_consumed replay delivered after the completion leaves the committed settlement unchanged and is no conflict: nothing is retained or alarmed (@spec metering#settlement-contract, metering#settlement-states, #2039)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#2039 (D1257 ruling 1). Both witnesses assert settlementConflicts empty and no alarm. Mutation-proved: removing permit_consumed from NON_REDEEMING_ERRORS (src/services/pdp/src/idempotency-claims.ts) fails all three witnesses: delivered alone or before the completion, the replay is accepted as a settlement; delivered after it, the replay goes to the conflict check (already_settled) instead of being refused not_a_settling_outcome."
+  },
+  {
    "id": "metering.settlement-contract.reserved-commits-stated",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "settlement-contract",
@@ -50826,7 +50903,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a suppressed outcome for a permitted payment releases its reservation on every counter it reserved, restoring the remaining",
+    "normative": "a suppressed outcome for a permitted payment releases its reservation on every counter it reserved, restoring the remaining; the suppressed record is that of a presentation that held a use of the permit, and a permit_consumed replay record releases nothing (metering.settlement-contract.replay-record-not-settlement)",
     "local": "In the reference a suppressed outcome settles only when the attempt that redeemed the permit reports it, for its own evaluation. The wire PEP sends nothing for a permit it refuses before redemption, because its redemption store cannot durably cancel the permit, so that reservation stays charged until the permit and its lease elapse and is then held with the alert, until an operator's reconciliation or a later redeeming attempt's own settlement (owner ruling; witnessed on metering.settlement-states.release-only-on-non-execution)."
    },
    "level": "endpoint",
@@ -51112,7 +51189,7 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a held reservation is released only by a suppressed outcome or by a reconciliation establishing that the permit was never redeemed; any other input leaves it charged",
+    "normative": "a held reservation is released only by a suppressed outcome or by a reconciliation establishing that the permit was never redeemed; any other input leaves it charged; a permit_consumed replay record is not such a suppressed outcome",
     "local": "In the reference non-execution is established by the operator's reconciliation recording not_executed, accepted only after the permit and its lease can no longer be used, which is the durable proof, or by a suppressed settlement from the attempt that redeemed the permit, for its own evaluation. A PEP's suppression of a permit no attempt redeemed releases nothing: the wire's redemption store cannot durably cancel a permit, so that reservation stays charged until the permit and its lease elapse and is then held. The PEP's unredeemed report leaves a held reservation held."
    },
    "level": "endpoint",
