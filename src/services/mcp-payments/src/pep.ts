@@ -82,6 +82,7 @@ import {
   sameWorkItem,
   type WorkItemRef,
   relationForAction,
+  type StalenessBound,
   stalenessBound,
   stateSourcePlacement,
   type StateSourcePlacement,
@@ -1115,6 +1116,14 @@ export interface PepDeps {
    * the other placement. Forwarded to the PDP's `stateSourcePlacement`.
    */
   stateSourcePlacement?: StateSourcePlacement;
+  /**
+   * @spec runtime#state-freshness: each action class's staleness bound, as
+   * the enforcement scope's statement declares it. Defaults to the published
+   * Enforcement Scope Statement's; a composition running under its own
+   * statement supplies that statement's (#1101). Forwarded to the PDP's
+   * `stalenessBound`.
+   */
+  stalenessBound?: (actionClass: string | undefined) => StalenessBound;
   /**
    * @spec cross-domain#origin-principal-mapping — resolves
    * `context.mission.subject` to a destination-local mapping; forwarded to
@@ -3401,7 +3410,7 @@ export class Pep {
       fga: this.deps.fga,
       modelId: this.deps.modelId,
       now: this.now,
-      stalenessBound,
+      stalenessBound: this.deps.stalenessBound ?? stalenessBound,
       relationForAction,
       ...(this.deps.requiresActionApproval ? { requiresActionApproval: this.deps.requiresActionApproval } : {}),
       ...(this.deps.maxApprovalAgeSeconds ? { maxApprovalAgeSeconds: this.deps.maxApprovalAgeSeconds } : {}),

@@ -126,6 +126,21 @@ external-communication or cross-domain, and a unit check
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next approval decision; Missions already approved are unaffected.
 
+## `as-native-separated.json`
+
+The separated AS-native configuration (#1101, D1258): the AS-native payments
+target with its authorization server in its own process and the payments PEP
+and PDP reaching it over HTTP. `authorization_server` is where the AS listens
+(its URL is the Mission issuer); `pdp_client_id` is the PDP's client at the
+AS's Mission Status endpoint; `txn_challenge_metadata` is the listener where
+the resource publishes its txn-challenge keys for the AS's Transaction
+Authorization Server; `state_source` places the Mission Status read with the
+PDP (`placement` must be `pdp`) and bounds it (`timeout_ms`,
+`max_response_bytes`). Read by its own strict loader
+(`loadAsNativeSeparatedConfig` in `demo/src/as-native-separated/config.ts`),
+which refuses an unknown member, a missing one or any other placement with an
+`AsNativeSeparatedConfigError`. See `docs/initial-runtime-deployment.md` §4.
+
 ## `authority-dependencies.json`
 
 The deployment's declared authority dependencies (`@spec
