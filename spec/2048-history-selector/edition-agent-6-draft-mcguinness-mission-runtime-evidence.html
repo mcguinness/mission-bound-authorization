@@ -4001,10 +4001,10 @@ this member records (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" clas
         <dd style="margin-left: 1.5em" id="section-9-3.6">
           <p id="section-9-3.6.1"><span class="bcp14">OPTIONAL</span>. An array of objects, recorded on Decision Evidence: the
 policy-selected history predicates the PDP evaluated, each with its
-<code>predicate</code> (and <code>action_class</code>, where applicable), its <code>action</code>
-where its type selects an operation (a string identifying that
-operation), and an <code>outcome</code>
-member (<code>satisfied</code>, <code>not_satisfied</code> for an established-false
+<code>predicate</code> (and <code>action_class</code>, where applicable), the identifier
+of the operation its type selects, if any, as <code>action</code> (a string,
+naming that operation as a record's <code>action</code> names it), and an
+<code>outcome</code> member (<code>satisfied</code>, <code>not_satisfied</code> for an established-false
 predicate, or <code>unavailable</code> for a predicate that could not be
 established, including an unrecognized <code>predicate</code> value or an
 evidence store that could not be consulted within its bound).
@@ -5035,9 +5035,10 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Extension Members: a <code>mission_history</code> entry carries <code>action</code>, the
-identifier of the operation its predicate selects, where the
-predicate's type selects one (#2048).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Extension Members: a <code>mission_history</code> entry carries the identifier
+of the operation its predicate's type selects, if any, as <code>action</code>,
+a string naming that operation as a record's <code>action</code> names it
+(#2048).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Extension Members: <code>protected_data</code>, owned by the harness profile,
