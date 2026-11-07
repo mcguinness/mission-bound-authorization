@@ -41,7 +41,7 @@ import { DERIVATION_POLICY, parseRequestProvenanceConfig, TOPOLOGY } from "@miss
 import { type Channel, createRequestIntake, type JsonObject } from "@mission/request-provenance";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { setStorage } from "oidc-provider/lib/adapters/memory_adapter.js";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ALL_PROVIDER_CAPABILITIES,
   buildAuthorizationServer,
@@ -119,8 +119,12 @@ const PENDING_LIFETIME_S = 600;
 
 const dirs: string[] = [];
 const open: Instance[] = [];
+/** Close every AS still open, so a failed test leaves no port or kernel file held. */
+const closeOpen = async (): Promise<void> => {
+  for (const inst of [...open]) await shutdown(inst);
+};
 afterAll(async () => {
-  for (const inst of open.splice(0)) await shutdown(inst);
+  await closeOpen();
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
   controlledClock.restore();
 });
@@ -430,21 +434,23 @@ const pairRows = (inst: Instance, jti: string) =>
 const storeOf = (inst: Instance) => inst.as.requestProvenanceStore as SqliteRequestProvenanceStore;
 
 describe("replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963)", () => {
+  afterEach(closeOpen);
+
   it("refuses as replay after a restart an assertion whose push committed before it, keeps the committed pair past exp plus the clock-skew allowance within its retention, and sweeps it once the retention ends", async () => {
     const paths = await deployment(REPLAY_PORT);
     const first = await boot(REPLAY_PORT, paths);
-    expect(storeOf(first)).toBeInstanceOf(SqliteRequestProvenanceStore);
-    expect(storeOf(first).db).toBe(first.as.kernel.db);
     const signed = await mintFor(first);
     const requestUri = expectAccepted(await push(first, [signed.entry]));
     const committedAt = Date.now();
     const ref = `par:${requestUri.slice(PUSHED_REQUEST_URN.length)}`;
-    expect(pairRows(first, signed.jti)).toEqual([{ state: "committed", submission_ref: ref }]);
 
     const second = await restart(first, REPLAY_PORT, paths);
     // Within exp plus the allowance, step 7 still passes: the refusal is step 10's.
     expect(Date.now() / 1000).toBeLessThan(signed.exp);
     expectReplay(await push(second, [signed.entry]));
+    // The pair the first boot committed, read back from the kernel's file by the AS's default store.
+    expect(storeOf(second)).toBeInstanceOf(SqliteRequestProvenanceStore);
+    expect(storeOf(second).db).toBe(second.as.kernel.db);
     expect(pairRows(second, signed.jti)).toEqual([{ state: "committed", submission_ref: ref }]);
     expect(storeOf(second).accepted(INTAKE, signed.jti, Date.now())?.submissionRef).toBe(ref);
 
@@ -484,6 +490,7 @@ describe("replay across a restart (@spec request-provenance#replay, D1119 Q5, #1
 
 describe("the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963)", () => {
   let second: Instance;
+  afterAll(closeOpen);
   const staged: Array<{
     keys: Keys;
     deferralCode: string;
@@ -528,7 +535,6 @@ describe("the acceptance record across a restart (@spec request-provenance#repla
 
   it("activates after the restart and past the assertion's exp a deferred approval staged before it, relying on the push's acceptance record from the kernel's file: the push's verification time and facts, and no verification again", async () => {
     const [s] = staged as [(typeof staged)[number]];
-    expect(pairRows(second, s.jti)).toEqual([{ state: "committed", submission_ref: s.accepted.submissionRef }]);
     const before = verifications();
     const delivered = await poll(second, s.deferralCode, s.keys);
     expect(delivered.status, `${JSON.stringify(delivered.body)} ${second.as.missionApprovalDeferrals?.resolutionReason(s.deferralCode)}`).toBe(200);
@@ -539,6 +545,8 @@ describe("the acceptance record across a restart (@spec request-provenance#repla
     expect(Date.parse(s.accepted.verifiedAt)).toBeLessThan(Date.now() - 129_000);
     // The activation verified nothing: the push before the restart did.
     expect(verifications()).toBe(before);
+    // The record it relied on is the committed row in the kernel's file.
+    expect(pairRows(second, s.jti)).toEqual([{ state: "committed", submission_ref: s.accepted.submissionRef }]);
   }, RESTART_TIMEOUT_MS);
 
   it("refuses after the restart a staged activation whose acceptance record is missing: access_denied, with no Mission", async () => {
@@ -571,6 +579,8 @@ describe("the acceptance record across a restart (@spec request-provenance#repla
 });
 
 describe("concurrency on the durable store (@spec request-provenance#replay, #1963)", () => {
+  afterEach(closeOpen);
+
   it("of two concurrent pushes presenting one assertion on a file-backed kernel, exactly one is accepted and the other is refused as replay, and the kernel's file holds one committed pair", async () => {
     const inst = await boot(CONCURRENT_PORT, await deployment(CONCURRENT_PORT));
     const store = storeOf(inst);
