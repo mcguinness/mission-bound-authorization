@@ -96823,16 +96823,22 @@
     "normative": "Of concurrent submissions presenting the same (iss, jti), at most one reserves the pair; every other is refused as replay with invalid_mission_intent_evidence."
    },
    "level": "concurrency",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
      "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > of two concurrent pushes presenting one assertion, exactly one is accepted and the other is refused as replay",
      "level": "concurrency",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "concurrency on the durable store (@spec request-provenance#replay, #1963) > of two concurrent pushes presenting one assertion on a file-backed kernel, exactly one is accepted and the other is refused as replay, and the kernel's file holds one committed pair",
+     "level": "concurrency",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-2. Step 10 reserves (iss, jti) with its acceptance record in one synchronous check and insert (InMemoryRequestProvenanceStore). Two pushes of one assertion, held by the test's store until both reach step 10 and then released in one turn, yield exactly one 201; the other is refused invalid_mission_intent_evidence as replay. Mutation: checking, awaiting, then inserting accepts both. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. Step 10 reserves (iss, jti) with its acceptance record in one synchronous INSERT. Two pushes of one assertion, held by the test's store until both reach step 10 and then released in one turn, yield exactly one 201; the other is refused invalid_mission_intent_evidence as replay. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. The cited wiring test runs the store class over a database of its own (the test's observed store wraps one), and the restart suite's runs the AS's default store on a witnessed kernel file; each yields exactly one 201 and one replay refusal, and the file holds one committed pair. The UNIQUE (iss, jti) constraint is what makes the one INSERT atomic: a mutant that checks, awaits, then inserts with the constraint dropped accepts both pushes in both tests."
   },
   {
    "id": "request-provenance.replay.release-on-refusal",
@@ -96852,7 +96858,7 @@
     "normative": "After a submission carrying a valid assertion is refused before acceptance for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -96921,7 +96927,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. A push refused before acceptance for another entry failing, for a later entry passing the verification-work bound, for a failed save of the pushed request, or for an exception after the provider set its 201, releases its reservation, and the same assertion is accepted next. The dispatch releases the scope on any refusal inside the evidence loop (unit tests), and the PAR wrapper releases on every outcome but acceptance, in a finally. Mutations: dropping the dispatch's release fails the unit tests (the endpoint tests still pass, since the wrapper releases too); releasing only on a normal return fails the exception test; committing when verification passes fails the save test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. Settlement is all or nothing (#2003 review): the scope prepares every hold, each checking with one reading of the clock that its reservation can still commit, before any commits, and when one has lapsed it releases them all and commits none. So a push refused at acceptance (its 500, the saved request_uri unusable since no record exists) leaves every still-valid assertion retryable, in either entry order. Mutations: committing hold by hold, committing each right after its own check, and a check that ignores the lapse each fail a cited test."
+   "notes": "#939 slice 2a-2. A push refused before acceptance for another entry failing, for a later entry passing the verification-work bound, for a failed save of the pushed request, or for an exception after the provider set its 201, releases its reservation, and the same assertion is accepted next. The dispatch releases the scope on any refusal inside the evidence loop (unit tests), and the PAR wrapper releases on every outcome but acceptance, in a finally. Mutations: dropping the dispatch's release fails the unit tests (the endpoint tests still pass, since the wrapper releases too); releasing only on a normal return fails the exception test; committing when verification passes fails the save test. Settlement is all or nothing (#2003 review): the scope prepares every hold, each checking with one reading of the clock that its reservation can still commit, before any commits, and when one has lapsed it releases them all and commits none. So a push refused at acceptance (its 500, the saved request_uri unusable since no record exists) leaves every still-valid assertion retryable, in either entry order. Mutations: committing hold by hold, committing each right after its own check, and a check that ignores the lapse each fail a cited test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. The endpoint tests run the store class (the main assembly's observed store) and the AS's default store on the kernel's database (the strict assembly). A release deletes the reservation's row, so the freed pair stays free across a reopen (the SQLite replay store > keeps its pairs across a reopen of its database file). A reservation whose process ends before it commits or releases, which is no refusal the AS returns, holds its pair until exp plus the allowance and then lapses (D1119 Q1)."
   },
   {
    "id": "request-provenance.replay.accepted-no-reverification",
@@ -96941,7 +96947,7 @@
     "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts; the AS's authorization, required-evidence and approval checks still apply at each step"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -96972,9 +96978,15 @@
      "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > one accepted push opens two interactions, each relying on the one acceptance record without verifying again, and a new push of the assertion is still replay",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > activates after the restart and past the assertion's exp a deferred approval staged before it, relying on the push's acceptance record from the kernel's file: the push's verification time and facts, and no verification again",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#939 slice 2a-2. The authorization endpoint, the rendering and the decision of an accepted push, and a deferred activation, verify no signature: the counted verifier runs once, at the push. The committed jti does not refuse them, and the Mission records the push's verified_at, artifact_hash and facts from the acceptance record. A resume is charged no verification work. The required-evidence check still applies at a later step (a submission that no longer presents the required type is refused); the approval checks still apply (an Approver who is not authenticated is refused at the rendering, uncited: no defect in this slice reaches that gate). Mutations: re-verifying instead of resuming, or skipping the required-evidence check on a resume, fails these tests. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. One accepted push opening two interactions (oidc-provider consumes it only at respond) has each rely on the one record with no further verification, while a new push of the assertion is still replay; each interaction keeps its own authorization, required-evidence, approval, expiry and idempotency checks (owner ruling on #2003's question 1)."
+   "notes": "#939 slice 2a-2. The authorization endpoint, the rendering and the decision of an accepted push, and a deferred activation, verify no signature: the counted verifier runs once, at the push. The committed jti does not refuse them, and the Mission records the push's verified_at, artifact_hash and facts from the acceptance record. A resume is charged no verification work. The required-evidence check still applies at a later step (a submission that no longer presents the required type is refused); the approval checks still apply (an Approver who is not authenticated is refused at the rendering, uncited: no defect in this slice reaches that gate). Mutations: re-verifying instead of resuming, or skipping the required-evidence check on a resume, fails these tests. One accepted push opening two interactions (oidc-provider consumes it only at respond) has each rely on the one record with no further verification, while a new push of the assertion is still replay; each interaction keeps its own authorization, required-evidence, approval, expiry and idempotency checks (owner ruling on #2003's question 1). #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it activates past the assertion's exp and the capture's maximum age, with no verification (the counted verifier is not called), and the Mission records the push's verified_at, artifact_hash and facts from the record read back from the kernel's file. Mutations: the default store held in memory, a commit held in memory only, a reopen that creates a fresh table, a sweep that deletes committed rows at exp plus the allowance, and an acceptance lookup that ignores the retention each refuse that activation. The authorization endpoint, rendering and decision of a push accepted before a restart cannot run after it, since the pushed request, its interaction and the Approver's session are the provider's, in its memory (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay); the deferred activation is the later step that survives a restart."
   },
   {
    "id": "request-provenance.replay.acceptance-record-required",
@@ -96994,7 +97006,7 @@
     "normative": "a later step of an accepted submission whose acceptance record is missing, or does not match the submission's intended AS, exact Intent, established presenter or unchanged evidence entry, refuses the submission"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97055,9 +97067,21 @@
      "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > resumes an accepted entry with no verification work, and refuses a record that names another authorization server, or a step presenting a confirmation key",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > refuses after the restart a staged activation whose acceptance record is missing: access_denied, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > refuses after the restart a staged activation whose stored acceptance record does not match its submission: access_denied, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#939 slice 2a-2. Each later step (the authorization endpoint's re-validation of the stored pushed request, the rendering, the decision, a deferred activation) finds the committed record by the assertion's (iss, jti) and refuses invalid_mission_intent_evidence when it is missing (as in an in-memory store after a restart), belongs to another submission than the step's par:<jti>, or binds another Intent, presenter or assertion bytes; a deferred activation whose pending approval names no accepted submission, or another, is refused. The intended AS cannot differ alone at an endpoint, since the provisional intent_hash commits the issuer; a unit test of the dispatch proves that comparison alone, and a step presenting a confirmation key the push did not establish. Mutations: removing each comparison, or treating a missing record as accepted, fails its test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. Each later step (the authorization endpoint's re-validation of the stored pushed request, the rendering, the decision, a deferred activation) finds the committed record by the assertion's (iss, jti) and refuses invalid_mission_intent_evidence when it is missing (as in an in-memory store after a restart), belongs to another submission than the step's par:<jti>, or binds another Intent, presenter or assertion bytes; a deferred activation whose pending approval names no accepted submission, or another, is refused. The intended AS cannot differ alone at an endpoint, since the provisional intent_hash commits the issuer; a unit test of the dispatch proves that comparison alone, and a step presenting a confirmation key the push did not establish. Mutations: removing each comparison, or treating a missing record as accepted, fails its test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it whose stored record is missing, or whose stored record binds another Intent, is refused access_denied, recording invalid_mission_intent_evidence, with no Mission. Mutations: a later step that does not compare the record's Intent, and one that proceeds without a record, each fail a restart test. The authorization endpoint, rendering and decision of a push accepted before a restart cannot run after it, since the pushed request, its interaction and the Approver's session are the provider's, in its memory (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay); the deferred activation, on the kernel's database, is the later step that survives a restart, and those three are witnessed within one process."
   },
   {
    "id": "request-provenance.replay.expiry-after-acceptance",
@@ -97077,7 +97101,7 @@
     "normative": "an accepted submission whose assertion expires, or whose capture passes the maximum capture age, before its approval completes is not refused for that reason, while its own pending-operation lifetime still applies"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97090,9 +97114,21 @@
      "name": "deferred activation of an accepted push (@spec request-provenance#replay, deferred-approval#deferred-sequencing, #939 slice 2a-2) > activates after exp and the capture age pass, verifying nothing again and recording the push's verification time and facts",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > activates after the restart and past the assertion's exp a deferred approval staged before it, relying on the push's acceptance record from the kernel's file: the push's verification time and facts, and no verification again",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-store.test.ts",
+     "name": "the replay store's guards, on SQLite (@spec request-provenance#replay, #1963) > keeps a committed pair until the later of exp plus skew and its retention: found past exp within its retention, kept by the sweep there, and gone at its end",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. On a controlled clock the authorization endpoint, the rendering and the decision run 40 s after the push, past exp plus the 5 s allowance and past the capture's 30 s maximum age, and a deferred activation two minutes after; none is refused for it. The pending operations' own lifetimes still apply: past the pushed request's 60 s the authorization endpoint refuses the request_uri though the acceptance record remains (uncited: oidc-provider's lifetime, which no defect in this slice reaches). A committed record is kept until the later of exp plus the allowance and, from acceptance, the longest chain of pending operations an accepted push can begin (requestProvenanceAcceptanceRetention: the pushed request, the interaction with the provider's clock tolerance, a deferred code and its pending approval, and the allowance). Mutation: re-verifying instead of resuming refuses at step 7. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. On a controlled clock the authorization endpoint, the rendering and the decision run 40 s after the push, past exp plus the 5 s allowance and past the capture's 30 s maximum age, and a deferred activation two minutes after; none is refused for it. The pending operations' own lifetimes still apply: past the pushed request's 60 s the authorization endpoint refuses the request_uri though the acceptance record remains (uncited: oidc-provider's lifetime, which no defect in this slice reaches). A committed record is kept until the later of exp plus the allowance and, from acceptance, the longest chain of pending operations an accepted push can begin (requestProvenanceAcceptanceRetention: the pushed request, the interaction with the provider's clock tolerance, a deferred code and its pending approval, and the allowance). Mutation: re-verifying instead of resuming refuses at step 7. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it activates 130 s after the push, past exp plus the allowance and the capture's maximum age, from the record kept on the kernel's file, which the store keeps until the later of exp plus the allowance and its retention (the replay store's guards > keeps a committed pair until the later of exp plus skew and its retention). Mutations: an acceptance lookup that ignores the retention, and a sweep that deletes committed rows at exp plus the allowance, each refuse that activation and fail the store's retention test."
   },
   {
    "id": "request-provenance.replay.no-release-after-acceptance",
@@ -97112,7 +97148,7 @@
     "normative": "after an accepted submission is refused later, for example by an approval denial, a new submission presenting the same assertion is refused as replay"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97125,9 +97161,15 @@
      "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > the replay store releases only a reservation: releasing a committed pair's token keeps its acceptance record and its pair",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-store.test.ts",
+     "name": "the replay store's guards, on SQLite (@spec request-provenance#replay, #1963) > releases only a reservation: a committed pair's release keeps its acceptance record and its pair, and a reservation's frees the pair",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. After a push is accepted and the Approver denies it at the decision, a new push of the same assertion is refused invalid_mission_intent_evidence as replay: nothing releases a committed admission scope (SubmissionAdmission), and no later step holds one. Mutation: a committed scope that still releases accepts the new push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. The store itself releases only a reservation, so a release that reaches a committed pair's token keeps its acceptance record and its pair; deleting by token whatever the state fails that unit test."
+   "notes": "#939 slice 2a-2. After a push is accepted and the Approver denies it at the decision, a new push of the same assertion is refused invalid_mission_intent_evidence as replay: nothing releases a committed admission scope (SubmissionAdmission), and no later step holds one. Mutation: a committed scope that still releases accepts the new push. The store itself releases only a reservation, so a release that reaches a committed pair's token keeps its acceptance record and its pair; deleting by token whatever the state fails that unit test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. The store's own guard holds for both stores (the replay store's guards, in memory and on SQLite > releases only a reservation): a release that reaches a committed pair's token keeps its record and its pair. Mutation: a SQLite release that deletes by token whatever the state fails the SQLite case. A committed pair still refuses its assertion after a restart (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > refuses as replay after a restart an assertion whose push committed before it, keeps the committed pair past exp plus the clock-skew allowance within its retention, and sweeps it once the retention ends)."
   },
   {
    "id": "request-provenance.replay.committed-refused",
@@ -97147,7 +97189,7 @@
     "normative": "On a surface without a creation idempotency fingerprint, such as PAR, presenting an assertion whose (iss, jti) an accepted submission committed is refused as replay with invalid_mission_intent_evidence until at least exp plus the clock-skew allowance."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97160,9 +97202,21 @@
      "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > refuses as replay an assertion an accepted push committed, until exp plus the clock-skew allowance",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > refuses as replay after a restart an assertion whose push committed before it, keeps the committed pair past exp plus the clock-skew allowance within its retention, and sweeps it once the retention ends",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-store.test.ts",
+     "name": "the SQLite replay store (@spec request-provenance#replay, D1119 Q5, #1963) > keeps its pairs across a reopen of its database file: a committed pair is still refused and its record found, a reservation still holds its pair until exp plus skew, and a released pair is free",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. The PAR wrapper commits the push's admission scope when the provider answers 201 with the request_uri of the pushed request it saved, under par:<jti>. A second push of the accepted assertion is refused invalid_mission_intent_evidence as replay, and again one second before exp plus the allowance, where step 7 still passes. Mutation: a committed scope that still releases accepts the second push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. The PAR wrapper commits the push's admission scope when the provider answers 201 with the request_uri of the pushed request it saved, under par:<jti>. A second push of the accepted assertion is refused invalid_mission_intent_evidence as replay, and again one second before exp plus the allowance, where step 7 still passes. Mutation: a committed scope that still releases accepts the second push. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart of the AS on the same kernel file, with the provider's memory replaced as a new process's is, the committed assertion is refused as replay at step 10, before its exp; the committed pair is kept past exp plus the allowance within its retention, and the next reservation after the retention ends sweeps it. The pushed request itself is the provider's and does not survive the restart (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay), while the committed pair still refuses the assertion. Mutations: the default store held in memory, and a reopen that creates a fresh table, each accept the assertion after the restart; a sweep that deletes committed rows at exp plus the allowance, and a commit held in memory only, each fail the retention assertions; an acceptance lookup that ignores the end of the retention fails the sweep assertion."
   },
   {
    "id": "request-provenance.replay.creation-recovery-original-evidence",
