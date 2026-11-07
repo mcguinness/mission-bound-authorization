@@ -26,6 +26,13 @@ const controlledClock = await vi.hoisted(async () => {
   return installControlledClock(CONTROLLED_CLOCK_MS);
 });
 
+// Count the AS's signature verifications: the module's one verification
+// function, wrapped so every call still verifies.
+vi.mock("../src/kernel/request-provenance.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../src/kernel/request-provenance.js")>();
+  return { ...original, verifyRequestProvenance: vi.fn(original.verifyRequestProvenance) };
+});
+
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
@@ -51,8 +58,15 @@ import {
   requestProvenanceAcceptanceRetention,
   SqliteRequestProvenanceStore,
 } from "../src/index.js";
+import { verifyRequestProvenance } from "../src/kernel/request-provenance.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
+
+/** Each test boots and restarts the AS on a loaded machine. */
+const RESTART_TIMEOUT_MS = 120_000;
+const verifications = () => vi.mocked(verifyRequestProvenance).mock.calls.length;
+const claimsOf = (assertion: string): Record<string, unknown> =>
+  JSON.parse(Buffer.from(assertion.split(".")[1] as string, "base64url").toString("utf8")) as Record<string, unknown>;
 
 const TYPE = "mission-request-provenance";
 const REPLAY_PORT = 14911;
@@ -449,7 +463,7 @@ describe("replay across a restart (@spec request-provenance#replay, D1119 Q5, #1
     expectAccepted(await push(second, [last.entry]));
     expect(pairRows(second, signed.jti)).toEqual([]);
     await shutdown(second);
-  });
+  }, RESTART_TIMEOUT_MS);
 
   it("does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay", async () => {
     const paths = await deployment(REPLAY_PORT);
@@ -465,12 +479,19 @@ describe("replay across a restart (@spec request-provenance#replay, D1119 Q5, #1
     expect(`${after.location} ${after.text}`).toContain("invalid_request_uri");
     expectReplay(await push(second, [signed.entry]));
     await shutdown(second);
-  });
+  }, RESTART_TIMEOUT_MS);
 });
 
 describe("the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963)", () => {
   let second: Instance;
-  const staged: Array<{ keys: Keys; deferralCode: string; jti: string; accepted: RequestProvenanceAcceptance; exp: number }> = [];
+  const staged: Array<{
+    keys: Keys;
+    deferralCode: string;
+    jti: string;
+    accepted: RequestProvenanceAcceptance;
+    exp: number;
+    capturedAt: number;
+  }> = [];
 
   /** Three deferred pushes, each redeemed into a pending approval, staged before a restart. */
   beforeAll(async () => {
@@ -490,27 +511,35 @@ describe("the acceptance record across a restart (@spec request-provenance#repla
       const { deferralCode, pushedJti } = await openDeferral(first, keys, [signed.entry]);
       const accepted = storeOf(first).accepted(INTAKE, signed.jti, Date.now()) as RequestProvenanceAcceptance;
       expect(accepted.submissionRef).toBe(`par:${pushedJti}`);
-      staged.push({ keys, deferralCode, jti: signed.jti, accepted, exp: signed.exp });
+      const capturedAt = claimsOf(signed.entry.assertion).captured_at as number;
+      staged.push({ keys, deferralCode, jti: signed.jti, accepted, exp: signed.exp, capturedAt });
     }
     second = await restart(first, DEFERRED_PORT, paths);
-    // Past every staged assertion's exp plus the allowance, within the pending approvals' lifetime.
-    controlledClock.advance(120_000);
-    for (const s of staged) expect(Date.now() / 1000).toBeGreaterThan(s.exp + SKEW_S);
+    // Past every staged assertion's exp plus the allowance and its capture's
+    // maximum age (120 s), within the pending approvals' lifetime.
+    controlledClock.advance(130_000);
+    for (const s of staged) {
+      expect(Date.now() / 1000).toBeGreaterThan(s.exp + SKEW_S);
+      expect(Date.now() / 1000).toBeGreaterThan(s.capturedAt + 120);
+    }
     // A fresh push sweeps lapsed pairs before it reserves; the committed records are kept.
     expectAccepted(await pushDeferred(second, [(await mintForReconciler(second)).entry]));
-  }, 120_000);
+  }, RESTART_TIMEOUT_MS);
 
   it("activates after the restart and past the assertion's exp a deferred approval staged before it, relying on the push's acceptance record from the kernel's file: the push's verification time and facts, and no verification again", async () => {
     const [s] = staged as [(typeof staged)[number]];
     expect(pairRows(second, s.jti)).toEqual([{ state: "committed", submission_ref: s.accepted.submissionRef }]);
+    const before = verifications();
     const delivered = await poll(second, s.deferralCode, s.keys);
     expect(delivered.status, `${JSON.stringify(delivered.body)} ${second.as.missionApprovalDeferrals?.resolutionReason(s.deferralCode)}`).toBe(200);
     const mission = second.as.kernel.get(delivered.body.mission_id as string) as MissionRecord;
     expect(mission.submission_evidence).toEqual([
       { type: TYPE, artifact_hash: s.accepted.artifactHash, verified_at: s.accepted.verifiedAt, facts: s.accepted.facts },
     ]);
-    expect(Date.parse(s.accepted.verifiedAt)).toBeLessThan(Date.now() - 119_000);
-  });
+    expect(Date.parse(s.accepted.verifiedAt)).toBeLessThan(Date.now() - 129_000);
+    // The activation verified nothing: the push before the restart did.
+    expect(verifications()).toBe(before);
+  }, RESTART_TIMEOUT_MS);
 
   it("refuses after the restart a staged activation whose acceptance record is missing: access_denied, with no Mission", async () => {
     const s = staged[1] as (typeof staged)[number];
@@ -521,7 +550,7 @@ describe("the acceptance record across a restart (@spec request-provenance#repla
     expect(r.body.error).toBe("access_denied");
     expect(second.as.kernel.allMissions().length).toBe(missions);
     expect(second.as.missionApprovalDeferrals?.resolutionReason(s.deferralCode)).toBe("invalid_mission_intent_evidence");
-  });
+  }, RESTART_TIMEOUT_MS);
 
   it("refuses after the restart a staged activation whose stored acceptance record does not match its submission: access_denied, with no Mission", async () => {
     const s = staged[2] as (typeof staged)[number];
@@ -538,7 +567,7 @@ describe("the acceptance record across a restart (@spec request-provenance#repla
     expect(r.body.error).toBe("access_denied");
     expect(second.as.kernel.allMissions().length).toBe(missions);
     expect(second.as.missionApprovalDeferrals?.resolutionReason(s.deferralCode)).toBe("invalid_mission_intent_evidence");
-  });
+  }, RESTART_TIMEOUT_MS);
 });
 
 describe("concurrency on the durable store (@spec request-provenance#replay, #1963)", () => {
@@ -570,7 +599,7 @@ describe("concurrency on the durable store (@spec request-provenance#replay, #19
       gather.mockRestore();
       await shutdown(inst);
     }
-  });
+  }, RESTART_TIMEOUT_MS);
 });
 
 function rootDoc(): GovernedPolicyRoot {
