@@ -26,8 +26,9 @@ import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.
  * `MISSION_EPHEMERAL_EVIDENCE_KEYS`) and the RAS's redemption store
  * (`MISSION_RAS_REDEMPTIONS`, which the key ring requires), the opt-in demo
  * request intake (`MISSION_REQUEST_INTAKE=1`, #939 slice 2b-2, D1221: the
- * intake and the AS's `mission-request-provenance` type together, refused by
- * the AS beside `MISSION_KERNEL_STORE`, D1119 Q5, #1963), and nothing else,
+ * intake and the AS's `mission-request-provenance` type together, whose
+ * replay pairs the kernel's file keeps beside `MISSION_KERNEL_STORE`, D1119
+ * Q5, #1963), and nothing else,
  * so never the test-only ordinary-token minting fixture. A value that is set
  * but unusable refuses startup with an error naming it, before anything
  * connects or listens.
