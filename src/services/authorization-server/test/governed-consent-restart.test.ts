@@ -24,6 +24,7 @@ import {
   type GovernedPolicyRoot,
   initSigningKeyRing,
   JWKS_MAX_AGE_SECONDS,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
   type SigningKeySource,
@@ -76,6 +77,8 @@ async function consentAcrossRestart(keys: () => Promise<SigningKeySource>): Prom
     root: { id: ROOT_ID, version: "1" },
     approver: { iss: ISSUER, sub: "dana" },
     consentEventId: `gpce-${crypto.randomUUID()}`,
+    // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+    disclosure: governedPolicyConsentDisclosure(first.kernel, { id: ROOT_ID, version: "1" }).commitment,
   });
   first.kernel.close();
 
@@ -161,6 +164,8 @@ describe("a governed-policy consent across a restart (@spec approval-governance#
       root: { id: ROOT_ID, version: "1" },
       approver: { iss: ISSUER, sub: "dana" },
       consentEventId: `gpce-${crypto.randomUUID()}`,
+      // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+      disclosure: governedPolicyConsentDisclosure(as.kernel, { id: ROOT_ID, version: "1" }).commitment,
     });
     expect(standingConsentsAttestedUnder(file, asStatus.kid)).toBe(1);
     expect(standingConsentsAttestedUnder(file, `${asStatus.kid}-2`)).toBe(0);
