@@ -387,8 +387,8 @@ const deleteHistory = (f: Fixture) =>
   (decisionsOf(f).filter((d) => d.content.action.name === DELETE).at(-1)?.content as DecisionEvidenceObject | undefined)?.mission_history;
 const lastRequest = (f: Fixture) => f.requests.at(-1);
 
-const SATISFIED = [{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", outcome: "satisfied" }];
-const NOT_SATISFIED = [{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", outcome: "not_satisfied" }];
+const SATISFIED = [{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", action: BACKUP, outcome: "satisfied" }];
+const NOT_SATISFIED = [{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", action: BACKUP, outcome: "not_satisfied" }];
 
 describe("a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815)", () => {
   it("deletes after the work item's completed backup of that database at its revision, recorded as acted on", async () => {
