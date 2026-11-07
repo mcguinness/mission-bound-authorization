@@ -321,6 +321,23 @@ describe("a governed activation's children take the figure its consent retained 
     }
   });
 
+  it("each child of a governed activation counts its own derivations against the retained figure: three under one child exhaust its limit of 3 and a fourth is refused derivation_cap_exhausted, while its sibling and the activated Mission count none", () => {
+    const { open } = store();
+    let k = open(3);
+    const recorded = consent(k);
+    k.close();
+    k = open(10);
+    const mission = activate(k, recorded.consent_id);
+    const first = child(k, mission);
+    const second = child(k, mission);
+    for (let i = 0; i < 3; i++) k.gateDerivation(first.id);
+    expect(k.get(first.id)?.derivation_count).toBe(3);
+    expect(() => k.gateDerivation(first.id)).toThrow(/derivation cap exhausted/);
+    expect(k.get(second.id)?.derivation_count).toBe(0);
+    expect(k.get(mission.id)?.derivation_count).toBe(0);
+    expect(k.gateDerivation(second.id).derivation_count).toBe(1);
+  });
+
   it("a governed consent recorded before the figures were retained still activates, but admits no child under its entry: refused policy_denied, committing nothing", () => {
     const { open } = store();
     let k = open(3);
