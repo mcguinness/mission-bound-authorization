@@ -491,10 +491,10 @@ export interface DecisionEvidenceEmissionInput {
 const HISTORY_OUTCOMES: readonly string[] = ["satisfied", "not_satisfied", "unavailable"];
 
 /**
- * @spec runtime-evidence#evidence-extensions `mission_history` (#2015,
+ * @spec runtime-evidence#evidence-extensions `mission_history` (#2015 and
  * #2048): each entry names its `predicate`, its `action_class` and its
- * `action` (a string, the operation the predicate selects) where the type
- * carries them, and an `outcome` of `satisfied`, `not_satisfied` or
+ * `action` (a non-empty string, the operation the predicate selects) where
+ * the type carries them, and an `outcome` of `satisfied`, `not_satisfied` or
  * `unavailable`. Anything else is never signed.
  */
 function missionHistoryOf(entries: readonly HistoryPredicateResult[]): HistoryPredicateResult[] {
@@ -506,8 +506,8 @@ function missionHistoryOf(entries: readonly HistoryPredicateResult[]): HistoryPr
     if (e.action_class !== undefined && typeof e.action_class !== "string") {
       throw new Error("Decision Evidence mission_history action_class must be a string");
     }
-    if (e.action !== undefined && typeof e.action !== "string") {
-      throw new Error("Decision Evidence mission_history action must be a string");
+    if (e.action !== undefined && (typeof e.action !== "string" || e.action.length === 0)) {
+      throw new Error("Decision Evidence mission_history action must be a non-empty string");
     }
     return {
       predicate: e.predicate,

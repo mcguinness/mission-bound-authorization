@@ -455,7 +455,17 @@ describe("a recorded mission_history entry names the operation its predicate sel
     expect(historyOf(unavailable)?.[1]).not.toHaveProperty("action");
   });
 
-  it("signs an entry's action as a string and refuses to sign one that is not", async () => {
+  it("records no action for an empty operation selector, whose predicate cannot be established", async () => {
+    const records = [await permit({ evaluation_id: "b1" }), await execution({ evaluation_id: "b1" })];
+    const emptySelector: HistoryPredicate = { predicate: "work_item_prerequisite_completed", action: "", action_class: "consequential_write" };
+    const decision = await evaluate(request(), options(historyBinding(records, [emptySelector])));
+    expect(decision.decision).toBe(false);
+    expect(decision.context.denial_reason).toBe("history_not_satisfied");
+    expect(historyOf(decision)).toEqual([{ predicate: "work_item_prerequisite_completed", action_class: "consequential_write", outcome: "unavailable" }]);
+    expect(historyOf(decision)?.[0]).not.toHaveProperty("action");
+  });
+
+  it("signs an entry's action only as a non-empty string and refuses to sign any other", async () => {
     const signer = emitter();
     const input = {
       mission: { id: MISSION, issuer: ISSUER, policy_view_id: "pv_prereq" },
@@ -470,8 +480,12 @@ describe("a recorded mission_history entry names the operation its predicate sel
       evaluated_at: NOW.toISOString(),
       evaluation_request_digest: canonicalDigest({ request: true }),
     };
-    const malformed = { predicate: "work_item_prerequisite_completed", action_class: "consequential_write", action: 7, outcome: "unavailable" };
-    await expect(signer.emit({ ...input, mission_history: [malformed as never] })).rejects.toThrow("mission_history action must be a string");
+    for (const action of [7, ""]) {
+      const malformed = { predicate: "work_item_prerequisite_completed", action_class: "consequential_write", action, outcome: "unavailable" };
+      await expect(signer.emit({ ...input, mission_history: [malformed as never] }), JSON.stringify(action)).rejects.toThrow(
+        "mission_history action must be a non-empty string",
+      );
+    }
     const record = await signer.emit({ ...input, mission_history: [entry(BACKUP, "unavailable") as never] });
     expect(record.mission_history).toEqual([entry(BACKUP, "unavailable")]);
   });

@@ -252,9 +252,10 @@ export const RECOGNIZED_HISTORY_PREDICATES: ReadonlySet<string> = new Set(["acti
 /**
  * @spec authzen#context-history, harness#work-item-prerequisite (#2048): the
  * recognized types that select an operation, each mapped to the predicate
- * member naming it. Its recorded entry carries that identifier as `action`.
- * `action_class_completed` selects by class alone, so its entry carries none,
- * even where policy gave it a stray `action` member.
+ * member naming it. Its recorded entry carries that identifier as `action`
+ * when it is a non-empty string. `action_class_completed` selects by class
+ * alone, so its entry carries none, even where policy gave it a stray
+ * `action` member; nor does an entry for a type this PDP does not recognize.
  */
 const OPERATION_SELECTORS: ReadonlyMap<string, string> = new Map([["work_item_prerequisite_completed", "action"]]);
 
@@ -359,7 +360,7 @@ function recordedEntry(p: HistoryPredicate, outcome: HistoryOutcome): HistoryPre
   return {
     predicate: typeof p.predicate === "string" ? p.predicate : String(p.predicate),
     ...(typeof p.action_class === "string" ? { action_class: p.action_class } : {}),
-    ...(typeof action === "string" ? { action } : {}),
+    ...(typeof action === "string" && action.length > 0 ? { action } : {}),
     outcome,
   };
 }
