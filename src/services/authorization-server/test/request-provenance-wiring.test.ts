@@ -21,10 +21,13 @@
  *  - the accepted submission: the authorization endpoint, the rendering and
  *    the decision rely on the acceptance record after `exp` and the capture
  *    age pass, and refuse without a matching one;
- *  - the carriers that do not admit the type, and the file-backed refusal.
+ *  - the carriers that do not admit the type, and enabling it: a supplied
+ *    replay store beside a file-backed kernel store refuses construction,
+ *    and the default store, on the kernel's database, starts there.
  *
  * Deferred activation, a later step on another assembly, is in
- * request-provenance-deferred.test.ts.
+ * request-provenance-deferred.test.ts, and the store across a restart of a
+ * file-backed kernel in request-provenance-restart.test.ts.
  */
 
 const controlledClock = await vi.hoisted(async () => {
@@ -40,7 +43,7 @@ vi.mock("../src/kernel/request-provenance.js", async (importOriginal) => {
 });
 
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -54,6 +57,7 @@ import {
   type RequestProvenanceConfig,
 } from "@mission/demo-data";
 import { type Channel, createRequestIntake, type JsonObject, type Presenter } from "@mission/request-provenance";
+import { openStore } from "@mission/store";
 import { CompactSign, calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -74,6 +78,7 @@ import {
   type RequestProvenanceAcceptance,
   type RequestProvenanceRecord,
   type RequestProvenanceStore,
+  SqliteRequestProvenanceStore,
   SubmissionAdmission,
   unregisterIntentSubmissionEvidenceType,
   verifyIntentSubmissionEvidence,
@@ -231,13 +236,14 @@ const entry = (assertion: unknown): Record<string, unknown> => ({ type: TYPE, as
 const envelope = (evidence: unknown[], intent: unknown = INTENT) => ({ intent, evidence });
 
 /**
- * The replay store the main assembly uses: the in-memory store, observed. A
- * test can make every acceptance record read as missing, as an in-memory
- * store's are after a restart, or gather concurrent reservations so they
- * reach the store in one turn.
+ * The replay store the main assembly uses: the AS's store class, on a
+ * database of its own, observed. A test can make every acceptance record
+ * read as missing, or gather concurrent reservations so they reach the
+ * store in one turn. The other assemblies keep the default, on their
+ * kernel's database.
  */
 class ObservedStore implements RequestProvenanceStore {
-  readonly inner = new InMemoryRequestProvenanceStore();
+  readonly inner = new SqliteRequestProvenanceStore(openStore(""));
   lost = false;
   #gathering: { size: number; waiting: Array<() => void> } | undefined;
 
@@ -1306,21 +1312,51 @@ describe("carriers that do not admit the type (@spec request-provenance#verifica
   });
 });
 
-describe("enabling the type (@spec request-provenance#replay, D1119 Q5, D1151)", () => {
-  it("refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records", async () => {
+describe("enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963)", () => {
+  it("refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened", async () => {
     const dir = mkdtempSync(join(tmpdir(), "rp-file-backed-"));
+    const file = join(dir, "kernel.db");
     try {
       await expect(
         buildAuthorizationServer({
           issuer: "https://file-backed.as.example",
-          kernelStore: { file: join(dir, "kernel.db") },
-          requestProvenance: { config: TRUST },
+          kernelStore: { file },
+          requestProvenance: { config: TRUST, store: new InMemoryRequestProvenanceStore() },
         }),
-      ).rejects.toThrow("cannot be enabled on a file-backed kernel store");
+      ).rejects.toThrow(
+        "mission-request-provenance on a file-backed kernel store keeps its replay history and acceptance records on the kernel's database: a supplied replay store does not survive a restart with the kernel (D1119 Q5, #1963)",
+      );
+      expect(existsSync(file)).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("starts with a file-backed kernel store and the default replay store, which keeps its pairs on the kernel's database in that file", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "rp-file-backed-"));
+    const file = join(dir, "kernel.db");
+    try {
+      const built = await buildAuthorizationServer({
+        issuer: "https://file-backed.as.example",
+        kernelStore: { file },
+        requestProvenance: { config: TRUST },
+      });
+      try {
+        const store = built.requestProvenanceStore;
+        expect(store).toBeInstanceOf(SqliteRequestProvenanceStore);
+        expect((store as SqliteRequestProvenanceStore).db).toBe(built.kernel.db);
+        expect(built.kernel.db.name).toBe(file);
+        expect(
+          built.kernel.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'request_provenance_pairs'").get(),
+        ).toEqual({ name: "request_provenance_pairs" });
+      } finally {
+        built.suspensionScheduler?.stop();
+        built.kernel.close();
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("registers nothing for a disabled configuration, the shipped one included: the type is unknown there", async () => {
     expect(REQUEST_PROVENANCE_CONFIG.enabled).toBe(false);

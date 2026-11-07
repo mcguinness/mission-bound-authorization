@@ -34,7 +34,6 @@ import {
   type BuiltAs,
   DEFERRED_GRANT_TYPE,
   type GovernedPolicyRoot,
-  InMemoryRequestProvenanceStore,
   type MissionRecord,
   type RegisteredActivationPolicy,
   recordGovernedPolicyConsent,
@@ -59,7 +58,6 @@ const CHANNEL = "https://intake.example.org/ch/service";
 const INTENT = { goal: "Reconcile Acme invoices against the ledger", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT };
 
 const intakeKeys = await generateKeyPair("ES256", { extractable: true });
-const store = new InMemoryRequestProvenanceStore();
 const TRUST = parseRequestProvenanceConfig({
   enabled: true,
   clock_skew_seconds: 5,
@@ -109,7 +107,8 @@ beforeAll(async () => {
     governedPolicyApproval: governance,
     activationPolicies: {},
     deferredApproval: { pendingLifetimeS: 600 },
-    requestProvenance: { config: TRUST, store },
+    // The type's default replay store, on the kernel's database.
+    requestProvenance: { config: TRUST },
   });
   server = as.provider.listen(PORT);
   agentKey = (await importJWK(as.ledgerReconcilerClientJwk as never, "ES256")) as CryptoKey;
@@ -246,7 +245,7 @@ describe("deferred activation of an accepted push (@spec request-provenance#repl
     const signed = await mint();
     const before = verifications();
     const { deferralCode, pushedJti } = await openDeferral(keys, [signed.entry]);
-    const accepted = store.accepted(INTAKE, signed.jti, Date.now());
+    const accepted = as.requestProvenanceStore?.accepted(INTAKE, signed.jti, Date.now());
     expect(accepted?.submissionRef).toBe(`par:${pushedJti}`);
     const row = as.kernel.db.prepare("SELECT acceptance_ref FROM mission_approval_deferrals WHERE deferral_code = ?").get(deferralCode) as {
       acceptance_ref: string | null;
