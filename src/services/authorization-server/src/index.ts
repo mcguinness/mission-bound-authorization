@@ -41,7 +41,8 @@ import { DEFERRAL_EXPIRES_IN } from "./kernel/deferral-lifetime.js";
 import { INTERACTION_TTL_S, PROVIDER_CLOCK_TOLERANCE_S } from "./kernel/interaction-lifetime.js";
 import { REQUEST_PROVENANCE_EVIDENCE_TYPE } from "./kernel/request-provenance.js";
 import { createRequestProvenanceEvidenceType } from "./kernel/request-provenance-evidence.js";
-import { InMemoryRequestProvenanceStore, type RequestProvenanceStore } from "./kernel/request-provenance-store.js";
+import { type RequestProvenanceStore, SqliteRequestProvenanceStore } from "./kernel/request-provenance-store.js";
+import type { IntentSubmissionEvidenceType } from "./kernel/intent.js";
 import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
 import {
   type AuthorityDependencyDeclaration,
@@ -356,6 +357,7 @@ export {
   type RequestProvenanceAcceptance,
   type RequestProvenanceRecord,
   type RequestProvenanceStore,
+  SqliteRequestProvenanceStore,
 } from "./kernel/request-provenance-store.js";
 export {
   deriveAuthoritySet,
@@ -1048,6 +1050,13 @@ export interface BuiltAs {
    */
   missionApprovalDeferrals?: MissionApprovalDeferralStore;
   /**
+   * @spec request-provenance#replay (#1963): the `mission-request-provenance`
+   * replay store, present exactly where the type is enabled: by default the
+   * {@link SqliteRequestProvenanceStore} on `kernel.db`. Exposed so a test
+   * can observe the pairs and acceptance records it holds.
+   */
+  requestProvenanceStore?: RequestProvenanceStore;
+  /**
    * @spec runtime#input-authority-dependency (#830, D798): the declared
    * authority dependency this assembly gates issuance on, with `governed`
    * answered from this kernel's records, for the deployment's PDP or composed
@@ -1321,19 +1330,25 @@ export async function buildAuthorizationServer(opts: {
   submissionEvidenceVerificationWork?: number;
   /**
    * @spec request-provenance#verification, request-provenance#replay (#939
-   * slice 2a-2): register the `mission-request-provenance` evidence type on
-   * this AS, with this trust configuration (the shape `@mission/demo-data`'s
-   * `loadRequestProvenanceConfig` returns) and replay store (default
-   * in-memory). Registered only where `config.enabled` is true. The shipped
+   * slice 2a-2, #1963): register the `mission-request-provenance` evidence
+   * type on this AS, with this trust configuration (the shape
+   * `@mission/demo-data`'s `loadRequestProvenanceConfig` returns).
+   * Registered only where `config.enabled` is true. The shipped
    * `config/request-provenance.json` is disabled, so the default is off, and
    * `server.ts` never passes this option (D1151, D1157). The one composition
    * that passes it is the `as-native` target under its opt-in
    * `requestIntake` launch option (`MISSION_REQUEST_INTAKE=1`, #939 slice
    * 2b-2), as D1221 authorizes: it enables the type together with the demo
    * request intake, trusting that intake's one signer under the shipped
-   * file's declared bounds. With a file-backed kernel store, an enabled type
-   * refuses construction, since its replay history and acceptance records do
-   * not survive a restart (D1119 Q5, #1963).
+   * file's declared bounds.
+   *
+   * The replay store defaults to {@link SqliteRequestProvenanceStore} on the
+   * kernel's database, so the replay history and acceptance records are as
+   * durable as the kernel: in memory without a kernel file, kept across a
+   * restart with one (D1119 Q5). `store` replaces it, for a test or an
+   * explicitly ephemeral demonstration, and only on an in-memory kernel: a
+   * supplied store beside a file-backed kernel store refuses construction,
+   * since only the kernel's own database survives a restart with it.
    */
   requestProvenance?: { config: RequestProvenanceConfig; store?: RequestProvenanceStore };
   /**
@@ -1698,14 +1713,16 @@ export async function buildAuthorizationServer(opts: {
   const progressive = opts.progressive
     ? validateProgressiveDrawdownOptions(opts.progressive, opts.approvalFloor ?? APPROVAL_FLOOR)
     : undefined;
-  // @spec request-provenance#replay (#939 slice 2a-2, D1119 Q5): the type's
-  // replay store keeps its history and acceptance records in memory only, so
-  // a deployment whose kernel state survives a restart cannot enable it: a
-  // restart would accept an unexpired assertion again (#1963).
+  // @spec request-provenance#replay (D1119 Q5, #1963): with a file-backed
+  // kernel store, the type's replay history and acceptance records must
+  // survive a restart with the kernel, so they live on the kernel's own
+  // database. A supplied store is not that database (it does not exist yet),
+  // so beside a kernel file it refuses, before anything is opened: a restart
+  // would forget its pairs and accept an unexpired assertion again.
   const requestProvenance = opts.requestProvenance?.config.enabled === true ? opts.requestProvenance : undefined;
-  if (requestProvenance && opts.kernelStore?.file) {
+  if (requestProvenance?.store && opts.kernelStore?.file) {
     throw new Error(
-      "mission-request-provenance cannot be enabled on a file-backed kernel store: its replay history and acceptance records are in memory only and do not survive a restart (D1119 Q5, #1963)",
+      "mission-request-provenance on a file-backed kernel store keeps its replay history and acceptance records on the kernel's database: a supplied replay store does not survive a restart with the kernel (D1119 Q5, #1963)",
     );
   }
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
@@ -1956,6 +1973,11 @@ export async function buildAuthorizationServer(opts: {
     dependencyTimers.push(timer);
   }
   const transformationCapabilities = opts.transformationCapabilities ?? TRANSFORMATION_CAPABILITIES;
+  // @spec request-provenance#verification, request-provenance#replay (#1963):
+  // this AS's own evidence types. The map is handed to the kernel now and
+  // the type registered into it once the kernel's database exists, below:
+  // the kernel reads the map at each call, and nothing calls before then.
+  const submissionEvidenceTypes = new Map<string, IntentSubmissionEvidenceType>();
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
@@ -1977,24 +1999,7 @@ export async function buildAuthorizationServer(opts: {
       : {}),
     // @spec request-provenance#verification (#939 slice 2a-2): this AS's own
     // evidence types, consulted before the process-wide registry.
-    ...(requestProvenance
-      ? {
-          submissionEvidenceTypes: new Map([
-            [
-              REQUEST_PROVENANCE_EVIDENCE_TYPE,
-              createRequestProvenanceEvidenceType({
-                trust: requestProvenance.config,
-                store: requestProvenance.store ?? new InMemoryRequestProvenanceStore(),
-                acceptanceRetentionSeconds: requestProvenanceAcceptanceRetention(
-                  requestProvenance.config.clock_skew_seconds,
-                  opts.deferredApproval?.pendingLifetimeS,
-                ),
-                ...(opts.now ? { now: opts.now } : {}),
-              }),
-            ],
-          ]),
-        }
-      : {}),
+    ...(requestProvenance ? { submissionEvidenceTypes } : {}),
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;
     // the file-backed single-writer store is the declared opt-in.
     ...(opts.kernelStore?.file ? { store: { file: opts.kernelStore.file } } : {}),
@@ -2093,6 +2098,31 @@ export async function buildAuthorizationServer(opts: {
       opts.onLifecycleCommit?.(commit);
     },
   });
+  // @spec request-provenance#replay (#939 slice 2a-2, D1119 Q5, #1963): the
+  // type's replay store, by default on the kernel's database, so its pairs
+  // and acceptance records are exactly as durable as the kernel. Registered
+  // before anything else uses the kernel; a failure releases the kernel.
+  let requestProvenanceStore: RequestProvenanceStore | undefined;
+  if (requestProvenance) {
+    try {
+      requestProvenanceStore = requestProvenance.store ?? new SqliteRequestProvenanceStore(kernel.db);
+      submissionEvidenceTypes.set(
+        REQUEST_PROVENANCE_EVIDENCE_TYPE,
+        createRequestProvenanceEvidenceType({
+          trust: requestProvenance.config,
+          store: requestProvenanceStore,
+          acceptanceRetentionSeconds: requestProvenanceAcceptanceRetention(
+            requestProvenance.config.clock_skew_seconds,
+            opts.deferredApproval?.pendingLifetimeS,
+          ),
+          ...(opts.now ? { now: opts.now } : {}),
+        }),
+      );
+    } catch (e) {
+      kernel.close();
+      throw e;
+    }
+  }
   // @spec id-continuation-assertion, async-delegation, control-plane#serialization
   // (#250): the continuation and delegation-family projections live on the
   // kernel's database and are written in its committing transactions; the
@@ -2480,6 +2510,7 @@ export async function buildAuthorizationServer(opts: {
     expansionDeferrals,
     expansionRateLimiter,
     ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
+    ...(requestProvenanceStore ? { requestProvenanceStore } : {}),
     creationIdempotency,
     issuer: opts.issuer,
     signingKeyMode: "ring" in keySource ? "ring" : "ephemeral",
