@@ -11,16 +11,16 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "d079de256b593c87a12ef666aa2c7abf43171213",
-    "content_sha256": "9df93323ab50beb9a07a5b12675c8c409d518338e8a97780ba058ee55aace22f"
+    "revision": "7592690aade7b91530e84d00abfe5a02d9f6f348",
+    "content_sha256": "82045791dc4f6dd5e4e603ef07969c66d30c49612558ab0fafdea33f0f04e53f"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "b7d73a3ebfac4d8fb246e416d997156e52cb3bc4",
-    "content_sha256": "8f74d04e972f5e656b8421c2b3ab5ee21b25fb7eb195f2df0f400c808740e82e"
+    "revision": "75a9ab4f36678ef1f251af310f29e1ce2deaba47",
+    "content_sha256": "b34895dbd37c79241c96c6729ce05935ad70c86b53e0a0992ee2b763bb94d8f1"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
@@ -45849,7 +45849,7 @@
    "id": "authzen.context-history.entry-records-operation",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
-   "text": "Where a predicate's type selects an operation, its entry carries that operation's identifier as `action`; an `action_class_completed` entry, which selects by class alone, carries none.",
+   "text": "Where a predicate's type selects an operation, its `mission_history` entry carries that operation's identifier as `action`; an `action_class_completed` entry, which selects by class alone, carries none.",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -45881,6 +45881,37 @@
     }
    ],
    "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) or from the signed entry (M3) fails the pair witness by its recorded-entry assertion; dropping the operation match (M5) records the export satisfied beside the backup, failing the same assertion with the decision assertions removed; recording any string action whatever the type (M2) fails the omission witness. The selector types are a per-type table in the reference PDP: work_item_prerequisite_completed selects by action, action_class_completed by class alone."
+  },
+  {
+   "id": "authzen.context-history.unrecognized-type-records-no-action",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "a `mission_history` entry for a type the PDP does not recognize carries no `action`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Decision Evidence entry recorded for a policy-selected predicate of a type the PDP does not recognize carries no action, even where the predicate carries an action member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048 cold read): falling back to the predicate's action member for any type the PDP does not map (`?? \"action\"`, M6) records the unrecognized predicate's action. The reference maps selecting types in a fixed table; work_item_prerequisite_completed is the only one."
   },
   {
    "id": "authzen.context-history.action-class-completed-applied-class",
@@ -57976,7 +58007,7 @@
    "id": "evidence.extensions.mission-history-entry-action",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "evidence-extensions",
-   "text": "each with its `predicate` (and `action_class`, where applicable), its `action` where its type selects an operation (a string identifying that operation), and an `outcome`",
+   "text": "each with its `predicate` (and `action_class`, where applicable), the identifier of the operation its type selects, if any, as `action` (a string, naming that operation as a record's `action` names it), and an `outcome`",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -57989,7 +58020,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a recorded mission_history entry carries action, a string identifying the operation its predicate selects, where the predicate's type selects one, and no action where the type selects by class alone"
+    "normative": "a recorded mission_history entry carries action, a non-empty string naming the operation its predicate's type selects, where the type selects one, and no action where the type selects by class alone or names no operation"
    },
    "level": "unit",
    "coverage": "tested",
@@ -58008,12 +58039,18 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
-     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > signs an entry's action as a string and refuses to sign one that is not",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > signs an entry's action only as a non-empty string and refuses to sign any other",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records no action for an empty operation selector, whose predicate cannot be established",
      "level": "unit",
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) or from the signed entry (M3) fails the pair witness; recording any string action whatever the type (M2) records the stray action on the action_class_completed entry; removing the emitter's type check (M4) signs a numeric action. The member is owned by the AuthZEN profile (authzen.context-history.entry-records-operation)."
+   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) or from the signed entry (M3) fails the pair witness; recording any string action whatever the type (M2) records the stray action on the action_class_completed entry; removing the emitter's type check (M4) signs a numeric action; accepting an empty selector in both recordedEntry and the emitter (M7) records action \"\" on the empty-selector entry; dropping only the emitter's non-empty check (M8) signs an empty action. The member is owned by the AuthZEN profile (authzen.context-history.entry-records-operation)."
   },
   {
    "id": "evidence.extensions.hop-reference-required-submembers",

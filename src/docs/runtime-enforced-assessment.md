@@ -272,7 +272,7 @@ Not exercised by this composition:
   `runtime.semantic-evaluator`, `runtime.taint-enforcement` and
   `runtime.break-glass` (1 each). The loader refuses any break-glass value
   other than `absent` (`loadRuntimePosture`).
-- `runtime.history-input` (15 rows: 9 tested, 6 todo): the PDP implements
+- `runtime.history-input` (16 rows: 10 tested, 6 todo): the PDP implements
   the History Context (#2015). Tested against a bound history policy and
   retained evidence (`src/services/pdp/test/evaluate-history.test.ts`):
   `authzen.context-history.no-caller-asserted-outcome`,
@@ -283,8 +283,10 @@ Not exercised by this composition:
   `authzen.evidence.mission-history-computed` and
   `runtime.decision-inputs.history-fail-closed`; the recorded entry's
   `action` (#2048, `src/services/pdp/test/evaluate-history-prerequisite.test.ts`):
-  `authzen.context-history.entry-records-operation` and
-  `evidence.extensions.mission-history-entry-action`. Todo:
+  `authzen.context-history.entry-records-operation`,
+  `evidence.extensions.mission-history-entry-action` and
+  `authzen.context-history.unrecognized-type-records-no-action` (its
+  witness in `evaluate-history.test.ts`). Todo:
   `runtime.decision-inputs.history-no-expand-authority` and the five
   completion-witness rows (#2029):
   `authzen.context-history.action-class-completed-completion-witness`,
