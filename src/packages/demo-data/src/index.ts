@@ -3206,8 +3206,14 @@ export function loadApprovalFloor(
     if (floorIds.has(id)) throw new ConfigError(file, `${ctx}.id ${id} is not unique`);
     floorIds.add(id);
     const appliesTo = reqStringArray(file, f, "applies_to", ctx);
-    if (appliesTo.length === 0 || !appliesTo.every((c) => isClass(c) || c === CONSUMPTION_BOUND_CLASS)) {
-      throw new ConfigError(file, `${ctx}.applies_to must name one or more known action classes or ${CONSUMPTION_BOUND_CLASS}`);
+    if (
+      appliesTo.length === 0 ||
+      !appliesTo.every((c) => isClass(c) || c === CONSUMPTION_BOUND_CLASS)
+    ) {
+      throw new ConfigError(
+        file,
+        `${ctx}.applies_to must name one or more known action classes or ${CONSUMPTION_BOUND_CLASS}`,
+      );
     }
     const acr = reqStringArray(file, f, "accepted_acr", ctx);
     if (acr.length === 0 || acr.some((a) => a.length === 0) || new Set(acr).size !== acr.length) {
