@@ -17,7 +17,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { activationPolicyDigest, authorityHash, intentHash } from "@mission/core";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import { APPROVAL_FLOOR, type ApprovalFloorPolicy, CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentDigest, RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -1056,5 +1056,70 @@ describe("an ordinary deferral's approval is unchanged by the budget exposure (@
     const section = metered.match(/<section class="budget-exposure">[\s\S]*?<\/section>\n/)?.[0];
     expect(section).toBeDefined();
     expect(metered.replace(section as string, "")).toBe(ordinary);
+  });
+});
+
+/**
+ * @spec mission#approval-authentication (#2032): a deployment can publish a
+ * consumption-bound floor stricter than its action floor. This one accepts
+ * only `stronger-mfa` for the bound while the action floor also accepts
+ * `mfa`, so meeting the payment action's floor does not meet the bound's.
+ */
+const SEPARATE_FLOOR_PORT = 15025;
+const SEPARATE_FLOOR_ISSUER = `http://localhost:${SEPARATE_FLOOR_PORT}`;
+const SEPARATE_FLOOR: ApprovalFloorPolicy = {
+  ...APPROVAL_FLOOR,
+  floors: [
+    ...APPROVAL_FLOOR.floors.map((f) => ({
+      ...f,
+      applies_to: f.applies_to.filter((c) => c !== "consumption_bound"),
+      accepted_acr: ["mfa", "stronger-mfa"],
+    })),
+    {
+      id: "consumption-bound",
+      applies_to: ["consumption_bound"],
+      approval_surface: "browser",
+      accepted_acr: ["stronger-mfa"],
+      max_authentication_age_seconds: 300,
+    },
+  ],
+};
+
+describe("a separately configured consumption-bound floor at standing-payment consent (@spec mission#approval-authentication, mission-template#template-consent, #2032)", () => {
+  let separate: BuiltAs;
+  let separateServer: Server;
+
+  beforeAll(async () => {
+    separate = await buildAuthorizationServer({
+      issuer: SEPARATE_FLOOR_ISSUER,
+      capabilities: ON,
+      approvalFloor: SEPARATE_FLOOR,
+      approvalSessions: SESSIONS,
+      dispatchPolicies: POLICIES,
+      enforcementScopeStatement: meteringStatement(SEPARATE_FLOOR_ISSUER),
+      budgetExposure: counters,
+    });
+    separateServer = separate.provider.listen(SEPARATE_FLOOR_PORT);
+  });
+
+  afterAll(() => {
+    separateServer?.close();
+  });
+
+  it("refuses a consent that meets the payment action's floor but not the consumption bound's, creating no template, and records both floors on a consent that meets them", async () => {
+    const id = await propose("alice", SEPARATE_FLOOR_ISSUER);
+    const mfa = login(id, "alice");
+    const page = await consentPage(id, mfa, SEPARATE_FLOOR_ISSUER);
+    const refused = await decideConsent(id, mfa, page.revision, SEPARATE_FLOOR_ISSUER);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(403);
+    expect(refused.body.error).toBe("access_denied");
+    const stronger = browserApprovalHeaders(SESSIONS, id, { sub: "alice", acr: "stronger-mfa", auth_time: FIXTURE_LOGIN_TIME }, "");
+    const again = await consentPage(id, stronger, SEPARATE_FLOOR_ISSUER);
+    const consented = await decideConsent(id, stronger, again.revision, SEPARATE_FLOOR_ISSUER);
+    expect(consented.status, JSON.stringify(consented.body)).toBe(201);
+    const provenance = separate.templateStore.get(consented.body.template_id as string)?.consent_provenance as
+      | { floors?: string[] }
+      | undefined;
+    expect(provenance?.floors).toEqual(expect.arrayContaining(["high-risk-authority", "consumption-bound"]));
   });
 });

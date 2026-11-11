@@ -659,6 +659,7 @@ import {
   type ProhibitedPredicateMapping,
   publishedProhibitedPredicateMapping,
   standingPaymentRootOf,
+  standingPaymentTermsOf,
   type TemplateConsentProvenance,
 } from "../kernel/standing-payment.js";
 import {
@@ -6673,11 +6674,29 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // `consent_principal` and `approved_at`, with no Approver authenticating,
       // so the consent itself meets the approval-authentication floor for
       // everything the ceiling admits, as a Progressive ceiling consent does.
+      // @spec mission#approval-authentication (#2032): a template whose
+      // trusted Dispatch Policy designates the standing payment yields
+      // instances whose Intent carries max_budget, a consumption bound, so the
+      // consent also meets every floor that bound invokes; a designation that
+      // does not parse fails closed to requiring them.
+      let consumptionBound = false;
+      if (standingPaymentOn) {
+        const held = opts.dispatchPolicies?.[proposal.body.dispatch_policy.id];
+        try {
+          consumptionBound = held !== undefined && standingPaymentTermsOf(held) !== undefined;
+        } catch {
+          consumptionBound = true;
+        }
+      }
       const floor = evaluateApprovalFloor(
         opts.approvalFloor,
         proposal.body.ceiling,
         { acr: principal.acr, auth_time: principal.auth_time },
-        { interactive: resolved.interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
+        {
+          interactive: resolved.interactive,
+          nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000),
+          consumptionBound,
+        },
       );
       if (floor.outcome === "refused") {
         refuse(403, "access_denied", floor.reason);
