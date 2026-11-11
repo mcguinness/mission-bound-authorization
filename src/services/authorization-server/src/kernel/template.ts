@@ -22,6 +22,7 @@
  */
 
 import { randomBytes } from "node:crypto";
+import { CONSUMPTION_BOUND_CLASS, type ApprovalFloorPolicy } from "@mission/demo-data";
 import {
   actionOutsideGrammar,
   authorityHash,
@@ -768,6 +769,8 @@ export interface DispatchInput {
 export interface StandingPaymentDispatchOptions {
   /** The deployment's published prohibited-predicate mapping. */
   mapping: ProhibitedPredicateMapping;
+  /** The deployment's published approval-authentication floor policy. */
+  approvalFloor: ApprovalFloorPolicy;
 }
 
 export interface DispatchResult {
@@ -1410,6 +1413,20 @@ function standingPaymentAdmissionRefusal(
   if (template.dispatchers.includes(consent.principal.sub) || template.recipients.agents.includes(consent.principal.sub)) {
     return `template ${template.id} was consented by a Dispatcher or an Agent, not a human`;
   }
+  // @spec mission#approval-authentication (#2032): the instance's max_budget is
+  // a consumption bound, so the retained consent records every floor that
+  // bound invokes; one recorded below it, or before a stricter bound floor was
+  // published, is not relied on.
+  const options = input.standingPayment as StandingPaymentDispatchOptions;
+  const boundFloors = options.approvalFloor.floors
+    .filter((f) => f.applies_to.includes(CONSUMPTION_BOUND_CLASS))
+    .map((f) => f.id);
+  const unmet = boundFloors.filter((id) => !consent.floors.includes(id));
+  if (boundFloors.length === 0 || unmet.length > 0) {
+    return `template ${template.id}'s consent does not meet the approval-authentication floor its instance's max_budget, a consumption bound, invokes: ${
+      unmet.length > 0 ? `${unmet.join(", ")} not recorded` : "no published floor names that class"
+    }`;
+  }
   const pinned = kernel.standingPayments.budgetBinding(template.dispatch_policy.id);
   if (!pinned || pinned.owner !== terms.budget.owner || pinned.id !== terms.budget.id) {
     return `the budget ${terms.budget.owner}/${terms.budget.id} is not the identity pinned for Dispatch Policy ${template.dispatch_policy.id}`;
@@ -1425,7 +1442,7 @@ function standingPaymentAdmissionRefusal(
     throw e;
   }
   return standingPaymentPredicateRefusal(
-    (input.standingPayment as StandingPaymentDispatchOptions).mapping,
+    options.mapping,
     terms,
     final,
     input.dispatchProhibitedActions ?? [],

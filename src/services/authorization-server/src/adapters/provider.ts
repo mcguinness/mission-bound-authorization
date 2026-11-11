@@ -7524,7 +7524,9 @@ async function handleMissionDispatchGrant(
     subject: { iss: template.issuer, sub: template.approver.sub },
     policyVersion: DERIVATION_POLICY.policy_version,
     dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
-    ...(standingPaymentOn ? { standingPayment: { mapping: prohibitedPredicateMappingOf(opts) } } : {}),
+    ...(standingPaymentOn
+      ? { standingPayment: { mapping: prohibitedPredicateMappingOf(opts), approvalFloor: opts.approvalFloor } }
+      : {}),
   };
   /** A refused Dispatch: the response, or false when `e` is not a Dispatch outcome. */
   const dispatchFailure = (e: unknown): boolean => {

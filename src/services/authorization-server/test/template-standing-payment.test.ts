@@ -16,6 +16,8 @@
  */
 import {
   APPROVAL_FLOOR,
+  type ApprovalFloorPolicy,
+  CONSUMPTION_BOUND_CLASS,
   DERIVATION_POLICY,
   DISPATCH_PROHIBITED_ACTIONS,
   PROGRESSIVE_PROFILE,
@@ -273,7 +275,12 @@ const intentWith = (
   );
 
 /** Dispatch with the capability on (the `standingPayment` input), unless `over` removes it. */
-const dispatch = (templateId: string, over: Partial<DispatchInput> = {}, mapping = mappingOf()) =>
+const dispatch = (
+  templateId: string,
+  over: Partial<DispatchInput> = {},
+  mapping = mappingOf(),
+  approvalFloor: ApprovalFloorPolicy = APPROVAL_FLOOR,
+) =>
   dispatchFromTemplate(kernel, store, {
     templateId,
     dispatchEventId: `dsp-${seq++}`,
@@ -283,7 +290,7 @@ const dispatch = (templateId: string, over: Partial<DispatchInput> = {}, mapping
     policyVersion: POLICY_VERSION,
     dispatchPolicies: REGISTRY,
     dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
-    standingPayment: { mapping },
+    standingPayment: { mapping, approvalFloor },
     ...over,
   });
 
@@ -1342,5 +1349,64 @@ describe("standing-payment currencies compared exactly (@spec template#standing-
       "the Template Ceiling: entry 0 bounds payments:payment.execute in usd, not USD",
     );
     expect(() => assertStandingPaymentCeiling(terms, bounded("USD"), "the Template Ceiling")).not.toThrow();
+  });
+});
+
+/**
+ * @spec mission#approval-authentication (#2032): the consumption bound under
+ * its own stricter floor, apart from the action floor the payment invokes.
+ */
+const SEPARATE_BOUND_FLOOR: ApprovalFloorPolicy = {
+  ...APPROVAL_FLOOR,
+  floors: [
+    ...APPROVAL_FLOOR.floors.map((f) => ({
+      ...f,
+      applies_to: f.applies_to.filter((c) => c !== CONSUMPTION_BOUND_CLASS),
+    })),
+    {
+      id: "consumption-bound",
+      applies_to: [CONSUMPTION_BOUND_CLASS],
+      approval_surface: "browser",
+      accepted_acr: ["stronger-mfa"],
+      max_authentication_age_seconds: 300,
+    },
+  ],
+};
+
+describe("the consent a standing-payment dispatch relies on meets the consumption bound's floor (@spec mission#approval-authentication, #2032)", () => {
+  it("refuses a dispatch whose retained consent records the payment action's floor but not the bound's, committing no Mission, and dispatches one that records both", () => {
+    const below = consentTo();
+    const before = missionCount();
+    const r = refusal(() => dispatch(below.id, {}, mappingOf(), SEPARATE_BOUND_FLOOR));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(/max_budget, a consumption bound, invokes: consumption-bound not recorded/);
+    expect(missionCount()).toBe(before);
+    const both = consentTo(
+      {},
+      {
+        consent: humanConsent("human-approver", {
+          acr: "stronger-mfa",
+          floors: ["high-risk-authority", "consumption-bound"],
+        }),
+      },
+    );
+    const { mission } = dispatch(both.id, {}, mappingOf(), SEPARATE_BOUND_FLOOR);
+    expect(mission.state).toBe("active");
+  });
+
+  it("refuses a dispatch when no published floor names the consumption-bound class, failing closed", () => {
+    const t = consentTo();
+    const unnamed: ApprovalFloorPolicy = {
+      ...APPROVAL_FLOOR,
+      floors: APPROVAL_FLOOR.floors.map((f) => ({
+        ...f,
+        applies_to: f.applies_to.filter((c) => c !== CONSUMPTION_BOUND_CLASS),
+      })),
+    };
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id, {}, mappingOf(), unnamed));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(/no published floor names that class/);
+    expect(missionCount()).toBe(before);
   });
 });
