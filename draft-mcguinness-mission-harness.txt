@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         4 November 2026
-Expires: 8 May 2027
+Intended status: Standards Track                        11 November 2026
+Expires: 15 May 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 May 2027.
+   This Internet-Draft will expire on 15 May 2027.
 
 Copyright Notice
 
@@ -664,7 +664,9 @@ Table of Contents
    operation target, and revision as the action being decided.  Policy
    names the operation with two members: action, its identifier, and
    action_class, a runtime action class name.  A predicate missing
-   either member cannot be established.
+   either member cannot be established.  Its mission_history entry in
+   Decision Evidence carries its action as well as its action_class
+   ([I-D.draft-mcguinness-mission-authzen], Section "History Context").
 
    The predicate is satisfied when the PDP's evidence store holds, for
    the established Mission, a Decision Evidence record with decision
@@ -2354,6 +2356,10 @@ Appendix A.  Mapping to Durable-Execution Engines
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Work-Item Prerequisite: the predicate's mission_history entry
+      carries its action as well as its action_class, so prerequisites
+      of one class for different operations are told apart (#2048).
 
    *  Protected-Data Exposure, Establishment and Binding, and Exposure-
       Qualified Egress: exposure, the confidentiality counterpart of
