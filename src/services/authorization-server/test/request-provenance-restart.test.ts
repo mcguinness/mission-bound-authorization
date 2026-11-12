@@ -48,6 +48,7 @@ import {
   type BuiltAs,
   DEFERRED_GRANT_TYPE,
   type GovernedPolicyRoot,
+  governedPolicyConsentDisclosure,
   initSigningKeyRing,
   type MissionRecord,
   reconcileKernelRecovery,
@@ -511,6 +512,8 @@ describe("the acceptance record across a restart (@spec request-provenance#repla
       root: { id: ROOT_ID, version: "1" },
       approver: { iss: first.issuer, sub: "dana" },
       consentEventId: `gpce-${ROOT_ID}`,
+      // The commitment of the disclosure rendered to the approver (#2040, D1278).
+      disclosure: governedPolicyConsentDisclosure(first.as.kernel, { id: ROOT_ID, version: "1" }).commitment,
     });
     for (let i = 0; i < 3; i += 1) {
       const keys = await newKeys();
