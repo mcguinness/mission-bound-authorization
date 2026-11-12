@@ -1329,8 +1329,12 @@ Completeness").
 
 An extension predicate type MUST be either a collision-resistant name
 or a name coordinated within this document family, under the same rule
-as denial reasons ({{runtime-denial-classification}}). The harness
-profile defines the coordinated type `work_item_prerequisite_completed`
+as denial reasons ({{runtime-denial-classification}}). The
+specification defining a predicate type states whether it selects an
+operation and which of its members names it; a `mission_history`
+entry for a type the PDP does not recognize carries no `action`. The
+harness profile defines the coordinated type
+`work_item_prerequisite_completed`
 ({{I-D.draft-mcguinness-mission-harness}}).
 
 The OPTIONAL `context.mission_history` request object carries only what
@@ -1373,7 +1377,11 @@ runtime profile fixes the fail-closed posture and the evidence
 store's freshness discipline
 ({{I-D.draft-mcguinness-mission-runtime}}). The PDP MUST record the
 evaluated predicates and their outcomes in Decision Evidence
-({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). Where a
+predicate's type selects an operation, its `mission_history` entry
+carries that operation's identifier as `action`; an
+`action_class_completed` entry, which selects by class alone, carries
+none.
 
 ## Canonical Projections {#projections}
 
@@ -3263,6 +3271,13 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- History Context: the specification defining a predicate type states
+  whether it selects an operation and which of its members names it.
+  Where a type selects one, its `mission_history` entry carries that
+  operation's identifier as `action`; an `action_class_completed`
+  entry, or one for a type the PDP does not recognize, carries none
+  (#2048).
 
 - Protected-Data Context: `context.protected_data` is a harness-owned
   extension point carrying the exposure determination that the harness

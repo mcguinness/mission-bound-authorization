@@ -26,6 +26,7 @@ import {
   IntentError,
   type MissionRecord,
   type RegisteredActivationPolicy,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
@@ -104,6 +105,8 @@ function useRoot(doc: GovernedPolicyRoot): void {
     root: { id, version: "1" },
     approver: { iss: ISSUER, sub: "dana" },
     consentEventId: `gpce-${id}`,
+    // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+    disclosure: governedPolicyConsentDisclosure(as.kernel, { id, version: "1" }).commitment,
   });
 }
 
