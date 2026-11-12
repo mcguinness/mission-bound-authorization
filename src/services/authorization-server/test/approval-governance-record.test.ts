@@ -21,6 +21,7 @@ import {
   MissionKernel,
   type MissionRecord,
   type PortableMissionReference,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   resolvedAnchors,
   signApprovalGovernanceRecord,
@@ -116,6 +117,8 @@ beforeAll(async () => {
     root: { id: ROOT_ID, version: "1" },
     approver: { iss: ISS, sub: "dana" },
     consentEventId: "gpce-envelope",
+    // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+    disclosure: governedPolicyConsentDisclosure(kernel, { id: ROOT_ID, version: "1" }).commitment,
   });
   ({ mission, record } = activateGovernedPolicy(kernel, {
     consentId: consent.consent_id,
