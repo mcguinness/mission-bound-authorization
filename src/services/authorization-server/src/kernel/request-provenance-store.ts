@@ -15,6 +15,12 @@
  *   committed pair: the store releases only a reservation, and the
  *   admission scope that owns it releases nothing once committed
  *   (`SubmissionAdmission`).
+ * - **Transaction** runs a settlement's commits as one unit: a write that
+ *   fails rolls every commit of the settlement back, and the scope then
+ *   releases the reservations, so a push refused at acceptance leaves each
+ *   assertion retryable (#2060 review). A commit whose outcome a crash or a
+ *   lost response leaves unknown stays committed and refuses its assertion
+ *   as replay; its client recovers with a fresh assertion (D1119 Q1).
  *
  * A reservation never outlives `exp` plus the clock-skew allowance. A
  * committed pair is retained until the later of that instant and the end of
@@ -91,6 +97,11 @@ export interface RequestProvenanceStore {
   commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean;
   /** Release the reservation `token`. Idempotent; no effect on another token, nor on a committed pair. */
   release(token: string): void;
+  /**
+   * Run `fn` as one transaction: every write it makes takes effect, or, when
+   * it throws, none does, and the error is rethrown.
+   */
+  transaction(fn: () => void): void;
   /** The committed acceptance of (`iss`, `jti`) while it is retained, else undefined. */
   accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined;
 }
@@ -168,6 +179,17 @@ export class InMemoryRequestProvenanceStore implements RequestProvenanceStore {
     const found = this.#byToken(token);
     // Only a reservation: a committed pair keeps its acceptance record until its retention ends.
     if (found !== undefined && found[1].state === "reserved") this.#rows.delete(found[0]);
+  }
+
+  transaction(fn: () => void): void {
+    const snapshot = new Map([...this.#rows].map(([key, row]) => [key, { ...row }]));
+    try {
+      fn();
+    } catch (e) {
+      this.#rows.clear();
+      for (const [key, row] of snapshot) this.#rows.set(key, row);
+      throw e;
+    }
   }
 
   accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined {
@@ -285,6 +307,10 @@ export class SqliteRequestProvenanceStore implements RequestProvenanceStore {
   release(token: string): void {
     // Only a reservation: a committed pair keeps its acceptance record until its retention ends.
     this.#release.run(token);
+  }
+
+  transaction(fn: () => void): void {
+    withTransaction(this.db, fn);
   }
 
   accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined {

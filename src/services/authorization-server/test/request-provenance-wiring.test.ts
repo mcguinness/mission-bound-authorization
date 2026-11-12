@@ -277,6 +277,10 @@ class ObservedStore implements RequestProvenanceStore {
     return this.inner.committable(token, nowMs);
   }
 
+  transaction(fn: () => void): void {
+    this.inner.transaction(fn);
+  }
+
   commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean {
     return this.inner.commit(token, ref, nowMs, retainUntilMs);
   }
@@ -1487,6 +1491,48 @@ describe("the admission scope at the dispatch (@spec request-provenance#replay, 
       expect(admission.state).toBe("released");
     },
   );
+
+  it("settles in one transaction: when a commit step throws, the shared transaction rolls every commit back, the scope releases every hold, and none is committed", () => {
+    const admission = new SubmissionAdmission();
+    let applied: string[] = [];
+    const released: string[] = [];
+    const atomically = (steps: () => void): void => {
+      const before = [...applied];
+      try {
+        steps();
+      } catch (e) {
+        applied = before;
+        throw e;
+      }
+    };
+    admission.hold({ prepare: (ref) => () => void applied.push(`a:${ref}`), release: () => void released.push("a"), atomically });
+    admission.hold({
+      prepare: () => () => {
+        throw new Error("the store refused the write");
+      },
+      release: () => void released.push("b"),
+      atomically,
+    });
+    expect(() => admission.commit("par:failed-write")).toThrow("the store refused the write");
+    expect(applied).toEqual([]);
+    expect(released.sort()).toEqual(["a", "b"]);
+    expect(admission.state).toBe("released");
+  });
+
+  it("releases every hold when a commit step throws, even where the holds share no transaction: the scope is never committed by a failed settlement", () => {
+    const admission = new SubmissionAdmission();
+    const released: string[] = [];
+    admission.hold({ prepare: () => () => {}, release: () => void released.push("a") });
+    admission.hold({
+      prepare: () => () => {
+        throw new Error("the store refused the write");
+      },
+      release: () => void released.push("b"),
+    });
+    expect(() => admission.commit("par:failed-write")).toThrow("the store refused the write");
+    expect(released.sort()).toEqual(["a", "b"]);
+    expect(admission.state).toBe("released");
+  });
 
   it("the replay store releases only a reservation: releasing a committed pair's token keeps its acceptance record and its pair", async () => {
     const own = new InMemoryRequestProvenanceStore();

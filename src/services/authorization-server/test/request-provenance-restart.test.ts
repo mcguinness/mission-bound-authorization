@@ -72,6 +72,7 @@ const TYPE = "mission-request-provenance";
 const REPLAY_PORT = 14911;
 const DEFERRED_PORT = 14912;
 const CONCURRENT_PORT = 14913;
+const FAULT_PORT = 14914;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const PUSHED_REQUEST_URN = "urn:ietf:params:oauth:request_uri:";
@@ -610,6 +611,36 @@ describe("concurrency on the durable store (@spec request-provenance#replay, #19
       await shutdown(inst);
     }
   }, RESTART_TIMEOUT_MS);
+});
+
+describe("a failed settlement on the durable store (@spec request-provenance#replay, #1963, #2060 review)", () => {
+  afterEach(closeOpen);
+
+  it.each([0, 1])(
+    "releases both assertions when the commit of the push's entry %i fails on a file-backed kernel: the push answers 500, neither pair stays committed or reserved, and after the fault is removed and the AS restarted each assertion is accepted",
+    async (failing) => {
+      const paths = await deployment(FAULT_PORT);
+      const first = await boot(FAULT_PORT, paths);
+      const signed = [await mintFor(first), await mintFor(first)];
+      const target = signed[failing] as (typeof signed)[number];
+      // A statement failure on that pair's commit only, injected in the database, not the source.
+      first.as.kernel.db.exec(
+        `CREATE TEMP TRIGGER fail_settlement BEFORE UPDATE OF state ON main.request_provenance_pairs
+         WHEN NEW.state = 'committed' AND NEW.jti = '${target.jti}'
+         BEGIN SELECT RAISE(ABORT, 'injected commit failure'); END`,
+      );
+      const refused = await push(first, signed.map((s) => s.entry));
+      expect(refused.status).toBe(500);
+      for (const s of signed) expect(pairRows(first, s.jti)).toEqual([]);
+      first.as.kernel.db.exec("DROP TRIGGER temp.fail_settlement");
+
+      const second = await restart(first, FAULT_PORT, paths);
+      for (const s of signed) expectAccepted(await push(second, [s.entry]));
+      for (const s of signed) expect(pairRows(second, s.jti).map((r) => r.state)).toEqual(["committed"]);
+      await shutdown(second);
+    },
+    RESTART_TIMEOUT_MS,
+  );
 });
 
 function rootDoc(): GovernedPolicyRoot {

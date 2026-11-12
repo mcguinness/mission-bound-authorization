@@ -77,6 +77,26 @@ describe.each(STORES)("the replay store's guards, %s (@spec request-provenance#r
     expect(await store.reserve(record("store-reserved"), AT)).toBeDefined();
   });
 
+  it("runs a transaction as one unit: when its body throws after a commit, the commit is rolled back and the reservation stays releasable; a body that returns keeps its commits", async () => {
+    const store = create();
+    const first = (await store.reserve(record("tx-first"), AT)) as string;
+    const second = (await store.reserve(record("tx-second"), AT)) as string;
+    expect(() =>
+      store.transaction(() => {
+        expect(store.commit(first, "par:tx", AT, RETAIN)).toBe(true);
+        throw new Error("the second commit failed");
+      }),
+    ).toThrow("the second commit failed");
+    expect(store.accepted(record("x").iss, "tx-first", AT)).toBeUndefined();
+    expect(store.committable(first, AT)).toBe(true);
+    store.release(first);
+    expect(await store.reserve(record("tx-first"), AT)).toBeDefined();
+    store.transaction(() => {
+      expect(store.commit(second, "par:tx", AT, RETAIN)).toBe(true);
+    });
+    expect(store.accepted(record("x").iss, "tx-second", AT)?.submissionRef).toBe("par:tx");
+  });
+
   it("answers a second commit of a committed token by its reference alone, and keeps the first commit's reference and retention", async () => {
     const store = create();
     const token = (await store.reserve(record("twice"), AT)) as string;
