@@ -6,10 +6,12 @@
  * real policy (for example `fgaResourcePolicy`) to its decision point.
  */
 
-import { EvaluationContextBindingDeclarations } from "@mission/core";
+import { EvaluationContextBindingDeclarations, MISSION_TXN_TOKEN_TYP } from "@mission/core";
 import { currentContractRef } from "@mission/demo-data";
+import { createLocalJWKSet, type CryptoKey, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { ARAP_APPROVAL_TYP, type ApprovalVerification } from "./approval-binding.js";
 import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
-import type { EvaluationRequest } from "./evaluate.js";
+import type { ActionApproval, EvaluationRequest } from "./evaluate.js";
 import type { MissionView } from "./policy-view.js";
 import {
   type ResourcePolicy,
@@ -106,3 +108,76 @@ export const RESOURCE_POLICY_UNAVAILABLE_FIXTURE: ResourcePolicy = Object.freeze
     throw new ResourcePolicyUnavailableError("fixture backend unavailable");
   },
 });
+
+/**
+ * @spec authzen#context-approval (#2067, D1313): an Access Request Service
+ * stand-in for unit tests and harnesses that present an action approval. It
+ * holds a fresh ES256 key, the trust anchor a decision point binds for it
+ * (`verification`), and mints approvals whose signed `state` binds the
+ * qualified Mission identity it is given, the way the service binds the one
+ * its denial binding names. `mission` undefined signs `state` with no Mission
+ * claim; `override` signs under another issuer, audience or key, for the
+ * refusal tests.
+ */
+export interface ApprovalSignerFixture {
+  issuer: string;
+  audience: string;
+  verification: ApprovalVerification;
+  approve(
+    approval: Omit<ActionApproval, "state">,
+    mission: { issuer: string; id: string } | undefined,
+    override?: { issuer?: string; audience?: string; signingKey?: CryptoKey },
+  ): Promise<ActionApproval>;
+}
+
+/**
+ * @spec authzen#context-approval (#2067, D1313): a decision point's trust
+ * anchor for the transaction tokens (`mission-txn-token+jwt`) a test's
+ * Transaction Authorization Server stand-in signs. A test generates its
+ * signing keys after the decision point is built, so `trust` adds each set to
+ * the anchor's key set, which the decision point reads at every verification.
+ */
+export function txnTokenAnchorFixture(
+  issuer: string,
+  audience: string,
+): { verification: ApprovalVerification; trust(jwks: { keys: readonly Record<string, unknown>[] }): void } {
+  const keys: Record<string, unknown>[] = [];
+  return {
+    verification: {
+      issuers: [
+        {
+          typ: MISSION_TXN_TOKEN_TYP,
+          issuer,
+          audience,
+          keys: (header, token) => createLocalJWKSet({ keys: keys as never })(header, token),
+        },
+      ],
+    },
+    trust(jwks) {
+      keys.push(...jwks.keys);
+    },
+  };
+}
+
+export async function approvalSignerFixture(
+  options: { issuer?: string; audience?: string } = {},
+): Promise<ApprovalSignerFixture> {
+  const issuer = options.issuer ?? "https://ars.test";
+  const audience = options.audience ?? "https://pdp.test";
+  const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
+  const jwk = { ...(await exportJWK(publicKey)), kid: "ars-approval-fixture", alg: "ES256" };
+  return {
+    issuer,
+    audience,
+    verification: { issuers: [{ typ: ARAP_APPROVAL_TYP, issuer, audience, keys: { keys: [jwk] } }] },
+    async approve(approval, mission, override = {}) {
+      const state = await new SignJWT({ ...approval, ...(mission ? { mission } : {}) })
+        .setProtectedHeader({ alg: "ES256", kid: "ars-approval-fixture", typ: ARAP_APPROVAL_TYP })
+        .setIssuer(override.issuer ?? issuer)
+        .setAudience(override.audience ?? audience)
+        .setIssuedAt()
+        .sign(override.signingKey ?? privateKey);
+      return { ...approval, state };
+    },
+  };
+}

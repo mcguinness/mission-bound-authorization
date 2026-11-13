@@ -20,7 +20,7 @@ import {
   relationForAction,
   stalenessBound,
 } from "../src/index.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { approvalSignerFixture, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withActionClass } from "./with-credential.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
@@ -29,6 +29,8 @@ const NOW = new Date("2026-10-05T12:00:00Z");
 const CLOSE = { event_type: "accounting-period-closed", discharge_authority: "close-2026-q3" };
 
 const allowingFga = { checkWithContext: async () => true } as unknown as Fga;
+/** @spec authzen#context-approval (#2067): signs each approval's material, bound to the Mission below. */
+const ARS = await approvalSignerFixture();
 
 /** A Mission that allows both reads, with no constraint of its own. */
 const BROAD_MISSION = [
@@ -55,6 +57,7 @@ const opts = (v: MissionView = view()) => ({
   stalenessBound,
   relationForAction,
   resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  approvalVerification: ARS.verification,
 });
 
 type Credential = NonNullable<EvaluationRequest["context"]["credential"]>;
@@ -298,7 +301,10 @@ describe("the credential's discharge and approval conditions are decided at the 
     const approved = {
       extra: {
         parameter_digest: "sha-256:op",
-        action_approval: { id: "apr_1", approved_at: NOW.toISOString(), parameter_digest: "sha-256:op" },
+        action_approval: await ARS.approve(
+          { id: "apr_1", approved_at: NOW.toISOString(), parameter_digest: "sha-256:op" },
+          { issuer: ISSUER, id: "msn_credential_1" },
+        ),
       },
     };
     expect(reason(await evaluate(req(approvalOnly, approved), opts()))).toBe("permit");

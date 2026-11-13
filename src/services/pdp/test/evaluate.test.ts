@@ -12,7 +12,7 @@ import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/eval
 import { type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { approvalSignerFixture, EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
@@ -102,7 +102,16 @@ const approvedUnder = (action: string) => ({
   properties: { resource_contract: currentContractRef({ resource: RESOURCE, actions: [action] }) },
 });
 
+/**
+ * @spec authzen#context-approval (#2067): the Access Request Service stand-in
+ * whose signed `state` binds each approval to the Mission these requests name,
+ * and whose trust anchor the PDP below holds.
+ */
+const ARS = await approvalSignerFixture();
+const BOUND_MISSION = { issuer: "https://as.test", id: "msn_test_1" };
+
 const opts = (v: MissionView) => ({
+  approvalVerification: ARS.verification,
   view: v,
   fga,
   modelId,
@@ -390,7 +399,17 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(Date.parse(ar.expires_at)).toBe(NOW.getTime() + 300_000);
   });
 
-  it("an approval past approved_until -> deny action_approval_required (ARAP)", async () => {
+  it("an approval past approved_until -> deny approval_expired, never action_approval_required (ARAP)", async () => {
+    const approval = await ARS.approve(
+      {
+        id: "apr_expired",
+        approved_at: NOW.toISOString(), // fresh (within max age)
+        approved_until: new Date(NOW.getTime() - 1000).toISOString(), // already past
+        parameter_digest: "sha-256:pd",
+        resource: approvedUnder("payments:payment.execute"),
+      },
+      BOUND_MISSION,
+    );
     const dec = await evaluate(
       req({
         action: { name: "payments:payment.execute" },
@@ -400,22 +419,29 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
           mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
-          action_approval: {
-            id: "apr_expired",
-            approved_at: NOW.toISOString(), // fresh (within max age)
-            approved_until: new Date(NOW.getTime() - 1000).toISOString(), // already past
-            parameter_digest: "sha-256:pd",
-            resource: approvedUnder("payments:payment.execute"),
-          },
+          action_approval: approval,
         },
       }),
       { ...opts(view()), requiresActionApproval: () => true, maxApprovalAgeSeconds: 300 },
     );
     expect(dec.decision).toBe(false);
-    expect(dec.context.denial_reason).toBe("action_approval_required");
+    // @spec authzen#context-approval: a presented approval that fails an ARAP
+    // check is denied with ARAP's re-evaluation reason and default next_action.
+    expect(dec.context.denial_reason).toBe("approval_expired");
+    expect(dec.context.next_action).toBe("request");
   });
 
   it("an approval within approved_until -> permit (ARAP positive control)", async () => {
+    const approval = await ARS.approve(
+      {
+        id: "apr_ok",
+        approved_at: NOW.toISOString(),
+        approved_until: new Date(NOW.getTime() + 60_000).toISOString(),
+        parameter_digest: "sha-256:pd",
+        resource: approvedUnder("payments:payment.execute"),
+      },
+      BOUND_MISSION,
+    );
     const dec = await evaluate(
       req({
         action: { name: "payments:payment.execute" },
@@ -425,13 +451,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
           action_class: "irreversible_action",
           parameter_digest: "sha-256:pd",
           mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
-          action_approval: {
-            id: "apr_ok",
-            approved_at: NOW.toISOString(),
-            approved_until: new Date(NOW.getTime() + 60_000).toISOString(),
-            parameter_digest: "sha-256:pd",
-            resource: approvedUnder("payments:payment.execute"),
-          },
+          action_approval: approval,
         },
       }),
       { ...opts(view()), requiresActionApproval: () => true, maxApprovalAgeSeconds: 300 },
@@ -474,18 +494,22 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
   });
 
   it("permits the same action once an approval bound to the parameters is presented", async () => {
+    const approval = await ARS.approve(
+      {
+        id: "apr_1",
+        approved_at: NOW.toISOString(),
+        parameter_digest: "sha-256:gated-op",
+        resource: approvedUnder("payments:invoice.read"),
+      },
+      BOUND_MISSION,
+    );
     const decision = await evaluate(
       req({
         context: {
           mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
           parameter_digest: "sha-256:gated-op",
           mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
-          action_approval: {
-            id: "apr_1",
-            approved_at: NOW.toISOString(),
-            parameter_digest: "sha-256:gated-op",
-            resource: approvedUnder("payments:invoice.read"),
-          },
+          action_approval: approval,
         },
       }),
       opts(gatedView),

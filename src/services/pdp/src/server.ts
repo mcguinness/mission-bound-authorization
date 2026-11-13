@@ -27,6 +27,7 @@
  * demonstrates is not obscured by an unbounded read.
  */
 
+import type { ApprovalVerification } from "./approval-binding.js";
 import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
 import { assertHistoryBinding, type HistoryBinding } from "./history.js";
 import { randomUUID } from "node:crypto";
@@ -198,6 +199,13 @@ export interface PdpRemoteServerConfig {
    * network hop exactly as `operationDeclarations` is.
    */
   history?: HistoryBinding;
+  /**
+   * @spec authzen#context-approval (#2067, D1313): this PDP's trust anchors
+   * for integrity-protected approval material, bound on this side of the
+   * network hop exactly as `history` is. Absent, no presented approval
+   * verifies.
+   */
+  approvalVerification?: ApprovalVerification;
   /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
@@ -461,11 +469,15 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     delete (opts as Partial<EvaluateOptions>).evaluationContextBinding;
     delete (opts as Partial<EvaluateOptions>).operationDeclarations;
     delete (opts as Partial<EvaluateOptions>).history;
+    // @spec authzen#context-approval (#2067): the approval-material trust
+    // anchors are this server's own, never a request option.
+    delete (opts as Partial<EvaluateOptions>).approvalVerification;
     if (config.evidence) opts.evidence = config.evidence;
     if (config.phasedActions) opts.phasedActions = config.phasedActions;
     if (config.evaluationContextBinding) opts.evaluationContextBinding = config.evaluationContextBinding;
     if (config.operationDeclarations) (opts as Partial<EvaluateOptions>).operationDeclarations = config.operationDeclarations;
     if (config.history) (opts as Partial<EvaluateOptions>).history = config.history;
+    if (config.approvalVerification) (opts as Partial<EvaluateOptions>).approvalVerification = config.approvalVerification;
     if (config.durationLeases) opts.durationLeases = config.durationLeases;
     if (config.refusals) opts.refusals = config.refusals;
     if (config.claims) opts.claims = config.claims;

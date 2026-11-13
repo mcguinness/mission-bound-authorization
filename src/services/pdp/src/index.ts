@@ -62,6 +62,15 @@ export {
 } from "./evaluate.js";
 export { createPdpRefusalRecorder, type PdpRefusalRecord, type PdpRefusalRecorderConfig } from "./refusal-record.js";
 export {
+  ARAP_APPROVAL_TYP,
+  type ApprovalBindingOutcome,
+  type ApprovalMaterialIssuer,
+  type ApprovalVerification,
+  txnApprovalId,
+  type VerifiedApproval,
+  verifyApprovalBinding,
+} from "./approval-binding.js";
+export {
   type MissionStateObservation,
   type MissionStatusVerifyOptions,
   parseStateObservation,

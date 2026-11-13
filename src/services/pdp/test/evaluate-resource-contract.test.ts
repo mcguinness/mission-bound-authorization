@@ -15,7 +15,7 @@ import {
   resourceContractDigest,
 } from "@mission/core";
 import { decodeJwt, generateKeyPair } from "jose";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   type ActionApproval,
   type EvaluateOptions,
@@ -26,7 +26,12 @@ import type { Fga } from "../src/fga.js";
 import type { AuthorityEntry, MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { authorizationBinding, decisionCacheKey } from "../src/projections.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "../src/test-support.js";
+import {
+  type ApprovalSignerFixture,
+  approvalSignerFixture,
+  RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  resourcePolicyFixture,
+} from "../src/test-support.js";
 import { withActionClass } from "./with-credential.js";
 
 const RS = "https://payments.test/mcp";
@@ -261,35 +266,45 @@ describe("a retained contract relaxes no other decision input (@spec runtime#res
 });
 
 describe("an action-bound approval binds the reference (@spec authzen#context-approval, runtime#resource-contract rule 4, #249)", () => {
-  const approval = (r?: ResourceContractRef): ActionApproval => ({
-    id: "apr_1",
-    approved_at: "2026-10-20T11:59:00Z",
-    parameter_digest: DIGEST,
-    ...(r ? { resource: { properties: { resource_contract: r } } } : {}),
+  // @spec authzen#context-approval (#2067): the approval's material is signed
+  // and bound to the Mission `view()` names, under the PDP's trust anchor.
+  let ars: ApprovalSignerFixture;
+  beforeAll(async () => {
+    ars = await approvalSignerFixture();
   });
+  const approval = (r?: ResourceContractRef): Promise<ActionApproval> =>
+    ars.approve(
+      {
+        id: "apr_1",
+        approved_at: "2026-10-20T11:59:00Z",
+        parameter_digest: DIGEST,
+        ...(r ? { resource: { properties: { resource_contract: r } } } : {}),
+      },
+      { issuer: "https://as.test", id: "msn_contract" },
+    );
   const withApproval = (req: EvaluationRequest, a?: ActionApproval): EvaluationRequest => ({
     ...req,
     context: { ...req.context, ...(a ? { action_approval: a } : {}) },
   });
   const gated = (contracts: ResourceContractDeclarations, v: MissionView) =>
-    options(contracts, v, { requiresActionApproval: () => true });
+    options(contracts, v, { requiresActionApproval: () => true, approvalVerification: ars.verification });
 
   it("denies out_of_scope, with no permit, an approval given under v1 presented for the same action under v2, both resolving and the parameters identical", async () => {
     const under = (r: ResourceContractRef) => view(r);
-    const d = await evaluate(withApproval(request(V2), approval(V1)), gated(BOTH, under(V2)));
+    const d = await evaluate(withApproval(request(V2), await approval(V1)), gated(BOTH, under(V2)));
     expect(d.decision).toBe(false);
     expect(d.context.denial_reason).toBe("out_of_scope");
     expect(d.context.conditions).toBeUndefined();
     // The approval given under the request's own reference satisfies the gate.
-    expect(await reason(withApproval(request(V2), approval(V2)), gated(BOTH, under(V2)))).toBe("permit");
-    expect(await reason(withApproval(request(V1), approval(V1)), gated(BOTH, under(V1)))).toBe("permit");
+    expect(await reason(withApproval(request(V2), await approval(V2)), gated(BOTH, under(V2)))).toBe("permit");
+    expect(await reason(withApproval(request(V1), await approval(V1)), gated(BOTH, under(V1)))).toBe("permit");
   });
 
   it("an approval whose approved Resource names no contract does not satisfy an action under one", async () => {
-    expect(await reason(withApproval(request(V1), approval()), gated(BOTH, view(V1)))).toBe("out_of_scope");
+    expect(await reason(withApproval(request(V1), await approval()), gated(BOTH, view(V1)))).toBe("out_of_scope");
     // Where no contract applies, neither side names one and the approval stands.
     expect(
-      await reason(withApproval(request(null), approval()), gated(ResourceContractDeclarations.NONE, view(null))),
+      await reason(withApproval(request(null), await approval()), gated(ResourceContractDeclarations.NONE, view(null))),
     ).toBe("permit");
   });
 
@@ -310,7 +325,7 @@ describe("an action-bound approval binds the reference (@spec authzen#context-ap
   });
 
   it("refuses an approved action, parameters unchanged, when the definition changed after the approval and before the decision", async () => {
-    const approved = withApproval(request(V1), approval(V1));
+    const approved = withApproval(request(V1), await approval(V1));
     expect(await reason(approved, gated(V1_CURRENT, view(V1)))).toBe("permit");
     // The resource changed the v1 definition (the same version, another
     // digest): the approval and parameter_digest are unchanged, and the

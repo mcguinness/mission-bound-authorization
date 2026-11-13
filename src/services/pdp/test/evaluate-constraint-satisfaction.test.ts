@@ -32,7 +32,7 @@ import {
   relationForAction,
   stalenessBound,
 } from "../src/index.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { approvalSignerFixture, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withActionClass } from "./with-credential.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
@@ -40,6 +40,8 @@ const ACTION = "payments:invoice.read";
 const OTHER_ACTION = "payments:vendor.read";
 const NOW = new Date("2026-10-18T12:00:00Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
+/** @spec authzen#context-approval (#2067): signs each approval's material, bound to the Mission below. */
+const ARS = await approvalSignerFixture();
 
 const missionView = (constraints?: Record<string, unknown>): MissionView => ({
   id: "msn_1375",
@@ -99,6 +101,7 @@ async function decide(
     relationForAction,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     maxApprovalAgeSeconds: 300,
+    approvalVerification: ARS.verification,
   });
   return { permit: d.decision, reason: d.context.denial_reason, digest: d.context.entry_digest as string | undefined };
 }
@@ -153,9 +156,12 @@ describe("PDP: another credential entry permits only on its own (@spec resource-
 
 describe("PDP: requires_action_approval's input and predicate (@spec resource-access#initial-common-constraints)", () => {
   const DIGEST = "sha-256:op-1375";
-  const approval = (over: Record<string, unknown> = {}) => ({
+  const approval = async (over: Record<string, unknown> = {}) => ({
     parameter_digest: DIGEST,
-    action_approval: { id: "apr_1375", approved_at: NOW.toISOString(), parameter_digest: DIGEST, ...over },
+    action_approval: await ARS.approve(
+      { id: "apr_1375", approved_at: NOW.toISOString(), parameter_digest: DIGEST, ...over },
+      { issuer: "https://as.test", id: "msn_1375" },
+    ),
   });
   const required = { permit: false, reason: "action_approval_required" };
 
@@ -172,12 +178,16 @@ describe("PDP: requires_action_approval's input and predicate (@spec resource-ac
     const gated = missionView({ requires_action_approval: true });
     const ask = (context: Partial<EvaluationRequest["context"]>) =>
       decide([credentialEntry()], {}, undefined, gated, context);
-    expect((await ask(approval())).permit).toBe(true);
-    // Older than the deployment's 300-second maximum age.
+    expect((await ask(await approval())).permit).toBe(true);
+    // Older than the deployment's 300-second maximum age: ARAP's
+    // `approval_expired` (@spec authzen#context-approval).
     const stale = new Date(NOW.getTime() - 301_000).toISOString();
-    expect(await ask(approval({ approved_at: stale }))).toMatchObject(required);
-    // Bound to other parameters than the request's.
-    expect(await ask(approval({ parameter_digest: "sha-256:other-op" }))).toMatchObject(required);
+    expect(await ask(await approval({ approved_at: stale }))).toMatchObject({ permit: false, reason: "approval_expired" });
+    // Bound to other parameters than the request's: ARAP's `out_of_scope`.
+    expect(await ask(await approval({ parameter_digest: "sha-256:other-op" }))).toMatchObject({
+      permit: false,
+      reason: "out_of_scope",
+    });
   });
 });
 
