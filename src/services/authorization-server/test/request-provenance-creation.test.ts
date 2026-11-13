@@ -801,8 +801,14 @@ describe("release before acceptance at the token exchanges (@spec request-proven
     const crid = crypto.randomUUID();
     const missions = as.kernel.allMissions().length;
     store.failNextCommit = true;
-    const r = await createChild(parent, [signed.entry], { crid });
-    expect(store.failNextCommit).toBe(false);
+    let r: Reply;
+    try {
+      r = await createChild(parent, [signed.entry], { crid });
+      // The write was attempted, and refused.
+      expect(store.failNextCommit).toBe(false);
+    } finally {
+      store.failNextCommit = false;
+    }
     expect(r.status, JSON.stringify(r.body)).toBe(500);
     expect(as.kernel.allMissions().length).toBe(missions);
     expect(acceptanceOf(signed.entry.assertion)).toBeUndefined();
