@@ -456,10 +456,12 @@ export async function composeStack(opts: {
    * `intake.signer()` under the bounds `config/request-provenance.json`
    * declares, which also set the intake's assertion lifetime and maximum
    * capture age, so the two halves cannot drift. The type is accepted, not
-   * required of any client. The shipped file stays `enabled: false`; with a
-   * file-backed kernel store (`kernelStore`) the AS refuses construction
-   * (D1119 Q5, #1963). `pnpm as-native` sets it from
-   * `MISSION_REQUEST_INTAKE=1`. Absent: the target is unchanged.
+   * required of any client. The shipped file stays `enabled: false`. The
+   * type's replay store is the AS's default, on the kernel's database, so
+   * with a file-backed kernel store (`kernelStore`) its pairs and acceptance
+   * records are kept in that file across restarts (D1119 Q5, #1963).
+   * `pnpm as-native` sets it from `MISSION_REQUEST_INTAKE=1`. Absent: the
+   * target is unchanged.
    */
   requestIntake?: boolean;
   /**
@@ -848,8 +850,10 @@ export async function composeStack(opts: {
       // @spec request-provenance#verification (#939 slice 2b-2, D1221): the
       // type enabled with the intake, trusting its one signer under the
       // shipped file's declared bounds, through the same validation as the
-      // file. Accepted, not required. With a kernel file the AS refuses
-      // construction here (D1119 Q5, #1963), releasing the intake too.
+      // file. Accepted, not required. No store is passed: the AS keeps the
+      // replay pairs on its kernel's database, in the kernel's file where
+      // there is one (D1119 Q5, #1963). A failed construction releases the
+      // intake too.
       ...(requestIntake
         ? {
             requestProvenance: {
