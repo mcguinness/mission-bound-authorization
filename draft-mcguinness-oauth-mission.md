@@ -1637,9 +1637,9 @@ establishes both.
 
 A deployment MUST publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
-it enforces for Missions whose derived Authority Set carries high-risk
-authority, and the deployment scope it applies to. This document
-requires no particular serialization.
+it enforces for Missions whose derived Authority Set or Mission Intent
+carries high-risk authority, and the deployment scope it applies to.
+This document requires no particular serialization.
 
 High-risk authority means irreversible, external-commitment, or
 privileged-administration actions under the deployment's
@@ -6658,6 +6658,9 @@ resolve before interoperating.
 - Approval: an implied-authority statement the AS holds for an entry
   is rendered with that entry as a disclosure of risk, apart from the
   derived Authority Set (#2046).
+- Approval authentication: the published floor covers high-risk
+  authority the Mission Intent carries, a cumulative consumption bound,
+  as well as the derived Authority Set (#2032).
 {: spacing="compact"}
 
 -02

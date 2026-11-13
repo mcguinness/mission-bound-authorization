@@ -10,7 +10,7 @@
  * be derived is reported underivable, which the PDP refuses; a Mission outside
  * every standing-payment lineage has none.
  */
-import { DERIVATION_POLICY, DISPATCH_PROHIBITED_ACTIONS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, DERIVATION_POLICY, DISPATCH_PROHIBITED_ACTIONS } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -152,7 +152,7 @@ function dispatched(policyId = "sp-binding") {
     policyVersion: DERIVATION_POLICY.policy_version,
     dispatchPolicies: REGISTRY,
     dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
-    standingPayment: { mapping: MAPPING },
+    standingPayment: { mapping: MAPPING, approvalFloor: APPROVAL_FLOOR },
   });
   const successor = () =>
     createExpansion(kernel, {
