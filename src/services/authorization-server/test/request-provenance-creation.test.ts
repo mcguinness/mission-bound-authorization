@@ -906,4 +906,27 @@ describe("a ceiling drawdown accepts the type (@spec request-provenance#replay, 
     expect(retried.body.mission_id).toBe(successor.id);
     expect(verifications()).toBe(before + 1);
   });
+
+  it("a failed write creating the drawdown's successor releases the reservation, so the retry completes with the same assertion", async () => {
+    const decided = assembledCeilingOffer(CEILING_OFFER as never, drawdownAs.kernel.resourceContracts()) as unknown as Record<string, unknown>;
+    const predecessor = await issueMission(drawdownTarget, { proposal: reads(READ), decided });
+    const signed = await mint({ audience: DRAWDOWN_ISSUER });
+    const crid = crypto.randomUUID();
+    const widened = reads([...READ, "payments:invoice.list"]);
+    const createCompleted = vi.spyOn(drawdownAs.creationIdempotency, "createCompleted").mockImplementationOnce(() => {
+      throw new Error("the kernel database refused the write");
+    });
+    try {
+      const r = await expand(predecessor, [signed.entry], { crid, proposal: widened, target: drawdownTarget });
+      expect(r.status, JSON.stringify(r.body)).toBe(500);
+    } finally {
+      createCompleted.mockRestore();
+    }
+    expect(drawdownAs.requestProvenanceStore?.accepted(INTAKE, signed.jti, Date.now())).toBeUndefined();
+    const completed = await expand(predecessor, [signed.entry], { crid, proposal: widened, target: drawdownTarget });
+    expect(completed.status, JSON.stringify(completed.body)).toBe(200);
+    expect(drawdownAs.requestProvenanceStore?.accepted(INTAKE, signed.jti, Date.now())?.submissionRef).toBe(
+      creationAcceptanceRef("expansion", CLIENT, crid),
+    );
+  });
 });
