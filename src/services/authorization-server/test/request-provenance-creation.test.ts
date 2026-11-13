@@ -637,12 +637,15 @@ describe("exact retry after a lost response (@spec request-provenance#replay, ch
     const crid = crypto.randomUUID();
     expectPending(await expand(predecessor, [(await mint()).entry], { crid }));
     const fresh = await mint();
+    const deferrals = () => (as.kernel.db.prepare("SELECT COUNT(*) AS n FROM expansion_deferrals").get() as { n: number }).n;
+    const opened = deferrals();
     const before = verifications();
     const r = await expand(predecessor, [fresh.entry], { crid });
     expect(r.status, JSON.stringify(r.body)).toBe(400);
     expect(r.body.error).toBe("invalid_request");
     expect(String(r.body.error_description)).toContain("already used for a different creation request");
     expect(verifications()).toBe(before);
+    expect(deferrals()).toBe(opened);
     expect(acceptanceOf(fresh.entry.assertion)).toBeUndefined();
   });
 
@@ -754,6 +757,20 @@ describe("one replay store across carriers (@spec request-provenance#replay, #93
     const forExchange = await resign(atPush.entry.assertion, (c) => ({ ...c, presenter: EXCHANGE_PRESENTER as unknown as Json }));
     expectEvidenceRefusal(await createChild(mission, [{ type: TYPE, assertion: forExchange }]), "replay");
     expectEvidenceRefusal(await expand(mission, [{ type: TYPE, assertion: forExchange }]), "replay");
+  });
+});
+
+describe("no release after acceptance at the token exchanges (@spec request-provenance#replay, #939 slice 3a)", () => {
+  it("a deferred expansion the Approver denies releases nothing: a new exchange presenting the assertion is refused as replay", async () => {
+    const mission = await issueMission();
+    const signed = await mint();
+    const code = expectPending(await expand(mission, [signed.entry]));
+    as.expansionDeferrals.deny(code);
+    const denied = await poll(code);
+    expect(denied.status, JSON.stringify(denied.body)).toBe(400);
+    expect(denied.body.error).toBe("access_denied");
+    expectEvidenceRefusal(await expand(mission, [signed.entry]), "replay");
+    expectEvidenceRefusal(await createChild(mission, [signed.entry]), "replay");
   });
 });
 
