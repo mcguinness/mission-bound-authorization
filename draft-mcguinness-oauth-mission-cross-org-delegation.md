@@ -334,8 +334,8 @@ credential MUST validate under {{actor-evidence}}; a Chain naming an
 actor on a hop with a missing, misaligned, or invalid credential MUST
 be refused.  A hop without `act` is key-only: its holder is
 identified by key possession alone, it satisfies no eligibility
-matcher (the issuance profile's `allowed_delegates` or a
-`sub_profile` selector), and where policy requires a named actor a
+condition of an entry's delegation policy (such as a delegate matcher
+or a `sub_profile` selector), and where policy requires a named actor a
 key-only hop fails closed.  `act` is an identity statement, never an
 evidence container.
 
