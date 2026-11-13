@@ -1217,6 +1217,20 @@ deployment's maximum approval age
 ({{I-D.draft-mcguinness-mission-runtime}}), and that `approved_until`
 has not passed.
 
+The Mission checks also bind the approval to the qualified Mission
+identity: the bound Mission's `issuer` and `id` both equal those of
+the Mission the PDP evaluates. The PDP MUST establish that binding
+from integrity-protected approval material, such as verified signed
+`state`, or from the approval record it resolves by `id`, and MUST
+NOT take it from the request's `context.mission`. An approval bound
+to another Mission, including the predecessor of an expanded Mission
+({{requestable-denials}}), does not cover the action: the PDP MUST
+deny that re-evaluation with ARAP's `out_of_scope`. An approval whose
+Mission binding cannot be established is unverifiable. The binding
+is to the Mission's identity alone, not to a status observation: a
+change of the Mission's version does not break it, and the Mission's
+state is established at each re-evaluation as for any decision.
+
 This profile requires a verifiable completion time for an action-bound
 approval: `approved_at` when present, otherwise the PDP MUST establish
 the grant time from the approval record it resolves by `id` or from
@@ -1253,7 +1267,7 @@ instead returns one of ARAP's five registered re-evaluation reasons in
 - `grant_pending` (`retry`);
 - `policy_denied` (`none`);
 - `approval_unverifiable` (`none`), which also covers an approval
-  whose completion time cannot be established.
+  whose completion time or Mission binding cannot be established.
 
 These are ARAP-owned values carried under its extensibility rule
 {{ARAP}}, not values this profile defines.
@@ -2390,7 +2404,8 @@ Decision Evidence's `denial_reason`:
   decision.
 - `parameter_violation`: parameters violate a constraint the PDP
   evaluated, the recomputed digest does not match, or a required
-  `parameter_digest` is absent for a parameter-bound action.
+  `parameter_digest` is absent for a parameter-bound action. This
+  condition is never marked requestable ({{requestable-denials}}).
 - `duplicate_suppressed`: the request's `idempotency_key` and
   operation identity ({{projections}}) match a prior claim whose
   outcome is unresolved (transient) or completed (terminal), so the
@@ -2483,6 +2498,13 @@ or policy adjudicates it, synchronously when policy auto-approves and
 otherwise asynchronously through ARAP's task handle; and on approval
 the PEP re-evaluates.
 
+The PDP MUST NOT mark a `parameter_violation` denial requestable or
+include `context.access_request` in it, and the denial carries
+nothing, such as `next_action: request`, that implies an approval
+would override the violated constraint. A client that needs a wider
+constraint pursues a separate, explicit Mission expansion
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+
 This is the demand-driven counterpart to the
 pre-consented drawdown of the experimental progressive authorization
 companion ({{I-D.draft-mcguinness-oauth-mission-progressive}}): the
@@ -2518,6 +2540,16 @@ An ARAP completion realizes one of two outcomes:
   relationship grant, or another authority-state change. The fresh
   evaluation observes that new state. Expansion is one realization,
   not ARAP's completion model.
+
+Where the realization is a Mission expansion, the fresh evaluation
+runs under the successor Mission, with the successor's
+`context.mission` and a credential bound to the successor, and a
+permit rests on the successor's authority, not on the ARAP approval.
+The expansion's approval is not an action-bound approval. Where
+policy gates the action on one, an approval bound to the predecessor
+does not satisfy that gate under the successor ({{context-approval}}):
+the PDP denies the re-evaluation `out_of_scope` when one is presented
+and `approval_required` when none is.
 
 The following example shows a requestable denial: deployment policy
 requires an action-bound approval for the journal-entry write, no valid
@@ -3271,6 +3303,17 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Changes a requirement (#2067): Approval Context binds an action
+  approval to the qualified Mission identity, `issuer` and `id`, which
+  the PDP establishes from integrity-protected approval material or the
+  approval record, never from `context.mission`. An approval bound to
+  another Mission, a predecessor included, is denied `out_of_scope`,
+  and one whose binding cannot be established `approval_unverifiable`.
+  Requestable Denials: a `parameter_violation` denial is never
+  requestable, and after a Mission expansion the fresh evaluation runs
+  under the successor, whose action-bound approval the expansion's
+  approval does not supply.
 
 - History Context: the specification defining a predicate type states
   whether it selects an operation and which of its members names it.
