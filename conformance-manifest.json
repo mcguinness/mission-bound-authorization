@@ -47064,7 +47064,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#2067 (D1313). The reference implementation spells the reason `action_approval_required` (and the member `context.action_approval`), the drift from the profile's `approval_required` the other approval rows carry. Proved by mutation: comparing the Mission issuer only fails the predecessor assertions; opening the gate when no approval is presented fails the action_approval_required assertions, in the PDP test and the PEP-level test."
+   "notes": "#2067 (D1313). The reference implementation spells the reason `action_approval_required` (and the member `context.action_approval`), the drift from the profile's `approval_required` the other approval rows carry. Proved by mutation: comparing the Mission issuer only fails the predecessor assertions; opening the gate when no approval is presented fails the action_approval_required assertions, in the PDP test and the PEP-level test; and signing the denial binding without the Mission issuer fails the PDP test's binding assertion."
   },
   {
    "id": "authzen.requestable-denials.expansion-runs-under-successor",
