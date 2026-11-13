@@ -316,10 +316,25 @@ export class SubmissionAdmission {
 /**
  * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1): a later step of
  * a submission the carrier already accepted, named by the carrier's
- * reference for it (`par:<jti>` for a pushed authorization request).
+ * reference for it: `par:<jti>` for a pushed authorization request, and
+ * {@link creationAcceptanceRef} for a child-creation or expansion exchange.
  */
 export interface IntentSubmissionAcceptedReference {
   ref: string;
+}
+
+/**
+ * @spec request-provenance#replay (#939 slice 3a, D1315 ruling 4): the
+ * reference under which a child-creation or expansion exchange commits its
+ * admission scope: the operation, the client and its `creation_request_id`,
+ * which together name one creation operation (expansion#creation-idempotency).
+ * A JSON array after the `creation:` prefix, so no client identifier or
+ * creation_request_id can make two operations' references equal, and none is
+ * confusable with `par:<jti>`. Deterministic: a deferral the exchange opens
+ * stages the same reference its admission commits under.
+ */
+export function creationAcceptanceRef(op: "child-creation" | "expansion", clientId: string, creationRequestId: string): string {
+  return `creation:${JSON.stringify([op, clientId, creationRequestId])}`;
 }
 
 /**
@@ -805,6 +820,73 @@ export async function verifyIntentSubmissionEvidence(
   } catch (e) {
     ctx.admission?.release();
     throw e;
+  }
+  return facts;
+}
+
+/**
+ * @spec request-provenance#replay (#939 slice 3a, D1119 Q1, D1315): a later
+ * step of an accepted submission whose carrier kept, with the pending
+ * operation, the entries as presented and the facts verified at acceptance
+ * (a deferred expansion's activation). An entry whose type defines `resume`
+ * relies on its acceptance record under `ctx.accepted`, and is refused when
+ * the step names no accepted submission or no record matches. Every other
+ * entry keeps the fact recorded at acceptance, as the carrier always did, and
+ * is not verified again. Returns the facts the step records: the resumed
+ * fact for a resumable entry, the recorded one otherwise.
+ *
+ * The kept entries and facts must agree, entry by entry, by type and
+ * `artifact_hash`; a disagreement, or a resumable fact kept with no entry,
+ * refuses `invalid_mission_intent_evidence`. No verification work is charged,
+ * since nothing is verified.
+ */
+export async function resumeRecordedIntentSubmissionEvidence(
+  evidence: IntentSubmissionEvidenceEntry[] | undefined,
+  recorded: IntentSubmissionEvidenceFact[] | undefined,
+  ctx: Omit<IntentSubmissionEvidenceResumeInput, "entry" | "accepted"> & { accepted?: IntentSubmissionAcceptedReference },
+  types?: IntentSubmissionEvidenceTypes,
+): Promise<IntentSubmissionEvidenceFact[] | undefined> {
+  const refused = (message: string) => new IntentError("invalid_mission_intent_evidence", message);
+  if (!evidence?.length) {
+    // A pending operation kept facts alone: no type relying on an
+    // acceptance record may be among them.
+    for (const fact of recorded ?? []) {
+      if (evidenceTypeFor(fact.type, types)?.resume !== undefined) {
+        throw refused(`evidence acceptance record refused (${fact.type}): the pending operation kept no evidence entry to resume`);
+      }
+    }
+    return recorded;
+  }
+  if (recorded?.length !== evidence.length) {
+    throw refused("the pending operation's evidence entries and recorded facts do not agree");
+  }
+  const facts: IntentSubmissionEvidenceFact[] = [];
+  for (const [i, entry] of evidence.entries()) {
+    const fact = recorded[i] as IntentSubmissionEvidenceFact;
+    if (fact.type !== entry.type || computeAnchor(MISSION_INTENT_EVIDENCE_TYP, ctx.issuer, entry as never) !== fact.artifact_hash) {
+      throw refused("the pending operation's evidence entries and recorded facts do not agree");
+    }
+    const impl = evidenceTypeFor(entry.type, types);
+    if (impl?.resume === undefined) {
+      facts.push(fact);
+      continue;
+    }
+    if (ctx.accepted === undefined) {
+      throw refused(`evidence acceptance record refused (${entry.type}): the pending operation names no accepted submission`);
+    }
+    let resumed: IntentSubmissionEvidenceResumed;
+    try {
+      resumed = await impl.resume({ ...ctx, entry, accepted: ctx.accepted });
+    } catch (e) {
+      if (e instanceof IntentError) throw e;
+      throw refused(`evidence acceptance record refused (${entry.type}): ${e instanceof Error ? e.message : "verifier error"}`);
+    }
+    facts.push({
+      type: entry.type,
+      artifact_hash: fact.artifact_hash,
+      verified_at: resumed.verified_at,
+      ...(Object.keys(resumed.facts).length ? { facts: resumed.facts } : {}),
+    });
   }
   return facts;
 }

@@ -72,7 +72,7 @@ export interface RequestProvenanceRecord {
 
 /** A committed pair: its record, and the accepted submission it belongs to. */
 export interface RequestProvenanceAcceptance extends RequestProvenanceRecord {
-  /** The carrier's reference for the accepted submission (`par:<jti>`). */
+  /** The carrier's reference for the accepted submission (`par:<jti>`, or `creationAcceptanceRef` for a token exchange). */
   submissionRef: string;
 }
 

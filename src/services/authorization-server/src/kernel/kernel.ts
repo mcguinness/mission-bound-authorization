@@ -239,6 +239,7 @@ import {
   type IntentSubmissionEvidenceTypes,
   type IntentSubmissionPresenter,
   provisionalIntentHash,
+  resumeRecordedIntentSubmissionEvidence,
   type SubmissionAdmission,
   type SubmissionEvidenceBounds,
   type SubmissionIntakeOptions,
@@ -1582,6 +1583,37 @@ export class MissionKernel {
         ...(this.opts.submissionEvidenceVerificationWork !== undefined
           ? { maxVerificationWork: this.opts.submissionEvidenceVerificationWork }
           : {}),
+      },
+      this.opts.submissionEvidenceTypes,
+    );
+  }
+
+  /**
+   * @spec request-provenance#replay (#939 slice 3a, D1119 Q1, D1315): a later
+   * step of an accepted submission whose pending operation kept the entries
+   * as presented and the facts verified at acceptance (a deferred
+   * expansion's activation). An entry of a type that defines `resume` relies
+   * on its acceptance record under `accepted`; every other entry keeps its
+   * recorded fact and is not verified again
+   * ({@link resumeRecordedIntentSubmissionEvidence}). Returns the facts the
+   * step records.
+   */
+  async resumeSubmissionEvidence(input: {
+    intent: MissionIntent;
+    evidence?: IntentSubmissionEvidenceEntry[];
+    recorded?: IntentSubmissionEvidenceFact[];
+    presenter: IntentSubmissionPresenter;
+    accepted?: IntentSubmissionAcceptedReference;
+  }): Promise<IntentSubmissionEvidenceFact[] | undefined> {
+    return resumeRecordedIntentSubmissionEvidence(
+      input.evidence,
+      input.recorded,
+      {
+        intentHash: provisionalIntentHash(this.opts.issuer, input.intent),
+        issuer: this.opts.issuer,
+        presenter: input.presenter,
+        now: this.now(),
+        ...(input.accepted ? { accepted: input.accepted } : {}),
       },
       this.opts.submissionEvidenceTypes,
     );
