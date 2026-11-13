@@ -46,7 +46,7 @@ import {
   RUNTIME_POSTURE,
   stalenessBound,
 } from "@mission/pdp";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { approvalSignerFixture, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it } from "vitest";
 import {
   type ActionMapping,
@@ -148,6 +148,9 @@ const entry = (r: ResourceContractRef | undefined, resource = CANONICAL_RESOURCE
     ...(r ? { resource_contract: r } : {}),
     ...over,
   }) as Entry;
+/** @spec authzen#context-approval (#2067): the Access Request Service stand-in whose signed state binds an approval to its Mission. */
+const ARS = await approvalSignerFixture();
+
 const viewOf = (authority_set: Entry[]): MissionView => ({
   id: "msn_249_pep",
   issuer: ISSUER,
@@ -203,6 +206,9 @@ async function build(
     audience: CANONICAL_RESOURCE,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     resourceContracts: opts.pdpContracts ?? contracts,
+    // @spec authzen#context-approval (#2067): the decision point's own trust
+    // anchor for approval state, on both sides of the channel.
+    approvalVerification: ARS.verification,
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
@@ -913,17 +919,21 @@ describe("the PDP decides the contract across the decision channel (@spec runtim
         const gated = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View));
         expect(gated, mode).toMatchObject({ permitted: false, denial_reason: "action_approval_required" });
         const digest = x.decided[0]?.context.parameter_digest as string;
-        const approval = (r: ResourceContractRef) => ({
-          id: "apr_249",
-          approved_at: NOW().toISOString(),
-          parameter_digest: digest,
-          resource: { properties: { resource_contract: r } },
-        });
-        expect(await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View), approval(V1)), mode).toMatchObject({
+        const approval = (r: ResourceContractRef) =>
+          ARS.approve(
+            {
+              id: "apr_249",
+              approved_at: NOW().toISOString(),
+              parameter_digest: digest,
+              resource: { properties: { resource_contract: r } },
+            },
+            { issuer: v2View.issuer, id: v2View.id },
+          );
+        expect(await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View), await approval(V1)), mode).toMatchObject({
           permitted: false,
           denial_reason: "out_of_scope",
         });
-        expect((await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View), approval(V2))).permitted, mode).toBe(true);
+        expect((await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View), await approval(V2))).permitted, mode).toBe(true);
         expect(new Set(x.decided.map((r) => r.context.parameter_digest)).size, mode).toBe(1);
       } finally {
         await x.close();
@@ -939,12 +949,15 @@ describe("the PDP decides the contract across the decision channel (@spec runtim
       const after = await build(mode, view, V1_CURRENT, { pdpContracts: changed, requiresActionApproval: () => true });
       try {
         await before.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
-        const approval = {
-          id: "apr_249_pin",
-          approved_at: NOW().toISOString(),
-          parameter_digest: before.decided[0]?.context.parameter_digest as string,
-          resource: { properties: { resource_contract: V1_LIVE } },
-        };
+        const approval = await ARS.approve(
+          {
+            id: "apr_249_pin",
+            approved_at: NOW().toISOString(),
+            parameter_digest: before.decided[0]?.context.parameter_digest as string,
+            resource: { properties: { resource_contract: V1_LIVE } },
+          },
+          { issuer: view.issuer, id: view.id },
+        );
         expect((await before.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view), approval)).permitted, mode).toBe(true);
         expect(await after.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view), approval), mode).toMatchObject({
           permitted: false,

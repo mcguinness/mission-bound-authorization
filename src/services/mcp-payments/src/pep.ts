@@ -208,6 +208,13 @@ export interface TxnCredential {
   expS: number;
   /** The token's own `parameter_digest`, already matched to the pending operation. */
   parameterDigest: string;
+  /**
+   * @spec authzen#context-approval (#2067, D1313): the verified transaction
+   * token itself, carried to the PDP as the derived approval's `state`: the
+   * integrity-protected material the PDP establishes the approval's Mission
+   * binding from, under its own trust anchors.
+   */
+  token: string;
 }
 
 /** Validated token facts the PEP works from (token validation is upstream). */

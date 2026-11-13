@@ -28,16 +28,24 @@ import {
   type TxnConsumptionStore,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, txnTokenAnchorFixture } from "@mission/pdp/test-support";
 import { pinnedToCurrentContract } from "@mission/demo-data";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
 
+// @spec authzen#context-approval (#2067): the decision point's own trust
+// anchor for the transaction tokens the AS stand-in below signs; `build`
+// trusts each test's generated key there, as it does at the resource.
+const TAS_ANCHOR = txnTokenAnchorFixture("https://as.test", CANONICAL_RESOURCE);
+
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
 // decision point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  approvalVerification: TAS_ANCHOR.verification,
+});
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -191,6 +199,7 @@ function build(
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const connectors = new Connectors();
   const engine = new TransactionEngine("epoch-1", opts.now);
+  if (opts.txnTokenJwks) TAS_ANCHOR.trust(opts.txnTokenJwks);
   const gated = Boolean(opts.jit || opts.challengeSigner || opts.gateRemittance);
   const pep = new Pep({
     decide: opts.decide ?? EVIDENCE_KEYS.decide,

@@ -38,16 +38,22 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { approvalSignerFixture, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
 
+/** @spec authzen#context-approval (#2067): the Access Request Service stand-in whose signed state binds an approval to its Mission. */
+const ARS = await approvalSignerFixture();
+
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
 // decision point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  approvalVerification: ARS.verification,
+});
 
 const ISSUER = "https://as.test";
 
@@ -232,15 +238,18 @@ describe("an action-bound approval is reverified against the concrete parameters
     const vendor = invoice ? payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) throw new Error("seed fixture missing");
     const effective = buildEffectiveParams({ action: "payments:payment.schedule", invoice, vendor, resource: CANONICAL_RESOURCE });
-    const approval: ActionApprovalInput = {
-      id: "apr_1",
-      approved_at: new Date().toISOString(),
-      parameter_digest: parameterDigest(effective),
-      // Given under the contract the entry pins, as a fresh approval records it (#249).
-      resource: {
-        properties: { resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:payment.schedule"] }) },
+    const approval: ActionApprovalInput = await ARS.approve(
+      {
+        id: "apr_1",
+        approved_at: new Date().toISOString(),
+        parameter_digest: parameterDigest(effective),
+        // Given under the contract the entry pins, as a fresh approval records it (#249).
+        resource: {
+          properties: { resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:payment.schedule"] }) },
+        },
       },
-    };
+      { issuer: ISSUER, id: "msn_test" },
+    );
 
     // The approval matches the CURRENT record: the gate is satisfied.
     const args = { invoice_id: "inv-1", idempotency_key: idem() };
@@ -258,7 +267,9 @@ describe("an action-bound approval is reverified against the concrete parameters
     payments.bumpInvoiceAmount("inv-1", "999.00");
     const after = await pep.enforce("schedule_payment", args, TOKEN, approval);
     expect(after.permitted).toBe(false);
-    expect(after.denial_reason).toBe("action_approval_required");
+    // @spec authzen#context-approval: it no longer covers these parameters,
+    // ARAP's `out_of_scope`.
+    expect(after.denial_reason).toBe("out_of_scope");
     // Nothing executed on either call: enforce() alone never commits an
     // effect, on a permit or a deny.
     expect(connectors.ledgerEntries()).toHaveLength(0);

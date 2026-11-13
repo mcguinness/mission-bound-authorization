@@ -52,16 +52,12 @@ import {
   type BuiltAs,
   type ChallengeIssuers,
 } from "../src/index.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, txnTokenAnchorFixture } from "@mission/pdp/test-support";
 import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
 
-// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
-// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
-// decision point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const FGA_KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -81,6 +77,18 @@ if (!up) console.warn("OpenFGA unreachable; skipping the transaction-authorizati
 
 const PORT = 14452;
 const ISSUER = `http://localhost:${PORT}`;
+// @spec authzen#context-approval (#2067): the decision point's own trust
+// anchor for the TAS's transaction tokens, trusted with the TAS's published
+// transaction-token key once the AS is up.
+const TAS_ANCHOR = txnTokenAnchorFixture(ISSUER, CANONICAL_RESOURCE);
+
+// @spec runtime-evidence#decision-evidence-object (#741): one bundle per
+// test module. `signing`/`resolver` wire the PEP's store; `decide` is the
+// decision point's entry point, which closes over the PDP's emission path.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  approvalVerification: TAS_ANCHOR.verification,
+});
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 
@@ -355,6 +363,7 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
       challengeSigner: { sign: rsTxnKeys.privateKey, kid: "rs-txn", alg: "ES256", asIssuer: ISSUER },
     });
     const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+    TAS_ANCHOR.trust({ keys: asJwks.keys.filter((k) => k.kid === "as-txn") });
     rs = new McpPaymentsServer({
       writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
       pep,

@@ -24,7 +24,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, type JWTPayload, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
-import { EvaluationContextBindingDeclarations } from "@mission/core";
+import { EvaluationContextBindingDeclarations, MISSION_TXN_TOKEN_TYP } from "@mission/core";
 import { RUNTIME_SCOPE_CONFIG, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
@@ -133,6 +133,11 @@ function harness(declarations: EvaluationContextBindingDeclarations, gated: read
     audience: CANONICAL_RESOURCE,
     claims,
     evaluationContextBinding: declarations,
+    // @spec authzen#context-approval (#2067): the decision point's own trust
+    // anchor for the transaction token the derived approval is carried in.
+    approvalVerification: {
+      issuers: [{ typ: MISSION_TXN_TOKEN_TYP, issuer: AS_ISSUER, audience: CANONICAL_RESOURCE, keys: { keys: [asTxnPub] } }],
+    },
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   pepKeys = keys.resolver;

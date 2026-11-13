@@ -50,6 +50,7 @@ import {
   type Decision,
   type MissionView,
   type RuntimePosture,
+  txnApprovalId,
 } from "@mission/pdp";
 
 import {
@@ -1289,6 +1290,7 @@ export class McpPaymentsServer {
       iatS: payload.iat,
       expS: payload.exp,
       parameterDigest: payload.parameter_digest,
+      token: txnToken,
     };
     return {
       ok: true,
@@ -2699,7 +2701,12 @@ export class McpPaymentsServer {
     return {
       ok: true,
       approval: {
-        id: `txn:${credential.jti}`,
+        id: txnApprovalId(credential.jti),
+        // @spec authzen#context-approval (#2067, D1313): the transaction token
+        // is the approval's integrity-protected material. The PDP verifies it
+        // under its own trust anchors and reads the Mission binding from it;
+        // the Mission this resource retained is never echoed as the binding.
+        state: credential.token,
         approved_at: new Date(credential.iatS * 1000).toISOString(),
         approved_until: new Date(credential.expS * 1000).toISOString(),
         parameter_digest: recomputed,

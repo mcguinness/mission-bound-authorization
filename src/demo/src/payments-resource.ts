@@ -9,6 +9,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { exportJWK, generateKeyPair } from "jose";
+import { MISSION_TXN_TOKEN_TYP } from "@mission/core";
 import {
   ACTION_APPROVAL_POLICY,
   AUDIT_HORIZON_SECONDS,
@@ -48,6 +49,7 @@ import {
   Connectors,
   createEphemeralEvidenceKeys,
   createHttpMcpChannel,
+  refreshingRoleKeyResolvers,
   deploymentReceiptIssuerScope,
   deploymentRetentionWindowSeconds,
   EVIDENCE_KEY_SET_LOCATION,
@@ -356,6 +358,27 @@ export async function assemblePaymentsResource(ctx: PaymentsResourceContext): Pr
     // consulted for it.
     ...(ctx.budgetBindings ? { budgetBindings: ctx.budgetBindings } : {}),
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
+    // @spec authzen#context-approval (#2067, D1313): the PDP's own trust
+    // anchor for the transaction token a challenged operation's approval is
+    // carried in, from which it establishes the approval's Mission binding:
+    // the AS's published transaction-token keys, pinned by role, through its
+    // own resolver over the federation metadata the resource also trusts.
+    // Where the resource takes no transaction token, the PDP trusts none.
+    ...(serverJwksUri && rsAsIssuer
+      ? {
+          approvalVerification: {
+            issuers: [
+              {
+                typ: MISSION_TXN_TOKEN_TYP,
+                issuer: rsAsIssuer,
+                audience: CANONICAL_RESOURCE,
+                keys: refreshingRoleKeyResolvers(rsKeyRoles, { jwksUri: serverJwksUri, txnTokenJwksUri: serverJwksUri })
+                  .transactionToken,
+              },
+            ],
+          },
+        }
+      : {}),
     // @spec authzen#pdp-request consistency check 11 (#1276, D457): a request
     // refused before evaluation (`operation_target_invalid`) is recorded as a
     // PDP Refusal Record, signed under the PDP's own published key and
