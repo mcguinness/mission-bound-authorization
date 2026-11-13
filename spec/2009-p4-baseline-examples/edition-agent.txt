@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-13T17:27:59Z
-Source repository commit: a9d0244e4d62755f679d0c8a07e605104cb3b3d0
+Generated: 2026-11-13T17:48:19Z
+Source repository commit: eb8e26a923b456e3c4f1ec67d60ef20526dc97ed
 Member count: 9
 
 Reading order:
@@ -12560,10 +12560,12 @@ Table of Contents
       only, never the policy digest.
 
    Only the Mission issuer reports state, termination, proposal_hash,
-   authority_hash, approval_basis, and authority_source (Section 9.2.3).
-   The last four are audit and correlation signals, not enforcement
-   inputs (Section 9.1); each is disclosed only as Section 9.2.1
-   permits.
+   approval_basis, and authority_source; another AS reports
+   authority_hash, where it does, only as the introspected token carries
+   it (Section 9.2.3).  The proposal_hash, authority_hash,
+   approval_basis, and authority_source members are audit and
+   correlation signals, not enforcement inputs (Section 9.1); each is
+   disclosed only as Section 9.2.1 permits.
 
    For a malformed, unknown, individually expired, or otherwise
    unresolvable token, the AS responds per [RFC7662] (active: false)
@@ -12652,12 +12654,15 @@ Table of Contents
 9.2.3.  Issuer-Only Members
 
    An AS MUST NOT include mission.state, mission.termination,
-   proposal_hash, authority_hash, approval_basis, or authority_source in
-   an introspection response unless it holds the Mission, that is,
-   unless it is the Mission issuer.  Introspection at a non-issuer
-   Resource AS, which returns only the claim-shape members, is specified
-   by the cross-domain companion
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   proposal_hash, approval_basis, or authority_source in an
+   introspection response unless it holds the Mission, that is, unless
+   it is the Mission issuer.  An AS that is not the Mission issuer MUST
+   NOT include in the mission member a member that the introspected
+   token's mission claim does not carry; an authority_hash it includes
+   MUST be the value that claim carries, unchanged, never one it
+   recomputes from the authority it holds (Section 17.1.1).  A profile
+   can restrict a mission member it defines to the Mission issuer in the
+   same way.
 
 9.2.4.  Introspected Token Consumption
 
@@ -15800,6 +15805,10 @@ Appendix E.  Document History
    *  Approval: an implied-authority statement the AS holds for an entry
       is rendered with that entry as a disclosure of risk, apart from
       the derived Authority Set (#2046).
+   *  Introspection: an AS that is not the Mission issuer reports only
+      members the token's mission claim carries, and authority_hash only
+      as carried; state, termination, and the Mission Record members
+      stay with the issuer (#2016).
    *  The normative-definition rule of Authorization Server Metadata
       covers every advertised type that has a defining specification,
       not only mission_resource_access (#2009).
