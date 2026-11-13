@@ -21,13 +21,16 @@
  *  - the accepted submission: the authorization endpoint, the rendering and
  *    the decision rely on the acceptance record after `exp` and the capture
  *    age pass, and refuse without a matching one;
- *  - the carriers that do not admit the type, and enabling it: a supplied
- *    replay store beside a file-backed kernel store refuses construction,
- *    and the default store, on the kernel's database, starts there.
+ *  - the carriers that do not admit the type (device authorization and
+ *    template dispatch), and enabling it: a supplied replay store beside a
+ *    file-backed kernel store refuses construction, and the default store,
+ *    on the kernel's database, starts there.
  *
  * Deferred activation, a later step on another assembly, is in
- * request-provenance-deferred.test.ts, and the store across a restart of a
- * file-backed kernel in request-provenance-restart.test.ts.
+ * request-provenance-deferred.test.ts, the store across a restart of a
+ * file-backed kernel in request-provenance-restart.test.ts, and the child
+ * creation and expansion exchanges, which accept the type, in
+ * request-provenance-creation.test.ts.
  */
 
 const controlledClock = await vi.hoisted(async () => {
@@ -58,10 +61,9 @@ import {
 } from "@mission/demo-data";
 import { type Channel, createRequestIntake, type JsonObject, type Presenter } from "@mission/request-provenance";
 import { openStore } from "@mission/store";
-import { CompactSign, calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
+import { CompactSign, calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
-import { ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import {
   ALL_PROVIDER_CAPABILITIES,
@@ -1174,21 +1176,6 @@ describe("later steps of an accepted push (@spec request-provenance#replay, #939
   });
 });
 
-/** An active Mission and its DPoP-bound (dpopKeys) access token, through a push with no evidence. */
-async function issueMission(): Promise<{ missionId: string; accessToken: string }> {
-  const par = await push(main, { intent: INTENT });
-  const auth = await authorize(main, expectAccepted(par));
-  const uid = auth.uid as string;
-  const headers = approverHeaders(uid, auth.jar);
-  const page = await render(main, uid, headers);
-  const decided = await decide(main, uid, auth.jar, headers, { decision: "approve", render_revision: page.revision });
-  const code = new URL(decided.location).searchParams.get("code") as string;
-  const tok = await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: PKCE_VERIFIER, resource: RESOURCE });
-  const body = (await tok.json()) as { access_token: string };
-  expect(tok.status, JSON.stringify(body)).toBe(200);
-  return { missionId: (decodeJwt(body.access_token) as { mission: { id: string } }).mission.id, accessToken: body.access_token };
-}
-
 /** POST /token as ap-agent with a DPoP proof under dpopKeys, with the nonce retry. */
 async function tokenRequest(params: Record<string, string>): Promise<Response> {
   const htu = `${ISSUER}/token`;
@@ -1214,15 +1201,6 @@ async function tokenRequest(params: Record<string, string>): Promise<Response> {
   if (res.status === 400 && nonce) res = await send({ nonce });
   return res;
 }
-
-const readEntry = [
-  {
-    type: "mission_resource_access",
-    resource: RESOURCE,
-    actions: ["payments:invoice.read"],
-    constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-  },
-];
 
 async function expectCarrierRefusal(res: Response): Promise<void> {
   const body = (await res.json()) as { error?: string; error_description?: string };
@@ -1266,50 +1244,6 @@ describe("carriers that do not admit the type (@spec request-provenance#verifica
         template_id,
         mission_intent: JSON.stringify(envelope([signed.entry], intent)),
         dispatch_event_id: `evt-rp-${crypto.randomUUID()}`,
-      }),
-    );
-    expect(verifications()).toBe(before);
-  });
-
-  it("the child-creation exchange refuses invalid_mission_intent_evidence an otherwise valid assertion bound to the exchange's key, before any signature verification", async () => {
-    const parent = await issueMission();
-    const intent = { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT };
-    const signed = await mint({ intent: intent as unknown as JsonObject, presenter: { client_id: "ap-agent", cnf: { jkt: dpopJkt } } });
-    const before = verifications();
-    await expectCarrierRefusal(
-      await tokenRequest({
-        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-        subject_token: parent.accessToken,
-        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-        requested_token_type: JWT_TOKEN_TYPE,
-        creation_request_id: crypto.randomUUID(),
-        login_hint: "alice",
-        mission_intent: JSON.stringify(envelope([signed.entry], intent)),
-        authorization_details: JSON.stringify(readEntry),
-        child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
-      }),
-    );
-    expect(verifications()).toBe(before);
-  });
-
-  it("the expansion exchange refuses invalid_mission_intent_evidence an otherwise valid assertion bound to the exchange's key, before any signature verification", async () => {
-    const predecessor = await issueMission();
-    const intent = { goal: "Widen to remittance", target_resources: [RESOURCE], expires_at: FIXTURE_EXPIRES_AT };
-    const signed = await mint({ intent: intent as unknown as JsonObject, presenter: { client_id: "ap-agent", cnf: { jkt: dpopJkt } } });
-    const before = verifications();
-    await expectCarrierRefusal(
-      await tokenRequest({
-        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-        subject_token: predecessor.accessToken,
-        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-        requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-        creation_request_id: crypto.randomUUID(),
-        completion_mode: "deferred",
-        login_hint: "alice",
-        mission_intent: JSON.stringify(envelope([signed.entry], intent)),
-        authorization_details: JSON.stringify([
-          { ...readEntry[0], actions: ["payments:invoice.read", "payments:remittance.send"] },
-        ]),
       }),
     );
     expect(verifications()).toBe(before);

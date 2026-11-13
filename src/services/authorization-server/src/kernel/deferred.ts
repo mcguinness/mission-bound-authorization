@@ -64,6 +64,7 @@ import {
 } from "./standing-consent-limit.js";
 import type {
   AuthorityEntry,
+  IntentSubmissionEvidenceEntry,
   IntentSubmissionEvidenceFact,
   MissionClaim,
   MissionIntent,
@@ -439,6 +440,13 @@ function migrateExpansionDeferrals(db: Database): void {
     // before it was retained has none, so that authority's figure is unknown
     // and no child is created under it until a fresh approval (no backfill).
     "decision_child_maximum_json",
+    // @spec request-provenance#replay (#939 slice 3a, D1315): the widening
+    // submission's evidence entries as presented, and the reference under
+    // which the exchange accepted it, so the activation relies on each
+    // entry's acceptance record. A deferral opened before them has neither,
+    // and keeps the facts verified at initiation alone.
+    "evidence_json",
+    "acceptance_ref",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -777,6 +785,19 @@ export class ExpansionDeferralStore {
      */
     submissionEvidence?: IntentSubmissionEvidenceFact[];
     /**
+     * @spec request-provenance#replay (#939 slice 3a, D1315): the Submission
+     * envelope's `evidence`, as presented, beside the facts verified from it,
+     * so the activation resumes an entry of a type that relies on its
+     * acceptance record.
+     */
+    evidence?: IntentSubmissionEvidenceEntry[];
+    /**
+     * @spec request-provenance#replay (#939 slice 3a, D1315): the exchange's
+     * reference for the accepted submission ({@link creationAcceptanceRef}):
+     * the activation is a later step of it.
+     */
+    acceptanceRef?: string;
+    /**
      * @spec progressive#ceiling-review (#1017): why a drawdown request of a
      * ceiling chain fell back to this fresh approval (a guard exception, or a
      * request beyond the ceiling).
@@ -866,7 +887,7 @@ export class ExpansionDeferralStore {
       }
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, carryover_plan_id, carryover_plan_json, drawdown_fallback_reason, encounter_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, evidence_json, acceptance_ref, carryover_plan_id, carryover_plan_json, drawdown_fallback_reason, encounter_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -878,6 +899,8 @@ export class ExpansionDeferralStore {
           snapshotCv,
           snapshotDischarges,
           input.submissionEvidence?.length ? JSON.stringify(input.submissionEvidence) : null,
+          input.evidence?.length ? JSON.stringify(input.evidence) : null,
+          input.acceptanceRef ?? null,
           plan?.plan_id ?? null,
           plan ? JSON.stringify(plan) : null,
           input.drawdownFallback ?? null,
@@ -1296,6 +1319,72 @@ export class ExpansionDeferralStore {
     );
   }
 
+  /**
+   * @spec request-provenance#replay (#939 slice 3a, D1119 Q1, D1315): the
+   * submission an approved deferral would activate on its next redemption,
+   * for the activation to rely on its acceptance records first: the widening
+   * Intent, the evidence entries as presented, the facts verified at
+   * initiation, and the reference the exchange accepted it under. Undefined
+   * when the next redemption creates nothing: the deferral is unknown, not
+   * approved, already redeemed or past its lifetime, or its committed
+   * successor is recovered (which relies on no record).
+   */
+  pendingActivation(deferralCode: string):
+    | { intent: MissionIntent; evidence?: IntentSubmissionEvidenceEntry[]; recorded?: IntentSubmissionEvidenceFact[]; acceptanceRef?: string }
+    | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT state, redeemed, completion_released, approval_event_id, predecessor_id, created_at, intent_json, submission_evidence_json, evidence_json, acceptance_ref FROM expansion_deferrals WHERE deferral_code = ?",
+      )
+      .get(deferralCode) as
+      | {
+          state: string;
+          redeemed: number;
+          completion_released: number | null;
+          approval_event_id: string | null;
+          predecessor_id: string;
+          created_at: number;
+          intent_json: string;
+          submission_evidence_json: string | null;
+          evidence_json: string | null;
+          acceptance_ref: string | null;
+        }
+      | undefined;
+    if (!row || row.state !== "approved" || row.redeemed !== 0) return undefined;
+    if (this.now().getTime() > row.created_at + DEFERRAL_EXPIRES_IN * 1000) return undefined;
+    if (
+      row.completion_released !== 1 &&
+      row.approval_event_id &&
+      this.kernel.successorByApprovalEvent(row.predecessor_id, row.approval_event_id)
+    ) {
+      return undefined;
+    }
+    return {
+      intent: (JSON.parse(row.intent_json) as { i: MissionIntent }).i,
+      ...(row.evidence_json ? { evidence: JSON.parse(row.evidence_json) as IntentSubmissionEvidenceEntry[] } : {}),
+      ...(row.submission_evidence_json
+        ? { recorded: JSON.parse(row.submission_evidence_json) as IntentSubmissionEvidenceFact[] }
+        : {}),
+      ...(row.acceptance_ref ? { acceptanceRef: row.acceptance_ref } : {}),
+    };
+  }
+
+  /**
+   * @spec request-provenance#replay (#939 slice 3a, D1119 Q1): the activation
+   * found no acceptance record for the submission, or one that does not
+   * match: the approved deferral is refused, as a refused completion is, so
+   * every later poll answers `access_denied`, and its carryover plan is
+   * cancelled. True when this call refused it.
+   */
+  refuseActivation(deferralCode: string): boolean {
+    const refused = this.db
+      .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ? AND state = 'approved' AND redeemed = 0")
+      .run(deferralCode);
+    if (refused.changes !== 1) return false;
+    this.cancelCarryoverPlan(deferralCode);
+    return true;
+  }
+
   /** Mark a denied or abandoned deferral's carryover reservations cancelled. */
   private cancelCarryoverPlan(deferralCode: string): void {
     const row = this.db
@@ -1361,9 +1450,15 @@ export class ExpansionDeferralStore {
    * poll/interval/expiry states. On approval it runs the deferred-window check (a)
    * against Mission STATE (never the expired subject_token, check (b)) and then
    * CREATES the successor via createExpansion. Single-use.
+   *
+   * @spec request-provenance#replay (#939 slice 3a): `activation.submissionEvidence`
+   * is the facts the activation relied on, from each entry's acceptance
+   * record ({@link pendingActivation}); without it, the facts verified at
+   * initiation land.
    */
   redeem(
     deferralCode: string,
+    activation?: { submissionEvidence?: IntentSubmissionEvidenceFact[] },
   ):
     | DeferralPending
     | DeferralSlowDown
@@ -1519,10 +1614,14 @@ export class ExpansionDeferralStore {
         ? row.creation_request_id
         : undefined;
     // @spec mission#intent-submission-evidence — the facts verified at
-    // INITIATION, persisted across the deferred window, land on the successor.
-    const submissionEvidence = row.submission_evidence_json
-      ? (JSON.parse(row.submission_evidence_json as string) as IntentSubmissionEvidenceFact[])
-      : undefined;
+    // INITIATION, persisted across the deferred window, land on the successor,
+    // or, @spec request-provenance#replay (#939 slice 3a), the facts the
+    // activation resumed from their acceptance records.
+    const submissionEvidence =
+      activation?.submissionEvidence ??
+      (row.submission_evidence_json
+        ? (JSON.parse(row.submission_evidence_json as string) as IntentSubmissionEvidenceFact[])
+        : undefined);
     // @spec expansion#superseded-state + mission#lifecycle (effective-active):
     // successor creation, idempotency completion, and predecessor supersession
     // commit as ONE transaction, with the predecessor re-checked expiry-aware
