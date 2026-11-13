@@ -45707,9 +45707,15 @@
      "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > the trust anchors are the decision point's own: a caller-supplied approvalVerification is never applied",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "the remote PDP server binds its own approval trust anchors (@spec authzen#context-approval, #2067) > a caller-supplied approvalVerification never reaches the decision over POST /evaluate: an approval only the caller's anchors trust is denied approval_unverifiable, with or without anchors of the server's own, and one the server's anchors trust permits",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#2067 (D1313). The reference PDP verifies the Access Request Service's signed `state` (`arap-approval+jwt`) or the transaction token a transaction-profile approval is carried in (`mission-txn-token+jwt`), under trust anchors bound to its decision point and stripped from caller options; the approval-record resolution alternative is not implemented. Proved by mutation, each failing the cited test on its denial assertion: accepting an unverified decode (the signature, issuer and audience cases, each alone), taking the binding from context.mission when the material states none, trusting a presented approval object that carries no material, and forwarding caller-supplied anchors through the decision point."
+   "notes": "#2067 (D1313). The reference PDP verifies the Access Request Service's signed `state` (`arap-approval+jwt`) or the transaction token a transaction-profile approval is carried in (`mission-txn-token+jwt`), under trust anchors bound to its decision point and stripped from caller options; the approval-record resolution alternative is not implemented. Proved by mutation, each failing the cited test on its denial assertion: accepting an unverified decode (the signature, issuer and audience cases, each alone), taking the binding from context.mission when the material states none, trusting a presented approval object that carries no material, and forwarding caller-supplied anchors through the decision point. At the remote PDP server (POST /evaluate), deleting the strip in handleEvaluate fails the server test on the anchorless server's permit assertion; the anchored server's assertion is proved alone by merging the caller's anchors with the server's."
   },
   {
    "id": "authzen.context-approval.mission-identity-mismatch-out-of-scope",
