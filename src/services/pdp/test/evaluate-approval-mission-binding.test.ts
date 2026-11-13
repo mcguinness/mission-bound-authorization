@@ -17,6 +17,7 @@
 import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 import { type CryptoKey, decodeJwt, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { evaluateRemote } from "../src/client.js";
 import { createEphemeralDecisionPoint } from "../src/decision-point.js";
 import {
   type ActionApproval,
@@ -28,9 +29,11 @@ import {
 import type { Fga } from "../src/fga.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
+import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
 import {
   type ApprovalSignerFixture,
   approvalSignerFixture,
+  EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
   OPERATION_DECLARATIONS_NONE_FIXTURE,
   RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
 } from "../src/test-support.js";
@@ -214,6 +217,53 @@ describe("an action approval binds the qualified Mission identity (@spec authzen
     const req = withCredential(request(bound, "125.00", approval));
     expect((await anchorless.decide(req, withCallerAnchors)).context.denial_reason).toBe("approval_unverifiable");
     expect((await anchored.decide(req, callerOptions as DecisionOptions)).decision).toBe(true);
+  });
+});
+
+describe("the remote PDP server binds its own approval trust anchors (@spec authzen#context-approval, #2067)", () => {
+  const view = missionView("msn_2067");
+  const bound = { issuer: view.issuer, id: view.id };
+  const PEP_ID = "pep.approval-binding";
+  const SECRET = "approval-binding-shared-secret";
+
+  it("a caller-supplied approvalVerification never reaches the decision over POST /evaluate: an approval only the caller's anchors trust is denied approval_unverifiable, with or without anchors of the server's own, and one the server's anchors trust permits", async () => {
+    // The caller's options resolver supplies anchors of its own: an Access
+    // Request Service the server's configuration does not trust.
+    const callerArs = await approvalSignerFixture({ issuer: "https://caller-ars.test" });
+    const { approvalVerification: _own, ...base } = gated(view);
+    const callerOptions = { ...base, approvalVerification: callerArs.verification } as unknown as DecisionOptions;
+    const serve = (own?: ApprovalSignerFixture) =>
+      createPdpHttpServer({
+        peps: new Map([[PEP_ID, { secret: SECRET, scopes: [RESOURCE] }]]),
+        getOptions: () => callerOptions,
+        evaluateFn: evaluateRequest,
+        resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+        evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+        operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
+        ...(own ? { approvalVerification: own.verification } : {}),
+      });
+    const anchorless = await serve();
+    const anchored = await serve(ars);
+    try {
+      const ask = async (server: PdpHttpServerHandle, approval: ActionApproval) =>
+        evaluateRemote(withCredential(request(bound, "125.00", approval)), { url: server.url, pepId: PEP_ID, secret: SECRET });
+      const callerSigned = await callerArs.approve(unsignedApproval(), bound);
+      // A server with no anchors of its own: the caller's are stripped, so
+      // nothing verifies the approval.
+      const stripped = await ask(anchorless, callerSigned);
+      expect(stripped.decision, JSON.stringify(stripped.context)).toBe(false);
+      expect(stripped.context.denial_reason).toBe("approval_unverifiable");
+      // A server with its own anchors applies only those.
+      const replaced = await ask(anchored, callerSigned);
+      expect(replaced.decision, JSON.stringify(replaced.context)).toBe(false);
+      expect(replaced.context.denial_reason).toBe("approval_unverifiable");
+      // Positive control: the same approval signed under the server's anchors permits.
+      const permitted = await ask(anchored, await ars.approve(unsignedApproval(), bound));
+      expect(permitted.decision, JSON.stringify(permitted.context)).toBe(true);
+    } finally {
+      await anchorless.close();
+      await anchored.close();
+    }
   });
 });
 
