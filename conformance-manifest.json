@@ -114664,6 +114664,47 @@
     }
    ],
    "notes": "#1724 D5 (D847). Proved by five defects: the resolver's expected issuer taken from the response (only the throughout-impostor witness fails; the existing iss-only test is caught by check 4 regardless); metadata naming another issuer accepted; keys from a fixed path at the issuer instead of the metadata's jwks_uri; the Status endpoint guessed from where the metadata was read. The launcher's own issuer check (mas-pilot-launcher.test.ts) is not cited: without it the helper still refuses, so its test fails only on the message."
+  },
+  {
+   "id": "submission-evidence.presenter-binding.match-established",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "presenter-binding",
+   "text": "An entry that names an authorized presenter (a `client_id`, a `cnf` key binding {{RFC7800}}) MUST match the established presenter, and a mismatch fails that entry's verification.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An evidence entry naming a client_id or a cnf key binding other than the presenter the containing exchange established (its authenticated client and, where the exchange uses proof of possession, that key) fails verification, refused with invalid_mission_intent_evidence; an entry naming the established presenter verifies."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Submission Evidence at dispatch sees the exchange's presenter (@spec submission-evidence#presenter-binding, mission#intent-submission-evidence, #1988) > verifies the entry with the DPoP key the dispatch exchange established, and refuses an entry naming another key invalid_mission_intent_evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a presenter other than the client the push authenticated",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a presenter carrying cnf, since a push establishes no confirmation key (D1119 Q3)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1988. The AS establishes the presenter through the containing exchange and hands it to the evidence type. At Template Dispatch the presenter carries the DPoP key the dispatch exchange's proof established (cnf.jkt), so an entry naming that key verifies and one naming another key is refused invalid_mission_intent_evidence, with no Mission. Mutation: handing the type only the client, as before #1988, refuses the entry naming the established key. At PAR, which establishes the client and no confirmation key, mission-request-provenance refuses a presenter naming another client and one carrying cnf (D1119 Q3). partial: child creation and expansion already pass {clientId, cnf: {jkt}} to verification, but no test there yet witnesses an entry naming the established key verifying and another refused; #939's slice 3 adds them."
   }
  ]
 }
