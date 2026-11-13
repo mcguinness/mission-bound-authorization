@@ -11,16 +11,16 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "cad628f2660524f9a9c282d5e05087f2e9222a62",
-    "content_sha256": "5fc7bf6168359ea3ac1fa124c5ea387084a4178fd827f59f9f1a94abb85e6c45"
+    "revision": "7592690aade7b91530e84d00abfe5a02d9f6f348",
+    "content_sha256": "82045791dc4f6dd5e4e603ef07969c66d30c49612558ab0fafdea33f0f04e53f"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
-    "content_sha256": "9bf8e198efbb2f419c9350376403611ccfb5e7633e035be3727b8ecf4cca54d1"
+    "revision": "75a9ab4f36678ef1f251af310f29e1ce2deaba47",
+    "content_sha256": "b34895dbd37c79241c96c6729ce05935ad70c86b53e0a0992ee2b763bb94d8f1"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
@@ -159,8 +159,8 @@
     "content_sha256": "a73a267a1da167dd2cb76a976c5e0bca75d8a056d0b44d9723bae39e0263793a"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "48bcb9db1b0fd525d3971595790b0f07b34db51b",
-    "content_sha256": "99cc188fd7f669f5c0fd5b4af8389a0839ca44811014caef4b639e611b4c3245"
+    "revision": "7cebe1624ea7406db4212a9b85882e9334cfb305",
+    "content_sha256": "0e40820c2dbbd7d2e20c5f99bf13adefcfd6a13449e0096d57a12372bf49a6a9"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
     "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
@@ -13486,7 +13486,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "at the human approval of a standing consent that admits policy-created Missions, the rendering carries the rule that establishes each admitted Mission's derivation_limit and either its finite maximum or an explicit statement that no finite maximum is guaranteed, taken from the exact consented version and the committed policy state the AS retains; no consent rendering or human approval is attributed to an admitted Mission's own creation",
-    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, a Progressive ceiling consent, or a governed_policy root's consent"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -13646,9 +13646,45 @@
      "name": "the per-child disclosure of a delegable Template Ceiling entry gates the template consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, mission-template#template-consent) > a held, valid child creation policy: the page renders the rule and maximum it states, and the consent creates the template (control)",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed root's disclosure renders the per-child rule its consent commits (#2040 governed; @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering) > renders the rule for the Missions the root activates, and for each delegable root ceiling entry the per-child rule, its maximum and its local scope: the deployment's figure for an entry with no child creation policy, the maximum its policy states for one with a policy, and that no finite maximum is guaranteed where the deployment sets none",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed root's disclosure renders the per-child rule its consent commits (#2040 governed; @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering) > states that refreshes of an async delegation family are not counted, for the activated Missions and each delegable entry, where the governance surface supports that transport; the statement does not change the commitment",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed consent requires the commitment of the disclosure it rendered, and retains its figures (#2040 governed, D1278 ruling 1; @spec derivation-limits#approval-rendering, derivation-limits#effective-limit) > a consent carrying the commitment of the disclosure rendered to its approver is recorded and retains the per-child figures that disclosure showed, across a restart",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed consent requires the commitment of the disclosure it rendered, and retains its figures (#2040 governed, D1278 ruling 1; @spec derivation-limits#approval-rendering, derivation-limits#effective-limit) > a consent with no commitment, or one that no longer matches the root, the policy state or the per-child figures, is refused before anything is written: no consent and no root snapshot",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed consent requires the commitment of the disclosure it rendered, and retains its figures (#2040 governed, D1278 ruling 1; @spec derivation-limits#approval-rendering, derivation-limits#effective-limit) > a root whose delegable entry commits a child creation policy not held, or one stating a malformed maximum, is refused per_child_undisclosable before anything is written, even with the matching commitment",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119) > states that drawdown successors carry the count forward and never exceed the established limit, or that no finite limit is guaranteed without one, only where a ceiling consent is offered",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). #2040 (D1260 ruling 3): the per-child rule and maximum for each delegable entry with no child_creation_policy are witnessed at the other human approvals that admit policy-created children (consent-per-child-rule-endpoint.test.ts): the Progressive ceiling consent on the approval page (a block per delegable ceiling entry, whose figure the approval retains with the ceiling), the Expansion deferral page (a block per delegable successor entry at the figure the approval retains, and per entry of the ceiling re-consent it offers), and the Template consent page (a block per delegable ceiling entry). Each decision approves the figure rendered: the deferral's render revision commits the figures, so a change between rendering and decision is refused approval_context_changed naming child_derivation; the template proposal pins the figure and refuses the consent once it has changed; and the Mission approval is bound to the derivation policy content it rendered (#1446). #2040 review (ruling 4, consent-per-child-refusal-endpoint.test.ts): an approval whose per-child figure cannot be disclosed (a child_creation_policy not held at its digest, or stating a malformed maximum) is refused at a consented ceiling (an offered but unselected ceiling is not), an Expansion successor, an Expansion ceiling re-consent (only when selected) and a Template proposal (at the proposal, and at its page and decision if the policy is withdrawn later), committing nothing and leaving a deferral or proposal pending; a held, valid policy renders its rule and is approved; and recovery is a fresh rendering that shows the restored rule. With Derivation Limits off nothing is refused for it (controls, not cited). Review P2: the deferral's render revision commits child_grants, the per-child disclosure the page showed, and the Mission approval's commits the held activation policies (#1446), so a rendering that could not show a figure never approves it once the policy is restored, before a first decision or after a refused one. Proved by mutation: dropping child_grants from the deferral's commitment, or the held policies from the Mission approval's, fails the stale-rendering witnesses; dropping each surface's refusal fails its refusal witnesses; refusing an unselected offer or re-consent fails the unselected halves; and ignoring the Derivation Limits switch fails the off controls. Not witnessed: the governed_policy basis, which has no HTTP consent surface and renders no per-child rule, so its instances still take the deployment's figure at activation (D1260 ruling 1, provisional). The Progressive basis's own successor-limit statement is progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails). #2040 proved by mutation: dropping the ceiling block, the deferral page's blocks or the template's blocks fails each surface's page witness; dropping the figures from the deferral's committed context fails the binding witness; and dropping the template's changed-figure refusal fails the pin witness."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). #2040 (D1260 ruling 3): the per-child rule and maximum for each delegable entry with no child_creation_policy are witnessed at the other human approvals that admit policy-created children (consent-per-child-rule-endpoint.test.ts): the Progressive ceiling consent on the approval page (a block per delegable ceiling entry, whose figure the approval retains with the ceiling), the Expansion deferral page (a block per delegable successor entry at the figure the approval retains, and per entry of the ceiling re-consent it offers), and the Template consent page (a block per delegable ceiling entry). Each decision approves the figure rendered: the deferral's render revision commits the figures, so a change between rendering and decision is refused approval_context_changed naming child_derivation; the template proposal pins the figure and refuses the consent once it has changed; and the Mission approval is bound to the derivation policy content it rendered (#1446). #2040 review (ruling 4, consent-per-child-refusal-endpoint.test.ts): an approval whose per-child figure cannot be disclosed (a child_creation_policy not held at its digest, or stating a malformed maximum) is refused at a consented ceiling (an offered but unselected ceiling is not), an Expansion successor, an Expansion ceiling re-consent (only when selected) and a Template proposal (at the proposal, and at its page and decision if the policy is withdrawn later), committing nothing and leaving a deferral or proposal pending; a held, valid policy renders its rule and is approved; and recovery is a fresh rendering that shows the restored rule. With Derivation Limits off nothing is refused for it (controls, not cited). Review P2: the deferral's render revision commits child_grants, the per-child disclosure the page showed, and the Mission approval's commits the held activation policies (#1446), so a rendering that could not show a figure never approves it once the policy is restored, before a first decision or after a refused one. Proved by mutation: dropping child_grants from the deferral's commitment, or the held policies from the Mission approval's, fails the stale-rendering witnesses; dropping each surface's refusal fails its refusal witnesses; refusing an unselected offer or re-consent fails the unselected halves; and ignoring the Derivation Limits switch fails the off controls. #2040 governed (D1278 ruling 1, governed-per-child-rule.test.ts): the governed_policy basis has no consent page in the reference; the deployment's governance surface renders governedPolicyConsentDisclosure, which carries the rule for the Missions the root activates (no finite maximum is guaranteed: the root commits none) and each delegable root ceiling entry's per-child rule and maximum. The consent is recorded only with that disclosure's commitment, still matching the exact root, the committed policy state and the per-child figures; a missing or stale commitment, or a figure that cannot be shown, is refused before anything is written, and the consent retains the figures. Proved by mutation: dropping the commitment check or the missing-commitment check, omitting the figures or the policy state from the commitment, dropping the rendered rules, or dropping the undisclosable refusal each fails its witness. The Progressive basis's own successor-limit statement is witnessed on progressive.drawdown-derivation.ceiling-consent-disclosure and cited here too. Still partial for one clause: \"no consent rendering or human approval is attributed to an admitted Mission's own creation\" has no cited witness on this row for any basis. Candidates for the owner's review, not cited because their assertions and proofs were not verified here: the drawdown approval_basis attribution in progressive-drawdown-endpoint.test.ts, the template approval_basis assertions in template.test.ts, and child-approved-at.test.ts. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails). #2040 proved by mutation: dropping the ceiling block, the deferral page's blocks or the template's blocks fails each surface's page witness; dropping the figures from the deferral's committed context fails the binding witness; and dropping the template's changed-figure refusal fails the pin witness."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -13666,10 +13702,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the standing-consent rendering states that its maximum bounds each admitted Mission locally (with the carryover and ceiling-drawdown counts as Effective Limit defines them), not a budget shared by the admitted Missions, their descendants, or their lifetimes, and carries the async-family and Mission Issuance Grant counting statements where the deployment supports those transports",
-    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, a Progressive ceiling consent, or a governed_policy root's consent"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
@@ -13700,9 +13736,33 @@
      "name": "the Mission Template consent page renders the per-child rule the template retains (#2040; @spec derivation-limits#approval-rendering, mission-template#template-consent) > renders, for each delegable ceiling entry, the per-child rule, its maximum and its local scope, and the approval retains that figure: an instance dispatched after the deployment's figure is raised retains 3",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed root's disclosure renders the per-child rule its consent commits (#2040 governed; @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering) > renders the rule for the Missions the root activates, and for each delegable root ceiling entry the per-child rule, its maximum and its local scope: the deployment's figure for an entry with no child creation policy, the maximum its policy states for one with a policy, and that no finite maximum is guaranteed where the deployment sets none",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed root's disclosure renders the per-child rule its consent commits (#2040 governed; @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering) > states that refreshes of an async delegation family are not counted, for the activated Missions and each delegable entry, where the governance surface supports that transport; the statement does not change the commitment",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/consent-per-child-rule-endpoint.test.ts",
+     "name": "the Expansion approval page renders and binds the per-child rule its decision retains (#2040; @spec derivation-limits#approval-rendering, expansion#completion-modes) > renders the per-child rule for each delegable entry of the ceiling re-consent it offers, and a re-consent retains that figure with the successor's ceiling through the completion",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119) > states that drawdown successors carry the count forward and never exceed the established limit, or that no finite limit is guaranteed without one, only where a ceiling consent is offered",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis: the template consent page states that each dispatched instance's maximum is local to it and no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (template-consent-page.test.ts). Not witnessed: the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails). #2040: witnessed likewise for the per-child maximum at the Progressive ceiling consent on the approval page, the Expansion deferral page and the Template consent page, each stating that the maximum is local to each child Mission (consent-per-child-rule-endpoint.test.ts); removing a surface's block fails its witness. The governed_policy basis renders nothing and stays unwitnessed."
+   "notes": "#1119 (D327). Tested since #2040 (governed). Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis: the template consent page states that each dispatched instance's maximum is local to it and no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (template-consent-page.test.ts). The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails). #2040: witnessed likewise for the per-child maximum at the Progressive ceiling consent on the approval page, the Expansion deferral page and the Template consent page, each stating that the maximum is local to each child Mission (consent-per-child-rule-endpoint.test.ts); removing a surface's block fails its witness. #2040 governed (governed-per-child-rule.test.ts): the governed_policy root's disclosure states that each governed Mission's maximum, and each delegable entry's per-child maximum, is local to it and no budget across the Missions the consent admits, their descendants, or their lifetimes. Two limits stated plainly: the reference ships no governed consent page, so this rendering is the kernel disclosure the deployment's governance surface renders; and its async delegation statement appears only where that surface declares the transport (asyncDelegation), outside the commitment, which nothing in the reference does (the provider's own surfaces derive it from the family store). The Mission Issuance Grant statement is not applicable: the reference issues no grants under that profile (see derivation-limits.rendering.issuance-grant-disclosure). Proved by mutation: dropping the per-child blocks, the governed-Mission rule, or the async flag fails the governed witnesses. Clause by clause at #2040 governed: the statement that the maximum is local to each admitted Mission and no budget across the Missions the consent admits, their descendants or their lifetimes is asserted on every basis (the parent's approval, the Template consent's per-instance and per-child rules, the ceiling consent, the Expansion successor and re-consent, and the governed disclosure); removing the scope line from the shared reader fails every one of those witnesses. The async delegation statement is asserted wherever the deployment supports the transport: the parent's child blocks and the Template per-instance rule (as stated), the ceiling, Expansion successor, re-consent and Template per-child blocks, and the governed disclosure when its surface declares the transport; dropping the transport on the ceiling page, the deferral page or the Template page fails that surface's witnesses, and ignoring the governed flag fails its witness. The parenthetical on the carryover and ceiling-drawdown counts is read as qualifying how the local maximum is counted, as the clause's own \"as Effective Limit counts it\" does, not as a further statement: the ceiling consent's drawdown inheritance line, which states the drawdown count is carried, is cited here, and a carryover replacement is not a Mission any consent rendering admits. The Mission Issuance Grant statement is not applicable (see above)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -13744,10 +13804,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "with a finite maximum M rendered at the standing consent, every Mission created under that consented version records a derivation_limit of at most M and never leaves it absent; a stricter applicable policy or requested limit yields the stricter value; after the AS policy ceiling is raised or removed, a Mission newly created under the same consent still records at most M until a fresh human approval of the standing consent; each admitted Mission counts its own derivations except under the carryover and ceiling-drawdown exceptions",
-    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
+    "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, a Progressive ceiling consent, or a governed_policy root's consent"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
@@ -13916,9 +13976,33 @@
      "name": "the Expansion approval page renders and binds the per-child rule its decision retains (#2040; @spec derivation-limits#approval-rendering, expansion#completion-modes) > renders the per-child rule and maximum for each delegable entry of the successor, and the figure the approval retains is the one rendered: completed after the deployment's figure is removed, the entry the Expansion adds retains 3 and its child records 3",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed activation's children take the figure its consent retained (#2040 governed, D1278 ruling 1; @spec derivation-limits#effective-limit) > an activation after the deployment ceiling is removed or raised under the same policy_version and a restart takes the figure the consent rendered: its entry retains 3 and its child records 3",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed activation's children take the figure its consent retained (#2040 governed, D1278 ruling 1; @spec derivation-limits#effective-limit) > a fresh governed consent recovers it: beside a consent recorded before the figures were retained, a consent recorded after a restart at 10 retains 10, and an activation under it admits a child at it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-per-child-rule.test.ts",
+     "name": "a governed activation's children take the figure its consent retained (#2040 governed, D1278 ruling 1; @spec derivation-limits#effective-limit) > each child of a governed activation counts its own derivations against the retained figure: three under one child exhaust its limit of 3 and a fourth is refused derivation_cap_exhausted, while its sibling and the activated Mission count none",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover budgets and external state (@spec child-delegation#carryover-no-reset) > transfers the derivation budget verbatim across two expand-and-carry cycles",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. #2026 (D1249): the Child Delegation basis for an entry with no child_creation_policy, whose per-child figure is the deployment's ceiling as the parent's approval rendered it, is witnessed too. The approval retains the rendered figure with the Mission Record (child_derivation_maxima); after a restart with the deployment ceiling removed or raised, under the same policy_version or a changed one, a later child, and a child's own child, still records at most it; a stricter ceiling narrows it; and with Derivation Limits off a retained finite figure refuses the next child, committing nothing. The fresh-approval clause is witnessed for this basis as far as the reference reaches: no change of policy replaces the figure, and a parent freshly approved under a raised ceiling admits children at the new figure. The reference has no in-place re-approval of an existing parent's consent, so its fresh approval is a new parent's. The Template audit (#2026, D1249 ruling 7): replacing the deployment ceiling under the same or a changed policy_version across a restart leaves an instance at its Dispatch Policy's maximum, so dispatch needed no change. Proved by mutation: reading the current ceiling instead of the retained figure fails the removal, raise, changed-version, fresh-approval, grandchild and Derivation-Limits-off witnesses; the approval retaining no finite figure fails the same set; a child retaining the figure current at its own creation instead of its parent's fails the grandchild witness; dropping the narrowing by the current ceiling fails the narrowing witness; and a per-instance limit falling back to the deployment ceiling fails the Template audit witness. PR #2037 review F1: a successor that widens or regroups an entry keeps every figure the authority it carries retains. After a restart at a raised ceiling, a drawdown widening [read] to [read, list], an Expansion widening an entry, an Expansion entry partly overlapping an earlier one, and an Expansion merging entries that retain 3 and 10 each keep 3 (the strictest), and their children record at most it. Reverting to whole-entry containment fails all four; so does letting an overlapping entry take the creation-time figure in place of the carried one. Not cited here, and reference behavior rather than conformance evidence (D1249 rulings 1 and 4): an overlapping source in unknown state keeps a widened or merged entry unknown, so its children are refused (skipping the unknown source fails those witnesses); authority a creating path adds takes the figure its consent retained, which also bounds an entry mixing carried and new authority (dropping that bound fails its witness). #2040 (D1260 ruling 3): the per-child figure a Template consent, a Progressive ceiling consent (or its re-consent at an Expansion decision) and an Expansion deferral's decision rendered (see the rendering rows) is retained with that consent, and the Missions created under it later take it, never a figure read at their creation. After a restart with the deployment ceiling removed or raised under the same policy_version, an instance dispatched under the template, the entry a drawdown adds, and the entry an Expansion adds when completed after its decision each retain 3, and their children record 3; the Expansion endpoint witness completes after the figure is removed in place. A fresh consent (the template consented again, a ceiling re-consent through the deferred completion, a fresh deferral) establishes the figure it renders. Proved by mutation: reading the figure current at the dispatch, the drawdown or the completion instead of the retained one fails the Template, Progressive and Expansion witnesses; the ceiling consent, its re-consent or the template decision retaining no figure fails theirs. Not cited, and reference behavior (D1249 ruling 4, taken for #2040 by analogy): a consent stored before the figure was retained (a template, a ceiling, an approved deferral) admits no child under the authority it admits, refused policy_denied with nothing committed (treating the unknown figure as the current one fails those witnesses). Still not witnessed: the governed_policy basis, whose consent has no rendering surface; its instances still retain the deployment's figure at activation (D1260 ruling 1, provisional), a local choice no row claims. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling. #2018 review (F1): turning the derivation-limits capability off does not leave the limit absent for a Mission created under a consent committing a finite maximum. After a restart from the kernel file with the capability off, the next child or dispatched instance is refused (policy_denied, dispatch_policy_changed) and nothing is committed, while the Mission created before keeps its limit. Proved by mutation: restoring the defect, a finite maximum recorded as no limit, fails both witnesses, and removing either path's refusal fails its witness."
+   "notes": "#1119 (D327). Tested since #2040 (governed): the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. #2026 (D1249): the Child Delegation basis for an entry with no child_creation_policy, whose per-child figure is the deployment's ceiling as the parent's approval rendered it, is witnessed too. The approval retains the rendered figure with the Mission Record (child_derivation_maxima); after a restart with the deployment ceiling removed or raised, under the same policy_version or a changed one, a later child, and a child's own child, still records at most it; a stricter ceiling narrows it; and with Derivation Limits off a retained finite figure refuses the next child, committing nothing. The fresh-approval clause is witnessed for this basis as far as the reference reaches: no change of policy replaces the figure, and a parent freshly approved under a raised ceiling admits children at the new figure. The reference has no in-place re-approval of an existing parent's consent, so its fresh approval is a new parent's. The Template audit (#2026, D1249 ruling 7): replacing the deployment ceiling under the same or a changed policy_version across a restart leaves an instance at its Dispatch Policy's maximum, so dispatch needed no change. Proved by mutation: reading the current ceiling instead of the retained figure fails the removal, raise, changed-version, fresh-approval, grandchild and Derivation-Limits-off witnesses; the approval retaining no finite figure fails the same set; a child retaining the figure current at its own creation instead of its parent's fails the grandchild witness; dropping the narrowing by the current ceiling fails the narrowing witness; and a per-instance limit falling back to the deployment ceiling fails the Template audit witness. PR #2037 review F1: a successor that widens or regroups an entry keeps every figure the authority it carries retains. After a restart at a raised ceiling, a drawdown widening [read] to [read, list], an Expansion widening an entry, an Expansion entry partly overlapping an earlier one, and an Expansion merging entries that retain 3 and 10 each keep 3 (the strictest), and their children record at most it. Reverting to whole-entry containment fails all four; so does letting an overlapping entry take the creation-time figure in place of the carried one. Not cited here, and reference behavior rather than conformance evidence (D1249 rulings 1 and 4): an overlapping source in unknown state keeps a widened or merged entry unknown, so its children are refused (skipping the unknown source fails those witnesses); authority a creating path adds takes the figure its consent retained, which also bounds an entry mixing carried and new authority (dropping that bound fails its witness). #2040 (D1260 ruling 3): the per-child figure a Template consent, a Progressive ceiling consent (or its re-consent at an Expansion decision) and an Expansion deferral's decision rendered (see the rendering rows) is retained with that consent, and the Missions created under it later take it, never a figure read at their creation. After a restart with the deployment ceiling removed or raised under the same policy_version, an instance dispatched under the template, the entry a drawdown adds, and the entry an Expansion adds when completed after its decision each retain 3, and their children record 3; the Expansion endpoint witness completes after the figure is removed in place. A fresh consent (the template consented again, a ceiling re-consent through the deferred completion, a fresh deferral) establishes the figure it renders. Proved by mutation: reading the figure current at the dispatch, the drawdown or the completion instead of the retained one fails the Template, Progressive and Expansion witnesses; the ceiling consent, its re-consent or the template decision retaining no figure fails theirs. Not cited, and reference behavior (D1249 ruling 4, taken for #2040 by analogy): a consent stored before the figure was retained (a template, a ceiling, an approved deferral) admits no child under the authority it admits, refused policy_denied with nothing committed (treating the unknown figure as the current one fails those witnesses). #2040 governed (D1278 ruling 1, governed-per-child-rule.test.ts): the governed_policy root commits no per-instance maximum, which its disclosure states, so this clause binds its Missions' children: the consent retains the per-child figure its committed disclosure rendered, and after a restart with the deployment ceiling removed or raised under the same policy_version an activation's entry retains 3 and its child records 3; a fresh consent establishes the figure it renders. Proved by mutation: reading the figure at activation instead of the retained one fails the activation and fresh-consent witnesses, and the consent retaining no figure fails them too. Not cited, and reference behavior: a governed consent recorded before the figures were retained admits no child, refused policy_denied with nothing committed (treating the unknown figure as the current one fails that witness); and the Derivation Limits off control. #2018 review (F1): turning the derivation-limits capability off does not leave the limit absent for a Mission created under a consent committing a finite maximum. After a restart from the kernel file with the capability off, the next child or dispatched instance is refused (policy_denied, dispatch_policy_changed) and nothing is committed, while the Mission created before keeps its limit. Proved by mutation: restoring the defect, a finite maximum recorded as no limit, fails both witnesses, and removing either path's refusal fails its witness. Clause by clause at #2040 governed: never above a finite maximum nor absent (every basis above, proved as stated); a stricter policy or requested limit yields the stricter value (the Child Delegation and Template narrowing witnesses; ignoring the request and the current ceiling under a finite maximum fails all seven); a raise or removal never lifts it until a fresh human approval (every basis, proved as stated); and each admitted Mission counts its own derivations (each child of a governed activation counts its own to its limit, its sibling and the activated Mission counting none; a counter shared across siblings fails it), except under the carryover exception (the replacement keeps the old child's count across two cycles; resetting the carried count fails it) and the ceiling-drawdown exception (the drawdown witnesses cited here; resetting the carried count fails them, per progressive.drawdown-derivation.count-carried-forward)."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -45915,6 +45999,74 @@
    "notes": "Mutation-proved (#2015): omitting mission_history from Decision Evidence fails every recording assertion (M8), including the owner-review witnesses (#2017) that record not_satisfied for a permit whose only completion was unauthorized and satisfied for a single-use permit beside a suppressed replay."
   },
   {
+   "id": "authzen.context-history.entry-records-operation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "Where a predicate's type selects an operation, its `mission_history` entry carries that operation's identifier as `action`; an `action_class_completed` entry, which selects by class alone, carries none.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Decision Evidence entry for a predicate whose type selects an operation carries that operation's identifier as action, so two selected predicates of one class for different operations are recorded as two entries, each naming its own operation beside its own outcome, in either selection order; an action_class_completed entry carries no action, including where policy gave the predicate an action member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records two prerequisites of one class for distinct operations as two entries, each naming its own action beside its own outcome, in either selection order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records no action on an action_class_completed entry, which selects by class alone, even where policy gave it one, whether evaluated or unavailable",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) or from the signed entry (M3) fails the pair witness by its recorded-entry assertion; dropping the operation match (M5) records the export satisfied beside the backup, failing the same assertion with the decision assertions removed; recording any string action whatever the type (M2) fails the omission witness. The selector types are a per-type table in the reference PDP: work_item_prerequisite_completed selects by action, action_class_completed by class alone."
+  },
+  {
+   "id": "authzen.context-history.unrecognized-type-records-no-action",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-history",
+   "text": "a `mission_history` entry for a type the PDP does not recognize carries no `action`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Decision Evidence entry recorded for a policy-selected predicate of a type the PDP does not recognize carries no action, even where the predicate carries an action member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history.test.ts",
+     "name": "the History Context evaluates policy-selected predicates against verified, linked retained evidence (@spec authzen#context-history, #2015) > refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048 cold read): falling back to the predicate's action member for any type the PDP does not map (`?? \"action\"`, M6) records the unrecognized predicate's action. The reference maps selecting types in a fixed table; work_item_prerequisite_completed is the only one."
+  },
+  {
    "id": "authzen.context-history.action-class-completed-applied-class",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
@@ -58003,6 +58155,55 @@
     }
    ],
    "notes": "Mutation-proved (#2015): recording nothing until the Mission is established leaves a decision denied before it without mission_history (M13); omitting the member fails every recording assertion (M8). Outcomes are satisfied, not_satisfied and unavailable."
+  },
+  {
+   "id": "evidence.extensions.mission-history-entry-action",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "each with its `predicate` (and `action_class`, where applicable), the identifier of the operation its type selects, if any, as `action` (a string, naming that operation as a record's `action` names it), and an `outcome`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a recorded mission_history entry carries action, a non-empty string naming the operation its predicate's type selects, where the type selects one, and no action where the type selects by class alone or names no operation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records two prerequisites of one class for distinct operations as two entries, each naming its own action beside its own outcome, in either selection order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records no action on an action_class_completed entry, which selects by class alone, even where policy gave it one, whether evaluated or unavailable",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > signs an entry's action only as a non-empty string and refuses to sign any other",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records no action for an empty operation selector, whose predicate cannot be established",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) or from the signed entry (M3) fails the pair witness; recording any string action whatever the type (M2) records the stray action on the action_class_completed entry; removing the emitter's type check (M4) signs a numeric action; accepting an empty selector in both recordedEntry and the emitter (M7) records action \"\" on the empty-selector entry; dropping only the emitter's non-empty check (M8) signs an empty action. The member is owned by the AuthZEN profile (authzen.context-history.entry-records-operation)."
   },
   {
    "id": "evidence.extensions.hop-reference-required-submembers",
@@ -96958,16 +97159,22 @@
     "normative": "Of concurrent submissions presenting the same (iss, jti), at most one reserves the pair; every other is refused as replay with invalid_mission_intent_evidence."
    },
    "level": "concurrency",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
      "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > of two concurrent pushes presenting one assertion, exactly one is accepted and the other is refused as replay",
      "level": "concurrency",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "concurrency on the durable store (@spec request-provenance#replay, #1963) > of two concurrent pushes presenting one assertion on a file-backed kernel, exactly one is accepted and the other is refused as replay, and the kernel's file holds one committed pair",
+     "level": "concurrency",
+     "surface": "par"
     }
    ],
-   "notes": "#939 slice 2a-2. Step 10 reserves (iss, jti) with its acceptance record in one synchronous check and insert (InMemoryRequestProvenanceStore). Two pushes of one assertion, held by the test's store until both reach step 10 and then released in one turn, yield exactly one 201; the other is refused invalid_mission_intent_evidence as replay. Mutation: checking, awaiting, then inserting accepts both. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. Step 10 reserves (iss, jti) with its acceptance record in one synchronous INSERT. Two pushes of one assertion, held by the test's store until both reach step 10 and then released in one turn, yield exactly one 201; the other is refused invalid_mission_intent_evidence as replay. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. The cited wiring test runs the store class over a database of its own (the test's observed store wraps one), and the restart suite's runs the AS's default store on a witnessed kernel file; each yields exactly one 201 and one replay refusal, and the file holds one committed pair. The UNIQUE (iss, jti) constraint is what makes the one INSERT atomic: a mutant that checks, awaits, then inserts with the constraint dropped accepts both pushes in both tests."
   },
   {
    "id": "request-provenance.replay.release-on-refusal",
@@ -96987,7 +97194,7 @@
     "normative": "After a submission carrying a valid assertion is refused before acceptance for another reason, such as another evidence entry failing, a later submission presenting the same assertion is not refused as replay."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97054,9 +97261,27 @@
      "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > settles all or nothing: when one hold can no longer commit, none commits and every hold is released (the lapsed hold first: true)",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "a failed settlement on the durable store (@spec request-provenance#replay, #1963, #2060 review) > releases both assertions when the commit of the push's entry %i fails on a file-backed kernel: the push answers 500, neither pair stays committed or reserved, and after the fault is removed and the AS restarted each assertion is accepted",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > settles in one transaction: when a commit step throws, the shared transaction rolls every commit back, the scope releases every hold, and none is committed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > releases every hold when a commit step throws, even where the holds share no transaction: the scope is never committed by a failed settlement",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. A push refused before acceptance for another entry failing, for a later entry passing the verification-work bound, for a failed save of the pushed request, or for an exception after the provider set its 201, releases its reservation, and the same assertion is accepted next. The dispatch releases the scope on any refusal inside the evidence loop (unit tests), and the PAR wrapper releases on every outcome but acceptance, in a finally. Mutations: dropping the dispatch's release fails the unit tests (the endpoint tests still pass, since the wrapper releases too); releasing only on a normal return fails the exception test; committing when verification passes fails the save test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. Settlement is all or nothing (#2003 review): the scope prepares every hold, each checking with one reading of the clock that its reservation can still commit, before any commits, and when one has lapsed it releases them all and commits none. So a push refused at acceptance (its 500, the saved request_uri unusable since no record exists) leaves every still-valid assertion retryable, in either entry order. Mutations: committing hold by hold, committing each right after its own check, and a check that ignores the lapse each fail a cited test."
+   "notes": "#939 slice 2a-2. A push refused before acceptance for another entry failing, for a later entry passing the verification-work bound, for a failed save of the pushed request, or for an exception after the provider set its 201, releases its reservation, and the same assertion is accepted next. The dispatch releases the scope on any refusal inside the evidence loop (unit tests), and the PAR wrapper releases on every outcome but acceptance, in a finally. Mutations: dropping the dispatch's release fails the unit tests (the endpoint tests still pass, since the wrapper releases too); releasing only on a normal return fails the exception test; committing when verification passes fails the save test. Settlement is all or nothing (#2003 and #2060 reviews): the scope prepares every hold, each checking with one reading of the clock that its reservation can still commit, before any commits, and when one has lapsed it releases them all and commits none. The commits then run in one transaction of the replay store, and the scope is committed only once they all return: a write that fails rolls every commit back, and the scope releases every reservation. So a push refused at acceptance (its 500, the saved request_uri unusable since no record exists) leaves every still-valid assertion retryable, in either entry order, whether a reservation lapsed or a commit's write failed. On a file-backed kernel a commit failure injected in the database on either entry's pair answers 500, leaves neither pair committed or reserved, and after the fault is removed and the AS restarted each assertion is accepted. The commit boundary: a commit whose outcome a crash or a lost response leaves unknown is no refusal the AS returns; it stays committed and refuses its assertion as replay, and the client recovers with a fresh assertion (owner ruling on #2060's question 1). Mutations: committing the scope before its steps run fails the endpoint and unit tests; running the steps outside the shared transaction fails the second-entry case and the transaction unit test; dropping the release on a failed settlement fails the unit tests (the PAR wrapper's release still frees the endpoint case). Mutations: committing hold by hold, committing each right after its own check, and a check that ignores the lapse each fail a cited test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. The endpoint tests run the store class (the main assembly's observed store) and the AS's default store on the kernel's database (the strict assembly). A release deletes the reservation's row, so the freed pair stays free across a reopen (the SQLite replay store > keeps its pairs across a reopen of its database file). A reservation whose process ends before it commits or releases, which is no refusal the AS returns, holds its pair until exp plus the allowance and then lapses (D1119 Q1)."
   },
   {
    "id": "request-provenance.replay.accepted-no-reverification",
@@ -97076,7 +97301,7 @@
     "normative": "a later step of an accepted submission (its approval render, the decision, a deferred activation) does not verify the assertion again, so its committed `jti` does not refuse it, and it uses the original verification's time and facts; the AS's authorization, required-evidence and approval checks still apply at each step"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97107,9 +97332,15 @@
      "name": "later steps of an accepted push (@spec request-provenance#replay, #939 slice 2a-2, D1119 Q1 and Q2) > one accepted push opens two interactions, each relying on the one acceptance record without verifying again, and a new push of the assertion is still replay",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > activates after the restart and past the assertion's exp a deferred approval staged before it, relying on the push's acceptance record from the kernel's file: the push's verification time and facts, and no verification again",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#939 slice 2a-2. The authorization endpoint, the rendering and the decision of an accepted push, and a deferred activation, verify no signature: the counted verifier runs once, at the push. The committed jti does not refuse them, and the Mission records the push's verified_at, artifact_hash and facts from the acceptance record. A resume is charged no verification work. The required-evidence check still applies at a later step (a submission that no longer presents the required type is refused); the approval checks still apply (an Approver who is not authenticated is refused at the rendering, uncited: no defect in this slice reaches that gate). Mutations: re-verifying instead of resuming, or skipping the required-evidence check on a resume, fails these tests. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. One accepted push opening two interactions (oidc-provider consumes it only at respond) has each rely on the one record with no further verification, while a new push of the assertion is still replay; each interaction keeps its own authorization, required-evidence, approval, expiry and idempotency checks (owner ruling on #2003's question 1)."
+   "notes": "#939 slice 2a-2. The authorization endpoint, the rendering and the decision of an accepted push, and a deferred activation, verify no signature: the counted verifier runs once, at the push. The committed jti does not refuse them, and the Mission records the push's verified_at, artifact_hash and facts from the acceptance record. A resume is charged no verification work. The required-evidence check still applies at a later step (a submission that no longer presents the required type is refused); the approval checks still apply (an Approver who is not authenticated is refused at the rendering, uncited: no defect in this slice reaches that gate). Mutations: re-verifying instead of resuming, or skipping the required-evidence check on a resume, fails these tests. One accepted push opening two interactions (oidc-provider consumes it only at respond) has each rely on the one record with no further verification, while a new push of the assertion is still replay; each interaction keeps its own authorization, required-evidence, approval, expiry and idempotency checks (owner ruling on #2003's question 1). #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it activates past the assertion's exp and the capture's maximum age, with no verification (the counted verifier is not called), and the Mission records the push's verified_at, artifact_hash and facts from the record read back from the kernel's file. Mutations: the default store held in memory, a commit held in memory only, a reopen that creates a fresh table, a sweep that deletes committed rows at exp plus the allowance, and an acceptance lookup that ignores the retention each refuse that activation. The authorization endpoint, rendering and decision of a push accepted before a restart cannot run after it, since the pushed request, its interaction and the Approver's session are the provider's, in its memory (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay); the deferred activation is the later step that survives a restart."
   },
   {
    "id": "request-provenance.replay.acceptance-record-required",
@@ -97129,7 +97360,7 @@
     "normative": "a later step of an accepted submission whose acceptance record is missing, or does not match the submission's intended AS, exact Intent, established presenter or unchanged evidence entry, refuses the submission"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97190,9 +97421,21 @@
      "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > resumes an accepted entry with no verification work, and refuses a record that names another authorization server, or a step presenting a confirmation key",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > refuses after the restart a staged activation whose acceptance record is missing: access_denied, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > refuses after the restart a staged activation whose stored acceptance record does not match its submission: access_denied, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#939 slice 2a-2. Each later step (the authorization endpoint's re-validation of the stored pushed request, the rendering, the decision, a deferred activation) finds the committed record by the assertion's (iss, jti) and refuses invalid_mission_intent_evidence when it is missing (as in an in-memory store after a restart), belongs to another submission than the step's par:<jti>, or binds another Intent, presenter or assertion bytes; a deferred activation whose pending approval names no accepted submission, or another, is refused. The intended AS cannot differ alone at an endpoint, since the provisional intent_hash commits the issuer; a unit test of the dispatch proves that comparison alone, and a step presenting a confirmation key the push did not establish. Mutations: removing each comparison, or treating a missing record as accepted, fails its test. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. Each later step (the authorization endpoint's re-validation of the stored pushed request, the rendering, the decision, a deferred activation) finds the committed record by the assertion's (iss, jti) and refuses invalid_mission_intent_evidence when it is missing (as in an in-memory store after a restart), belongs to another submission than the step's par:<jti>, or binds another Intent, presenter or assertion bytes; a deferred activation whose pending approval names no accepted submission, or another, is refused. The intended AS cannot differ alone at an endpoint, since the provisional intent_hash commits the issuer; a unit test of the dispatch proves that comparison alone, and a step presenting a confirmation key the push did not establish. Mutations: removing each comparison, or treating a missing record as accepted, fails its test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it whose stored record is missing, or whose stored record binds another Intent, is refused access_denied, recording invalid_mission_intent_evidence, with no Mission. Mutations: a later step that does not compare the record's Intent, and one that proceeds without a record, each fail a restart test. The authorization endpoint, rendering and decision of a push accepted before a restart cannot run after it, since the pushed request, its interaction and the Approver's session are the provider's, in its memory (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay); the deferred activation, on the kernel's database, is the later step that survives a restart, and those three are witnessed within one process."
   },
   {
    "id": "request-provenance.replay.expiry-after-acceptance",
@@ -97212,7 +97455,7 @@
     "normative": "an accepted submission whose assertion expires, or whose capture passes the maximum capture age, before its approval completes is not refused for that reason, while its own pending-operation lifetime still applies"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97225,9 +97468,21 @@
      "name": "deferred activation of an accepted push (@spec request-provenance#replay, deferred-approval#deferred-sequencing, #939 slice 2a-2) > activates after exp and the capture age pass, verifying nothing again and recording the push's verification time and facts",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "the acceptance record across a restart (@spec request-provenance#replay, deferred-approval#deferred-sequencing, D1119 Q1, Q2 and Q5, #1963) > activates after the restart and past the assertion's exp a deferred approval staged before it, relying on the push's acceptance record from the kernel's file: the push's verification time and facts, and no verification again",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-store.test.ts",
+     "name": "the replay store's guards, on SQLite (@spec request-provenance#replay, #1963) > keeps a committed pair until the later of exp plus skew and its retention: found past exp within its retention, kept by the sweep there, and gone at its end",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. On a controlled clock the authorization endpoint, the rendering and the decision run 40 s after the push, past exp plus the 5 s allowance and past the capture's 30 s maximum age, and a deferred activation two minutes after; none is refused for it. The pending operations' own lifetimes still apply: past the pushed request's 60 s the authorization endpoint refuses the request_uri though the acceptance record remains (uncited: oidc-provider's lifetime, which no defect in this slice reaches). A committed record is kept until the later of exp plus the allowance and, from acceptance, the longest chain of pending operations an accepted push can begin (requestProvenanceAcceptanceRetention: the pushed request, the interaction with the provider's clock tolerance, a deferred code and its pending approval, and the allowance). Mutation: re-verifying instead of resuming refuses at step 7. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. On a controlled clock the authorization endpoint, the rendering and the decision run 40 s after the push, past exp plus the 5 s allowance and past the capture's 30 s maximum age, and a deferred activation two minutes after; none is refused for it. The pending operations' own lifetimes still apply: past the pushed request's 60 s the authorization endpoint refuses the request_uri though the acceptance record remains (uncited: oidc-provider's lifetime, which no defect in this slice reaches). A committed record is kept until the later of exp plus the allowance and, from acceptance, the longest chain of pending operations an accepted push can begin (requestProvenanceAcceptanceRetention: the pushed request, the interaction with the provider's clock tolerance, a deferred code and its pending approval, and the allowance). Mutation: re-verifying instead of resuming refuses at step 7. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it activates 130 s after the push, past exp plus the allowance and the capture's maximum age, from the record kept on the kernel's file, which the store keeps until the later of exp plus the allowance and its retention (the replay store's guards > keeps a committed pair until the later of exp plus skew and its retention). Mutations: an acceptance lookup that ignores the retention, and a sweep that deletes committed rows at exp plus the allowance, each refuse that activation and fail the store's retention test."
   },
   {
    "id": "request-provenance.replay.no-release-after-acceptance",
@@ -97247,7 +97502,7 @@
     "normative": "after an accepted submission is refused later, for example by an approval denial, a new submission presenting the same assertion is refused as replay"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97260,9 +97515,15 @@
      "name": "the admission scope at the dispatch (@spec request-provenance#replay, submission-evidence#verification-bounds, #939 slice 2a-2) > the replay store releases only a reservation: releasing a committed pair's token keeps its acceptance record and its pair",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-store.test.ts",
+     "name": "the replay store's guards, on SQLite (@spec request-provenance#replay, #1963) > releases only a reservation: a committed pair's release keeps its acceptance record and its pair, and a reservation's frees the pair",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. After a push is accepted and the Approver denies it at the decision, a new push of the same assertion is refused invalid_mission_intent_evidence as replay: nothing releases a committed admission scope (SubmissionAdmission), and no later step holds one. Mutation: a committed scope that still releases accepts the new push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963. The store itself releases only a reservation, so a release that reaches a committed pair's token keeps its acceptance record and its pair; deleting by token whatever the state fails that unit test."
+   "notes": "#939 slice 2a-2. After a push is accepted and the Approver denies it at the decision, a new push of the same assertion is refused invalid_mission_intent_evidence as replay: nothing releases a committed admission scope (SubmissionAdmission), and no later step holds one. Mutation: a committed scope that still releases accepts the new push. The store itself releases only a reservation, so a release that reaches a committed pair's token keeps its acceptance record and its pair; deleting by token whatever the state fails that unit test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. The store's own guard holds for both stores (the replay store's guards, in memory and on SQLite > releases only a reservation): a release that reaches a committed pair's token keeps its record and its pair. Mutation: a SQLite release that deletes by token whatever the state fails the SQLite case. A committed pair still refuses its assertion after a restart (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > refuses as replay after a restart an assertion whose push committed before it, keeps the committed pair past exp plus the clock-skew allowance within its retention, and sweeps it once the retention ends)."
   },
   {
    "id": "request-provenance.replay.committed-refused",
@@ -97282,7 +97543,7 @@
     "normative": "On a surface without a creation idempotency fingerprint, such as PAR, presenting an assertion whose (iss, jti) an accepted submission committed is refused as replay with invalid_mission_intent_evidence until at least exp plus the clock-skew allowance."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
@@ -97295,9 +97556,21 @@
      "name": "replay at PAR (@spec request-provenance#replay, #939 slice 2a-2) > refuses as replay an assertion an accepted push committed, until exp plus the clock-skew allowance",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-restart.test.ts",
+     "name": "replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > refuses as replay after a restart an assertion whose push committed before it, keeps the committed pair past exp plus the clock-skew allowance within its retention, and sweeps it once the retention ends",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-store.test.ts",
+     "name": "the SQLite replay store (@spec request-provenance#replay, D1119 Q5, #1963) > keeps its pairs across a reopen of its database file: a committed pair is still refused and its record found, a reservation still holds its pair until exp plus skew, and a released pair is free",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#939 slice 2a-2. The PAR wrapper commits the push's admission scope when the provider answers 201 with the request_uri of the pushed request it saved, under par:<jti>. A second push of the accepted assertion is refused invalid_mission_intent_evidence as replay, and again one second before exp plus the allowance, where step 7 still passes. Mutation: a committed scope that still releases accepts the second push. partial: the replay store and its acceptance records are in memory only, an explicitly ephemeral demonstration (D1119 Q5): a restart forgets every pair, so an unexpired assertion is accepted again and an accepted submission loses its acceptance record. The AS therefore refuses to enable the type on a file-backed kernel store (enabling the type > refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records). Coverage stays partial until #1963."
+   "notes": "#939 slice 2a-2. The PAR wrapper commits the push's admission scope when the provider answers 201 with the request_uri of the pushed request it saved, under par:<jti>. A second push of the accepted assertion is refused invalid_mission_intent_evidence as replay, and again one second before exp plus the allowance, where step 7 still passes. Mutation: a committed scope that still releases accepts the second push. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart of the AS on the same kernel file, with the provider's memory replaced as a new process's is, the committed assertion is refused as replay at step 10, before its exp; the committed pair is kept past exp plus the allowance within its retention, and the next reservation after the retention ends sweeps it. The pushed request itself is the provider's and does not survive the restart (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay). Mutations: the default store held in memory, and a reopen that creates a fresh table, each accept the assertion after the restart; a sweep that deletes committed rows at exp plus the allowance, and a commit held in memory only, each fail the retention assertions; an acceptance lookup that ignores the end of the retention fails the sweep assertion."
   },
   {
    "id": "request-provenance.replay.creation-recovery-original-evidence",
@@ -113052,6 +113325,41 @@
     }
    ],
    "notes": "Mutation-proved (#815): dropping the action check records not_satisfied for the predicate without action (U-member-action); dropping the class check does the same for the predicate without action_class (U-member-class)."
+  },
+  {
+   "id": "harness.work-item-prerequisite.entry-records-action",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-prerequisite",
+   "text": "Its `mission_history` entry in Decision Evidence carries its `action` as well as its `action_class`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-prerequisite"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a work_item_prerequisite_completed entry in Decision Evidence carries the predicate's action and action_class, so prerequisites of one class for different operations, such as a backup and an export, are recorded as distinct entries, each with its own outcome"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-history-prerequisite.test.ts",
+     "name": "a recorded mission_history entry names the operation its predicate selects (@spec authzen#context-history, runtime-evidence#evidence-extensions, harness#work-item-prerequisite, #2048) > records two prerequisites of one class for distinct operations as two entries, each naming its own action beside its own outcome, in either selection order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-prerequisite.test.ts",
+     "name": "a database is deleted only after a completed backup for the same work item, target and revision (@spec harness#work-item-prerequisite, #815) > refuses the delete when only another operation of the backup's class completed for that work item, target and revision",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Mutation-proved (#2048): dropping action from the recorded entry (M1) fails the unit pair witness and the cross-component witness, whose delete records the backup prerequisite not_satisfied with its action while only an export of the same class completed; dropping the operation match (M5) fails the pair witness's recorded outcomes with the decision assertions removed. The cross-component witness runs the reference PEP, an ephemeral in-process decision point with the history binding, and the PEP's evidence store over the test-only revisioned database; nothing of that operation set ships."
   },
   {
    "id": "harness.work-item-prerequisite.operation-and-class",

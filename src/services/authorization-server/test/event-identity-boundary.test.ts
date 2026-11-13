@@ -81,6 +81,7 @@ import {
   MissionKernel,
   type MissionRecord,
   recordDispatchDelivery,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   TemplateStore,
   validateMissionIntent,
@@ -515,6 +516,8 @@ describe(`Deferred Mission Approval: the pending approval's event yields one Mis
       root: { id: "urn:root:reconciler", version: "1" },
       approver: DANA,
       consentEventId: `gpce-${tmplSeq++}`,
+      // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+      disclosure: governedPolicyConsentDisclosure(k, { id: "urn:root:reconciler", version: "1" }).commitment,
     });
     return { k, consent, deferrals: new MissionApprovalDeferralStore(k, { now: kNow }) };
   };

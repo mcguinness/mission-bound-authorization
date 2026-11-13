@@ -21,10 +21,13 @@
  *  - the accepted submission: the authorization endpoint, the rendering and
  *    the decision rely on the acceptance record after `exp` and the capture
  *    age pass, and refuse without a matching one;
- *  - the carriers that do not admit the type, and the file-backed refusal.
+ *  - the carriers that do not admit the type, and enabling it: a supplied
+ *    replay store beside a file-backed kernel store refuses construction,
+ *    and the default store, on the kernel's database, starts there.
  *
  * Deferred activation, a later step on another assembly, is in
- * request-provenance-deferred.test.ts.
+ * request-provenance-deferred.test.ts, and the store across a restart of a
+ * file-backed kernel in request-provenance-restart.test.ts.
  */
 
 const controlledClock = await vi.hoisted(async () => {
@@ -40,7 +43,7 @@ vi.mock("../src/kernel/request-provenance.js", async (importOriginal) => {
 });
 
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -54,6 +57,7 @@ import {
   type RequestProvenanceConfig,
 } from "@mission/demo-data";
 import { type Channel, createRequestIntake, type JsonObject, type Presenter } from "@mission/request-provenance";
+import { openStore } from "@mission/store";
 import { CompactSign, calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -74,6 +78,7 @@ import {
   type RequestProvenanceAcceptance,
   type RequestProvenanceRecord,
   type RequestProvenanceStore,
+  SqliteRequestProvenanceStore,
   SubmissionAdmission,
   unregisterIntentSubmissionEvidenceType,
   verifyIntentSubmissionEvidence,
@@ -231,13 +236,14 @@ const entry = (assertion: unknown): Record<string, unknown> => ({ type: TYPE, as
 const envelope = (evidence: unknown[], intent: unknown = INTENT) => ({ intent, evidence });
 
 /**
- * The replay store the main assembly uses: the in-memory store, observed. A
- * test can make every acceptance record read as missing, as an in-memory
- * store's are after a restart, or gather concurrent reservations so they
- * reach the store in one turn.
+ * The replay store the main assembly uses: the AS's store class, on a
+ * database of its own, observed. A test can make every acceptance record
+ * read as missing, or gather concurrent reservations so they reach the
+ * store in one turn. The other assemblies keep the default, on their
+ * kernel's database.
  */
 class ObservedStore implements RequestProvenanceStore {
-  readonly inner = new InMemoryRequestProvenanceStore();
+  readonly inner = new SqliteRequestProvenanceStore(openStore(""));
   lost = false;
   #gathering: { size: number; waiting: Array<() => void> } | undefined;
 
@@ -269,6 +275,10 @@ class ObservedStore implements RequestProvenanceStore {
 
   committable(token: string, nowMs: number): boolean {
     return this.inner.committable(token, nowMs);
+  }
+
+  transaction(fn: () => void): void {
+    this.inner.transaction(fn);
   }
 
   commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean {
@@ -1306,21 +1316,51 @@ describe("carriers that do not admit the type (@spec request-provenance#verifica
   });
 });
 
-describe("enabling the type (@spec request-provenance#replay, D1119 Q5, D1151)", () => {
-  it("refuses construction with a file-backed kernel store, whose restart would forget the replay history and acceptance records", async () => {
+describe("enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963)", () => {
+  it("refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened", async () => {
     const dir = mkdtempSync(join(tmpdir(), "rp-file-backed-"));
+    const file = join(dir, "kernel.db");
     try {
       await expect(
         buildAuthorizationServer({
           issuer: "https://file-backed.as.example",
-          kernelStore: { file: join(dir, "kernel.db") },
-          requestProvenance: { config: TRUST },
+          kernelStore: { file },
+          requestProvenance: { config: TRUST, store: new InMemoryRequestProvenanceStore() },
         }),
-      ).rejects.toThrow("cannot be enabled on a file-backed kernel store");
+      ).rejects.toThrow(
+        "mission-request-provenance on a file-backed kernel store keeps its replay history and acceptance records on the kernel's database: a supplied replay store does not survive a restart with the kernel (D1119 Q5, #1963)",
+      );
+      expect(existsSync(file)).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("starts with a file-backed kernel store and the default replay store, which keeps its pairs on the kernel's database in that file", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "rp-file-backed-"));
+    const file = join(dir, "kernel.db");
+    try {
+      const built = await buildAuthorizationServer({
+        issuer: "https://file-backed.as.example",
+        kernelStore: { file },
+        requestProvenance: { config: TRUST },
+      });
+      try {
+        const store = built.requestProvenanceStore;
+        expect(store).toBeInstanceOf(SqliteRequestProvenanceStore);
+        expect((store as SqliteRequestProvenanceStore).db).toBe(built.kernel.db);
+        expect(built.kernel.db.name).toBe(file);
+        expect(
+          built.kernel.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'request_provenance_pairs'").get(),
+        ).toEqual({ name: "request_provenance_pairs" });
+      } finally {
+        built.suspensionScheduler?.stop();
+        built.kernel.close();
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("registers nothing for a disabled configuration, the shipped one included: the type is unknown there", async () => {
     expect(REQUEST_PROVENANCE_CONFIG.enabled).toBe(false);
@@ -1451,6 +1491,48 @@ describe("the admission scope at the dispatch (@spec request-provenance#replay, 
       expect(admission.state).toBe("released");
     },
   );
+
+  it("settles in one transaction: when a commit step throws, the shared transaction rolls every commit back, the scope releases every hold, and none is committed", () => {
+    const admission = new SubmissionAdmission();
+    let applied: string[] = [];
+    const released: string[] = [];
+    const atomically = (steps: () => void): void => {
+      const before = [...applied];
+      try {
+        steps();
+      } catch (e) {
+        applied = before;
+        throw e;
+      }
+    };
+    admission.hold({ prepare: (ref) => () => void applied.push(`a:${ref}`), release: () => void released.push("a"), atomically });
+    admission.hold({
+      prepare: () => () => {
+        throw new Error("the store refused the write");
+      },
+      release: () => void released.push("b"),
+      atomically,
+    });
+    expect(() => admission.commit("par:failed-write")).toThrow("the store refused the write");
+    expect(applied).toEqual([]);
+    expect(released.sort()).toEqual(["a", "b"]);
+    expect(admission.state).toBe("released");
+  });
+
+  it("releases every hold when a commit step throws, even where the holds share no transaction: the scope is never committed by a failed settlement", () => {
+    const admission = new SubmissionAdmission();
+    const released: string[] = [];
+    admission.hold({ prepare: () => () => {}, release: () => void released.push("a") });
+    admission.hold({
+      prepare: () => () => {
+        throw new Error("the store refused the write");
+      },
+      release: () => void released.push("b"),
+    });
+    expect(() => admission.commit("par:failed-write")).toThrow("the store refused the write");
+    expect(released.sort()).toEqual(["a", "b"]);
+    expect(admission.state).toBe("released");
+  });
 
   it("the replay store releases only a reservation: releasing a committed pair's token keeps its acceptance record and its pair", async () => {
     const own = new InMemoryRequestProvenanceStore();
