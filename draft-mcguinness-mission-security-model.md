@@ -1063,12 +1063,21 @@ Exfiltration of private data (the third leg of the lethal trifecta):
 : Addressed by external communication is a gated consequential action;
   harness leaves no unmediated path; session taint downgrades egress
   after untrusted input (optional; recommended, not required);
+  exposure qualification relieves that downgrade only for an
+  external-communication egress whose composing context is established
+  as unexposed, never for an irreversible, external-commitment, or
+  privileged-administration action
+  ({{I-D.draft-mcguinness-mission-harness}});
   least-exposure context minimization narrows what an injected agent
   sees (runtime, harness); the composite is claimable as trifecta
   containment (runtime). Residual: PEP-placement completeness; no
   information-flow control, so a sequence of in-scope steps can launder
-  data; the quarantine pattern (separate ingestion and egress Missions)
-  turns that limit into a deployment architecture
+  data; exposure qualification is only as sound as the protected
+  source set and the layer that establishes exposure, so a source left
+  out of the set, or a determination made for the executing process
+  rather than the composing context, lets protected data leave without
+  approval; the quarantine pattern (separate ingestion and egress
+  Missions) turns that limit into a deployment architecture
   ({{I-D.draft-mcguinness-mission-architecture}}).
 
 Sub-agent fan-out abuse (Child Missions):
@@ -1078,6 +1087,25 @@ Sub-agent fan-out abuse (Child Missions):
   child credentials never transit the parent. Residual: breadth within
   the fan-out policy is the deployment's; a permissive delegation policy
   is consented but wide.
+
+Authority amplification through reads:
+: Addressed by the mediating PEP's disposition of authority-bearing
+  content, such as the one-time codes and reset links a mailbox
+  receives. Each recognized item is withheld; routed, through a
+  surface the agent cannot read, only to a recipient authorized to
+  receive that item; or replaced by a surrogate that resolves only into
+  an action matching its recorded service, account, operation, Mission,
+  and limits and permitted within the Effective Authority Set, with any
+  credential the redemption returns held at the PEP
+  ({{I-D.draft-mcguinness-mission-runtime}}). Before
+  approval, the shaper narrows a read entry that can return such
+  content or discloses the authority the entry implies
+  ({{I-D.draft-mcguinness-mission-shaping}}). Residual: detection is
+  declared, not complete, so an item the detector misses reaches the
+  agent; a deployment that claims neither agent-compromise-resistant
+  enforcement nor trifecta containment applies the dispositions only as
+  a recommendation; and content outside the declared covered reads is
+  not inspected.
 
 One instance of a swarm is compromised (class-pinned multiplication):
 : Addressed by three kills that stay separable: revoke the one
@@ -1631,6 +1659,17 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The exfiltration entry names the harness profile's exposure
+  qualification under Addressed, and its dependence on the protected
+  source set and on establishment under Residual. No requirement
+  changed (#2044).
+
+- The adversary model adds authority amplification through reads:
+  content a read returns that is itself authority, addressed by the
+  runtime profile's dispositions and the shaper's narrowing and
+  disclosure, with declared, incomplete detection as its residual. No
+  requirement changed (#2045).
 
 - The Trusted Base gives a materialized policy view its own entry: it
   carries compiled authority, never Mission lifecycle state, and is no

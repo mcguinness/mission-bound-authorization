@@ -36,6 +36,7 @@ import {
   type ModelAdvisorRequest,
   mintActivationPolicyRef,
   type RecordedModelOutput,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
   verifyApprovalGovernanceRecord,
@@ -159,6 +160,8 @@ function addRoot(doc: GovernedPolicyRoot, opts: { approver?: string; consent?: b
           root: { id, version },
           approver: { iss: ISSUER, sub: approver },
           consentEventId: `gpce-${id}`,
+          // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+          disclosure: governedPolicyConsentDisclosure(as.kernel, { id, version }).commitment,
         });
   return { id, consent };
 }

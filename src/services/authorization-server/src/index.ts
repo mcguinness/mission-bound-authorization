@@ -723,6 +723,8 @@ export {
   type GovernedPolicyApprovalConfig,
   GovernedPolicyConfigError,
   type GovernedPolicyConsent,
+  type GovernedPolicyConsentDisclosure,
+  governedPolicyConsentDisclosure,
   GovernedPolicyConsentStore,
   type GovernedPolicyDecision,
   GovernedPolicyError,
@@ -1325,12 +1327,15 @@ export async function buildAuthorizationServer(opts: {
    * this AS, with this trust configuration (the shape `@mission/demo-data`'s
    * `loadRequestProvenanceConfig` returns) and replay store (default
    * in-memory). Registered only where `config.enabled` is true. The shipped
-   * `config/request-provenance.json` is disabled, and `server.ts` and
-   * `stack.ts` never pass this option: enabling the real verifier in the
-   * reference composition is unauthorized (D1151, D1157). With a file-backed
-   * kernel store, an enabled type refuses construction, since its replay
-   * history and acceptance records do not survive a restart (D1119 Q5,
-   * #1963).
+   * `config/request-provenance.json` is disabled, so the default is off, and
+   * `server.ts` never passes this option (D1151, D1157). The one composition
+   * that passes it is the `as-native` target under its opt-in
+   * `requestIntake` launch option (`MISSION_REQUEST_INTAKE=1`, #939 slice
+   * 2b-2), as D1221 authorizes: it enables the type together with the demo
+   * request intake, trusting that intake's one signer under the shipped
+   * file's declared bounds. With a file-backed kernel store, an enabled type
+   * refuses construction, since its replay history and acceptance records do
+   * not survive a restart (D1119 Q5, #1963).
    */
   requestProvenance?: { config: RequestProvenanceConfig; store?: RequestProvenanceStore };
   /**
@@ -1967,6 +1972,8 @@ export async function buildAuthorizationServer(opts: {
     // retained; a derived record inherits instead.
     entryAudiences: (entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry),
     policy: (opts.derivationPolicy ?? DERIVATION_POLICY) as never,
+    // @spec derivation-limits#conformance (#2018): the capability switch.
+    derivationLimits: capabilityEnabled(opts, "derivation-limits"),
     ...(opts.submissionEvidenceVerificationWork !== undefined
       ? { submissionEvidenceVerificationWork: opts.submissionEvidenceVerificationWork }
       : {}),
@@ -2329,7 +2336,14 @@ export async function buildAuthorizationServer(opts: {
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).
-    introspectionPrincipals: [...INTROSPECTION_PRINCIPALS, ...(opts.testIntrospectionPrincipals ?? [])],
+    // @spec mission#optional-capabilities (#2018): the shipped registry is
+    // inert where the Introspection capability is off, since no route serves
+    // it; a principal the caller adds is a configured introspecting consumer,
+    // which the provider refuses at construction while the capability is off.
+    introspectionPrincipals: [
+      ...(capabilityEnabled(opts, "introspection") ? INTROSPECTION_PRINCIPALS : []),
+      ...(opts.testIntrospectionPrincipals ?? []),
+    ],
     // @spec mission#designation (#869, D449): config/delegation.json.
     designableClients: opts.designableClients ?? DESIGNABLE_CLIENTS,
     // @spec mission#authority-proposal (#1531, D741): config/governed-resources.json.

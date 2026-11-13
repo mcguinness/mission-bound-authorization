@@ -7,10 +7,14 @@ import {
   DISPATCH_PROHIBITED_ACTIONS,
   PROGRESSIVE_PROFILE,
 } from "@mission/demo-data";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { type CryptoKey, generateKeyPair } from "jose";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
+  createChildMission,
   createExpansion,
   createTemplate,
   type CreateTemplateInput,
@@ -28,6 +32,7 @@ import {
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
+import { renderedChildMaxima } from "../src/kernel/standing-consent-limit.js";
 import { CreationIdempotencyStore } from "../src/kernel/creation-idempotency.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -95,7 +100,7 @@ const ceilEntry = (actions: string[], maxAmount = "200.00"): AuthorityEntry => (
   constraints: { max_amount: { amount: maxAmount, currency: "USD" }, vendors: ["acme"] },
 });
 
-const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
+const mkTemplate = (over: Partial<CreateTemplateInput> = {}, options: Partial<Parameters<typeof createTemplate>[2]> = {}) =>
   createTemplate(store, {
     template_version: "tmpl-v1",
     issuer: ISS,
@@ -111,7 +116,7 @@ const mkTemplate = (over: Partial<CreateTemplateInput> = {}) =>
     approval_event_id: `tmpl-ev-${tmplSeq++}`,
     expires_at: "2026-12-01T00:00:00Z",
     ...over,
-  }, { ...kernel.authoritySourceOptions(), dispatchPolicies: REGISTRY });
+  }, { ...kernel.authoritySourceOptions(), dispatchPolicies: REGISTRY, ...options });
 
 /** An untrusted Intent proposing the given actions (default max_amount 500,
  *  which is exactly the policy ceiling, so any narrower final is attributable). */
@@ -909,7 +914,7 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
       }),
     );
   /** A kernel like the suite's, with the given deployment ceiling. */
-  const kernelWithCeiling = (ceiling: number | null) =>
+  const kernelWithCeiling = (ceiling: number | null, over: Partial<ConstructorParameters<typeof MissionKernel>[0]> = {}) =>
     new MissionKernel({
       issuer: ISS,
       policy: { ...DERIVATION_POLICY, derivation_limit_ceiling: ceiling } as never,
@@ -917,6 +922,7 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
       statusKey: key,
       statusKid: "as-status",
       now,
+      ...over,
     });
   const dispatchOn = (k: MissionKernel, templateId: string, limit?: number) =>
     dispatchFromTemplate(k, store, {
@@ -964,6 +970,177 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
       );
       expect(store.getByApprovalEvent(approval_event_id), id).toBeUndefined();
     }
+  });
+
+  // The kernel restarts from its file; the reference's template store is in
+  // memory, so the suite's one store stands in for a durable one across it.
+  describe("with Derivation Limits turned off after the template's consent (#2018 review F1; @spec derivation-limits#effective-limit)", () => {
+    let dir: string;
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "template-limit-off-"));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const onFile = (file: string, derivationLimits: boolean) => kernelWithCeiling(null, { store: { file }, derivationLimits });
+    const EPOCH = "1970-01-01T00:00:00Z";
+
+    it("a finite per-instance maximum the consent committed outlives the restart: with the capability on the instance records it, and after a restart with it off the next Dispatch is refused dispatch_policy_changed, committing nothing, while the earlier instance keeps its limit", () => {
+      const file = join(dir, "kernel.sqlite");
+      const t = mkTemplate({ dispatch_policy: policyRef("limit-3"), max_active: 5, rate_per_min: 10 });
+      const on = onFile(file, true);
+      const first = dispatchOn(on, t.id);
+      expect(first.derivation_limit).toBe(3);
+      on.close();
+      const off = onFile(file, false);
+      try {
+        const missions = off.allMissions().length;
+        const dispatches = store.dispatchesSince(t.id, EPOCH);
+        try {
+          dispatchOn(off, t.id);
+          expect.unreachable();
+        } catch (e) {
+          expect(e).toBeInstanceOf(DispatchError);
+          expect((e as DispatchError).reason).toBe("dispatch_policy_changed");
+          expect((e as Error).message).toMatch(/committed a per-Mission derivation limit of at most 3/);
+        }
+        expect(off.allMissions()).toHaveLength(missions);
+        expect(store.dispatchesSince(t.id, EPOCH)).toBe(dispatches);
+        // The instance dispatched before the restart keeps its own finite limit.
+        expect(off.get(first.id)?.derivation_limit).toBe(3);
+      } finally {
+        off.close();
+      }
+    });
+
+    it("a Dispatch Policy guaranteeing no finite maximum still dispatches after the restart, recording no limit (positive control)", () => {
+      for (const id of ["limit-null", "test-policy"]) {
+        const file = join(dir, `kernel-${id}.sqlite`);
+        const t = mkTemplate({ dispatch_policy: policyRef(id), max_active: 5, rate_per_min: 10 });
+        const on = onFile(file, true);
+        expect(dispatchOn(on, t.id).derivation_limit, id).toBeNull();
+        on.close();
+        const off = onFile(file, false);
+        try {
+          const missions = off.allMissions().length;
+          expect(dispatchOn(off, t.id).derivation_limit, id).toBeNull();
+          expect(off.allMissions(), id).toHaveLength(missions + 1);
+        } finally {
+          off.close();
+        }
+      }
+    });
+  });
+
+  // @spec derivation-limits#effective-limit (#2026, D1249 ruling 7): the
+  // audit of Template dispatch. The per-instance maximum is the one the
+  // committed Dispatch Policy states, read from its verified snapshot, never
+  // the deployment ceiling, so replacing the ceiling under the same
+  // policy_version does not reach it. An instance's own children take the
+  // per-child figure the instance retained at its dispatch. The kernel
+  // restarts from its file; the suite's one template store stands in for a
+  // durable one across it.
+  describe("with the deployment ceiling replaced after the template's consent (#2026 audit; @spec derivation-limits#effective-limit)", () => {
+    let dir: string;
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "template-limit-replaced-"));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const onFile = (file: string, ceiling: number | null, policyVersion = POLICY_VERSION) =>
+      kernelWithCeiling(ceiling, {
+        store: { file },
+        policy: { ...DERIVATION_POLICY, derivation_limit_ceiling: ceiling, policy_version: policyVersion } as never,
+        actorProfiles: { "child-agent": "ai_agent" },
+      });
+    const replacements: ReadonlyArray<readonly [number | null, string]> = [
+      [null, POLICY_VERSION],
+      [10, POLICY_VERSION],
+      [null, "changed-policy"],
+      [10, "changed-policy"],
+    ];
+
+    it("the per-instance maximum its Dispatch Policy commits binds whatever the deployment ceiling becomes: removed or raised under the same policy_version, or under a changed one, across a restart, an instance records at most 3, and the earlier instance keeps its limit", () => {
+      const t = mkTemplate({ dispatch_policy: policyRef("limit-3"), max_active: 20, rate_per_min: 20 });
+      for (const [i, [next, version]] of replacements.entries()) {
+        const file = join(dir, `kernel-${i}.sqlite`);
+        const before = onFile(file, 5);
+        const first = dispatchOn(before, t.id);
+        expect(first.derivation_limit).toBe(3);
+        before.close();
+        const after = onFile(file, next, version);
+        try {
+          expect(after.policyVersion()).toBe(version);
+          expect(dispatchOn(after, t.id).derivation_limit, `${next} ${version}`).toBe(3);
+          expect(dispatchOn(after, t.id, 50).derivation_limit, `${next} ${version}`).toBe(3);
+          expect(after.get(first.id)?.derivation_limit).toBe(3);
+        } finally {
+          after.close();
+        }
+      }
+    });
+
+    it("a Dispatch Policy stating no maximum commits none, so an instance follows the deployment ceiling current at its dispatch (positive control)", () => {
+      const t = mkTemplate({ dispatch_policy: policyRef("limit-null"), max_active: 20, rate_per_min: 20 });
+      const file = join(dir, "kernel.sqlite");
+      const before = onFile(file, 5);
+      expect(dispatchOn(before, t.id).derivation_limit).toBe(5);
+      before.close();
+      const removed = onFile(file, null);
+      expect(dispatchOn(removed, t.id).derivation_limit).toBeNull();
+      removed.close();
+      const raised = onFile(file, 10);
+      try {
+        expect(dispatchOn(raised, t.id).derivation_limit).toBe(10);
+      } finally {
+        raised.close();
+      }
+    });
+
+    it("an instance's own children take the per-child figure the template consent rendered: after the ceiling is removed or raised under the same policy_version and a restart, an instance dispatched before or after it retains that figure, and their children record it (#2040)", () => {
+      const delegable: AuthorityEntry = {
+        ...ceilEntry(["payments:invoice.read"]),
+        delegation: { max_depth: 2, children: { max_children: 5, allowed_child_actors: [{ sub_profile: "ai_agent" }] } },
+      };
+      // The consent rendered 3, the deployment's figure at the consent (#2040).
+      const t = mkTemplate(
+        { ceiling: [delegable], max_active: 20, rate_per_min: 20 },
+        { ceilingChildMaxima: (entries) => renderedChildMaxima(entries, 3) },
+      );
+      const childProposal: AuthorityEntry[] = [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ];
+      const childOf = (k: MissionKernel, instance: MissionRecord) =>
+        createChildMission(k, {
+          parentId: instance.id,
+          intent: limitIntent(),
+          proposedAuthority: childProposal,
+          childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+        }).child;
+      for (const [i, next] of [null, 10].entries()) {
+        const file = join(dir, `kernel-children-${i}.sqlite`);
+        const before = onFile(file, 3);
+        const instance = dispatchOn(before, t.id);
+        expect(instance.child_derivation_maxima).toEqual([{ finite: 3 }]);
+        expect(childOf(before, instance).derivation_limit).toBe(3);
+        before.close();
+        const after = onFile(file, next);
+        try {
+          expect(childOf(after, instance).derivation_limit, String(next)).toBe(3);
+          const later = dispatchOn(after, t.id);
+          expect(later.child_derivation_maxima, String(next)).toEqual([{ finite: 3 }]);
+          expect(childOf(after, later).derivation_limit, String(next)).toBe(3);
+        } finally {
+          after.close();
+        }
+      }
+    });
   });
 });
 

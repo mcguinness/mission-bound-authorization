@@ -669,6 +669,22 @@ export interface MissionRecord {
    */
   approved_audiences?: string[][];
   /**
+   * @spec derivation-limits#effective-limit, child-delegation#derivation-budget
+   * (#2026, D1249): for each entry whose policy-created children take the
+   * deployment's per-child figure (a `children` grant with no
+   * `child_creation_policy`), index-aligned with `authority_set`, the figure
+   * the human approval behind the entry rendered and the Approver accepted:
+   * `{ finite: n }`, or `{ finite: null }` for an explicitly retained "no
+   * finite maximum"; `null` for every other entry, or where the figure is
+   * unknown. Retained at a direct approval event, inherited by a record
+   * derived from earlier authority, never re-read from a later policy. The
+   * same authorization-server state as `approved_audiences`: outside every
+   * integrity anchor, never on the wire, immutable after creation. Absent,
+   * or not aligned with `authority_set`, it retains no figure, and no child
+   * is created under an entry that takes one.
+   */
+  child_derivation_maxima?: ({ finite: number | null } | null)[];
+  /**
    * @spec mission#record-content-members, mission#integrity-anchors (#1917,
    * D1061): OPTIONAL with an implied value, the `mission-intent` anchor over
    * the retained `intent` under `iss` = `issuer`. Absent when the deployment
@@ -810,6 +826,20 @@ export interface MissionRecord {
    * audience with any ceiling entry.
    */
   ceiling_audiences?: string[][];
+  /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040, D1260 ruling 3): for each ceiling entry whose policy-created
+   * children take the deployment's per-child figure, index-aligned with
+   * `authority_ceiling`, the figure the ceiling consent rendered and the
+   * Approver accepted (`{ finite: n }`, or `{ finite: null }` for no finite
+   * maximum); `null` for every other entry. Retained at the consent, carried
+   * with the ceiling and never re-read from a later policy, so authority a
+   * drawdown adds takes it. The same state as `child_derivation_maxima`:
+   * outside `ceiling_hash`, never on the wire. Absent (a ceiling consented
+   * before it was retained) or misaligned, it retains no figure, and no child
+   * is created under authority a drawdown adds from it.
+   */
+  ceiling_child_derivation_maxima?: ({ finite: number | null } | null)[];
   /**
    * @spec progressive#progressive-authorization: the activation policy
    * reference under which the Mission Issuer MAY adjudicate an in-ceiling

@@ -830,6 +830,14 @@ export interface IntentIntakeOptions {
    * unknown.
    */
   admitMaxBudget?: boolean;
+  /**
+   * @spec mission#submission-via-par, derivation-limits#introduction (#2018):
+   * whether the AS implements Mission Derivation Limits, the companion that
+   * defines `requested_derivation_limit`. Default true. False: the closed top
+   * level refuses the member `invalid_request` as one neither the binding nor
+   * an implemented companion defines.
+   */
+  derivationLimits?: boolean;
 }
 
 /** The semantic-Intent rules over a parsed object (shared by the envelope
@@ -838,9 +846,15 @@ function validateMissionIntentObject(
   obj: Record<string, JsonValue>,
   opts: IntentIntakeOptions = {},
 ): MissionIntent {
-  // Closed top level (@spec mission#submission-via-par).
+  // Closed top level (@spec mission#submission-via-par). The members a
+  // companion defines are known only where the AS implements that companion
+  // (#2018): `requested_derivation_limit` is Derivation Limits'.
   for (const key of Object.keys(obj)) {
-    if (!TOP_LEVEL.has(key) && !(key === "max_budget" && opts.admitMaxBudget === true)) {
+    const known =
+      key === "requested_derivation_limit"
+        ? opts.derivationLimits !== false
+        : TOP_LEVEL.has(key) || (key === "max_budget" && opts.admitMaxBudget === true);
+    if (!known) {
       throw new IntentError("invalid_request", `unknown top-level member: ${key}`);
     }
   }

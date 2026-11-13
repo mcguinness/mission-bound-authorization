@@ -55,6 +55,13 @@ import {
   type ReconsentedCeiling,
 } from "./progressive.js";
 import type { MissionKernel } from "./kernel.js";
+import {
+  childMaximumReferences,
+  figureMaximum,
+  inheritedChildMaxima,
+  type RetainedChildMaximum,
+  retainedFigureOf,
+} from "./standing-consent-limit.js";
 import type {
   AuthorityEntry,
   IntentSubmissionEvidenceFact,
@@ -426,6 +433,12 @@ function migrateExpansionDeferrals(db: Database): void {
     // the Approver's decision. A deferral approved before it was retained
     // has none, so the entries its approval adds have none (fail closed).
     "decision_audiences_json",
+    // @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+    // (#2040): the per-child derivation figure the Approver's decision
+    // rendered for the authority the Expansion adds. A deferral approved
+    // before it was retained has none, so that authority's figure is unknown
+    // and no child is created under it until a fresh approval (no backfill).
+    "decision_child_maximum_json",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -528,6 +541,17 @@ export interface DeferralReview extends PendingDeferral {
    * commits; fixed while the deferral is pending.
    */
   carryover?: CarryoverManifest;
+  /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040): the per-child derivation figure each delegable entry would
+   * retain, as an approval now establishes it: for the successor's entries,
+   * index-aligned with `successor`, the strictest figure carried authority
+   * retains bounded by the deployment's figure now for authority the
+   * approval adds (`null` where unknown); for the re-consent offer's ceiling
+   * entries, index-aligned with its `authority_ceiling`, the deployment's
+   * figure now. The page renders them; the decision is bound to them.
+   */
+  child_derivation: { successor: RetainedChildMaximum[]; reconsent: RetainedChildMaximum[] | null };
 }
 
 /** The Approver's async adjudication payload for a deferred expansion. */
@@ -892,6 +916,14 @@ export class ExpansionDeferralStore {
     let reconsent: ReconsentedCeiling | undefined;
     let approvedAuthority: string | null = null;
     let decisionAudiences: AudienceReference[] | undefined;
+    // @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+    // (#2040, D1260 ruling 3): this decision is the fresh approval of the
+    // authority the Expansion adds, so the per-child figure it renders for
+    // that authority (the deployment's now, the read `pendingReview` and the
+    // page show; the approval surface's decision is bound to that rendering)
+    // is retained with the deferral, and completion reads it, never the
+    // figure current at the completing poll.
+    const decidedChildMaximum = figureMaximum(this.kernel.resolveDerivationLimit(undefined));
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
       const approvedPredecessor = this.kernel.get(pending.predecessor_id);
@@ -951,6 +983,10 @@ export class ExpansionDeferralStore {
         // the association the mapping assigns them at this decision.
         const ceilingAudiences = this.kernel.mappedEntryAudiences(committed.authority_ceiling);
         reconsent = ceilingAudiences ? { ...committed, ceiling_audiences: ceilingAudiences } : committed;
+        // @spec derivation-limits#approval-rendering (#2040): a re-consent is a
+        // ceiling consent, so it retains the per-child figure it rendered for
+        // each delegable ceiling entry, as the initial consent does.
+        reconsent.ceiling_child_derivation_maxima = this.kernel.establishedChildMaxima(committed.authority_ceiling);
       }
     }
     // @spec child-delegation#carryover-manifest — the approval event COMMITS
@@ -976,7 +1012,7 @@ export class ExpansionDeferralStore {
     return withTransaction(this.db, () => {
       const approved = this.db
         .prepare(
-          "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ?, approved_authority_hash = ?, decision_audiences_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+          "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ?, approved_authority_hash = ?, decision_audiences_json = ?, decision_child_maximum_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
         )
         .run(
           JSON.stringify(approval.approver),
@@ -987,6 +1023,7 @@ export class ExpansionDeferralStore {
           reconsent ? JSON.stringify(reconsent) : null,
           approvedAuthority,
           decisionAudiences ? JSON.stringify(decisionAudiences) : null,
+          JSON.stringify(decidedChildMaximum),
           deferralCode,
         );
       if (approved.changes === 1 && reconsent?.drawdown_policy) {
@@ -1145,12 +1182,24 @@ export class ExpansionDeferralStore {
     const successor = successorAuthority(this.kernel, recorded.i, proposal, predecessor).entries;
     const disclosure = this.disclosure(deferralCode) as ExpansionDisclosure;
     const offer = disclosure.ceiling?.reconsent_offer;
+    // @spec derivation-limits#approval-rendering (#2040): the figures an
+    // approval now retains, from the read its decision makes.
+    const figureNow = figureMaximum(this.kernel.resolveDerivationLimit(undefined));
+    const child_derivation = {
+      successor: inheritedChildMaxima(
+        successor,
+        childMaximumReferences(predecessor.authority_set, predecessor.child_derivation_maxima),
+        { retained: figureNow },
+      ),
+      reconsent: offer ? this.kernel.establishedChildMaxima(offer.authority_ceiling) : null,
+    };
     return {
       ...pending,
       intent: recorded.i,
       ...(proposal ? { proposal } : {}),
       successor,
       disclosure,
+      child_derivation,
       ...(row.carryover_plan_json ? { carryover: (JSON.parse(row.carryover_plan_json) as CarryoverPlan).manifest } : {}),
       ...(offer
         ? {
@@ -1578,6 +1627,7 @@ export class ExpansionDeferralStore {
       const batch = manifest
         ? { manifest, config: this.requireCarryoverEnabled() }
         : undefined;
+      const decidedChildMaximum = retainedFigureOf(row.decision_child_maximum_json);
       const res = createExpansion(this.kernel, {
         predecessorId: row.predecessor_id as string,
         intent,
@@ -1594,6 +1644,10 @@ export class ExpansionDeferralStore {
         // the association retained at the Approver's decision; none where the
         // decision retained none.
         decidedAudiences: decisionAudiencesOf(row.decision_audiences_json),
+        // @spec derivation-limits#effective-limit (#2040): the per-child figure
+        // the decision rendered and retained; none (unknown) where it retained
+        // none, never the figure current at this completion.
+        ...(decidedChildMaximum ? { decidedChildMaximum } : {}),
         // @spec progressive#audit-linkage (#1469): the digest of the declaration
         // the encounter's adjudication evaluated, on this successor.
         ...(row.encounter_json && (JSON.parse(row.encounter_json as string) as EncounterFacts).declaration_digest

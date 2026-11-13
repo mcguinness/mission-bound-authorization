@@ -33,7 +33,7 @@
  * decide the approval.
  */
 
-import { type KeyObject, randomBytes, verify } from "node:crypto";
+import { createHash, type KeyObject, randomBytes, verify } from "node:crypto";
 import {
   type ActivationPolicyRef,
   approvalPolicyDigest,
@@ -76,6 +76,17 @@ import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import { assembleResourceContracts } from "./resource-contract.js";
+import {
+  type ChildGrantDisclosure,
+  childGrantDisclosures,
+  childMaximumReferences,
+  committedPerChildMaximum,
+  inheritedChildMaxima,
+  NO_FINITE_MAXIMUM,
+  type RetainedChildMaximum,
+  retainedChildMaximaOf,
+  standingConsentLines,
+} from "./standing-consent-limit.js";
 import type {
   ApprovalBasisGovernedPolicy,
   AuthorityEntry,
@@ -508,7 +519,14 @@ export type GovernedPolicyRefusal =
   | "high_risk_without_exception"
   | "approval_event_used"
   | "unclassified_action"
-  | "narrowing_not_permitted";
+  | "narrowing_not_permitted"
+  // @spec derivation-limits#approval-rendering (#2040, D1278 ruling 1): a
+  // consent recorded without the commitment of the disclosure it rendered,
+  // with one that no longer matches the root, policy state and per-child
+  // figures, or with a per-child figure that could not be shown.
+  | "disclosure_required"
+  | "disclosure_changed"
+  | "per_child_undisclosable";
 
 export class GovernedPolicyError extends Error {
   constructor(
@@ -545,6 +563,20 @@ export interface GovernedPolicyConsent {
    * associates no audience with any entry.
    */
   ceiling_audiences?: string[][];
+  /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040, D1278 ruling 1): each root ceiling entry's per-child derivation
+   * figure, index-aligned with the root's `authority_ceiling`, as the
+   * disclosure this consent committed rendered it: for an entry whose
+   * policy-created children take the deployment's figure, that figure at the
+   * consent (`{ finite: n }` or `{ finite: null }`), `null` otherwise. Every
+   * activation's entries take it, never a figure read at activation.
+   * Authorization-server state outside the attestation's fixed shape, never on
+   * the wire. Absent (a consent recorded before it was retained), it retains
+   * no figure, and no child is created under an activated entry that takes
+   * one until a fresh consent retains it.
+   */
+  ceiling_child_derivation_maxima?: RetainedChildMaximum[];
 }
 
 /** The members an attestation commits, in a fixed shape. */
@@ -581,7 +613,8 @@ CREATE TABLE IF NOT EXISTS governed_policy_consents (
   consent_event_id TEXT NOT NULL UNIQUE,
   attestation TEXT NOT NULL,
   withdrawn_at TEXT,
-  ceiling_audiences_json TEXT
+  ceiling_audiences_json TEXT,
+  ceiling_child_derivation_maxima_json TEXT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS governed_policy_activations (
   approval_event_id TEXT PRIMARY KEY,
@@ -613,6 +646,13 @@ export class GovernedPolicyConsentStore {
     );
     if (!columns.has("ceiling_audiences_json")) {
       this.db.exec("ALTER TABLE governed_policy_consents ADD COLUMN ceiling_audiences_json TEXT");
+    }
+    // @spec derivation-limits#effective-limit (#2040, D1278 ruling 1): likewise
+    // the per-child figures, with no default and no backfill: a consent
+    // recorded before them retains no figure, so no child is created under an
+    // activated entry that takes one until a fresh consent retains it.
+    if (!columns.has("ceiling_child_derivation_maxima_json")) {
+      this.db.exec("ALTER TABLE governed_policy_consents ADD COLUMN ceiling_child_derivation_maxima_json TEXT");
     }
   }
 
@@ -694,8 +734,9 @@ export class GovernedPolicyConsentStore {
       this.db
         .prepare(
           `INSERT INTO governed_policy_consents (consent_id, issuer, policy_id, version, digest, approver_iss,
-             approver_sub, approved_at, consent_event_id, attestation, ceiling_audiences_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             approver_sub, approved_at, consent_event_id, attestation, ceiling_audiences_json,
+             ceiling_child_derivation_maxima_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           c.consent_id,
@@ -709,6 +750,7 @@ export class GovernedPolicyConsentStore {
           c.consent_event_id,
           c.attestation,
           c.ceiling_audiences ? JSON.stringify(c.ceiling_audiences) : null,
+          c.ceiling_child_derivation_maxima ? JSON.stringify(c.ceiling_child_derivation_maxima) : null,
         );
     });
   }
@@ -760,7 +802,16 @@ function consentOf(row: Record<string, unknown>): GovernedPolicyConsent {
     attestation: row.attestation as string,
     ...(row.withdrawn_at ? { withdrawn_at: row.withdrawn_at as string } : {}),
     ...ceilingAudiencesOf(row.ceiling_audiences_json),
+    // @spec derivation-limits#effective-limit (#2040): absent where none is
+    // stored or it cannot be read (fail closed), never re-derived.
+    ...ceilingChildMaximaOf(row.ceiling_child_derivation_maxima_json),
   };
+}
+
+/** @spec derivation-limits#effective-limit (#2040): the stored per-child figures, or no member. */
+function ceilingChildMaximaOf(text: unknown): { ceiling_child_derivation_maxima?: RetainedChildMaximum[] } {
+  const figures = retainedChildMaximaOf(text);
+  return figures ? { ceiling_child_derivation_maxima: figures } : {};
 }
 
 /**
@@ -850,6 +901,86 @@ function approverAuthorized(
 }
 
 /**
+ * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit,
+ * child-delegation#subtree-rendering (#2040, D1278 ruling 1): what the
+ * deployment's governance surface renders at the human approval of an exact
+ * root version, before the human approves, and the commitment that approval
+ * hands back to {@link recordGovernedPolicyConsent}. A read: nothing is
+ * written.
+ * - `instance`: the rule that establishes the `derivation_limit` of each
+ *   Mission the root activates: its own request under the deployment's
+ *   ceiling; the root commits no maximum, so no finite maximum is guaranteed.
+ * - `child_grants`: for each delegable root ceiling entry, the subtree
+ *   figures and the per-child rule and maximum, from the reader every
+ *   approval surface uses: the maximum its `child_creation_policy` states, or,
+ *   for an entry committing none, the deployment's per-child figure now,
+ *   which the consent retains; or why it cannot be shown.
+ * - `child_derivation_maxima`: the figures the consent retains, index-aligned
+ *   with the root's `authority_ceiling`.
+ * - `commitment`: over the exact root (its `id`, `version` and the digest of
+ *   the bytes held), whether Derivation Limits is implemented, and, for each
+ *   delegable entry, the committed policy state its figure comes from (the
+ *   maximum a held policy states, why one cannot be read, or the deployment
+ *   figure shown). The lines are a rendering of exactly these; the async
+ *   delegation statement is the deployment's constant and outside it.
+ */
+export interface GovernedPolicyConsentDisclosure {
+  root: ActivationPolicyRef;
+  instance: string[];
+  child_grants: ChildGrantDisclosure[];
+  child_derivation_maxima: RetainedChildMaximum[];
+  commitment: string;
+}
+
+/** The disclosure of `root` as this issuer holds it now. Throws `not_configured` or `root_not_held`. */
+export function governedPolicyConsentDisclosure(
+  kernel: MissionKernel,
+  root: { id: string; version: string },
+  opts: { asyncDelegation?: boolean } = {},
+): GovernedPolicyConsentDisclosure {
+  const config = requireConfig(kernel);
+  const held = Object.hasOwn(config.roots, root.id) ? config.roots[root.id] : undefined;
+  if (!held || held.version !== root.version) {
+    throw new GovernedPolicyError("root_not_held", `governed policy ${root.id} version ${root.version} is not a root this issuer holds`);
+  }
+  return disclosureOf(kernel, root.id, held, opts.asyncDelegation ?? false);
+}
+
+function disclosureOf(
+  kernel: MissionKernel,
+  id: string,
+  held: RegisteredActivationPolicy,
+  asyncDelegation: boolean,
+): GovernedPolicyConsentDisclosure {
+  const issuer = kernel.issuerId();
+  const { authority_ceiling: ceiling } = parseGovernedPolicyRoot(held.content);
+  const ref: ActivationPolicyRef = { id, version: held.version, digest: approvalPolicyDigest(issuer, held) };
+  const derivationLimits = kernel.derivationLimitsEnabled();
+  const figures = kernel.establishedChildMaxima(ceiling);
+  const policyHeld = (r: ActivationPolicyRef) => verifiedActivationPolicy(issuer, kernel.activationPolicies(), r);
+  const child_grants = childGrantDisclosures(ceiling, {
+    ...(derivationLimits ? {} : { derivationLimits: false }),
+    figures,
+    held: policyHeld,
+    asyncDelegation,
+  });
+  const perChild = ceiling.map((entry, i) => {
+    const grant = entry.delegation?.children as { child_creation_policy?: ActivationPolicyRef } | undefined;
+    if (!grant) return null;
+    const committed = committedPerChildMaximum(grant, policyHeld);
+    return committed.source === "deployment" ? { source: "deployment", maximum: figures[i] ?? null } : committed;
+  });
+  const committed = canonicalize({ root: ref, derivation_limits: derivationLimits, per_child: perChild } as unknown as JsonValue);
+  return {
+    root: ref,
+    instance: derivationLimits ? standingConsentLines(NO_FINITE_MAXIMUM, "governed Mission", { asyncDelegation }) : [],
+    child_grants,
+    child_derivation_maxima: figures,
+    commitment: `sha-256:${createHash("sha256").update(committed).digest("base64url")}`,
+  };
+}
+
+/**
  * @spec approval-governance#governed-policy-root: record a human's approval
  * of an exact root version, from the deployment's authenticated governance
  * surface: the caller has authenticated `approver` and hands over the
@@ -862,7 +993,19 @@ function approverAuthorized(
  */
 export function recordGovernedPolicyConsent(
   kernel: MissionKernel,
-  input: { root: { id: string; version: string }; approver: { iss: string; sub: string }; consentEventId: string },
+  input: {
+    root: { id: string; version: string };
+    approver: { iss: string; sub: string };
+    consentEventId: string;
+    /**
+     * @spec derivation-limits#approval-rendering (#2040, D1278 ruling 1): the
+     * `commitment` of the {@link governedPolicyConsentDisclosure} the
+     * governance surface rendered to this approver. REQUIRED: a consent is
+     * recorded only for the root, policy state and per-child figures it
+     * commits, and they are the ones retained.
+     */
+    disclosure: string;
+  },
 ): GovernedPolicyConsent {
   const config = requireConfig(kernel);
   const approver = kernel.assertDeploymentPrincipal(input.approver, "approver");
@@ -882,6 +1025,31 @@ export function recordGovernedPolicyConsent(
     );
   }
   const heldRoot = parseGovernedPolicyRoot(held.content);
+  // @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+  // (#2040, D1278 ruling 1): the human approved what the governance surface
+  // rendered. The consent is recorded only with the commitment of that
+  // disclosure, and only while it still matches the exact root, the policy
+  // state it commits and the per-child figures, read now; otherwise it is
+  // refused before anything is written. A per-child figure that could not be
+  // shown refuses it too, as at every other approval surface (#2047), where
+  // the deployment implements Derivation Limits.
+  if (typeof input.disclosure !== "string" || input.disclosure.length === 0) {
+    throw new GovernedPolicyError(
+      "disclosure_required",
+      `a consent to governed policy ${input.root.id} carries the commitment of the disclosure rendered to its approver`,
+    );
+  }
+  const disclosure = disclosureOf(kernel, input.root.id, held, false);
+  if (disclosure.commitment !== input.disclosure) {
+    throw new GovernedPolicyError(
+      "disclosure_changed",
+      `the disclosure of governed policy ${input.root.id} changed since it was rendered; render it again`,
+    );
+  }
+  const undisclosed = kernel.derivationLimitsEnabled()
+    ? disclosure.child_grants.find((g) => g.undisclosed)?.undisclosed
+    : undefined;
+  if (undisclosed) throw new GovernedPolicyError("per_child_undisclosable", undisclosed);
   const issuer = kernel.issuerId();
   const unsigned = {
     consent_id: `gpc_${randomBytes(16).toString("base64url")}`,
@@ -899,6 +1067,9 @@ export function recordGovernedPolicyConsent(
     ...unsigned,
     attestation: signConsent(kernel, unsigned),
     ...(ceilingAudiences ? { ceiling_audiences: ceilingAudiences } : {}),
+    // @spec derivation-limits#effective-limit (#2040, D1278 ruling 1): the
+    // per-child figures the committed disclosure rendered, retained.
+    ceiling_child_derivation_maxima: disclosure.child_derivation_maxima,
   };
   try {
     kernel.governedPolicyConsents.insertConsent(consent, held);
@@ -1355,6 +1526,17 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
     authority_set: final,
     eligibility_provenance: finalProvenance,
     child_actor_provenance: finalChildActorProvenance,
+    // @spec derivation-limits#effective-limit, derivation-limits#approval-rendering
+    // (#2026, #2040, D1278 ruling 1): an activation carries no earlier
+    // Mission's authority; all of it is added from the root ceiling, so each
+    // entry whose policy-created children take the deployment's figure takes
+    // the strictest figure the consent rendered and retained for the root
+    // ceiling entries it falls in, never one read at this activation. Under a
+    // consent recorded before the figure was retained it is unknown, so no
+    // child is created under it until a fresh consent.
+    child_derivation_maxima: inheritedChildMaxima(final, [], {
+      references: childMaximumReferences(root.authority_ceiling, consent.ceiling_child_derivation_maxima),
+    }),
     intent_hash: iHash,
     ...(proposal ? { proposal_hash: proposalHash(issuer, proposal as never) } : {}),
     authority_hash: aHash,

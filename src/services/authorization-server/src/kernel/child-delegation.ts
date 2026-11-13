@@ -46,11 +46,13 @@ import { newMissionId } from "./mission-id.js";
 import { assertCarriedContractsResolvable, inheritResourceContract } from "./resource-contract.js";
 import { assertNotStandingPaymentLineage, StandingPaymentLineageError } from "./standing-payment.js";
 import {
+  childMaximumReferences,
   committedPerChildMaximum,
+  inheritedChildMaxima,
+  retainedChildMaximum,
   STANDING_CONSENT_LIMIT_MEMBER,
   type StandingConsentMaximum,
   strictestMaximum,
-  withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
 import {
   type ApprovalBasis,
@@ -83,7 +85,10 @@ export const CHILD_EVIDENCE_MEDIA_TYPE = "application/mission-child-evidence+jso
  * `delegation_not_permitted` is the on-switch refusal (a justifying parent entry
  * carries no `delegation.children`); it is DISTINCT from `policy_denied`, the
  * refusal when a carried `child_creation_policy` no longer matches its
- * committed digest.
+ * committed digest, and when the per-child derivation figure the parent's
+ * approval committed cannot be honored: a malformed figure, a finite one this
+ * deployment cannot establish (#2018), or one the parent does not retain
+ * (#2026).
  */
 export type ChildDenialReason =
   | "parent_not_active"
@@ -638,14 +643,18 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   }
 
   // @spec child-delegation#derivation-budget, derivation-limits#effective-limit
-  // (#1119, D327): the per-child derivation limit the Parent Mission's approval
-  // rendered for each justifying entry is taken from the policy state that
-  // approval committed: the entry's `child_creation_policy` snapshot where it
-  // carries one, otherwise the policy the parent's `policy_version` identifies.
-  // This issuer holds only its current policy, so an entry without a snapshot
-  // under a parent approved under another policy version cannot have its
-  // figure read, and creation is refused rather than taking the current
-  // ceiling, which may since have been raised or removed.
+  // (#1119, D327, #2026, D1249): the per-child derivation limit the Parent
+  // Mission's approval rendered for each justifying entry is taken from the
+  // policy state that approval committed: the entry's `child_creation_policy`
+  // snapshot where it carries one, otherwise the figure the parent retains for
+  // the entry (`child_derivation_maxima`). The current deployment policy is
+  // never read for it, whatever its `policy_version`: a ceiling raised or
+  // removed since, a reused `policy_version` or a restart cannot lift it, and
+  // a changed `policy_version` does not make it unusable. A stricter current
+  // ceiling or requested limit still narrows the child below it
+  // (standingConsentDerivationLimit). A parent that retains no figure for the
+  // entry (one approved before the figure was retained) creates no child
+  // under it until a fresh human approval retains one.
   const perChildMaxima: StandingConsentMaximum[] = [];
   for (const pi of drawnOn) {
     // The same reader the Parent Mission's approval rendering and decision
@@ -659,14 +668,20 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
         )?.snapshot,
     );
     if (committed.source === "deployment") {
-      if (parent.policy_version !== kernel.policyVersion()) {
+      const retained = retainedChildMaximum(parent, pi);
+      // @spec derivation-limits#effective-limit (#2026, D1249 ruling 4): a
+      // reference diagnostic, not a protocol requirement: the refusal Child
+      // Delegation already uses for a per-child figure it cannot honor, with
+      // an explanatory message, committing nothing.
+      if (!retained) {
         throw new ChildDelegationError(
           "policy_denied",
-          `the per-child derivation limit the parent's approval rendered cannot be read: policy_version ${parent.policy_version} is not the policy this issuer holds, and the entry carries no child_creation_policy`,
+          `the per-child derivation limit the parent's approval rendered for ${parentEntry(pi).resource} is not retained, and the entry carries no child_creation_policy: no child is created under it until a fresh human approval of the parent establishes one`,
           makeEvidence("denied", "strict_subset", "policy_denied"),
         );
       }
-      continue; // the current policy's ceiling applies through resolveDerivationLimit
+      perChildMaxima.push(retained);
+      continue;
     }
     if (committed.source !== "policy") {
       throw new ChildDelegationError(
@@ -678,6 +693,14 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
       );
     }
     perChildMaxima.push(committed.maximum);
+  }
+  // @spec derivation-limits#effective-limit (#2018): a finite per-child
+  // maximum the parent's approval committed stays in force where this AS no
+  // longer implements Derivation Limits. The creation is refused, as for a
+  // per-child figure that cannot be read, rather than recorded with no limit.
+  const unestablishable = kernel.standingConsentMaximumRefusal(strictestMaximum(perChildMaxima));
+  if (unestablishable) {
+    throw new ChildDelegationError("policy_denied", unestablishable, makeEvidence("denied", "strict_subset", "policy_denied"));
   }
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
@@ -847,6 +870,15 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     authority_set: childAuthority,
     eligibility_provenance: childProvenance,
     child_actor_provenance: childActorProvenance,
+    // @spec derivation-limits#effective-limit (#2026, D1249): a child's own
+    // children are created under the same standing consent, so each child
+    // entry keeps the strictest figure the parent entries it may carry
+    // authority of retain (a strict subset, so it adds nothing new), never
+    // one read from the current policy.
+    child_derivation_maxima: inheritedChildMaxima(
+      childAuthority,
+      childMaximumReferences(parent.authority_set, parent.child_derivation_maxima),
+    ),
     intent_hash: intentHash(parent.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(parent.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
@@ -880,8 +912,9 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     // @spec child-delegation#derivation-budget (#1119, D327): never above the
     // strictest finite per-child figure the justifying entries' committed
     // policies state, and never absent where one is finite.
-    derivation_limit: withinStandingConsentMaximum(
-      kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+    // None where this AS does not implement Derivation Limits (#2018).
+    derivation_limit: kernel.standingConsentDerivationLimit(
+      input.intent.requested_derivation_limit,
       strictestMaximum(perChildMaxima),
     ),
     derivation_count: 0,

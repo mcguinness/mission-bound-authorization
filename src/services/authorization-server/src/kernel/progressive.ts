@@ -57,6 +57,12 @@ import { restrictedSinceAdjudication } from "./expansion.js";
 import { childActorCeilingOrigin, inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { ceilingOrigin, inheritOrigins } from "./eligibility-provenance.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
+import {
+  childMaximumReferences,
+  inheritedChildMaxima,
+  parseRetainedChildMaxima,
+  type RetainedChildMaximum,
+} from "./standing-consent-limit.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -146,6 +152,13 @@ export interface MissionCeiling {
    * carried with the ceiling. Outside `ceiling_hash`.
    */
   ceiling_audiences?: string[][];
+  /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040): each ceiling entry's per-child derivation figure, as the ceiling
+   * consent rendered and retained it, index-aligned with `authority_ceiling`
+   * (`MissionRecord.ceiling_child_derivation_maxima`). Outside `ceiling_hash`.
+   */
+  ceiling_child_derivation_maxima?: RetainedChildMaximum[];
   drawdown_policy?: ActivationPolicyRef;
   ceiling_hash: string;
   /** The latest explicitly consented ceiling's `ceiling_hash` (#1468); absent on records stored before it. */
@@ -335,6 +348,11 @@ export function successorCeilingMembers(
     // @spec mission#transformation-capabilities (D733 ruling 2): the
     // ceiling's retained association carries with it unchanged.
     ...(predecessor.ceiling_audiences ? { ceiling_audiences: predecessor.ceiling_audiences } : {}),
+    // @spec derivation-limits#effective-limit (#2040): and so do the per-child
+    // figures its consent retained.
+    ...(predecessor.ceiling_child_derivation_maxima
+      ? { ceiling_child_derivation_maxima: predecessor.ceiling_child_derivation_maxima }
+      : {}),
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
     ceiling_hash: predecessor.ceiling_hash,
     ceiling_consent_hash: predecessor.ceiling_consent_hash ?? predecessor.ceiling_hash,
@@ -368,6 +386,9 @@ export function serializeCeiling(record: MissionRecord): string | null {
   const stored: MissionCeiling = {
     authority_ceiling: record.authority_ceiling,
     ...(record.ceiling_audiences ? { ceiling_audiences: record.ceiling_audiences } : {}),
+    ...(record.ceiling_child_derivation_maxima
+      ? { ceiling_child_derivation_maxima: record.ceiling_child_derivation_maxima }
+      : {}),
     ...(record.drawdown_policy ? { drawdown_policy: record.drawdown_policy } : {}),
     ceiling_hash: record.ceiling_hash,
     ...(record.ceiling_consent_hash ? { ceiling_consent_hash: record.ceiling_consent_hash } : {}),
@@ -380,10 +401,16 @@ export function serializeCeiling(record: MissionRecord): string | null {
   return JSON.stringify(stored);
 }
 
-/** Hydrate a stored ceiling column; an absent column is no ceiling. */
+/**
+ * Hydrate a stored ceiling column; an absent column is no ceiling.
+ * @spec derivation-limits#effective-limit (#2040): stored per-child figures
+ * that cannot be read are no member, so they retain no figure (fail closed).
+ */
 export function ceilingMembersOf(raw: unknown): Partial<MissionCeiling> {
   if (typeof raw !== "string" || !raw) return {};
-  return JSON.parse(raw) as MissionCeiling;
+  const { ceiling_child_derivation_maxima: figures, ...members } = JSON.parse(raw) as MissionCeiling;
+  const readable = figures === undefined ? undefined : parseRetainedChildMaxima(figures);
+  return readable ? { ...members, ceiling_child_derivation_maxima: readable } : members;
 }
 
 /** The runtime profile's action classes, the vocabulary of the published classification. */
@@ -1701,6 +1728,18 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
       : predecessor.ceiling_audiences
         ? inheritedAudiences(carried, ceilingReferences)
         : undefined;
+  // @spec derivation-limits#effective-limit (#2040): the carried ceiling keeps
+  // the per-child figures its consent retained, each narrowed entry the
+  // strictest of the consented entries it falls in, through a narrowing too.
+  const carriedChildMaxima =
+    carried === predecessor.authority_ceiling
+      ? predecessor.ceiling_child_derivation_maxima
+      : predecessor.ceiling_child_derivation_maxima
+        ? inheritedChildMaxima(
+            carried,
+            childMaximumReferences(predecessor.authority_ceiling, predecessor.ceiling_child_derivation_maxima),
+          )
+        : undefined;
   const id = newMissionId();
   const record: MissionRecord = {
     id,
@@ -1711,6 +1750,21 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     authority_set: authoritySet,
     eligibility_provenance: provenance,
     child_actor_provenance: childActorProvenance,
+    // @spec derivation-limits#effective-limit (#2026, D1249; review F1): a
+    // drawdown is no approval of its own. An entry that may carry authority
+    // of the predecessor's approved entries, widened or regrouped included,
+    // keeps the strictest figure they retain, and stays unknown where any of
+    // them is unknown. @spec derivation-limits#approval-rendering (#2040):
+    // authority drawn from the ceiling takes the figure the ceiling consent
+    // rendered and retained for the ceiling entries it falls in, never one
+    // read at this drawdown, and never above a carried one; under a ceiling
+    // consented before the figure was retained it is unknown, so no child is
+    // created under it until a fresh approval.
+    child_derivation_maxima: inheritedChildMaxima(
+      authoritySet,
+      childMaximumReferences(predecessor.authority_set, predecessor.child_derivation_maxima),
+      { references: childMaximumReferences(predecessor.authority_ceiling, predecessor.ceiling_child_derivation_maxima) },
+    ),
     intent_hash: intentHash(predecessor.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(predecessor.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
@@ -1733,6 +1787,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     // `ceiling_hash`, or narrowed under a recomputed one.
     authority_ceiling: carried,
     ...(carriedAudiences ? { ceiling_audiences: carriedAudiences } : {}),
+    ...(carriedChildMaxima ? { ceiling_child_derivation_maxima: carriedChildMaxima } : {}),
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
     ceiling_hash: carriedHash,
     ceiling_consent_hash: ceilingConsentHash(predecessor) as string,

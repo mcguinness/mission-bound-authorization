@@ -1153,6 +1153,17 @@ a `stale_state` denial ({{runtime-denial-classification}}).
   ({{runtime-denial-classification}}) when `context.taint` is absent
   from an in-scope decision.
 
+## Protected-Data Context {#context-protected-data}
+
+`protected_data`:
+: OPTIONAL, carried at `context.protected_data`. A registered
+  extension point owned by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which defines the member
+  shape (`exposed`, `established_by`), the establishing layer's
+  attachment the PEP populates it from, its reading when absent, and
+  the exposure qualification it can satisfy. It never relaxes the
+  fail-closed default of `context.taint` ({{context-taint}}).
+
 ## Work-Item Context {#context-work-item}
 
 `work_item`:
@@ -1259,9 +1270,13 @@ This document defines one predicate type that policy MAY name,
 `action_class_completed`. It is satisfied when the PDP's evidence store
 holds, for the established Mission, at least one Decision Evidence
 record with `decision` `permit` to which the named class applied, and
-every such record has a linked Execution Evidence record
-({{I-D.draft-mcguinness-mission-runtime-evidence}}) whose `outcome` is
-`completed`. The named class applied to a record when its
+every such permit has a completion witness: a linked Execution
+Evidence record ({{I-D.draft-mcguinness-mission-runtime-evidence}})
+whose `outcome` is `completed` and in which each authorized digest
+present (`authorized_parameter_digest`,
+`authorized_evaluation_context_digest`) has an equal effective
+counterpart (`effective_parameter_digest`,
+`effective_evaluation_context_digest`). The named class applied to a record when its
 `action_classes` member lists that class or, in a record without
 `action_classes`, its `action_class` is that class, so an execution
 the class applied to counts whichever class was assigned. The
@@ -1279,9 +1294,48 @@ delete step's precondition this way:
 }
 ~~~
 
+The predicate is per permit: a permit has a completion witness when
+any of its executions is one, so a `failed` use of a multi-use permit,
+or a replay suppressed as `permit_consumed`, does not remove it. A
+predicate that requires every use of a permit to complete is a
+different predicate type.
+
+A single-use permit has one authorized completion
+({{I-D.draft-mcguinness-mission-runtime-evidence}}): only the
+completion that took its single use can be its witness, and any other
+`completed` record under it creates none, whatever its digests. The
+order in which records reach the evidence store does not establish
+which completion took the use, nor do the records' `sequence` or
+timestamps. Where no trusted source, such as the PEP's
+consumed-identifier store, establishes it, a single-use permit with
+more than one `completed` record has a witness only when each of them
+would be one on its own, and its completion is undetermined when only
+some would.
+
+A `completed` record whose effective digest differs from its
+authorized digest records an unauthorized execution
+({{I-D.draft-mcguinness-mission-runtime-evidence}}): it remains valid
+evidence, and it is not a completion witness. A `completed` record
+that carries an authorized digest without its effective counterpart is
+not a completion witness either, and a permit with such a record and
+no witness has an undetermined completion. The predicate is not
+satisfied when some permit has neither a witness nor an undetermined
+completion, and is otherwise not establishable while any permit's
+completion is undetermined. The evaluation relies on the evidence
+store returning the complete, current Mission history; sequence checks
+detect gaps only within the records returned
+({{I-D.draft-mcguinness-mission-runtime-evidence}}, Section "History
+Completeness").
+
 An extension predicate type MUST be either a collision-resistant name
 or a name coordinated within this document family, under the same rule
-as denial reasons ({{runtime-denial-classification}}).
+as denial reasons ({{runtime-denial-classification}}). The
+specification defining a predicate type states whether it selects an
+operation and which of its members names it; a `mission_history`
+entry for a type the PDP does not recognize carries no `action`. The
+harness profile defines the coordinated type
+`work_item_prerequisite_completed`
+({{I-D.draft-mcguinness-mission-harness}}).
 
 The OPTIONAL `context.mission_history` request object carries only what
 the PEP can supply in support of the policy-selected predicates, never
@@ -1323,7 +1377,11 @@ runtime profile fixes the fail-closed posture and the evidence
 store's freshness discipline
 ({{I-D.draft-mcguinness-mission-runtime}}). The PDP MUST record the
 evaluated predicates and their outcomes in Decision Evidence
-({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). Where a
+predicate's type selects an operation, its `mission_history` entry
+carries that operation's identifier as `action`; an
+`action_class_completed` entry, which selects by class alone, carries
+none.
 
 ## Canonical Projections {#projections}
 
@@ -1348,11 +1406,11 @@ Authorization binding:
   contract reference ({{context-resource-contract}}),
   credential-derived facts, the Mission reference, the authority and
   view identity, the approval, and every policy-relevant context
-  input, including `taint`, `work_item`, the Mission history
-  reference, the capability source, and any extension member a
-  companion profile adds. This is what a permit is bound to. A new
-  companion context member is part of the authorization binding by
-  default; a companion narrows it only by amending this enumeration.
+  input, including `taint`, `protected_data`, `work_item`, the
+  Mission history reference, the capability source, and any extension
+  member a companion profile adds. This is what a permit is bound to.
+  A new companion context member is part of the authorization binding
+  by default; a companion narrows it only by amending this enumeration.
   It excludes only the request's volatile machinery: the
   `supported_obligations` declaration and transport metadata.
 
@@ -2798,7 +2856,7 @@ profile defines two Decision Evidence extension members:
 `mission_history`, the policy-selected history predicates and their
 outcomes ({{context-history}}), and `authority_bound` (below). It also
 carries coordinated extension members owned elsewhere, for example
-`taint` and `work_item` (owned by the harness profile,
+`taint`, `protected_data` and `work_item` (owned by the harness profile,
 {{I-D.draft-mcguinness-mission-harness}}) and `capability_source`
 (owned by Mission Capability Binding,
 {{I-D.draft-mcguinness-mission-capability-binding}}).
@@ -2817,8 +2875,9 @@ This profile maps its wire members into Decision Evidence as follows,
 in addition to the members other sections require the PDP to record:
 
 - `mission`, `subject`, `resource`, `action`, `audience`,
-  `credential`, `parameter_digest`, `obligations`, `taint`, and
-  `work_item` are populated from the correspondingly named members of
+  `credential`, `parameter_digest`, `obligations`, `taint`,
+  `protected_data`, and `work_item` are populated from the
+  correspondingly named members of
   the PDP request and response ({{pdp-request}}, {{pdp-response}}).
 - `mission_history` records the predicates the PDP evaluated and their
   outcomes ({{context-history}}); the PDP computes it, never copying it
@@ -2936,7 +2995,8 @@ Mission Capability Binding
 profile ({{I-D.draft-mcguinness-mission-harness}}) are normative
 references. The requirements that cite them bind only a deployment that
 adopts Capability Binding, or the harness capability the requirement
-names (PDP-enforced taint, for the taint members, and work-item
+names (PDP-enforced taint, for the taint members; exposure
+qualification, for the protected-data member; and work-item
 attribution, for the work-item member).
 
 A PEP conforming to the Decision Base MUST:
@@ -3131,7 +3191,7 @@ response members this document defines ({{pdp-request}},
 in an IANA registry. Members a companion adds are that companion's:
 `context.capability_source`
 ({{I-D.draft-mcguinness-mission-capability-binding}}), and
-`context.taint`, `context.work_item`, and
+`context.taint`, `context.protected_data`, `context.work_item`, and
 `action.properties.external_communication`
 ({{I-D.draft-mcguinness-mission-harness}}). The Mission-bound token
 claims this profile consumes are registered by
@@ -3212,6 +3272,22 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 \[\[ To be removed from the final specification ]]
 
+- History Context: the specification defining a predicate type states
+  whether it selects an operation and which of its members names it.
+  Where a type selects one, its `mission_history` entry carries that
+  operation's identifier as `action`; an `action_class_completed`
+  entry, or one for a type the PDP does not recognize, carries none
+  (#2048).
+
+- Protected-Data Context: `context.protected_data` is a harness-owned
+  extension point carrying the exposure determination that the harness
+  profile's exposure qualification relies on. It is part of the
+  authorization binding and recorded in Decision Evidence, and
+  `taint_context_missing` is unchanged (#2044).
+
+- History Context: names `work_item_prerequisite_completed`, the
+  harness profile's coordinated predicate type (#815).
+
 - Changes a requirement (#1994): a mediated request carried with an
   action class other than the one the PDP's trusted declaration assigns
   its operation and phase has no class established, and the PDP refuses
@@ -3222,7 +3298,13 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   a class that applies to the action calls for them, and
   `action_class_completed` counts a permit when the named class is in
   its `action_classes`, or is its `action_class` where the record
-  carries no `action_classes` (#1994).
+  carries no `action_classes` (#1994). Every such permit needs a
+  completion witness, a linked `completed` record whose effective
+  digests equal the authorized ones; a digest deviation is none, a
+  failed use or suppressed replay removes none, a single-use permit's
+  completion other than the one that took its use creates none, a
+  missing effective digest leaves completion undetermined, and the
+  evaluation relies on a complete history read (#2029).
 
 - Credential Decision Context: requiring a credential's whole authority
   description to be evaluable is this profile's credential validation

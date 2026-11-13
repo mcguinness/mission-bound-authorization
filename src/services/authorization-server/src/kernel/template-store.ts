@@ -24,6 +24,7 @@ import type { ActivationPolicyRef } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { type AuthoritySourceBinding, parseRecordedAuthoritySource } from "./authority-source.js";
 import { isHumanFloorConsent, type TemplateConsentProvenance } from "./standing-payment.js";
+import { type RetainedChildMaximum, retainedChildMaximaOf } from "./standing-consent-limit.js";
 import type { AuthorityEntry, AuthoritySource, RecordedAuthoritySource } from "./types.js";
 
 /**
@@ -49,6 +50,7 @@ CREATE TABLE templates (
   authority_source_json TEXT NOT NULL,
   ceiling_json TEXT NOT NULL,
   ceiling_audiences_json TEXT,
+  ceiling_child_derivation_maxima_json TEXT,
   dispatch_policy_json TEXT NOT NULL,
   dispatchers_json TEXT NOT NULL,
   recipients_json TEXT NOT NULL,
@@ -115,6 +117,18 @@ export interface MissionTemplate {
    */
   ceiling_audiences?: string[][];
   /**
+   * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+   * (#2040, D1260 ruling 3): each ceiling entry's per-child derivation figure,
+   * index-aligned with `ceiling`: for an entry whose policy-created children
+   * take the deployment's figure, the one the template consent rendered and
+   * the Approver accepted (`{ finite: n }` or `{ finite: null }`), `null`
+   * otherwise. Every instance's entries take it, never a figure read at
+   * dispatch. Outside `template_hash`, never on the wire. Absent (a template
+   * consented before it was retained) or misaligned, it retains no figure,
+   * and no child is created under an instance entry that takes one.
+   */
+  ceiling_child_derivation_maxima?: RetainedChildMaximum[];
+  /**
    * @spec mission-template#the-mission-template, approval-governance#activation-policy-commitment
    * — the Dispatch Policy as an activation policy reference (`id`, `version`,
    * `digest`), inside `template_hash`; Dispatch verifies `digest` first.
@@ -173,6 +187,8 @@ export interface TemplateCreate {
   ceiling: AuthorityEntry[];
   /** @spec mission#transformation-capabilities (D733): retained at consent; absent when no mapping is configured. */
   ceiling_audiences?: string[][];
+  /** @spec derivation-limits#approval-rendering (#2040): retained at consent; absent when the consent rendered none. */
+  ceiling_child_derivation_maxima?: RetainedChildMaximum[];
   dispatch_policy: ActivationPolicyRef;
   dispatchers: string[];
   recipients: TemplateRecipients;
@@ -196,6 +212,7 @@ interface TemplateRow {
   authority_source_json: string;
   ceiling_json: string;
   ceiling_audiences_json: string | null;
+  ceiling_child_derivation_maxima_json: string | null;
   dispatch_policy_json: string;
   dispatchers_json: string;
   recipients_json: string;
@@ -240,6 +257,12 @@ function ceilingAudiencesOf(text: string | null): { ceiling_audiences?: string[]
   return valid ? { ceiling_audiences: parsed as string[][] } : {};
 }
 
+/** @spec derivation-limits#effective-limit (#2040): the stored per-child figures, or no member. */
+function ceilingChildMaximaOf(text: string | null): { ceiling_child_derivation_maxima?: RetainedChildMaximum[] } {
+  const figures = retainedChildMaximaOf(text);
+  return figures ? { ceiling_child_derivation_maxima: figures } : {};
+}
+
 function rowToTemplate(row: TemplateRow): MissionTemplate {
   return {
     id: row.id,
@@ -254,6 +277,9 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
     ),
     ceiling: JSON.parse(row.ceiling_json) as AuthorityEntry[],
     ...ceilingAudiencesOf(row.ceiling_audiences_json),
+    // @spec derivation-limits#effective-limit (#2040): absent where none is
+    // stored or it cannot be read (fail closed), never re-derived.
+    ...ceilingChildMaximaOf(row.ceiling_child_derivation_maxima_json),
     dispatch_policy: JSON.parse(row.dispatch_policy_json) as ActivationPolicyRef,
     dispatchers: JSON.parse(row.dispatchers_json) as string[],
     recipients: JSON.parse(row.recipients_json) as TemplateRecipients,
@@ -295,10 +321,11 @@ export class TemplateStore {
         this.db
           .prepare(
             `INSERT INTO templates (id, template_version, issuer, approver_iss, approver_sub,
-             authority_source_json, ceiling_json, ceiling_audiences_json, dispatch_policy_json, dispatchers_json,
+             authority_source_json, ceiling_json, ceiling_audiences_json, ceiling_child_derivation_maxima_json,
+             dispatch_policy_json, dispatchers_json,
              recipients_json, per_instance_lifetime_s, max_active, rate_per_min, review_cadence_s,
              template_hash, approval_event_id, expires_at, state, created_at, consent_provenance_json)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
           )
           .run(
             input.id,
@@ -309,6 +336,7 @@ export class TemplateStore {
             JSON.stringify(input.authority_source),
             JSON.stringify(input.ceiling),
             input.ceiling_audiences ? JSON.stringify(input.ceiling_audiences) : null,
+            input.ceiling_child_derivation_maxima ? JSON.stringify(input.ceiling_child_derivation_maxima) : null,
             JSON.stringify(input.dispatch_policy),
             JSON.stringify(input.dispatchers),
             JSON.stringify(input.recipients),

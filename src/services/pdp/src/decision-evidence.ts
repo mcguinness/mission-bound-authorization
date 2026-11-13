@@ -36,6 +36,7 @@ import {
   type EvidenceSigningKey,
   signEvidenceEnvelope,
 } from "./runtime-evidence-integrity.js";
+import type { HistoryPredicateResult } from "./history.js";
 import { parseWorkItem, type WorkItemRef } from "./work-item.js";
 
 /** @spec runtime-evidence#decision-evidence-object mission sub-object (REQUIRES `policy_view_id`). */
@@ -353,6 +354,13 @@ export interface DecisionEvidenceObject {
    * refusal, one entry per counter the evaluation charged.
    */
   metering?: DecisionMeteringEntry[];
+  /**
+   * @spec runtime-evidence#evidence-extensions `mission_history`,
+   * authzen#context-history (#2015): the policy-selected history predicates
+   * the PDP evaluated and their outcomes, REQUIRED when policy selected any;
+   * computed by the PDP, never copied from `context.mission_history`.
+   */
+  mission_history?: HistoryPredicateResult[];
   entry_digest?: string;
   sequence: number;
   emitter: { id: string; role: "pdp" };
@@ -475,7 +483,39 @@ export interface DecisionEvidenceEmissionInput {
   contributing_constraints?: readonly string[];
   /** @spec metering#metering-evidence (#816): the counters this evaluation metered, from the claim step. */
   metering?: readonly DecisionMeteringEntry[];
+  /** @spec authzen#context-history (#2015): the evaluated history predicates and their outcomes. */
+  mission_history?: readonly HistoryPredicateResult[];
   entry_digest?: string;
+}
+
+const HISTORY_OUTCOMES: readonly string[] = ["satisfied", "not_satisfied", "unavailable"];
+
+/**
+ * @spec runtime-evidence#evidence-extensions `mission_history` (#2015 and
+ * #2048): each entry names its `predicate`, its `action_class` and its
+ * `action` (a non-empty string, the operation the predicate selects) where
+ * the type carries them, and an `outcome` of `satisfied`, `not_satisfied` or
+ * `unavailable`. Anything else is never signed.
+ */
+function missionHistoryOf(entries: readonly HistoryPredicateResult[]): HistoryPredicateResult[] {
+  if (!Array.isArray(entries)) throw new Error("Decision Evidence mission_history must be an array");
+  return entries.map((e) => {
+    if (typeof e?.predicate !== "string" || e.predicate.length === 0 || !HISTORY_OUTCOMES.includes(e.outcome)) {
+      throw new Error("Decision Evidence mission_history entries name a predicate and a known outcome");
+    }
+    if (e.action_class !== undefined && typeof e.action_class !== "string") {
+      throw new Error("Decision Evidence mission_history action_class must be a string");
+    }
+    if (e.action !== undefined && (typeof e.action !== "string" || e.action.length === 0)) {
+      throw new Error("Decision Evidence mission_history action must be a non-empty string");
+    }
+    return {
+      predicate: e.predicate,
+      ...(e.action_class !== undefined ? { action_class: e.action_class } : {}),
+      ...(e.action !== undefined ? { action: e.action } : {}),
+      outcome: e.outcome,
+    };
+  });
 }
 
 /**
@@ -713,6 +753,9 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
           contributing_constraints: [...new Set(input.contributing_constraints.map(requiredString))],
         } : {}),
         ...(input.metering !== undefined ? { metering: meteringEntriesOf(input.metering, input.decision) } : {}),
+        ...(input.mission_history !== undefined && input.mission_history.length > 0
+          ? { mission_history: missionHistoryOf(input.mission_history) }
+          : {}),
         ...(input.entry_digest !== undefined ? { entry_digest: input.entry_digest } : {}),
         sequence: nextSequence(mission),
         emitter: { id: config.emitterId, role: "pdp" as const },

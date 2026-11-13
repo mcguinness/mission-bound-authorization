@@ -70,9 +70,11 @@ import { assembleResourceContracts, assertCarriedContractsResolvable } from "./r
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
+  childMaximumReferences,
+  inheritedChildMaxima,
+  type RetainedChildMaximum,
   STANDING_CONSENT_LIMIT_MEMBER,
   standingConsentMaximumOf,
-  withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
 import {
   assertStandingPaymentCeiling,
@@ -438,6 +440,15 @@ export function createTemplate(
      */
     entryAudiences?: (entries: readonly AuthorityEntry[]) => string[][] | undefined;
     /**
+     * @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+     * (#2040, D1260 ruling 3): the per-child derivation figure this consent
+     * rendered for each ceiling entry (`renderedChildMaxima` over the figure
+     * the approval surface showed), retained with the template. Absent, or
+     * returning undefined, the template retains no figure, so no child is
+     * created under an instance entry whose children take one.
+     */
+    ceilingChildMaxima?: (entries: readonly AuthorityEntry[]) => RetainedChildMaximum[] | undefined;
+    /**
      * @spec mission-template#prohibited-classes (#813): present exactly where
      * the `standing-payment-dispatch` capability is on. A template whose
      * Dispatch Policy designates the standing payment is then created only
@@ -514,6 +525,9 @@ export function createTemplate(
   // consent is the approval event every instance draws on, so the ceiling's
   // association is retained here, outside `template_hash`.
   const ceiling_audiences = options.entryAudiences?.(ceiling);
+  // @spec derivation-limits#approval-rendering (#2040): likewise the per-child
+  // figure the consent rendered for each delegable ceiling entry.
+  const ceiling_child_derivation_maxima = options.ceilingChildMaxima?.(ceiling);
   const create: TemplateCreate = {
     ...input,
     ceiling,
@@ -523,6 +537,7 @@ export function createTemplate(
     authority_source,
     source_bindings,
     ...(ceiling_audiences ? { ceiling_audiences } : {}),
+    ...(ceiling_child_derivation_maxima ? { ceiling_child_derivation_maxima } : {}),
     ...(consent_provenance ? { consent_provenance } : {}),
   };
   return store.create(create);
@@ -982,6 +997,17 @@ export function dispatchFromTemplate(
       `template ${template.id} dispatch policy ${template.dispatch_policy.id} states no usable ${STANDING_CONSENT_LIMIT_MEMBER}; re-consent the template`,
     );
   }
+  // @spec derivation-limits#effective-limit (#2018): a finite per-instance
+  // maximum the template's consent committed stays in force where this AS no
+  // longer implements Derivation Limits. The Dispatch is refused, as for a
+  // maximum that cannot be read, rather than recorded with no limit.
+  const unestablishable = kernel.standingConsentMaximumRefusal(dispatchMaximum);
+  if (unestablishable) {
+    throw new DispatchError(
+      "dispatch_policy_changed",
+      `template ${template.id} dispatch policy ${template.dispatch_policy.id}: ${unestablishable}`,
+    );
+  }
   // @spec mission-template#prohibited-classes (#813): under the
   // `standing-payment-dispatch` capability, a template whose verified
   // Dispatch Policy states standing-payment terms dispatches through the
@@ -1245,6 +1271,17 @@ export function dispatchFromTemplate(
     authority_set: final,
     eligibility_provenance: provenance,
     child_actor_provenance: childActorProvenance,
+    // @spec derivation-limits#effective-limit, derivation-limits#approval-rendering
+    // (#2026, #2040, D1260 ruling 3): an instance carries no earlier Mission's
+    // authority; all of it is added from the template ceiling, so each entry
+    // whose policy-created children take the deployment's figure takes the
+    // strictest figure the template consent rendered and retained for the
+    // ceiling entries it falls in, never one read at this dispatch. Under a
+    // template consented before the figure was retained it is unknown, so no
+    // child is created under it until a fresh consent.
+    child_derivation_maxima: inheritedChildMaxima(final, [], {
+      references: childMaximumReferences(template.ceiling, template.ceiling_child_derivation_maxima),
+    }),
     intent_hash: intentHash(template.issuer, input.intent as never),
     ...(proposal ? { proposal_hash: proposalHash(template.issuer, proposal as never) } : {}),
     ...(input.submissionEvidence?.length ? { submission_evidence: input.submissionEvidence } : {}),
@@ -1265,10 +1302,8 @@ export function dispatchFromTemplate(
     // D327): established afresh for this instance, never above the maximum
     // the committed Dispatch Policy states, and never absent where it is
     // finite, whatever the deployment's ceiling has since become.
-    derivation_limit: withinStandingConsentMaximum(
-      kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
-      dispatchMaximum,
-    ),
+    // None where this AS does not implement Derivation Limits (#2018).
+    derivation_limit: kernel.standingConsentDerivationLimit(input.intent.requested_derivation_limit, dispatchMaximum),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

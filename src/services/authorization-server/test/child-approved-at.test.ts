@@ -12,6 +12,7 @@ import {
   type GovernedPolicyRoot,
   MissionKernel,
   type MissionRecord,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
   TemplateStore,
@@ -153,7 +154,12 @@ describe("a child's approved_at follows the root its authority traces to (@spec 
         approval_event_id: `tmpl-ev-${seq++}`,
         expires_at: "2026-12-01T00:00:00Z",
       } as never,
-      { ...kernel.authoritySourceOptions(), dispatchPolicies: registry },
+      {
+        ...kernel.authoritySourceOptions(),
+        dispatchPolicies: registry,
+        // The per-child figure a consent at this instant renders and retains (#2040).
+        ceilingChildMaxima: (entries) => kernel.establishedChildMaxima(entries),
+      },
     );
     at(1);
     const instance = dispatchFromTemplate(kernel, store, {
@@ -221,6 +227,8 @@ describe("a child's approved_at follows the root its authority traces to (@spec 
       root: { id: "urn:policy:root", version: "1" },
       approver: { iss: ISS, sub: "dana" },
       consentEventId: `gpce-${seq++}`,
+      // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+      disclosure: governedPolicyConsentDisclosure(kernel, { id: "urn:policy:root", version: "1" }).commitment,
     });
     at(1);
     const { mission } = activateGovernedPolicy(kernel, {

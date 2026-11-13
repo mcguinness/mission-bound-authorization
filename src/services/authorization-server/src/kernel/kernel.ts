@@ -82,6 +82,12 @@ import {
   resolveEffectiveExpiry,
 } from "./derive.js";
 import {
+  renderedChildMaxima,
+  type RetainedChildMaximum,
+  type StandingConsentMaximum,
+  withinStandingConsentMaximum,
+} from "./standing-consent-limit.js";
+import {
   assertDischargeAuthoritiesResolvable,
   conditionCanonicalBytes,
   conditionDigest,
@@ -350,7 +356,8 @@ CREATE TABLE IF NOT EXISTS missions (
   eligibility_provenance_json TEXT,
   child_actor_provenance_json TEXT,
   approved_audiences_json TEXT,
-  extensions_json TEXT
+  extensions_json TEXT,
+  child_derivation_maxima_json TEXT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS approval_reservations (
   approval_event_id TEXT PRIMARY KEY,
@@ -499,6 +506,17 @@ function migrateMissions(db: Database): void {
   // it reads back with none.
   if (!columns.has("extensions_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN extensions_json TEXT");
+  }
+  // @spec derivation-limits#effective-limit, child-delegation#derivation-budget
+  // (#2026, D1249): the per-child derivation maximum each entry's approval
+  // rendered, written once at creation. Nullable with no default and no
+  // backfill: a row that predates it retains no figure, so no child is
+  // created under an entry that takes the deployment's figure until a fresh
+  // human approval retains one. Nothing is read from the current deployment
+  // policy, the row's own `derivation_limit` or its `policy_version` in its
+  // place, and the stored approval is never rewritten.
+  if (!columns.has("child_derivation_maxima_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN child_derivation_maxima_json TEXT");
   }
   // @spec mission#record-content-members, mission#integrity-anchors (#1917,
   // D1061): after every additive step, so the rebuilt table has every column.
@@ -823,6 +841,16 @@ export interface KernelOptions {
   capabilityResolver?: CapabilitySourceResolver;
   issuer: string;
   policy: DerivationPolicy;
+  /**
+   * @spec derivation-limits#conformance, mission#submission-via-par (#2018):
+   * whether this AS implements Mission Derivation Limits. Default true. False:
+   * intake refuses a `requested_derivation_limit` Intent member
+   * `invalid_request` as a member no implemented profile defines, every
+   * creation path establishes no `derivation_limit`, and a record carrying
+   * either member is refused at commit. Construction refuses a policy that
+   * sets `derivation_limit_ceiling`.
+   */
+  derivationLimits?: boolean;
   statusKey: CryptoKey;
   statusKid: string;
   /**
@@ -1302,6 +1330,14 @@ export class MissionKernel {
   private readonly sourceResolver: AuthoritySourceResolver;
 
   constructor(private readonly opts: KernelOptions) {
+    // @spec derivation-limits#effective-limit (#2018): a policy ceiling is a
+    // Derivation Limits setting, so a deployment that does not implement the
+    // profile and sets one is misconfigured, refused here rather than ignored.
+    if (opts.derivationLimits === false && (opts.policy.derivation_limit_ceiling ?? null) !== null) {
+      throw new Error(
+        "the derivation policy sets derivation_limit_ceiling, but this deployment does not implement Derivation Limits (the derivation-limits capability is off)",
+      );
+    }
     // @spec mission#authority-sources — the catalog's own invariants are
     // enforced HERE, not only over the shipped file: a duplicate root id, or
     // two declarations that select the same (client, Subject), would make
@@ -1469,7 +1505,12 @@ export class MissionKernel {
   }
 
   validateIntent(raw: string, opts: Pick<IntentIntakeOptions, "admitMaxBudget"> = {}): MissionIntent {
-    return validateMissionIntent(raw, { ...opts, now: this.now() });
+    return validateMissionIntent(raw, { ...opts, now: this.now(), derivationLimits: this.derivationLimitsEnabled() });
+  }
+
+  /** @spec derivation-limits#conformance (#2018): whether this AS implements Mission Derivation Limits. */
+  derivationLimitsEnabled(): boolean {
+    return this.opts.derivationLimits !== false;
   }
 
   /**
@@ -1489,6 +1530,7 @@ export class MissionKernel {
     return validateMissionIntentSubmission(raw, bounds, {
       ...opts,
       now: this.now(),
+      derivationLimits: this.derivationLimitsEnabled(),
       ...(this.opts.submissionEvidenceTypes ? { evidenceTypes: this.opts.submissionEvidenceTypes } : {}),
     });
   }
@@ -1630,7 +1672,64 @@ export class MissionKernel {
    * value copied verbatim.
    */
   resolveDerivationLimit(requested: number | null | undefined): number | null {
+    // @spec derivation-limits#introduction (#2018): an AS that does not
+    // implement Derivation Limits establishes no derivation limit.
+    if (!this.derivationLimitsEnabled()) return null;
     return resolveDerivationLimit(requested, this.opts.policy.derivation_limit_ceiling);
+  }
+
+  /**
+   * @spec derivation-limits#effective-limit, derivation-limits#approval-rendering
+   * (#2026, D1249): the per-child figures an approval event at this instant
+   * establishes for `entries`: for each entry whose policy-created children
+   * take the deployment's figure, this deployment's ceiling for a child's
+   * `derivation_limit` (none where it sets none or does not implement
+   * Derivation Limits), the figure the approval page renders
+   * (`approvalDerivationRendering`, from the same read). A decision is bound
+   * to its rendering's derivation policy content (#1446, D583), so the figure
+   * a direct approval retains is the one its Approver was shown. @spec
+   * derivation-limits#approval-rendering (#2040): the same read gives the
+   * figure a ceiling consent, an Expansion decision and the template
+   * consent stand-in retain for the consents they render.
+   */
+  establishedChildMaxima(entries: readonly AuthorityEntry[]): RetainedChildMaximum[] {
+    return renderedChildMaxima(entries, this.resolveDerivationLimit(undefined));
+  }
+
+  /**
+   * @spec derivation-limits#effective-limit (#1119, D327, #2018): the
+   * `derivation_limit` a Mission created under a standing consent records:
+   * its own resolved limit, never above a finite committed maximum. Where
+   * this AS does not implement Derivation Limits, none for a consent that
+   * guarantees no finite maximum. A finite committed maximum is never turned
+   * into no limit: only a fresh human approval replaces it, so turning the
+   * capability off does not remove it. Each creating path refuses such a
+   * creation first ({@link MissionKernel.standingConsentMaximumRefusal});
+   * reaching here with one is a defect, refused.
+   */
+  standingConsentDerivationLimit(requested: number | null | undefined, maximum: StandingConsentMaximum): number | null {
+    if (!this.derivationLimitsEnabled()) {
+      if (maximum.finite !== null) {
+        throw new Error(
+          `a standing consent committed a finite derivation_limit maximum of ${maximum.finite}, which this deployment cannot record: Derivation Limits is off`,
+        );
+      }
+      return null;
+    }
+    return withinStandingConsentMaximum(this.resolveDerivationLimit(requested), maximum);
+  }
+
+  /**
+   * @spec derivation-limits#effective-limit (#2018): whether a Mission can be
+   * created under a standing consent committing `maximum`. Where this AS does
+   * not implement Derivation Limits it cannot establish the limit a finite
+   * committed maximum requires, and recording none would lift a bound only a
+   * fresh human approval replaces, so the creation is refused: the returned
+   * reason, or undefined where the creation can proceed.
+   */
+  standingConsentMaximumRefusal(maximum: StandingConsentMaximum): string | undefined {
+    if (this.derivationLimitsEnabled() || maximum.finite === null) return undefined;
+    return `the standing consent committed a per-Mission derivation limit of at most ${maximum.finite}, which this deployment cannot establish because it does not implement Derivation Limits; disabling the capability does not remove the commitment, which only a fresh human approval replaces`;
   }
 
   /**
@@ -2218,6 +2317,13 @@ export class MissionKernel {
     // so a later drawdown draws them with it rather than with a later mapping.
     const ceilingAudiences = ceiling ? this.mappedEntryAudiences(ceiling.authority_ceiling) : undefined;
     if (ceiling && ceilingAudiences) ceiling.ceiling_audiences = ceilingAudiences;
+    // @spec derivation-limits#approval-rendering, derivation-limits#effective-limit
+    // (#2040, D1260 ruling 3): the per-child figure this approval rendered for
+    // each delegable ceiling entry with no child_creation_policy, from the
+    // same read as the Mission's own entries (the page's ceiling block), is
+    // retained with the ceiling, so the authority a later drawdown adds takes
+    // it rather than the figure current at the drawdown.
+    if (ceiling) ceiling.ceiling_child_derivation_maxima = this.establishedChildMaxima(ceiling.authority_ceiling);
     // @spec mission#record-principal-members — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.
@@ -2242,6 +2348,10 @@ export class MissionKernel {
       eligibility_provenance: provenance,
       // @spec child-delegation#fanout (#1304): retained apart, from the same derivation.
       child_actor_provenance: childActorProvenance,
+      // @spec derivation-limits#effective-limit, derivation-limits#approval-rendering
+      // (#2026, D1249): the per-child figure this approval rendered for each
+      // delegable entry with no child_creation_policy, retained with it.
+      child_derivation_maxima: this.establishedChildMaxima(authoritySet),
       intent_hash: intentHash(this.opts.issuer, input.intent as never),
       ...(proposal ? { proposal_hash: proposalHash(this.opts.issuer, proposal as never) } : {}),
       // @spec mission#intent-submission-evidence — verified facts land on the
@@ -2273,10 +2383,7 @@ export class MissionKernel {
       // @spec mission#derivation-issuance-policy — the immutable EFFECTIVE
       // ceiling: min(deployment policy, the client's requested_derivation_limit),
       // never the requested value copied verbatim.
-      derivation_limit: resolveDerivationLimit(
-        input.intent.requested_derivation_limit,
-        this.opts.policy.derivation_limit_ceiling,
-      ),
+      derivation_limit: this.resolveDerivationLimit(input.intent.requested_derivation_limit),
       derivation_count: 0,
       // @spec mission#approval-event (step 7) (#916): bound at the commit, never after.
       grant_id: input.grantId ?? null,
@@ -2497,6 +2604,21 @@ export class MissionKernel {
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
     if (record.issuer !== this.opts.issuer) throw new Error("record issuer does not own this kernel");
+    // @spec derivation-limits#introduction (#2018): every creator funnels
+    // through here, so where this AS does not implement Derivation Limits no
+    // record commits its members, whatever path built it.
+    if (!this.derivationLimitsEnabled()) {
+      if (record.derivation_limit !== null) {
+        throw new Error(
+          `mission ${record.id} would establish derivation_limit ${record.derivation_limit}, but this deployment does not implement Derivation Limits`,
+        );
+      }
+      if (Object.hasOwn(record.intent, "requested_derivation_limit")) {
+        throw new Error(
+          `mission ${record.id} would commit requested_derivation_limit, but this deployment does not implement Derivation Limits`,
+        );
+      }
+    }
     // @spec resource-access#delegate-eligibility: provenance a creating surface
     // records is index-aligned with the Authority Set it commits; a misaligned
     // array is a creation defect, refused rather than stored.
@@ -2512,6 +2634,14 @@ export class MissionKernel {
       record.child_actor_provenance.length !== record.authority_set.length
     ) {
       throw new Error(`mission ${record.id}: child-actor provenance is not aligned with its Authority Set`);
+    }
+    // @spec derivation-limits#effective-limit (#2026, D1249): the same for the
+    // retained per-child figures.
+    if (
+      record.child_derivation_maxima !== undefined &&
+      record.child_derivation_maxima.length !== record.authority_set.length
+    ) {
+      throw new Error(`mission ${record.id}: retained per-child derivation maxima are not aligned with its Authority Set`);
     }
     // @spec mission#record-principal-members (#1912, D1048): a `direct` basis
     // that carries activation, activation_actor or root_commitment carries
@@ -2629,8 +2759,8 @@ export class MissionKernel {
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json, ceiling_json,
            eligibility_provenance_json, child_actor_provenance_json, approved_audiences_json,
-           extensions_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           extensions_json, child_derivation_maxima_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -2710,6 +2840,10 @@ export class MissionKernel {
           // does not recognize, exactly as the record carries it, written
           // only here; no later UPDATE touches it.
           recordExtensionsJson(record),
+          // @spec derivation-limits#effective-limit (#2026, D1249): the
+          // retained per-child figures, immutable after creation, written
+          // only here (null when the creating surface retained none).
+          record.child_derivation_maxima ? JSON.stringify(record.child_derivation_maxima) : null,
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -6033,6 +6167,9 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     // @spec mission#transformation-capabilities (#1503 finding 7): absent
     // when the row retains none or it cannot be read; never re-derived.
     ...approvedAudiencesMemberOf(row.approved_audiences_json),
+    // @spec derivation-limits#effective-limit (#2026, D1249): absent when the
+    // row retains none or it cannot be read; never re-derived from policy.
+    ...childDerivationMaximaMemberOf(row.child_derivation_maxima_json),
     // @spec mission#integrity-anchors (#1917, D1061): a NULL anchor column is
     // an absent member, whose implied value readers resolve; a stored value
     // is the member, held to its implied value by `resolvedAnchors`.
@@ -6155,6 +6292,35 @@ function approvedAudiencesMemberOf(text: unknown): { approved_audiences?: string
     Array.isArray(parsed) &&
     parsed.every((a) => Array.isArray(a) && a.every((aud) => typeof aud === "string"));
   return valid ? { approved_audiences: parsed as string[][] } : {};
+}
+
+/**
+ * @spec derivation-limits#effective-limit (#2026, D1249): the stored per-child
+ * figures as the record member, or no member where none is stored or any
+ * element is not `null`, `{ finite: null }` or `{ finite: n }` with `n` an
+ * integer of at least 1. An unreadable column retains no figure, which
+ * refuses a child under an entry that takes one, rather than reading as no
+ * finite maximum.
+ */
+function childDerivationMaximaMemberOf(text: unknown): { child_derivation_maxima?: ({ finite: number | null } | null)[] } {
+  if (typeof text !== "string" || text === "") return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  const element = (m: unknown): boolean => {
+    if (m === null) return true;
+    if (typeof m !== "object" || Array.isArray(m) || Object.keys(m as object).length !== 1 || !Object.hasOwn(m as object, "finite")) {
+      return false;
+    }
+    const finite = (m as { finite: unknown }).finite;
+    return finite === null || (typeof finite === "number" && Number.isInteger(finite) && finite >= 1);
+  };
+  return Array.isArray(parsed) && parsed.every(element)
+    ? { child_derivation_maxima: parsed as ({ finite: number | null } | null)[] }
+    : {};
 }
 
 /** `condition_digest`, or undefined for a structurally invalid condition (never throws). */
