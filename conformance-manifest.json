@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "188817f6f30a55b194ad3e0d481645559c260a08",
-    "content_sha256": "fde631688f44da604297d58bc3770f31fd2c67def7516d5dd1fd6bb66a0147d6"
+    "revision": "23c075817e70878a006c70ba87bd7aa75266535f",
+    "content_sha256": "0dd86f7bd5602e71807a2a48e537f9ffca57929b556163ecc107636345f62ede"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
@@ -21671,6 +21671,75 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A per-use read stops later requests only; excluding an effect admitted before a revocation commits needs a serialization boundary (#250), which this row does not claim."
+  },
+  {
+   "id": "core.introspection.issuer-only-members",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "only-issuer-reports-state",
+   "text": "An AS MUST NOT include `mission.state`, `mission.termination`, `proposal_hash`, `approval_basis`, or `authority_source` in an introspection response unless it holds the Mission, that is, unless it is the Mission `issuer`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an AS that is not the Mission `issuer` reports none of `state`, `termination`, `proposal_hash`, `approval_basis` or `authority_source` in any introspection response, active or inactive, even for a token that names the Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 option A (D1266). Todo: the reference serves Mission introspection only at the Mission issuer (provider.ts introspection verifies issuer: opts.issuer, refuses a token whose mission.issuer differs from the record's, and the kernel stores no record from another issuer), and no AS other than the issuer implements introspection, so no test can witness the non-issuer side; nothing here builds an introspection endpoint for one."
+  },
+  {
+   "id": "core.introspection.non-issuer-carried-members-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "only-issuer-reports-state",
+   "text": "An AS that is not the Mission `issuer` MUST NOT include in the `mission` member a member that the introspected token's `mission` claim does not carry",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the `mission` member a non-issuer AS reports contains only members present in the introspected token's `mission` claim; it never adds live state, a value from a Mission Record it does not hold, or a member the claim does not carry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 option A (D1266). Todo: the reference serves Mission introspection only at the Mission issuer (provider.ts introspection verifies issuer: opts.issuer, refuses a token whose mission.issuer differs from the record's, and the kernel stores no record from another issuer), and no AS other than the issuer implements introspection, so no test can witness the non-issuer side; nothing here builds an introspection endpoint for one."
+  },
+  {
+   "id": "core.introspection.non-issuer-authority-hash-carried",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "only-issuer-reports-state",
+   "text": "an `authority_hash` it includes MUST be the value that claim carries, unchanged, never one it recomputes from the authority it holds",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an `authority_hash` a non-issuer AS reports is the exact value the introspected token's `mission` claim carries, the issuer's authenticated commitment; it never reports one it computed from the authority it holds, such as an audience-scoped subset"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 option A (D1266). Todo: the reference serves Mission introspection only at the Mission issuer (provider.ts introspection verifies issuer: opts.issuer, refuses a token whose mission.issuer differs from the record's, and the kernel stores no record from another issuer), and no AS other than the issuer implements introspection, so no test can witness the non-issuer side; nothing here builds an introspection endpoint for one."
   },
   {
    "id": "core.anchors.entry-commitment",
@@ -69035,6 +69104,72 @@
     }
    ],
    "notes": "#1180, D378 (the delayed-redemption witness). The test revokes the Mission, confirms the issuer refuses a new grant, redeems the outstanding grant five seconds before its exp, and shows the partner resource honoring the local token until the grant's exp and refusing it after; exposure from revocation exceeds the 120 s local lifetime. The rest of the sentence, that the Resource AS issues no renewal authority on the grant, is cross-domain.resource-as.no-renewal-authority."
+  },
+  {
+   "id": "cross-domain.introspection-at-resource-as.claim-shape-only",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "introspection-at-resource-as",
+   "text": "A Resource AS that supports introspection for a local token it minted from a cross-domain grant returns the claim-shape members only: `id`, `issuer`, and `authority_hash`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS introspecting a local token minted from a cross-domain grant reports in its `mission` member only `id`, `issuer` and `authority_hash`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 (D1266): Cross-Domain is unchanged; the binding's Issuer-Only Members now admits this response generically. Todo: the reference Resource AS serves no introspection endpoint (it exposes registerClient, redeem and metadata only)."
+  },
+  {
+   "id": "cross-domain.introspection-at-resource-as.omits-state",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "introspection-at-resource-as",
+   "text": "It MUST omit `mission.state` and `mission.termination` rather than report a stale value as current.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a Resource AS's introspection response for a local token minted from a cross-domain grant carries neither `mission.state` nor `mission.termination`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 (D1266): Cross-Domain is unchanged; the binding's Issuer-Only Members now admits this response generically. Todo: the reference Resource AS serves no introspection endpoint (it exposes registerClient, redeem and metadata only)."
+  },
+  {
+   "id": "cross-domain.introspection-at-resource-as.carried-not-recomputed",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "introspection-at-resource-as",
+   "text": "`authority_hash`, when included, is the issuer's commitment carried through the grant, not a value the Resource AS recomputes from its audience-scoped subset",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an `authority_hash` a Resource AS reports is the value the cross-domain grant carried, never one it computed from its audience-scoped subset"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 (D1266): Cross-Domain is unchanged; the binding's Issuer-Only Members now admits this response generically. Todo: the reference Resource AS serves no introspection endpoint (it exposes registerClient, redeem and metadata only)."
   },
   {
    "id": "continuation.ica-transport.refusal-codes",
