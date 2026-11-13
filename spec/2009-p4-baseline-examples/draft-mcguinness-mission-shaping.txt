@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           3 November 2026
-Expires: 7 May 2027
+Intended status: Informational                          13 November 2026
+Expires: 17 May 2027
 
 
                          Mission Intent Shaping
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -86,8 +86,9 @@ Table of Contents
      6.1.  Mission Intent Members
      6.2.  Authority Proposal
      6.3.  Shaping Ceiling and Default Deny
-     6.4.  Constraints from Trusted Context
-     6.5.  Delegation and Child Missions
+     6.4.  Authority Amplification Through Reads
+     6.5.  Constraints from Trusted Context
+     6.6.  Delegation and Child Missions
    7.  Ambiguity Handling
      7.1.  Clarifications
      7.2.  Refusal
@@ -353,7 +354,7 @@ Table of Contents
    1.  Normalize and classify the task input.
 
    2.  Separate facts the requester supplied, facts and constraints
-       trusted context supplied (Section 6.4), and facts the shaper
+       trusted context supplied (Section 6.5), and facts the shaper
        inferred.
 
    3.  Resolve candidate resources and actions against capability
@@ -603,7 +604,30 @@ Table of Contents
    The Mission Issuer enforces its own ceiling whether or not a shaping
    ceiling is present.
 
-6.4.  Constraints from Trusted Context
+6.4.  Authority Amplification Through Reads
+
+   A read entry can carry more authority than its face.  Content a read
+   returns can itself be authority at another service
+   ([I-D.draft-mcguinness-mission-runtime], Section "Authority Carried
+   in Content").  Read access to a primary mailbox reaches the one-time
+   codes and reset links that arrive there, and with them sign-in or
+   account recovery at each service that sends them.
+
+   When a proposed read entry can return such content, the shaper SHOULD
+   narrow the entry where the capability source allows, for example to a
+   folder, a label, a sender set, or a time window.  Where the entry can
+   still return such content, the shaper SHOULD record the authority it
+   implies as implied_authority in the entry's entry_rationales object
+   (Section 8).  Where the shaper can neither exclude such content nor
+   state what the entry implies, it SHOULD request clarification
+   (Section 7.1).
+
+   The implied_authority member discloses a risk and grants nothing: the
+   Mission Issuer derives the same Authority Set with or without it, and
+   a consent surface presents it as a disclosure of risk, never as
+   authority.
+
+6.5.  Constraints from Trusted Context
 
    Trusted context can supply constraints the request does not state: a
    deployment policy, a preference the Subject recorded earlier, or a
@@ -665,7 +689,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime], Section "Authority
    Dependencies"), not something the evidence decides.
 
-6.5.  Delegation and Child Missions
+6.6.  Delegation and Child Missions
 
    The shaper does not author the delegation member of an Authority Set
    entry ([I-D.draft-mcguinness-oauth-mission-resource-access]).  If the
@@ -819,7 +843,7 @@ Table of Contents
       ceiling was supplied.
 
    parent_mission:  String.  The Parent Mission identifier.  Present for
-      a Child Mission proposal (Section 6.5).
+      a Child Mission proposal (Section 6.6).
 
    input_digest:  String.  A digest over the shaping request, in the
       integrity-anchor form of the issuance profile
@@ -846,7 +870,7 @@ Table of Contents
       applied during shaping.
 
    context_constraints:  Array of objects, one per constraint trusted
-      context supplied (Section 6.4), with the members source (string:
+      context supplied (Section 6.5), with the members source (string:
       deployment_policy, subject_preference, model_refusal, or a
       deployment-defined value), description (string, the constraint as
       its source states it), source_uri (string, the source document
@@ -871,9 +895,11 @@ Table of Contents
    entry_rationales:  Array of objects, one per proposed resource or
       action, with the members applies_to (object naming the resource
       and action) and basis (string, the user-supplied or inferred fact
-      that motivated its inclusion).  A consent surface draws on this
-      record to answer why the task needs an entry (Disclosure
-      Interrogation,
+      that motivated its inclusion), and optionally implied_authority
+      (string, the authority the entry carries beyond its face, such as
+      account recovery at the services whose codes reach a mailbox,
+      Section 6.4).  A consent surface draws on this record to answer
+      why the task needs an entry (Disclosure Interrogation,
       [I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
    ambiguities:  Array of objects, one per material ambiguity, with the
@@ -1575,7 +1601,7 @@ Appendix B.  Example: Constraints from Trusted Context
    concrete itinerary, so the approval is the Subject's and no other
    approver can satisfy it.  The shaper restates the cabin bound and the
    confirmation in task_bounds, with the overnight-flight preference
-   (Section 6.4).  Shaping Evidence records the three constraints:
+   (Section 6.5).  Shaping Evidence records the three constraints:
 
    {
      "context_constraints": [
@@ -1637,7 +1663,15 @@ Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
 
-   *  Constraints from Trusted Context (Section 6.4) describes how the
+   *  Authority Amplification Through Reads (Section 6.4): when a
+      proposed read entry can return content that is itself authority,
+      such as the codes that reach a mailbox, the shaper narrows the
+      entry, records the authority it still implies in the optional
+      entry_rationales member implied_authority, and requests
+      clarification when it can do neither.  The member discloses a risk
+      and grants nothing (#2045).
+
+   *  Constraints from Trusted Context (Section 6.5) describes how the
       shaper carries a deployment policy, a preference the Subject
       recorded, or a model's refusal into the proposal: the proposal
       satisfies every applicable mandatory constraint, comparable bounds

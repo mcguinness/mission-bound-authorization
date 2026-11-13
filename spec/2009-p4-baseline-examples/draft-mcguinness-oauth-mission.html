@@ -28,7 +28,7 @@ OAuth Actor Profile and, as specified by a companion, let a single
 Mission be honored across trust domains. Runtime enforcement of each
 action is a separate, optional layer. 
     " name="description">
-<meta content="xml2rfc 3.34.1" name="generator">
+<meta content="xml2rfc 3.35.0" name="generator">
 <meta content="oauth" name="keyword">
 <meta content="mission" name="keyword">
 <meta content="agent" name="keyword">
@@ -37,19 +37,19 @@ action is a separate, optional layer.
 <meta content="par" name="keyword">
 <meta content="draft-mcguinness-oauth-mission-latest" name="ietf.draft">
 <!-- Generator version information:
-  xml2rfc 3.34.1
-    Python 3.14.8
-    ConfigArgParse 1.8.0
+  xml2rfc 3.35.0
+    Python 3.14.10
+    ConfigArgParse 1.9.0
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.13.4
+    platformdirs 4.14.3
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
-    wcwidth 0.9.2
+    wcwidth 0.9.4
 -->
 <link href="draft-mcguinness-oauth-mission.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1050,7 +1050,7 @@ svg {
   & :is([stroke="white"], [stroke^="#fff"]) {
     stroke: var(--background-color);
   }
-  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+  & :is([fill="black"], [fill^="#000"], :not([fill], [fill] *)) {
     fill: var(--text-color);
   }
   & :is([fill="white"], [fill^="#fff"]) {
@@ -1069,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 7 May 2027</td>
+<td class="center">Expires 17 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-11-03" class="published">3 November 2026</time>
+<time datetime="2026-11-13" class="published">13 November 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-07">7 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-17">17 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1151,7 +1151,7 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 7 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 17 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -3745,10 +3745,22 @@ the Subject the authority is granted for.<a href="#section-6.1.5-4.2.1" class="p
 (<code>authority_source.policy</code>).<a href="#section-6.1.5-4.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.1.5-4.4">
-              <p id="section-6.1.5-4.4.1">When the client submitted an authority proposal
+              <p id="section-6.1.5-4.4.1">When the AS holds an <strong>implied-authority statement</strong> for a rendered
+Authority Set entry, a statement of authority the entry carries
+beyond what it names (for example, account recovery at each service
+that sends reset links or one-time codes to a mailbox the entry
+reads), the rendering <span class="bcp14">MUST</span> present the statement with that entry as
+a disclosure of risk, never as part of the derived Authority Set.
+The rendering attributes a statement from the AS's local policy to
+the AS; one the client supplied, such as the <code>implied_authority</code>
+member defined by <span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>, is
+client-supplied text under the rules below.<a href="#section-6.1.5-4.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.1.5-4.5">
+              <p id="section-6.1.5-4.5.1">When the client submitted an authority proposal
 (<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>), the rendering <span class="bcp14">MUST</span> distinguish the
 entries the client proposed from any narrowing or restructuring the
-AS applied.<a href="#section-6.1.5-4.4.1" class="pilcrow">¶</a></p>
+AS applied.<a href="#section-6.1.5-4.5.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 <p id="section-6.1.5-5">The consent rendering is hardened against client text:<a href="#section-6.1.5-5" class="pilcrow">¶</a></p>
@@ -10320,11 +10332,16 @@ resolve before interoperating.<a href="#appendix-D-36" class="pilcrow">¶</a></p
 <p id="appendix-E-1">[[ To be removed from the final specification ]]<a href="#appendix-E-1" class="pilcrow">¶</a></p>
 <p id="appendix-E-2">-03<a href="#appendix-E-2" class="pilcrow">¶</a></p>
 <p id="appendix-E-3"><strong>Behavior changes</strong><a href="#appendix-E-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="appendix-E-4.1">
-          <p id="appendix-E-4.1.1">The normative-definition rule of Authorization Server Metadata
+<ul class="compact">
+<li class="compact" id="appendix-E-4.1">
+          <p id="appendix-E-4.1.1">Approval: an implied-authority statement the AS holds for an entry
+is rendered with that entry as a disclosure of risk, apart from the
+derived Authority Set (#2046).<a href="#appendix-E-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="compact" id="appendix-E-4.2">
+          <p id="appendix-E-4.2.1">The normative-definition rule of Authorization Server Metadata
 covers every advertised type that has a defining specification, not
-only <code>mission_resource_access</code> (#2009).<a href="#appendix-E-4.1.1" class="pilcrow">¶</a></p>
+only <code>mission_resource_access</code> (#2009).<a href="#appendix-E-4.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-E-5"><strong>Examples</strong><a href="#appendix-E-5" class="pilcrow">¶</a></p>
