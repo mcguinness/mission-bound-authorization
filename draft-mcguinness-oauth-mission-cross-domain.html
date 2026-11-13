@@ -2114,8 +2114,8 @@ closed, narrowing the entry out, for any <code>sub</code> matcher it cannot
 resolve against the delegate it authenticated in its own namespace.<a href="#section-9-4" class="pilcrow">¶</a></p>
 <p id="section-9-5">Portable cross-domain matching <span class="bcp14">SHOULD</span> therefore use a <code>sub_profile</code>
 matcher, an actor-type class rather than a domain-relative identifier
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
-Constraints"). A Resource AS evaluates a conveyed <code>sub_profile</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>, Section
+"Delegate Eligibility"). A Resource AS evaluates a conveyed <code>sub_profile</code>
 matcher against the classification it asserts for its own delegates.
 A value names no equivalent class across trust domains unless
 pre-established trust (<a href="#pre-established-trust" class="auto internal xref">Section 7</a>) fixes a shared
@@ -3088,8 +3088,8 @@ defined by that profile's Mission Resource Access Profile
       <h2 id="name-end-to-end-example-non-norm">
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-end-to-end-example-non-norm" class="section-name selfRef">End-to-End Example (Non-Normative)</a>
       </h2>
-<p id="appendix-A-1">This appendix continues the end-to-end example of the issuance profile's
-appendix across a trust boundary: from the home domain
+<p id="appendix-A-1">This appendix carries the family's shared Q3 reconciliation example
+across a trust boundary: from the home domain
 (<code>as.example.com</code>) into a partner domain, and then into the partner's
 internal microservice call chain. It is illustrative and adds no
 normative requirements. The final intra-domain hop shows one
@@ -3097,9 +3097,9 @@ deployment-local way to carry Mission context in a Transaction Token
 <span>[<a href="#I-D.draft-ietf-oauth-transaction-tokens" class="cite xref">I-D.draft-ietf-oauth-transaction-tokens</a>]</span>. Identifiers are
 illustrative. The Mission's <code>intent_hash</code> and <code>authority_hash</code> are
 its integrity anchors (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Integrity Anchors") over the issuance profile example's
-Intent and Authority Set, each with the partner values the scenario
-names appended.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+Section "Integrity Anchors") over the shared Q3 example's Intent and
+Authority Set, each with the partner values the scenario names
+appended.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-2">The chain crosses boundaries in two distinct ways, and seeing why is
 the point of the example:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -3126,8 +3126,8 @@ from Status or Signals.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
 <p id="appendix-A-5">Scenario: agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>
 (<code>user_3p2q8mN1a0kV7tR</code>), reconciles Q3 invoices in a partner ERP
 under Mission <code>msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY</code>. Stage 1 (Mission
-creation at the home AS) is the base profile's single-domain
-walkthrough, extended here in one way: the
+creation at the home AS) is the shared Q3 example's single-domain
+creation, extended here in one way: the
 Mission Intent's <code>target_resources</code> also names the partner ERP
 <code>https://erp.partner.example.com</code>, so the approved Authority Set
 additionally carries, for that resource, an <code>invoices.read</code> entry
@@ -3138,8 +3138,8 @@ Mission was recorded <code>active</code> with <code>authority_hash</code>
         <code>sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM</code> and
 <code>intent_hash</code>
         <code>sha-256:PKG6dLDsex-HyP9hs4NJpxqAocHYUmpDmoMH4UaoW-o</code> (this Mission
-is not the single-domain walkthrough's: its Intent and Authority Set
-extend that example's, so its identifier and anchors differ). The
+is not the shared Q3 example's: its Intent and Authority Set extend
+that example's, so its identifier and anchors differ). The
 partner ERP
 is behind the Resource AS <code>ras.partner.example.com</code>, so the agent's
 next step is a cross-domain projection rather than a home-domain

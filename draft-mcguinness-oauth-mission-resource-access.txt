@@ -143,7 +143,7 @@ Table of Contents
    support; the issuance profile is complete, and type-agnostic, without
    it.  The type is general-purpose: an authorization server with no
    need for a narrower, audience-specific type can use it directly, as
-   the issuance profile's worked examples do.
+   the family's shared Q3 reconciliation example does.
 
 2.  Conventions and Terminology
 

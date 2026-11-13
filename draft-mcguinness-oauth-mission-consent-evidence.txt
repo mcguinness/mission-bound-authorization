@@ -1000,7 +1000,7 @@ Table of Contents
 
    Example, over the worked disclosure of Appendix B.  The Mission's
    record carries the same consent_rendering_hash, which this profile
-   adds to the record the issuance profile's Worked Example shows:
+   adds to the record of the family's shared Q3 reconciliation example:
 
    {
      "evidence_id": "cns_7rP2kL9mQ4",
@@ -1775,14 +1775,14 @@ Appendix B.  Worked Disclosure and Test Vector
    This non-normative vector lets an implementation verify its
    consent_rendering_hash computation (Section 5) byte for byte.  The
    disclosure is the one the evidence example of Section 7 records.  It
-   renders the Authority Set of the issuance profile's Worked Example
-   Mission ([I-D.draft-mcguinness-oauth-mission]): invoices.read on
-   invoices issued in 2026-Q3, delegable to AI agents, and journal-
-   entries.write bounded by a max_amount of 500.00 USD, on
-   https://erp.example.com, approved by alice (user_3p2q8mN1a0kV7tR);
-   source_hashes carries that Mission's intent_hash, authority_hash, and
-   proposal_hash.  The rendering_template_digest value stands for the
-   deployment's template commitment and is illustrative.
+   renders the Authority Set of the family's shared Q3 reconciliation
+   Mission: invoices.read on invoices issued in 2026-Q3, delegable to AI
+   agents, and journal-entries.write bounded by a max_amount of 500.00
+   USD, on https://erp.example.com, approved by alice
+   (user_3p2q8mN1a0kV7tR); source_hashes carries that Mission's
+   intent_hash, authority_hash, and proposal_hash.  The
+   rendering_template_digest value stands for the deployment's template
+   commitment and is illustrative.
 
    The Consent Disclosure object:
 

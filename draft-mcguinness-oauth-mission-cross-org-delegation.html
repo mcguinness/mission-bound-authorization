@@ -1494,8 +1494,8 @@ credential <span class="bcp14">MUST</span> validate under <a href="#actor-eviden
 actor on a hop with a missing, misaligned, or invalid credential <span class="bcp14">MUST</span>
 be refused.  A hop without <code>act</code> is key-only: its holder is
 identified by key possession alone, it satisfies no eligibility
-matcher (the issuance profile's <code>allowed_delegates</code> or a
-<code>sub_profile</code> selector), and where policy requires a named actor a
+condition of an entry's delegation policy (such as a delegate matcher
+or a <code>sub_profile</code> selector), and where policy requires a named actor a
 key-only hop fails closed.  <code>act</code> is an identity statement, never an
 evidence container.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
 <p id="section-3.3-3">The <code>act</code> member never carries authority.  Delegation history follows

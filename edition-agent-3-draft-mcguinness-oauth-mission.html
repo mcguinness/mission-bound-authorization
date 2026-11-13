@@ -1912,32 +1912,39 @@ concrete values.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
         <h3 id="name-introductory-example">
 <a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-introductory-example" class="section-name selfRef">Introductory Example</a>
         </h3>
-<p id="section-2.2-1">In the examples in this document, each service's operation contract
-identifies the service's own identifier, such as
-<code>https://erp.example.com</code>, as the operation target
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
-constraints determine the permitted operations within that service.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
-<p id="section-2.2-2">The following example shows a registered client reading invoices
-from one ERP resource for Alice, who is both the Subject and the
-Approver; the authority source is user-delegated. The AS and ERP
-support the <code>mission_resource_access</code> type defined by
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>. The example
-uses a direct approval, a JWT access token, no delegated token, and
-no submission evidence (the AS's admission policy requires none).
-All times are UTC on the same day.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+<p id="section-2.2-1">The examples in this document follow one Mission whose only authority
+is the <code>payment_initiation</code> example of <span><a href="https://rfc-editor.org/rfc/rfc9396#section-2" class="relref">Section 2</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>. The
+type is illustrative: it is not a Mission type or a complete payment
+API, and its interpretation belongs to the AS and the API. The
+examples assume that it authorizes initiating one described credit
+transfer at <code>https://example.com/payments</code> (EUR 123.50 to Merchant A,
+with its remittance text) and checking or cancelling that transfer;
+that the AS declares no transformation for the type, so the approved
+entry is the proposed one unchanged; that the entry, which carries
+<code>locations</code> rather than a <code>resource</code> member, has the payments resource
+server as its approved audience; and that the payments resource server
+permits an initiation only when its amount, currency, creditor and
+remittance text equal the entry's. These assumptions belong to the
+examples, not to this document.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">The following example shows a registered client initiating that
+payment for Alice, who is both the Subject and the Approver; the
+authority source is user-delegated. The example uses a direct
+approval, a JWT access token, no delegated token, and no submission
+evidence (the AS's admission policy requires none). All times are UTC
+on the same day.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-2.2-3">
 <li id="section-2.2-3.1">
             <p id="section-2.2-3.1.1"><strong>Submit.</strong> The client pushes a Mission Intent naming
-<code>https://erp.example.com</code> and requesting expiry at 13:00, with a
-proposed <code>authorization_details</code> entry of type
-<code>mission_resource_access</code> for that resource and the action
-<code>invoices.read</code>. It follows the PAR <code>request_uri</code> into the
-authorization interaction (<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>).<a href="#section-2.2-3.1.1" class="pilcrow">¶</a></p>
+<code>https://example.com/payments</code> and requesting expiry at 13:00, with
+a proposed <code>authorization_details</code> entry of type
+<code>payment_initiation</code> for the transfer. It follows the PAR
+<code>request_uri</code> into the authorization interaction
+(<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>).<a href="#section-2.2-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-2.2-3.2">
             <p id="section-2.2-3.2.1"><strong>Approve and commit.</strong> At 12:00 the AS authenticates Alice,
-verifies the authority source and proposed read authority, and
-renders that authority and the effective 13:00 expiry for her
+verifies the authority source and the proposed payment authority,
+and renders that authority and the effective 13:00 expiry for her
 approval. On approval it atomically creates the active Mission,
 records its commitments, and binds the authorization code to it
 (<a href="#direct-approval-steps" class="auto internal xref">Section 6.1.1</a>, <a href="#grant-binding-resolution" class="auto internal xref">Section 6.4.1</a>).<a href="#section-2.2-3.2.1" class="pilcrow">¶</a></p>
@@ -1945,7 +1952,7 @@ records its commitments, and binds the authorization code to it
           <li id="section-2.2-3.3">
             <p id="section-2.2-3.3.1"><strong>Issue.</strong> Still at 12:00, the client redeems the code. The AS
 resolves and checks the Mission and returns a sender-constrained
-ERP token that expires at 12:05, with the read authority and a
+payments token that expires at 12:05, with the approved entry and a
 <code>mission</code> reference. The response also carries the granted
 authority (<a href="#token-response" class="auto internal xref">Section 7.3</a>), <code>mission_id</code>, and
 <code>mission_expires_at</code>; the access token's five-minute lifetime is
@@ -1953,13 +1960,13 @@ distinct from the Mission's one-hour lifetime
 (<a href="#mission-response-parameters" class="auto internal xref">Section 7.3.1</a>).<a href="#section-2.2-3.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-2.2-3.4">
-            <p id="section-2.2-3.4.1"><strong>Use.</strong> The ERP is a Mission-aware Resource Server: it enforces
-the <code>mission_resource_access</code> entry itself, work a plain
+            <p id="section-2.2-3.4.1"><strong>Use.</strong> The payments service is a Mission-aware Resource Server:
+it enforces the <code>payment_initiation</code> entry itself, work a plain
 <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> resource server does not do (<a href="#conformance" class="auto internal xref">Section 15</a>). It
 validates the token and proof of possession and permits the
-authorized read; the
-token grants no write authority. The resource request involves no
-Mission-state lookup or complete-set retrieval (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>).<a href="#section-2.2-3.4.1" class="pilcrow">¶</a></p>
+described initiation; the token authorizes no other transfer. The
+resource request involves no Mission-state lookup or complete-set
+retrieval (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>).<a href="#section-2.2-3.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-2.2-3.5">
             <p id="section-2.2-3.5.1"><strong>Stop further issuance.</strong> At 12:02 an authorized revocation makes
@@ -1967,16 +1974,18 @@ the Mission non-active. A subsequent refresh, if the AS issued a
 refresh token, is refused with the <code>invalid_grant</code> error code
 (<a href="#refusing-a-derivation" class="auto internal xref">Section 7.1.1</a>). The already-issued access token can
 still be honored on this stateless path until 12:05; revocation does
-not undo a completed read (<a href="#revocation" class="auto internal xref">Section 10.2</a>).<a href="#section-2.2-3.5.1" class="pilcrow">¶</a></p>
+not undo a completed initiation (<a href="#revocation" class="auto internal xref">Section 10.2</a>).<a href="#section-2.2-3.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-2.2-4">An ERP that instead introspects on every request stops honoring the
-token on its next request after revocation, through the composite
-<code>active</code> result (<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>).<a href="#section-2.2-4" class="pilcrow">¶</a></p>
-<p id="section-2.2-5">The later message examples use the end-to-end example's separate Q3
-reconciliation Mission (<a href="#e2e-example" class="auto internal xref">Appendix A</a>), whose approved authority
-includes invoice reads and bounded journal writes. Its identifiers and
-timeline differ from this introductory example.<a href="#section-2.2-5" class="pilcrow">¶</a></p>
+<p id="section-2.2-4">A payments service that instead introspects on every request stops
+honoring the token on its next request after revocation, through the
+composite <code>active</code> result (<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>).<a href="#section-2.2-4" class="pilcrow">¶</a></p>
+<p id="section-2.2-5">The later examples follow the same Mission, through the end-to-end
+example (<a href="#e2e-example" class="auto internal xref">Appendix A</a>). The delegation examples (<a href="#delegation" class="auto internal xref">Section 8</a>) use
+a Resource Access entry instead
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), since an
+entry whose type defines no delegation policy is non-delegable
+(<a href="#delegation-constraints" class="auto internal xref">Section 8.4</a>).<a href="#section-2.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1993,7 +2002,8 @@ appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶<
 <p id="section-3-2">All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. An
 example line too long for the page is folded with the single backslash
-strategy of <span>[<a href="#RFC8792" class="cite xref">RFC8792</a>]</span>.<a href="#section-3-2" class="pilcrow">¶</a></p>
+strategy of <span>[<a href="#RFC8792" class="cite xref">RFC8792</a>]</span>. A compact token, DPoP proof or form-encoded
+value that ends in <code>...</code> is truncated and does not verify.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <div id="terminology">
 <section id="section-3.1">
         <h3 id="name-terminology">
@@ -2166,9 +2176,10 @@ Mission-bound (<a href="#conformance" class="auto internal xref">Section 15</a>)
             <p id="section-3.1-1.42.1">An <code>authorization_details</code> entry that applies, under the entry's
 type, to a request to a resource server: where the type defines a
 <code>resource</code>, the request's operation target matches it under that type
-(<a href="#token-response" class="auto internal xref">Section 7.3</a>). <a href="#rs-requirements" class="auto internal xref">Section 9.1.1</a> governs an entry whose type
-the resource server does not implement, or whose type-defined
-enforcement it cannot complete.<a href="#section-3.1-1.42.1" class="pilcrow">¶</a></p>
+(<a href="#token-response" class="auto internal xref">Section 7.3</a>). An operation target is the resource a request
+acts on. <a href="#rs-requirements" class="auto internal xref">Section 9.1.1</a> governs an entry whose type the resource
+server does not implement, or whose type-defined enforcement it cannot
+complete.<a href="#section-3.1-1.42.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.1-1.43">Delegate:</dt>
@@ -2429,7 +2440,7 @@ the audience of a given token with the standard <code>resource</code> parameter
 <code>task_bounds</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.1-3.8">
             <p id="section-4.1-3.8.1"><span class="bcp14">OPTIONAL</span>. An array of strings. Human-readable bounds on the task
-(for example, "read only invoices from 2026"). They are disclosure
+(for example, "initiate one transfer only"). They are disclosure
 and audit context, rendered to the Approver beside the derived
 Authority Set (<a href="#direct-approval-steps" class="auto internal xref">Section 6.1.1</a>), and carry no machine
 semantics (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>); a machine-enforceable bound
@@ -2508,15 +2519,10 @@ those a companion profile the AS implements defines
 =============== NOTE: '\' line wrapping per RFC 8792 ===============
 
 {
-  "goal": "Reconcile Q3 invoices and post adjustments of at most \
-    USD 500 per journal entry.",
-  "target_resources": ["https://erp.example.com"],
-  "task_bounds": [
-    "Read only invoices issued in 2026-Q3.",
-    "Post journal entries of at most USD 500 each."
-  ],
-  "purpose": "urn:example:purpose:reconcile",
-  "expires_at": "2026-12-31T23:59:59Z"
+  "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+    with reference Ref Number Merchant, and check or cancel it.",
+  "target_resources": ["https://example.com/payments"],
+  "expires_at": "2026-11-02T13:00:00Z"
 }
 </pre><a href="#section-4.1-7" class="pilcrow">¶</a>
 </div>
@@ -2598,10 +2604,10 @@ deployment-defined type:<a href="#section-4.2.1-6" class="pilcrow">¶</a></p>
 
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments of at most \
-      USD 500 per journal entry.",
-    "target_resources": ["https://erp.example.com"],
-    "expires_at": "2026-12-31T23:59:59Z"
+    "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+      with reference Ref Number Merchant, and check or cancel it.",
+    "target_resources": ["https://example.com/payments"],
+    "expires_at": "2026-11-02T13:00:00Z"
   },
   "evidence": [
     {
@@ -2759,36 +2765,25 @@ and commits it by <code>proposal_hash</code> (<a href="#integrity-anchors" class
 approved Authority Set (<code>authority_hash</code>), so a narrowed approved
 Authority Set can be audited against the proposal that sought it.<a href="#section-4.3.2-3" class="pilcrow">¶</a></p>
 <p id="section-4.3.2-4">The following is an example of an authority proposal submitted
-alongside the example Intent of <a href="#mission-intent" class="auto internal xref">Section 4</a>:<a href="#section-4.3.2-4" class="pilcrow">¶</a></p>
+alongside the example Intent of <a href="#mission-intent" class="auto internal xref">Section 4</a>, the
+<code>payment_initiation</code> entry of <span><a href="https://rfc-editor.org/rfc/rfc9396#section-2" class="relref">Section 2</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>:<a href="#section-4.3.2-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-4.3.2-5">
 <pre>
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.*"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 </pre><a href="#section-4.3.2-5" class="pilcrow">¶</a>
 </div>
-<p id="section-4.3.2-6">Under a declared <code>narrowing</code> capability, Authority Set derivation
-narrows <code>invoices.*</code> to <code>invoices.read</code>. It keeps the proposed Q3
-issuance window and write ceiling, which the Intent's task bounds
-support, and carries the proposed <code>delegation</code> policy through
-unchanged. The result is the example Authority Set of
-<a href="#authorization-derivation" class="auto internal xref">Section 5</a>.<a href="#section-4.3.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-6">The type's fields define no subset relation, and the AS declares no
+<code>narrowing</code> capability for it, so Authority Set derivation retains the
+proposed entry unchanged (<a href="#transformation-capabilities" class="auto internal xref">Section 5.5.1</a>). The result
+is the example Authority Set of <a href="#authorization-derivation" class="auto internal xref">Section 5</a>.<a href="#section-4.3.2-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="mission-governed">
@@ -3180,32 +3175,20 @@ matches the words, not as a machine enforcement mechanism.<a href="#section-5.2-
         <h3 id="name-authority-set-example">
 <a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-authority-set-example" class="section-name selfRef">Authority Set Example</a>
         </h3>
-<p id="section-5.3-1">The following is an example of an Authority Set. The read entry is
-delegable to depth 2 and bounded to a Q3 issuance window by the
-<code>resource_issued_after</code> and <code>resource_issued_before</code> Common
-Constraints (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>);
-the write entry carries no <code>delegation</code> and so is non-delegable,
-because <code>delegation</code> is per entry:<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-1">The following is an example of an Authority Set: the proposed
+<code>payment_initiation</code> entry, retained unchanged
+(<a href="#proposal-derivation" class="auto internal xref">Section 4.3.2</a>). The type defines no delegation policy, so
+the entry is non-delegable (<a href="#delegation-constraints" class="auto internal xref">Section 8.4</a>):<a href="#section-5.3-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-5.3-2">
 <pre>
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 </pre><a href="#section-5.3-2" class="pilcrow">¶</a>
 </div>
@@ -4355,96 +4338,68 @@ surface that references a Mission from outside carries it as
 <a href="#section-6.2.6" class="section-number selfRef">6.2.6. </a><a href="#name-mission-record-example" class="section-name selfRef">Mission Record Example</a>
           </h4>
 <p id="section-6.2.6-1">The following is an example of a Mission Record:<a href="#section-6.2.6-1" class="pilcrow">¶</a></p>
-<div class="breakable lang-json sourcecode" id="section-6.2.6-2">
+<div class="lang-json sourcecode" id="section-6.2.6-2">
 <pre>
 =============== NOTE: '\' line wrapping per RFC 8792 ===============
 
 {
-  "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+  "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
   "issuer": "https://as.example.com",
   "state": "active",
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments of at most \
-      USD 500 per journal entry.",
-    "target_resources": ["https://erp.example.com"],
-    "task_bounds": [
-      "Read only invoices issued in 2026-Q3.",
-      "Post journal entries of at most USD 500 each."
-    ],
-    "purpose": "urn:example:purpose:reconcile",
-    "expires_at": "2026-12-31T23:59:59Z" },
+    "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+      with reference Ref Number Merchant, and check or cancel it.",
+    "target_resources": ["https://example.com/payments"],
+    "expires_at": "2026-11-02T13:00:00Z" },
   "proposed_authority": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.*"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "authority_set": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "authority_hash":
-    "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY",
   "intent_hash":
-    "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
+    "sha-256:Vo-xrC5HtrAUS9ZAPSWhhpLd7fr43eQsbH6AMiooa5Y",
   "proposal_hash":
-    "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
+    "sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg",
   "subject": { "iss": "https://idp.example.com",
-    "sub": "user_3p2q8mN1a0kV7tR" },
+    "sub": "user_5Tn8qW2xK7mR4vBc" },
   "approval_basis": {
     "type": "direct",
     "consent_principal": { "iss": "https://idp.example.com",
-      "sub": "user_3p2q8mN1a0kV7tR" },
-    "activation": { "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z" },
-    "activation_actor": { "iss": "https://idp.example.com",
-      "sub": "user_3p2q8mN1a0kV7tR" },
-    "adjudication": { "kind": "human" },
-    "root_commitment":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+      "sub": "user_5Tn8qW2xK7mR4vBc" }
   },
   "authority_source": { "type": "user_delegated" },
-  "client_id": "s6BhdRkqt3",
-  "policy_version": "deploy-policy:v17",
-  "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-  "created_at": "2026-11-02T08:00:00Z",
-  "expires_at": "2026-12-31T23:59:59Z"
+  "client_id": "pq7Lm2Xz9K",
+  "approval_event_id": "ape_3Hq8Lm2Vx7Rz9Tc4",
+  "created_at": "2026-11-02T12:00:00Z",
+  "expires_at": "2026-11-02T13:00:00Z"
 }
 </pre><a href="#section-6.2.6-2" class="pilcrow">¶</a>
 </div>
-<p id="section-6.2.6-3">The following example shows an excerpt, other members omitted, of a
+<p id="section-6.2.6-3">Its <code>direct</code> basis omits <code>activation</code>, <code>activation_actor</code> and
+<code>root_commitment</code>, which take their implied values
+(<a href="#record-principal-members" class="auto internal xref">Section 6.2.3</a>), and it carries no <code>adjudication</code> or
+<code>policy_version</code>.<a href="#section-6.2.6-3" class="pilcrow">¶</a></p>
+<p id="section-6.2.6-4">The following example shows an excerpt, other members omitted, of a
 Mission for an agent acting for its own workload principal: <code>subject</code>
 is the workload principal, <code>client_id</code> is the agent, and
 <code>consent_principal</code> is the administrator who approved it under the
-<code>service_owned</code> source.<a href="#section-6.2.6-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-6.2.6-4">
+<code>service_owned</code> source.<a href="#section-6.2.6-4" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-6.2.6-5">
 <pre>
 {
   "subject": { "iss": "https://login.example.com",
@@ -4462,13 +4417,13 @@ is the workload principal, <code>client_id</code> is the agent, and
       "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo"
   }
 }
-</pre><a href="#section-6.2.6-4" class="pilcrow">¶</a>
+</pre><a href="#section-6.2.6-5" class="pilcrow">¶</a>
 </div>
-<p id="section-6.2.6-5">The first example's anchors are computed over its displayed <code>intent</code>,
+<p id="section-6.2.6-6">The first example's anchors are computed over its displayed <code>intent</code>,
 <code>proposed_authority</code> and <code>authority_set</code> (<a href="#integrity-anchors" class="auto internal xref">Section 6.3.1</a>); the
 excerpt's <code>root_commitment</code> is illustrative. A companion that extends
 this example either reproduces the recorded objects byte-exactly or
-states that its example diverges and its anchors differ.<a href="#section-6.2.6-5" class="pilcrow">¶</a></p>
+states that its example diverges and its anchors differ.<a href="#section-6.2.6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -5203,13 +5158,13 @@ narrows grants the narrower authority it states, and a client need
 not reject a grant narrower than its proposal. The <code>mission_id</code> and
 <code>mission_expires_at</code> response parameters carry the Mission reference
 and expiry beside it (<a href="#mission-response-parameters" class="auto internal xref">Section 7.3.1</a>).<a href="#section-7.3-6" class="pilcrow">¶</a></p>
-<p id="section-7.3-7">The following is an example of a refresh request that narrows the
-canonical ERP Mission (the worked example of <a href="#mission-record" class="auto internal xref">Section 6.2</a>) to a
-read-only token with the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> parameter and the
-<code>authorization_details</code> parameter (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-6" class="relref">Section 6</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). The ERP
-consumes <code>authorization_details</code>, so a resource <code>scope</code> for it would
-be refused (<a href="#scope-projection" class="auto internal xref">Section 7.7</a>). Extra line breaks are for display
-purposes only:<a href="#section-7.3-7" class="pilcrow">¶</a></p>
+<p id="section-7.3-7">The following is an example of a refresh request for the payment
+Mission of <a href="#worked-example" class="auto internal xref">Section 6.2.6</a>, with the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code>
+parameter and the <code>authorization_details</code> parameter
+(<span><a href="https://rfc-editor.org/rfc/rfc9396#section-6" class="relref">Section 6</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). The payments service consumes
+<code>authorization_details</code>, so a resource <code>scope</code> for it would be refused
+(<a href="#scope-projection" class="auto internal xref">Section 7.7</a>). Extra line breaks are for display purposes
+only:<a href="#section-7.3-7" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-7.3-8">
 <pre>
 POST /token HTTP/1.1
@@ -5219,56 +5174,47 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 grant_type=refresh_token
 &amp;refresh_token=rt_4mN8qV2xP7sL1tY9zB3k
-&amp;resource=https%3A%2F%2Ferp.example.com
-&amp;authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+&amp;resource=https%3A%2F%2Fexample.com%2Fpayments
+&amp;authorization_details=%5B%7B%22type%22%3A%22payment_initiation%22...
 </pre><a href="#section-7.3-8" class="pilcrow">¶</a>
 </div>
 <p id="section-7.3-9">The <code>authorization_details</code> value, before form encoding, requests the
-Mission's read entry alone:<a href="#section-7.3-9" class="pilcrow">¶</a></p>
+Mission's entry unchanged; an entry equal to its reference entry is a
+subset of it for every type (<a href="#subset" class="auto internal xref">Section 5.4</a>):<a href="#section-7.3-9" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7.3-10">
 <pre>
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 </pre><a href="#section-7.3-10" class="pilcrow">¶</a>
 </div>
 <p id="section-7.3-11">The issuance is a derivation, gated on the Mission being <code>active</code>
 (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>). The following example shows the token response.
 It carries no <code>scope</code> member because none was requested or granted, and
-it echoes the narrowed grant and the <code>mission_id</code> reference
-(<a href="#mission-response-parameters" class="auto internal xref">Section 7.3.1</a>). The emitted entry is a subset
-(<a href="#subset" class="auto internal xref">Section 5.4</a>) of the Mission's read entry, its <code>constraints</code> carried
-intact:<a href="#section-7.3-11" class="pilcrow">¶</a></p>
+it echoes the granted entry and the <code>mission_id</code> reference
+(<a href="#mission-response-parameters" class="auto internal xref">Section 7.3.1</a>):<a href="#section-7.3-11" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7.3-12">
 <pre>
 {
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "DPoP",
   "expires_in": 300,
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "mission_expires_at": "2026-12-31T23:59:59Z",
+  "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
+  "mission_expires_at": "2026-11-02T13:00:00Z",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ]
 }
 </pre><a href="#section-7.3-12" class="pilcrow">¶</a>
@@ -5668,34 +5614,24 @@ members above remain authoritative.<a href="#section-7.8-8" class="pilcrow">¶</
 <pre>
 {
   "iss": "https://as.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "aud": "https://erp.example.com",
-  "client_id": "s6BhdRkqt3",
-  "iat": 1793606405,
-  "exp": 1793606705,
+  "sub": "user_5Tn8qW2xK7mR4vBc",
+  "aud": "https://example.com/payments",
+  "client_id": "pq7Lm2Xz9K",
+  "iat": 1793620805,
+  "exp": 1793621105,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com"
   }
 }
@@ -6107,19 +6043,19 @@ support presenter attribution.<a href="#section-8.3-4.7.1" class="pilcrow">¶</a
         </h3>
 <p id="section-8.4-1">What may be delegated, how far, and to whom is governed per Authority
 Set entry by a type-defined delegation policy (<a href="#other-types" class="auto internal xref">Section 5.5</a>). For
-<code>mission_resource_access</code>, the policy is the <code>delegation</code> member,
-whose concrete depth and matcher conditions the Mission Resource
-Access Profile defines
+example, the <code>mission_resource_access</code> policy is the entry's
+<code>delegation</code> member, whose depth and delegate conditions the Mission
+Resource Access Profile defines
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <p id="section-8.4-2">Because the policy lives in the entry, <code>authority_hash</code> commits it
 with the rest of the Authority Set.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
 <p id="section-8.4-3"><strong>Delegation depth.</strong> The delegation depth of a token is the number
 of delegations between the approved agent and the token's current
 actor: the agent's own non-delegated token is depth 0, the first
-delegate is depth 1, and each further delegate adds 1. The depth
-checked against <code>max_depth</code> is that of the token being issued,
-computed after appending the new outermost actor, not the depth of
-the delegating token.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+delegate is depth 1, and each further delegate adds 1. The depth a
+policy's depth limit is checked against is that of the token being
+issued, computed after appending the new outermost actor, not the
+depth of the delegating token.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
 <p id="section-8.4-4"><strong>Depth accounting.</strong> The AS <span class="bcp14">MUST</span> establish delegation depth from
 accounting it maintains for the tokens it issues under the Mission
 and associates with the credential it validates (for example, recorded
@@ -6158,7 +6094,7 @@ the default.<a href="#section-8.4-10.1.1" class="pilcrow">¶</a></p>
           <li id="section-8.4-10.2">
             <p id="section-8.4-10.2.1">That policy, evaluated at depth <code>d</code>, permits this delegate. The AS
 applies the policy's own eligibility test at every exchange; where
-the policy leaves a matcher unstated, the AS's
+the policy leaves an eligibility condition unstated, the AS's
 delegation-authorization policy decides, and absence is never a
 blanket grant.<a href="#section-8.4-10.2.1" class="pilcrow">¶</a></p>
 </li>
@@ -6183,10 +6119,14 @@ already-narrowed <code>authorization_details</code> and enforces those as usual
         <h3 id="name-delegated-token-example">
 <a href="#section-8.5" class="section-number selfRef">8.5. </a><a href="#name-delegated-token-example" class="section-name selfRef">Delegated Token Example</a>
         </h3>
-<p id="section-8.5-1">In this example, the Mission's Authority Set has two entries on the ERP:
-<code>invoices.read</code>, delegable to <code>ai_agent</code> actors through depth 2; and
-<code>journal-entries.write</code>, which carries no <code>delegation</code> member and is
-therefore non-delegable. The approved agent <code>s6BhdRkqt3</code> designates
+<p id="section-8.5-1">The payment entry of the other examples defines no delegation policy
+and is non-delegable, so this example uses a Mission whose entries
+have the <code>mission_resource_access</code> type
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Its
+Authority Set has two entries on an ERP: <code>invoices.read</code>, delegable to
+<code>ai_agent</code> actors through depth 2; and <code>journal-entries.write</code>, which
+carries no <code>delegation</code> member and is therefore non-delegable. The
+approved agent <code>s6BhdRkqt3</code> designates
 sub-agent <code>tool-runner-7</code>, an <code>ai_agent</code>, which redeems the
 designation at depth 1. The read entry
 is permitted (depth 1 &lt;= 2, <code>ai_agent</code> allowed) and the write entry
@@ -6850,8 +6790,8 @@ cacheable assertion.<a href="#section-9.2.4-8" class="pilcrow">¶</a></p>
 <a href="#section-9.2.5" class="section-number selfRef">9.2.5. </a><a href="#name-introspection-response-exam" class="section-name selfRef">Introspection Response Examples</a>
           </h4>
 <p id="section-9.2.5-1">The following is an example of an introspection response for the
-canonical ERP token (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>) while the Mission is
-<code>active</code>. The issuer AS returns the standard <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> members and
+payment token of <a href="#mission-claim" class="auto internal xref">Section 7.8</a> while the Mission is <code>active</code>. The
+issuer AS returns the standard <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> members and
 the <code>mission</code> member to a caller holding the deployment's
 audit-and-correlation disclosure privilege, so <code>authority_hash</code> and
 <code>proposal_hash</code> appear; the default audience-filtered enforcement
@@ -6861,57 +6801,46 @@ projection omits them.<a href="#section-9.2.5-1" class="pilcrow">¶</a></p>
 {
   "active": true,
   "iss": "https://as.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
-  "aud": "https://erp.example.com",
-  "exp": 1793606705,
+  "sub": "user_5Tn8qW2xK7mR4vBc",
+  "client_id": "pq7Lm2Xz9K",
+  "aud": "https://example.com/payments",
+  "exp": 1793621105,
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+      "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY",
     "proposal_hash":
-      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
+      "sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg",
     "state": "active"
   }
 }
 </pre><a href="#section-9.2.5-2" class="pilcrow">¶</a>
 </div>
-<p id="section-9.2.5-3">The following is an example of the response, after the Mission is
-revoked, for an unexpired token the AS issued on refresh before the
-revocation (<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>):<a href="#section-9.2.5-3" class="pilcrow">¶</a></p>
+<p id="section-9.2.5-3">The following is an example of the response for the same token, still
+unexpired, after the Mission is revoked (<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>):<a href="#section-9.2.5-3" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-9.2.5-4">
 <pre>
 {
   "active": false,
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+      "sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
-      "terminated_at": "2026-11-02T08:53:20Z"
+      "terminated_at": "2026-11-02T12:02:00Z"
     }
   }
 }
@@ -7458,10 +7387,11 @@ client's workflows unrelated to the Mission
 (<a href="#downgrade-by-omission" class="auto internal xref">Section 17.1.2</a>).<a href="#section-12-4" class="pilcrow">¶</a></p>
 <p id="section-12-5">An AS that advertises support for this document <span class="bcp14">MUST</span> include at least
 one AS-supported type in its <code>authorization_details_types_supported</code>
-metadata (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). Where <code>mission_resource_access</code> is among them,
+metadata (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). Where a type among them has a defining
+specification, that specification, not out-of-band documentation, is
+the type's normative definition; for <code>mission_resource_access</code>, it is
 the Mission Resource Access Profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), not
-out-of-band documentation, is that type's normative definition.<a href="#section-12-5" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-12-5" class="pilcrow">¶</a></p>
 <p id="section-12-6">An AS that advertises <code>mission_bound_authorization_supported: true</code>
         <span class="bcp14">MUST</span> also publish <code>pushed_authorization_request_endpoint</code>
 (<span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>), since the authorization-code path accepts a Mission
@@ -8428,12 +8358,13 @@ which issuance-time bounds alone do not provide:<a href="#section-17.3.1-4" clas
               <p id="section-17.3.1-5.3.1">a bound the receiving resource server cannot enforce.<a href="#section-17.3.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-17.3.1-6">Where the resource server or a composing runtime layer matches an
-operation target against a <code>prefix</code> entry, the Resource Boundary
+<p id="section-17.3.1-6">Where the resource server and a composing runtime layer both match an
+operation target against an entry, a target the two normalize
+differently can be permitted by one and refused by the other. The
+entry's type defines the single normalization for that match; for a
+<code>mission_resource_access</code> <code>prefix</code> entry, the Resource Boundary
 Canonicalization analysis of the Mission Resource Access Profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) gives the
-single-normalization rule for that match, for a deployment that
-supports that type.<a href="#section-17.3.1-6" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) gives it.<a href="#section-17.3.1-6" class="pilcrow">¶</a></p>
 <p id="section-17.3.1-7">Short-lived access tokens are this document's issuance-only
 recommendation: with no runtime layer, token lifetime is the
 revocation-latency bound at unmodified resource servers. Where a runtime
@@ -8520,11 +8451,11 @@ chain, a compromised actor can act only within its narrowed
 following limit this exposure:<a href="#section-17.4.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-17.4.2-2.1">
-              <p id="section-17.4.2-2.1.1">The per-entry delegation constraints (delegability, <code>max_depth</code>, and
-<code>allowed_delegates</code>, <a href="#delegation-constraints" class="auto internal xref">Section 8.4</a>) bound it at approval
-time. The <code>max_depth</code> constraint bounds the length of a delegation
-chain, not its breadth: only <code>allowed_delegates</code> bounds fan-out to
-many distinct depth-1 delegates.<a href="#section-17.4.2-2.1.1" class="pilcrow">¶</a></p>
+              <p id="section-17.4.2-2.1.1">The per-entry delegation policies (<a href="#delegation-constraints" class="auto internal xref">Section 8.4</a>) bound
+it at approval time. A depth limit bounds the length of a delegation
+chain, not its breadth: only a delegate-eligibility condition bounds
+fan-out to many distinct depth-1 delegates (for
+<code>mission_resource_access</code>, <code>max_depth</code> and <code>allowed_delegates</code>).<a href="#section-17.4.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-17.4.2-2.2">
               <p id="section-17.4.2-2.2.1">Binding each delegated token to the delegate's own key
@@ -9627,18 +9558,17 @@ member's registration in its own IANA considerations.<a href="#section-20.9-9" c
 <p id="appendix-A-1">This appendix follows one Mission in a single trust domain through
 Mission creation, token issuance, resource server enforcement, a
 refusal, and revocation. It is illustrative and adds no requirements.
-The OAuth steps follow
-this document. Identifiers are illustrative; the hash
-values are computed over the displayed objects
+The OAuth steps follow this document. Identifiers are illustrative;
+the hash values are computed over the displayed objects
 (<a href="#integrity-anchors" class="auto internal xref">Section 6.3.1</a>).<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-2">The OAuth flow of Stages 1 to 4, and the revocation in Stage 5, use
-only this document and the <code>mission_resource_access</code> type
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>): the
-baseline issuance path, with enforcement from the token alone,
+only this document and the illustrative <code>payment_initiation</code> type of
+<span><a href="https://rfc-editor.org/rfc/rfc9396#section-2" class="relref">Section 2</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>, under the assumptions of <a href="#first-mission" class="auto internal xref">Section 2.2</a>:
+the baseline issuance path, with enforcement from the token alone,
 bounded by token lifetime.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
-<p id="appendix-A-3">Scenario: agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>
-(<code>user_3p2q8mN1a0kV7tR</code>), reconciles Q3 invoices in the home ERP
-under Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>.<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+<p id="appendix-A-3">Scenario: agent <code>pq7Lm2Xz9K</code>, acting for <code>alice</code>
+(<code>user_5Tn8qW2xK7mR4vBc</code>), initiates one credit transfer at the
+payments service under Mission <code>msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u</code>.<a href="#appendix-A-3" class="pilcrow">¶</a></p>
 <div id="stage-1-mission-creation">
 <section id="appendix-A.1">
         <h3 id="name-stage-1-mission-creation">
@@ -9653,15 +9583,10 @@ no evidence:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
 
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments of at most \
-      USD 500 per journal entry.",
-    "target_resources": ["https://erp.example.com"],
-    "task_bounds": [
-      "Read only invoices issued in 2026-Q3.",
-      "Post journal entries of at most USD 500 each."
-    ],
-    "purpose": "urn:example:purpose:reconcile",
-    "expires_at": "2026-12-31T23:59:59Z"
+    "goal": "Initiate a credit transfer of EUR 123.50 to Merchant A \
+      with reference Ref Number Merchant, and check or cancel it.",
+    "target_resources": ["https://example.com/payments"],
+    "expires_at": "2026-11-02T13:00:00Z"
   }
 }
 </pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
@@ -9671,23 +9596,13 @@ no evidence:<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-A.1-4">
 <pre>
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.*"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 </pre><a href="#appendix-A.1-4" class="pilcrow">¶</a>
 </div>
@@ -9701,12 +9616,12 @@ Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
 
 response_type=code
-&amp;client_id=s6BhdRkqt3
+&amp;client_id=pq7Lm2Xz9K
 &amp;redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
 &amp;code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
 &amp;code_challenge_method=S256
-&amp;mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Reconcile...
-&amp;authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+&amp;mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Initiate...
+&amp;authorization_details=%5B%7B%22type%22%3A%22payment_initiation%22...
 </pre><a href="#appendix-A.1-6" class="pilcrow">¶</a>
 </div>
 <p id="appendix-A.1-7">The AS returns a <code>request_uri</code>:<a href="#appendix-A.1-7" class="pilcrow">¶</a></p>
@@ -9726,47 +9641,39 @@ Cache-Control: no-store
 endpoint with it:<a href="#appendix-A.1-9" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-A.1-10">
 <pre>
-GET /authorize?client_id=s6BhdRkqt3&amp;request_uri=urn%3Aietf%3Aparams
+GET /authorize?client_id=pq7Lm2Xz9K&amp;request_uri=urn%3Aietf%3Aparams
   %3Aoauth%3Arequest_uri%3A6esc_11ACC5bwc HTTP/1.1
 Host: as.example.com
 </pre><a href="#appendix-A.1-10" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.1-11">The AS (<code>as.example.com</code>) validates both, derives this Authority Set
-under a declared <code>narrowing</code> capability (each entry a same-type subset
-of a proposed entry, <a href="#proposal-derivation" class="auto internal xref">Section 4.3.2</a>,
+<p id="appendix-A.1-11">The AS (<code>as.example.com</code>) validates both. It declares no <code>narrowing</code>
+capability for the type, so it retains the proposed entry unchanged as
+the Authority Set (<a href="#proposal-derivation" class="auto internal xref">Section 4.3.2</a>,
 <a href="#transformation-capabilities" class="auto internal xref">Section 5.5.1</a>), and renders it for <code>alice</code>'s
 consent:<a href="#appendix-A.1-11" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-A.1-12">
 <pre>
 [
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read"],
-    "constraints": {
-      "resource_issued_after": "2026-07-01T00:00:00Z",
-      "resource_issued_before": "2026-09-30T23:59:59Z"
-    },
-    "delegation": {
-      "max_depth": 2,
-      "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-    } },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" }
-    } }
+  { "type": "payment_initiation",
+    "actions": ["initiate", "status", "cancel"],
+    "locations": ["https://example.com/payments"],
+    "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+    "creditorName": "Merchant A",
+    "creditorAccount": { "iban": "DE02100100109307118603" },
+    "remittanceInformationUnstructured": "Ref Number Merchant" }
 ]
 </pre><a href="#appendix-A.1-12" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.1-13">The user <code>alice</code> approves at 08:00:00 UTC on 2026-11-02, and the AS
-records Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code> in the <code>active</code>
+<p id="appendix-A.1-13">The user <code>alice</code> approves at 12:00:00 UTC on 2026-11-02, and the AS
+records Mission <code>msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u</code> in the <code>active</code>
 state with <code>authority_hash</code>
-          <code>sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM</code>,
+          <code>sha-256:G5P5feAebBxFgyxOHNoSZwB4DfCqufYXQXEZFTxvgQY</code>,
 <code>intent_hash</code>
-          <code>sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0</code>, and
+          <code>sha-256:Vo-xrC5HtrAUS9ZAPSWhhpLd7fr43eQsbH6AMiooa5Y</code>, and
 <code>proposal_hash</code>
-          <code>sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo</code>.<a href="#appendix-A.1-13" class="pilcrow">¶</a></p>
+          <code>sha-256:jd1SqDhGAl1PQn3rnJFPHyaUG_Wfy8KusEBKh8s1lNg</code>. The proposal
+and the Authority Set are the same array, yet their anchors differ:
+<code>typ</code> separates them (<a href="#integrity-anchors" class="auto internal xref">Section 6.3.1</a>).<a href="#appendix-A.1-13" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-2-mission-bound-token-issuance">
@@ -9774,7 +9681,7 @@ state with <code>authority_hash</code>
         <h3 id="name-stage-2-mission-bound-token">
 <a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-stage-2-mission-bound-token" class="section-name selfRef">Stage 2: Mission-Bound Token Issuance</a>
         </h3>
-<p id="appendix-A.2-1">At 08:00:05 the agent redeems the authorization code with its PKCE
+<p id="appendix-A.2-1">At 12:00:05 the agent redeems the authorization code with its PKCE
 verifier and a DPoP proof (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>):<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-A.2-2">
 <pre>
@@ -9792,8 +9699,8 @@ grant_type=authorization_code
 <p id="appendix-A.2-3">The AS resolves the Mission from the grant
 (<a href="#grant-binding-resolution" class="auto internal xref">Section 6.4.1</a>), checks that it is <code>active</code>
 (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>), and issues a Mission-bound access token for the
-ERP and a refresh token. The token response carries the granted
-<code>authorization_details</code> echo (<a href="#token-response" class="auto internal xref">Section 7.3</a>) and the
+payments service and a refresh token. The token response carries the
+granted <code>authorization_details</code> echo (<a href="#token-response" class="auto internal xref">Section 7.3</a>) and the
 <code>mission_id</code> and <code>mission_expires_at</code> response parameters
 (<a href="#mission-response-parameters" class="auto internal xref">Section 7.3.1</a>):<a href="#appendix-A.2-3" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-A.2-4">
@@ -9803,26 +9710,16 @@ ERP and a refresh token. The token response carries the granted
   "token_type": "DPoP",
   "expires_in": 300,
   "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
-  "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
-  "mission_expires_at": "2026-12-31T23:59:59Z",
+  "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
+  "mission_expires_at": "2026-11-02T13:00:00Z",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ]
 }
 </pre><a href="#appendix-A.2-4" class="pilcrow">¶</a>
@@ -9832,47 +9729,36 @@ ERP and a refresh token. The token response carries the granted
 <pre>
 {
   "iss": "https://as.example.com",
-  "sub": "user_3p2q8mN1a0kV7tR",
-  "aud": "https://erp.example.com",
-  "client_id": "s6BhdRkqt3",
-  "iat": 1793606405,
-  "exp": 1793606705,
+  "sub": "user_5Tn8qW2xK7mR4vBc",
+  "aud": "https://example.com/payments",
+  "client_id": "pq7Lm2Xz9K",
+  "iat": 1793620805,
+  "exp": 1793621105,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["invoices.read"],
-      "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
-      } },
-    { "type": "mission_resource_access",
-      "resource": "https://erp.example.com",
-      "actions": ["journal-entries.write"],
-      "constraints": {
-        "max_amount": { "amount": "500.00", "currency": "USD" }
-      } }
+    { "type": "payment_initiation",
+      "actions": ["initiate", "status", "cancel"],
+      "locations": ["https://example.com/payments"],
+      "instructedAmount": { "currency": "EUR", "amount": "123.50" },
+      "creditorName": "Merchant A",
+      "creditorAccount": { "iban": "DE02100100109307118603" },
+      "remittanceInformationUnstructured": "Ref Number Merchant" }
   ],
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_K9iLTMIDFUiBucaPegc_B4lYKVIK6v6u",
     "issuer": "https://as.example.com"
   }
 }
 </pre><a href="#appendix-A.2-6" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.2-7">The token's <code>authorization_details</code> claim carries the same two entries
-as the token response's echo. The token carries everything enforcement
+<p id="appendix-A.2-7">The token's <code>authorization_details</code> claim carries the same entry as
+the token response's echo. The token carries everything enforcement
 needs: the audience, the sender constraint (the <code>cnf</code> claim), the
-authority with its constraints, and the <code>mission</code> claim naming the
-Mission it was derived under. Its 300-second lifetime ends well
-before the Mission's <code>expires_at</code>. Revoking the Mission stops further
-derivation, but this token remains valid until its own <code>exp</code>
-(<a href="#revocation" class="auto internal xref">Section 10.2</a>).<a href="#appendix-A.2-7" class="pilcrow">¶</a></p>
+authority, and the <code>mission</code> claim naming the Mission it was derived
+under. Its 300-second lifetime ends well before the Mission's
+<code>expires_at</code>. Revoking the Mission stops further derivation, but this
+token remains valid until its own <code>exp</code> (<a href="#revocation" class="auto internal xref">Section 10.2</a>).<a href="#appendix-A.2-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-3-the-resource-server-enforces">
@@ -9880,31 +9766,27 @@ derivation, but this token remains valid until its own <code>exp</code>
         <h3 id="name-stage-3-resource-server-enf">
 <a href="#appendix-A.3" class="section-number selfRef">A.3. </a><a href="#name-stage-3-resource-server-enf" class="section-name selfRef">Stage 3: Resource Server Enforcement</a>
         </h3>
-<p id="appendix-A.3-1">The agent calls the ERP resource server (<code>erp.example.com</code>) with that
-token. The resource server:<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.3-1">The agent asks the payments service (<code>https://example.com/payments</code>)
+to initiate the transfer with that token. The resource server:<a href="#appendix-A.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A.3-2.1">
             <p id="appendix-A.3-2.1.1">validates the JWT and verifies the request's DPoP proof against the
 key identified by the token's <code>cnf</code> claim;<a href="#appendix-A.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.3-2.2">
-            <p id="appendix-A.3-2.2.1">enforces the <code>authorization_details</code> entries whose <code>resource</code>
-matches the operation target, <code>https://erp.example.com</code>,
-permitting <code>invoices.read</code> within the Q3 issuance window and
-<code>journal-entries.write</code> up to the <code>max_amount</code> ceiling of 500.00
-USD (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>); and<a href="#appendix-A.3-2.2.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.3-2.2.1">enforces the <code>payment_initiation</code> entry whose <code>locations</code> include
+the operation target, <code>https://example.com/payments</code>, permitting the
+initiation of the described transfer (EUR 123.50 to Merchant A, with
+its remittance text) and the checking or cancelling of that transfer
+(<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>); and<a href="#appendix-A.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-A.3-2.3">
             <p id="appendix-A.3-2.3.1">treats the <code>mission</code> claim as audit and correlation context, making
 no call to the AS.<a href="#appendix-A.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="appendix-A.3-3">With enforcement from the token alone, the consequential
-<code>journal-entries.write</code> is bounded only by token lifetime and the
-carried constraints.<a href="#appendix-A.3-3" class="pilcrow">¶</a></p>
-<p id="appendix-A.3-4">At 08:14:00 the agent refreshes for a write-only token, narrowed to
-the <code>journal-entries.write</code> entry, as the refresh example in
-<a href="#token-response" class="auto internal xref">Section 7.3</a> narrows to the read entry.<a href="#appendix-A.3-4" class="pilcrow">¶</a></p>
+<p id="appendix-A.3-3">With enforcement from the token alone, the consequential initiation is
+bounded only by token lifetime and the carried entry.<a href="#appendix-A.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stage-4-the-resource-server-refuses">
@@ -9912,13 +9794,13 @@ the <code>journal-entries.write</code> entry, as the refresh example in
         <h3 id="name-stage-4-resource-server-ref">
 <a href="#appendix-A.4" class="section-number selfRef">A.4. </a><a href="#name-stage-4-resource-server-ref" class="section-name selfRef">Stage 4: Resource Server Refusal</a>
         </h3>
-<p id="appendix-A.4-1">The agent then asks the ERP to post a 780.00 USD adjustment with the
-same write-only token. The amount exceeds the entry's <code>max_amount</code> of
-500.00 USD, so the ERP refuses it from the token alone as outside the
-carried authority (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>). This deployment accepts the
-agent learning that more authority needs a new approval or an
-expansion (<a href="#denial-disclosure" class="auto internal xref">Section 17.3.2</a>), so the challenge carries
-<code>mission_denial</code>:<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.4-1">The agent then asks the payments service to initiate a transfer of EUR
+1,235.00 to Merchant A with the same token. The amount differs from
+the entry's <code>instructedAmount</code>, so the payments service refuses it
+from the token alone as outside the carried authority
+(<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>). This deployment accepts the agent learning that
+more authority needs a new approval or an expansion
+(<a href="#denial-disclosure" class="auto internal xref">Section 17.3.2</a>), so the challenge carries <code>mission_denial</code>:<a href="#appendix-A.4-1" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="appendix-A.4-2">
 <pre>
 HTTP/1.1 403 Forbidden
@@ -9935,13 +9817,11 @@ derives is a subset of the same Authority Set (<a href="#subset" class="auto int
         <h3 id="name-stage-5-revocation">
 <a href="#appendix-A.5" class="section-number selfRef">A.5. </a><a href="#name-stage-5-revocation" class="section-name selfRef">Stage 5: Revocation</a>
         </h3>
-<p id="appendix-A.5-1">At 08:50:00 the agent refreshes for the read-only token of the
-refresh example in <a href="#token-response" class="auto internal xref">Section 7.3</a>, which expires at 08:55:00.<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
-<p id="appendix-A.5-2">At 08:53:20 the Mission is revoked, and the AS commits <code>terminated</code>
+<p id="appendix-A.5-1">At 12:02:00 the Mission is revoked, and the AS commits <code>terminated</code>
 with reason <code>revoked</code>. Revocation stops the Mission at the issuer
-(<a href="#revocation" class="auto internal xref">Section 10.2</a>). A later refresh is refused with the <code>mission_error</code>
-diagnostic (<a href="#mission-error-member" class="auto internal xref">Section 7.1.2</a>):<a href="#appendix-A.5-2" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="appendix-A.5-3">
+(<a href="#revocation" class="auto internal xref">Section 10.2</a>). The agent's refresh at 12:03:00 is refused with the
+<code>mission_error</code> diagnostic (<a href="#mission-error-member" class="auto internal xref">Section 7.1.2</a>):<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-A.5-2">
 <pre>
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
@@ -9951,15 +9831,15 @@ Cache-Control: no-store
   "error": "invalid_grant",
   "mission_error": "revoked"
 }
-</pre><a href="#appendix-A.5-3" class="pilcrow">¶</a>
+</pre><a href="#appendix-A.5-2" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.5-4">Introspection reports the 08:50:00 token inactive with the Mission's
+<p id="appendix-A.5-3">Introspection reports the access token inactive with the Mission's
 termination, although the token has not expired (<a href="#examples" class="auto internal xref">Section 9.2.5</a>,
-<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>).<a href="#appendix-A.5-4" class="pilcrow">¶</a></p>
-<p id="appendix-A.5-5">Revocation does not recall the token already issued. The ERP,
-enforcing from the token alone, can honor the read-only token until
-its <code>exp</code> at 08:55:00. A resource server that introspects at the
-issuer on every request stops honoring it on its next request.<a href="#appendix-A.5-5" class="pilcrow">¶</a></p>
+<a href="#composite-active" class="auto internal xref">Section 9.2.2</a>).<a href="#appendix-A.5-3" class="pilcrow">¶</a></p>
+<p id="appendix-A.5-4">Revocation does not recall the token already issued. The payments
+service, enforcing from the token alone, can honor it until its <code>exp</code>
+at 12:05:05. A resource server that introspects at the issuer on every
+request stops honoring it on its next request.<a href="#appendix-A.5-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -10472,62 +10352,77 @@ members the token's <code>mission</code> claim carries, and <code>authority_hash
 only as carried; <code>state</code>, <code>termination</code>, and the Mission Record
 members stay with the issuer (#2016).<a href="#appendix-E-4.2.1" class="pilcrow">¶</a></p>
 </li>
-      </ul>
-<p id="appendix-E-5">-02<a href="#appendix-E-5" class="pilcrow">¶</a></p>
-<p id="appendix-E-6"><strong>Behavior changes</strong><a href="#appendix-E-6" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="appendix-E-7.1">
-          <p id="appendix-E-7.1.1">The legacy Mission-state reading is removed: <code>revoked</code>, <code>expired</code>,
-<code>completed</code>, <code>superseded</code>, and <code>cascaded</code> are no longer read as a
-<code>state</code> (#1504).<a href="#appendix-E-7.1.1" class="pilcrow">¶</a></p>
+        <li class="compact" id="appendix-E-4.3">
+          <p id="appendix-E-4.3.1">The normative-definition rule of Authorization Server Metadata
+covers every advertised type that has a defining specification, not
+only <code>mission_resource_access</code> (#2009).<a href="#appendix-E-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-7.2">
-          <p id="appendix-E-7.2.1">An intentional normative relaxation: the -01 standing-consent
+      </ul>
+<p id="appendix-E-5"><strong>Examples</strong><a href="#appendix-E-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-E-6.1">
+          <p id="appendix-E-6.1.1">The examples follow one illustrative Mission whose only authority is
+the <code>payment_initiation</code> example of RFC 9396, retained unchanged
+(#2009). The delegation examples keep a Resource Access entry, since
+delegation needs a type-defined delegation policy. Truncated tokens
+and proofs are marked as not verifying.<a href="#appendix-E-6.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="appendix-E-7">-02<a href="#appendix-E-7" class="pilcrow">¶</a></p>
+<p id="appendix-E-8"><strong>Behavior changes</strong><a href="#appendix-E-8" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-E-9.1">
+          <p id="appendix-E-9.1.1">The legacy Mission-state reading is removed: <code>revoked</code>, <code>expired</code>,
+<code>completed</code>, <code>superseded</code>, and <code>cascaded</code> are no longer read as a
+<code>state</code> (#1504).<a href="#appendix-E-9.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="compact" id="appendix-E-9.2">
+          <p id="appendix-E-9.2.1">An intentional normative relaxation: the -01 standing-consent
 requirements (<code>approved_at</code>, <code>policy</code> adjudication, Activation Policy
 Commitment, Standing-Consent Recency) move to Approval Governance,
 which the profiles defining standing-consent bases adopt;
 Mission-Creating Paths keeps the basis type, activation semantics
-and recorded activation members (#1915, #1967).<a href="#appendix-E-7.2.1" class="pilcrow">¶</a></p>
+and recorded activation members (#1915, #1967).<a href="#appendix-E-9.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-7.3">
-          <p id="appendix-E-7.3.1">Mission Record: its required members are named, <code>policy_version</code>
+        <li class="compact" id="appendix-E-9.3">
+          <p id="appendix-E-9.3.1">Mission Record: its required members are named, <code>policy_version</code>
 and the <code>direct</code> activation members become optional, and an omitted
-integrity anchor is implied from the retained record (#1912, #1917).<a href="#appendix-E-7.3.1" class="pilcrow">¶</a></p>
+integrity anchor is implied from the retained record (#1912, #1917).<a href="#appendix-E-9.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-7.4">
-          <p id="appendix-E-7.4.1">Approval: the AS allocates <code>approval_event_id</code> (#1915); a commit past
+        <li class="compact" id="appendix-E-9.4">
+          <p id="appendix-E-9.4.1">Approval: the AS allocates <code>approval_event_id</code> (#1915); a commit past
 the effective expiry is refused with <code>access_denied</code> (#1721); the
-rendering attributes client text to the client (#1532).<a href="#appendix-E-7.4.1" class="pilcrow">¶</a></p>
+rendering attributes client text to the client (#1532).<a href="#appendix-E-9.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-7.5">
-          <p id="appendix-E-7.5.1">Issuance: no token outside a Mission for a Mission-governed resource,
+        <li class="compact" id="appendix-E-9.5">
+          <p id="appendix-E-9.5.1">Issuance: no token outside a Mission for a Mission-governed resource,
 and only entries whose approved audience includes the token's, each
 refused with <code>invalid_target</code> (#1503); transformation-capability
 precedence and validation (#1377, #1720); <code>mission_id</code> and
 <code>mission_expires_at</code> on a new Mission's first response and on a
-delegated exchange response (#1719).<a href="#appendix-E-7.5.1" class="pilcrow">¶</a></p>
+delegated exchange response (#1719).<a href="#appendix-E-9.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-7.6">
-          <p id="appendix-E-7.6.1">Delegation: client authentication by a method the AS relies on,
+        <li class="compact" id="appendix-E-9.6">
+          <p id="appendix-E-9.6.1">Delegation: client authentication by a method the AS relies on,
 refusing others with <code>invalid_client</code> and an <code>actor_token</code> from an
 authenticated client with <code>invalid_request</code> (#1718); delegated tokens
 only to resource servers that process <code>act</code> (#1503); unsupported
-self-exchange refused (#1892).<a href="#appendix-E-7.6.1" class="pilcrow">¶</a></p>
+self-exchange refused (#1892).<a href="#appendix-E-9.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-7.7">
-          <p id="appendix-E-7.7.1">Token consumption: the <code>mission</code> claim is reserved to Mission-binding
+        <li class="compact" id="appendix-E-9.7">
+          <p id="appendix-E-9.7.1">Token consumption: the <code>mission</code> claim is reserved to Mission-binding
 profiles; a JWT access token follows RFC 9068 unless a profile
 defines its format (#1760); an unenforceable entry is refused only
-with <code>insufficient_scope</code> or the RAR remediation challenge (#1721).<a href="#appendix-E-7.7.1" class="pilcrow">¶</a></p>
+with <code>insufficient_scope</code> or the RAR remediation challenge (#1721).<a href="#appendix-E-9.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-7.8">
-          <p id="appendix-E-7.8.1">Revocation: by <code>mission_id</code>, from a party the deployment's policy
+        <li class="compact" id="appendix-E-9.8">
+          <p id="appendix-E-9.8.1">Revocation: by <code>mission_id</code>, from a party the deployment's policy
 authorizes, independent of possession of any token; a Mission whose
 recorded Subject is deprovisioned should be terminated (#830, #1892,
-#1895).<a href="#appendix-E-7.8.1" class="pilcrow">¶</a></p>
+#1895).<a href="#appendix-E-9.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="appendix-E-8"><strong>Structure.</strong> Sections follow processing order, with Mission
+<p id="appendix-E-10"><strong>Structure.</strong> Sections follow processing order, with Mission
 Creation, Mission-Bound Token Issuance, Delegation Within a Mission,
 Token Consumption, and Mission Lifecycle as chapters (#1723, #1793).
 Applicability states the baseline. Restated rules become pointers, and
@@ -10535,36 +10430,36 @@ existing obligations carry BCP 14 keywords, with no new requirement
 (#1892). Family material moves to the Architecture, the security
 analysis to the Mission Security Model, and companion mechanics to
 their profiles; companion pointers remain only at the hooks they
-explain (#1794, #2009).<a href="#appendix-E-8" class="pilcrow">¶</a></p>
-<p id="appendix-E-9"><strong>References.</strong> RFC 9110 is added as normative and the AAuth protocol
+explain (#1794, #2009).<a href="#appendix-E-10" class="pilcrow">¶</a></p>
+<p id="appendix-E-11"><strong>References.</strong> RFC 9110 is added as normative and the AAuth protocol
 as informative. No longer cited: FAPI Grant Management, the Cedar RAR
 draft, SPIFFE client authentication, Transaction Tokens, GNAP, the
 Attenuating Agent Tokens draft, RFC 8628, RFC 8935, and the Audit,
 Capability Binding, Child Delegation, Consent Evidence, Containment,
 Continuation, Cross-Organizational Delegation, Derivation Limits,
 Device Authorization, Expansion, Management, Mission Authority Server,
-Progressive, Signals, Template, and Work Products companions.<a href="#appendix-E-9" class="pilcrow">¶</a></p>
-<p id="appendix-E-10">-01<a href="#appendix-E-10" class="pilcrow">¶</a></p>
-<p id="appendix-E-11"><strong>Breaking wire changes</strong><a href="#appendix-E-11" class="pilcrow">¶</a></p>
+Progressive, Signals, Template, and Work Products companions.<a href="#appendix-E-11" class="pilcrow">¶</a></p>
+<p id="appendix-E-12">-01<a href="#appendix-E-12" class="pilcrow">¶</a></p>
+<p id="appendix-E-13"><strong>Breaking wire changes</strong><a href="#appendix-E-13" class="pilcrow">¶</a></p>
 <ul class="compact">
-<li class="compact" id="appendix-E-12.1">
-          <p id="appendix-E-12.1.1"><code>mission_intent</code> carries the Mission Intent Submission envelope,
+<li class="compact" id="appendix-E-14.1">
+          <p id="appendix-E-14.1.1"><code>mission_intent</code> carries the Mission Intent Submission envelope,
 <code>intent</code> plus an optional typed <code>evidence</code> array; a bare Intent is
 refused, and unsupported, invalid, or missing required evidence is
 refused with the new <code>invalid_mission_intent_evidence</code> error code.
 PAR carries it on the authorization-code path; other grants need a
 companion (#1202). The authority proposal moves from the removed
 Intent member <code>proposed_authority</code> to the <code>authorization_details</code>
-parameter, committed by the new <code>proposal_hash</code>.<a href="#appendix-E-12.1.1" class="pilcrow">¶</a></p>
+parameter, committed by the new <code>proposal_hash</code>.<a href="#appendix-E-14.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.2">
-          <p id="appendix-E-12.2.1">Inside a signed Request Object pushed through PAR, the
+        <li class="compact" id="appendix-E-14.2">
+          <p id="appendix-E-14.2.1">Inside a signed Request Object pushed through PAR, the
 <code>mission_intent</code> claim is the Submission envelope as a JSON object,
 not its serialization; any other value is refused with
-<code>invalid_request</code> (#1503).<a href="#appendix-E-12.2.1" class="pilcrow">¶</a></p>
+<code>invalid_request</code> (#1503).<a href="#appendix-E-14.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.3">
-          <p id="appendix-E-12.3.1">Intent members, with no aliases (#636, #706, #117): <code>resources</code> is
+        <li class="compact" id="appendix-E-14.3">
+          <p id="appendix-E-14.3.1">Intent members, with no aliases (#636, #706, #117): <code>resources</code> is
 renamed <code>target_resources</code> and <code>constraints</code> <code>task_bounds</code>;
 <code>controls</code> is removed, its <code>acr</code> replaced by the <code>acr_values</code> and
 <code>max_age</code> parameters and its <code>max_derivations</code> by Derivation Limits'
@@ -10572,34 +10467,34 @@ renamed <code>target_resources</code> and <code>constraints</code> <code>task_bo
 earlier Missions keep their recorded Intent. <code>goal_lang</code> is new
 (#534). The top level admits only defined members, a Mission Intent
 Members registry assigns short names, and test vectors are
-regenerated.<a href="#appendix-E-12.3.1" class="pilcrow">¶</a></p>
+regenerated.<a href="#appendix-E-14.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.4">
-          <p id="appendix-E-12.4.1">The baseline <code>mission</code> claim carries <code>id</code>, <code>issuer</code>, and an optional
+        <li class="compact" id="appendix-E-14.4">
+          <p id="appendix-E-14.4.1">The baseline <code>mission</code> claim carries <code>id</code>, <code>issuer</code>, and an optional
 <code>expires_at</code>; <code>authority_hash</code> leaves the claim, and introspection
 can disclose it (#702). The Mission Record replaces <code>approver</code> with
 <code>approval_basis.consent_principal</code> (#705) and adds <code>approval_basis</code>,
 <code>authority_source</code> (#316), <code>termination</code>, <code>proposed_authority</code>,
-<code>proposal_hash</code>, and <code>submission_evidence</code>.<a href="#appendix-E-12.4.1" class="pilcrow">¶</a></p>
+<code>proposal_hash</code>, and <code>submission_evidence</code>.<a href="#appendix-E-14.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.5">
-          <p id="appendix-E-12.5.1">The lifecycle states are <code>active</code> and <code>terminated</code>; the -00 states
+        <li class="compact" id="appendix-E-14.5">
+          <p id="appendix-E-14.5.1">The lifecycle states are <code>active</code> and <code>terminated</code>; the -00 states
 <code>revoked</code> and <code>expired</code> become termination reasons, and a consumer
 can read a legacy state that way during a transition (#705). New
 registries hold lifecycle states, any further one non-terminal
-(#170), and termination reasons.<a href="#appendix-E-12.5.1" class="pilcrow">¶</a></p>
+(#170), and termination reasons.<a href="#appendix-E-14.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.6">
-          <p id="appendix-E-12.6.1">The token endpoint adds <code>mission_expires_at</code>, the effective expiry,
+        <li class="compact" id="appendix-E-14.6">
+          <p id="appendix-E-14.6.1">The token endpoint adds <code>mission_expires_at</code>, the effective expiry,
 which can precede the requested <code>intent.expires_at</code>, and the
 <code>mission_error</code> diagnostic; <code>mission_id</code> is recommended.
 Authorization details type metadata can declare
 <code>mission_transformation_capabilities</code>, and entry commitments use
 <code>mission-authority-entry</code>. Resource server challenges add
-<code>mission_denial</code> and use RFC 9470 <code>insufficient_user_authentication</code>.<a href="#appendix-E-12.6.1" class="pilcrow">¶</a></p>
+<code>mission_denial</code> and use RFC 9470 <code>insufficient_user_authentication</code>.<a href="#appendix-E-14.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.7">
-          <p id="appendix-E-12.7.1">A Token Exchange refuses an inactive Mission (#1154) and an invalid,
+        <li class="compact" id="appendix-E-14.7">
+          <p id="appendix-E-14.7.1">A Token Exchange refuses an inactive Mission (#1154) and an invalid,
 unproven, or unacceptable subject or actor token (#1178) with
 <code>invalid_request</code>, unless its profile assigns a code; other grants
 keep <code>invalid_grant</code>, and DPoP proof failures use
@@ -10607,24 +10502,24 @@ keep <code>invalid_grant</code>, and DPoP proof failures use
 <code>invalid_authorization_details</code> where no <code>authorization_details</code> was
 submitted; <code>invalid_target</code> covers scope-projection and routing
 failures; and <code>invalid_scope</code> covers an ungrantable <code>scope</code> and an
-<code>openid</code> request whose Approver is not the Subject (#826).<a href="#appendix-E-12.7.1" class="pilcrow">¶</a></p>
+<code>openid</code> request whose Approver is not the Subject (#826).<a href="#appendix-E-14.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.8">
-          <p id="appendix-E-12.8.1">Delegation by designation (#1268): the delegate's <code>subject_token</code> is
+        <li class="compact" id="appendix-E-14.8">
+          <p id="appendix-E-14.8.1">Delegation by designation (#1268): the delegate's <code>subject_token</code> is
 a designation, which only the holder of a sender-constrained token
-obtains, by Token Exchange naming the delegate as <code>audience</code>.<a href="#appendix-E-12.8.1" class="pilcrow">¶</a></p>
+obtains, by Token Exchange naming the delegate as <code>audience</code>.<a href="#appendix-E-14.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-E-12.9">
-          <p id="appendix-E-12.9.1">Instance context no longer identifies the instance through <code>act.sub</code>
+        <li class="compact" id="appendix-E-14.9">
+          <p id="appendix-E-14.9.1">Instance context no longer identifies the instance through <code>act.sub</code>
 or <code>act.cnf</code>: the delegate's actor identity is established
 separately, the top-level <code>cnf</code> binds the presenting key, and a
 deployment can convey optional <code>client_instance</code> context under
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>. The
 instance-delegate matcher example uses the <code>ai_agent</code> actor type
-instead of the retired <code>client_instance</code> actor type.<a href="#appendix-E-12.9.1" class="pilcrow">¶</a></p>
+instead of the retired <code>client_instance</code> actor type.<a href="#appendix-E-14.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="appendix-E-13"><strong>Model changes.</strong> Approval separates <code>consent_principal</code>,
+<p id="appendix-E-15"><strong>Model changes.</strong> Approval separates <code>consent_principal</code>,
 <code>activation_actor</code>, and optional <code>adjudication</code> (#701): <code>direct</code>
 approval is human (#1185), approval activates only authority its
 source holds (#316), and standing-consent bases activate instances at
@@ -10643,14 +10538,14 @@ cross-domain projection where that profile's provenance rule keeps it
 provenance and does not deactivate the Mission, though no Mission is
 approved from a source the AS does not recognize, and an
 <code>authority_source.policy</code> digest follows the construction and issuer
-its policy format defines (#1503).<a href="#appendix-E-13" class="pilcrow">¶</a></p>
-<p id="appendix-E-14"><strong>Moved to companions.</strong> Resource Access (the <code>mission_resource_access</code>
+its policy format defines (#1503).<a href="#appendix-E-15" class="pilcrow">¶</a></p>
+<p id="appendix-E-16"><strong>Moved to companions.</strong> Resource Access (the <code>mission_resource_access</code>
 type, Common Constraints, tool modeling, and
 <code>mission_constraints_supported</code>; #637, #645, #698); Intent Submission
 Evidence (the verification framework; <code>evidence</code> stays); Approved-Set
 Verification; Derivation Limits (with <code>derivations_remaining</code>);
-Metering's Intent members; and Approval Governance's assertion rules.<a href="#appendix-E-14" class="pilcrow">¶</a></p>
-<p id="appendix-E-15"><strong>Security and privacy.</strong> Delegation hardening and no authority from
+Metering's Intent members; and Approval Governance's assertion rules.<a href="#appendix-E-16" class="pilcrow">¶</a></p>
+<p id="appendix-E-17"><strong>Security and privacy.</strong> Delegation hardening and no authority from
 an entry a resource server cannot fully enforce (#1258); Approver
 authentication kept off derived tokens and out of OpenID Connect
 results for another Subject (#826); task credentials that are
@@ -10664,8 +10559,8 @@ adopted cross-domain profile; the approval rendering identifies the
 receiving client from information the AS trusts; a refresh request
 beyond its grant is refused, never trimmed (#1503); and the approval
 basis named as outside the integrity anchors, with the profiles that
-commit it (#1518).<a href="#appendix-E-15" class="pilcrow">¶</a></p>
-<p id="appendix-E-16"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
+commit it (#1518).<a href="#appendix-E-17" class="pilcrow">¶</a></p>
+<p id="appendix-E-18"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501, #1526), with the issuance rules
 gathered under Mission-Bound Access Tokens, "Mission Lifecycle and
@@ -10675,19 +10570,19 @@ section; the error-table detail for a configured-mapping refusal
 aligned with Derivation Modes (#1495); subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
-Assessment, moved from the substrate (#708).<a href="#appendix-E-16" class="pilcrow">¶</a></p>
-<p id="appendix-E-17"><strong>References.</strong> The WIMSE AIMS draft, the RAR metadata remediation
+Assessment, moved from the substrate (#708).<a href="#appendix-E-18" class="pilcrow">¶</a></p>
+<p id="appendix-E-19"><strong>References.</strong> The WIMSE AIMS draft, the RAR metadata remediation
 draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
 6750, RFC 9700, Client Instance ID, OpenID Connect Core, the RAR
 metadata remediation draft and, for Delegation, the OAuth Actor
-Profile are normative.<a href="#appendix-E-17" class="pilcrow">¶</a></p>
-<p id="appendix-E-18">-00<a href="#appendix-E-18" class="pilcrow">¶</a></p>
+Profile are normative.<a href="#appendix-E-19" class="pilcrow">¶</a></p>
+<p id="appendix-E-20">-00<a href="#appendix-E-20" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="appendix-E-19.1">
-          <p id="appendix-E-19.1.1">Initial individual draft.<a href="#appendix-E-19.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="appendix-E-21.1">
+          <p id="appendix-E-21.1.1">Initial individual draft.<a href="#appendix-E-21.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

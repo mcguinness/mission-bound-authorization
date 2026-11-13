@@ -1993,8 +1993,9 @@ issuer-qualified actor identifier is independently bound to that
 hop's <code>cnf</code> key through a validated workload credential or
 attestation. Absent that binding the hop is key-only: its asserted
 identity is informational provenance at most and <span class="bcp14">MUST NOT</span> satisfy an
-eligibility matcher (the issuance profile's <code>allowed_delegates</code> or a
-<code>sub_profile</code> selector, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) or
+eligibility matcher (the Resource Access <code>allowed_delegates</code> or a
+<code>sub_profile</code> selector,
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) or
 otherwise influence authorization; where policy requires a named
 actor and the binding is absent or invalid, verification fails
 closed.<a href="#section-11-3" class="pilcrow">¶</a></p>
@@ -2010,7 +2011,7 @@ closed.<a href="#section-11-3" class="pilcrow">¶</a></p>
 Mission-bound attenuation root. Its authority covers reading invoices
 and posting journal entries of at most USD 500; <code>del_max_depth</code> allows
 two levels of offline narrowing (illustrative; this Mission's Authority
-Set extends the single-domain walkthrough's, its write entry also
+Set extends the shared Q3 example's, its write entry also
 carrying a <code>delegation</code> member with <code>max_depth</code> 2, so both mapped
 entries are delegable to depth 2 under the root-shaping rules of
 <a href="#root-mapping" class="auto internal xref">Section 4.1</a> and its <code>authority_hash</code> differs from that example's).
