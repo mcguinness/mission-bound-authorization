@@ -135,6 +135,22 @@ describe("an action approval binds the qualified Mission identity (@spec authzen
     expect(d.decision, JSON.stringify(d.context)).toBe(true);
   });
 
+  it("the binding is to the Mission's identity alone: it holds across a change of the Mission's version, and never stands in for the Mission's current state", async () => {
+    // The material records the version the Mission had when the approval was
+    // given; the binding reads only its identity.
+    const observedAtApproval = { ...bound, version: view.version };
+    const approval = await ars.approve(unsignedApproval(), observedAtApproval);
+    const moved: MissionView = { ...view, version: view.version + 1, authority_hash: "sha-256:moved" };
+    const req = request(bound, "125.00", approval);
+    req.context.mission.authority_hash = "sha-256:moved";
+    const d = await evaluate(req, gated(moved));
+    expect(d.decision, JSON.stringify(d.context)).toBe(true);
+    // The Mission's state is established at the re-evaluation, approval or not.
+    const suspended = await evaluate(req, gated({ ...moved, state: "suspended" }));
+    expect(suspended.decision).toBe(false);
+    expect(suspended.context.denial_reason).toBe("mission_inactive");
+  });
+
   it("an approval for the same Mission id under a different issuer does not satisfy the gate: out_of_scope", async () => {
     const approval = await ars.approve(unsignedApproval(), { issuer: "https://other-as.test", id: view.id });
     const d = await evaluate(request(bound, "125.00", approval), gated(view));

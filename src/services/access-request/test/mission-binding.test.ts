@@ -10,8 +10,20 @@
 import type { TxnApprovalBinding } from "@mission/core";
 import { txnApprovalBindingDigest } from "@mission/core";
 import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AccessRequestService } from "../src/index.js";
+
+// date-literal: controlled-clock
+const CLOCK_MS = Date.parse("2026-10-20T12:00:00Z");
+
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+  vi.setSystemTime(CLOCK_MS);
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 async function setup() {
   const pdp = await generateKeyPair("ES256", { extractable: true });
