@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-10T17:42:30Z
-Source repository commit: 930ec35472ccbfbe3709861a0bb76212b51c1ce1
+Generated: 2026-11-13T17:39:15Z
+Source repository commit: a742656c7df2ad4dd25fa8ee099ffede0f310d8c
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                          10 November 2026
-Expires: 14 May 2027
+Intended status: Informational                          13 November 2026
+Expires: 17 May 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -6852,8 +6852,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        10 November 2026
-Expires: 14 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                      Mission Substrate Requirements
@@ -6911,7 +6911,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -8463,8 +8463,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        10 November 2026
-Expires: 14 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -8523,7 +8523,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -16136,8 +16136,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        10 November 2026
-Expires: 14 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16189,7 +16189,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -18731,8 +18731,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        10 November 2026
-Expires: 14 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18791,7 +18791,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -24400,8 +24400,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        10 November 2026
-Expires: 14 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                         Mission Runtime Evidence
@@ -24451,7 +24451,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -26649,9 +26649,11 @@ Table of Contents
    mission_history:  OPTIONAL.  An array of objects, recorded on
       Decision Evidence: the policy-selected history predicates the PDP
       evaluated, each with its predicate (and action_class, where
-      applicable) and an outcome member (satisfied, not_satisfied for an
-      established-false predicate, or unavailable for a predicate that
-      could not be established, including an unrecognized predicate
+      applicable), the identifier of the operation its type selects, if
+      any, as action (a string, naming that operation as a record's
+      action names it), and an outcome member (satisfied, not_satisfied
+      for an established-false predicate, or unavailable for a predicate
+      that could not be established, including an unrecognized predicate
       value or an evidence store that could not be consulted within its
       bound).  REQUIRED when policy selected any history predicate for
       the decision, whether or not the request carried a Mission history
@@ -27427,6 +27429,11 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Extension Members: a mission_history entry carries the identifier
+      of the operation its predicate's type selects, if any, as action,
+      a string naming that operation as a record's action names it
+      (#2048).
+
    *  Extension Members: protected_data, owned by the harness profile,
       records on Decision Evidence the exposure determination a decision
       request carried, as presented (#2044).
@@ -27594,8 +27601,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        10 November 2026
-Expires: 14 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -27644,7 +27651,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -28883,8 +28890,11 @@ Table of Contents
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
-   rule as denial reasons (Section 6.5).  The harness profile defines
-   the coordinated type work_item_prerequisite_completed
+   rule as denial reasons (Section 6.5).  The specification defining a
+   predicate type states whether it selects an operation and which of
+   its members names it; a mission_history entry for a type the PDP does
+   not recognize carries no action.  The harness profile defines the
+   coordinated type work_item_prerequisite_completed
    ([I-D.draft-mcguinness-mission-harness]).
 
    The OPTIONAL context.mission_history request object carries only what
@@ -28924,6 +28934,10 @@ Table of Contents
    freshness discipline ([I-D.draft-mcguinness-mission-runtime]).  The
    PDP MUST record the evaluated predicates and their outcomes in
    Decision Evidence ([I-D.draft-mcguinness-mission-runtime-evidence]).
+   Where a predicate's type selects an operation, its mission_history
+   entry carries that operation's identifier as action; an
+   action_class_completed entry, which selects by class alone, carries
+   none.
 
 5.18.  Canonical Projections
 
@@ -31297,6 +31311,13 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  History Context: the specification defining a predicate type
+      states whether it selects an operation and which of its members
+      names it.  Where a type selects one, its mission_history entry
+      carries that operation's identifier as action; an
+      action_class_completed entry, or one for a type the PDP does not
+      recognize, carries none (#2048).
 
    *  Protected-Data Context: context.protected_data is a harness-owned
       extension point carrying the exposure determination that the

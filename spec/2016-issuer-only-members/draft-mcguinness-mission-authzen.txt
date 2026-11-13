@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        10 November 2026
-Expires: 14 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 14 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -1293,8 +1293,11 @@ Table of Contents
 
    An extension predicate type MUST be either a collision-resistant name
    or a name coordinated within this document family, under the same
-   rule as denial reasons (Section 6.5).  The harness profile defines
-   the coordinated type work_item_prerequisite_completed
+   rule as denial reasons (Section 6.5).  The specification defining a
+   predicate type states whether it selects an operation and which of
+   its members names it; a mission_history entry for a type the PDP does
+   not recognize carries no action.  The harness profile defines the
+   coordinated type work_item_prerequisite_completed
    ([I-D.draft-mcguinness-mission-harness]).
 
    The OPTIONAL context.mission_history request object carries only what
@@ -1334,6 +1337,10 @@ Table of Contents
    freshness discipline ([I-D.draft-mcguinness-mission-runtime]).  The
    PDP MUST record the evaluated predicates and their outcomes in
    Decision Evidence ([I-D.draft-mcguinness-mission-runtime-evidence]).
+   Where a predicate's type selects an operation, its mission_history
+   entry carries that operation's identifier as action; an
+   action_class_completed entry, which selects by class alone, carries
+   none.
 
 5.18.  Canonical Projections
 
@@ -3707,6 +3714,13 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  History Context: the specification defining a predicate type
+      states whether it selects an operation and which of its members
+      names it.  Where a type selects one, its mission_history entry
+      carries that operation's identifier as action; an
+      action_class_completed entry, or one for a type the PDP does not
+      recognize, carries none (#2048).
 
    *  Protected-Data Context: context.protected_data is a harness-owned
       extension point carrying the exposure determination that the
