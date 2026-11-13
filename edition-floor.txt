@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-11-11T00:47:15Z
-Source repository commit: 517451078347139ababf59ad712b73f02e7ee21d
+Generated: 2026-11-13T17:46:16Z
+Source repository commit: 25a6c91d205b5a593f1a49371ff67390e75d7137
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                          11 November 2026
-Expires: 15 May 2027
+Intended status: Informational                          13 November 2026
+Expires: 17 May 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -6852,8 +6852,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        11 November 2026
-Expires: 15 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                      Mission Substrate Requirements
@@ -6911,7 +6911,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -8463,8 +8463,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        11 November 2026
-Expires: 15 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -8523,7 +8523,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -12616,10 +12616,12 @@ Table of Contents
       only, never the policy digest.
 
    Only the Mission issuer reports state, termination, proposal_hash,
-   authority_hash, approval_basis, and authority_source (Section 9.2.3).
-   The last four are audit and correlation signals, not enforcement
-   inputs (Section 9.1); each is disclosed only as Section 9.2.1
-   permits.
+   approval_basis, and authority_source; another AS reports
+   authority_hash, where it does, only as the introspected token carries
+   it (Section 9.2.3).  The proposal_hash, authority_hash,
+   approval_basis, and authority_source members are audit and
+   correlation signals, not enforcement inputs (Section 9.1); each is
+   disclosed only as Section 9.2.1 permits.
 
    For a malformed, unknown, individually expired, or otherwise
    unresolvable token, the AS responds per [RFC7662] (active: false)
@@ -12708,12 +12710,15 @@ Table of Contents
 9.2.3.  Issuer-Only Members
 
    An AS MUST NOT include mission.state, mission.termination,
-   proposal_hash, authority_hash, approval_basis, or authority_source in
-   an introspection response unless it holds the Mission, that is,
-   unless it is the Mission issuer.  Introspection at a non-issuer
-   Resource AS, which returns only the claim-shape members, is specified
-   by the cross-domain companion
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
+   proposal_hash, approval_basis, or authority_source in an
+   introspection response unless it holds the Mission, that is, unless
+   it is the Mission issuer.  An AS that is not the Mission issuer MUST
+   NOT include in the mission member a member that the introspected
+   token's mission claim does not carry; an authority_hash it includes
+   MUST be the value that claim carries, unchanged, never one it
+   recomputes from the authority it holds (Section 17.1.1).  A profile
+   can restrict a mission member it defines to the Mission issuer in the
+   same way.
 
 9.2.4.  Introspected Token Consumption
 
@@ -15916,6 +15921,10 @@ Appendix E.  Document History
    *  Approval: an implied-authority statement the AS holds for an entry
       is rendered with that entry as a disclosure of risk, apart from
       the derived Authority Set (#2046).
+   *  Introspection: an AS that is not the Mission issuer reports only
+      members the token's mission claim carries, and authority_hash only
+      as carried; state, termination, and the Mission Record members
+      stay with the issuer (#2016).
 
    -02
 
@@ -16127,8 +16136,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        11 November 2026
-Expires: 15 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16180,7 +16189,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -18722,8 +18731,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        11 November 2026
-Expires: 15 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18782,7 +18791,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -24391,8 +24400,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        11 November 2026
-Expires: 15 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
                         Mission Runtime Evidence
@@ -24442,7 +24451,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 
@@ -27592,8 +27601,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                        11 November 2026
-Expires: 15 May 2027
+Intended status: Standards Track                        13 November 2026
+Expires: 17 May 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -27642,7 +27651,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 15 May 2027.
+   This Internet-Draft will expire on 17 May 2027.
 
 Copyright Notice
 

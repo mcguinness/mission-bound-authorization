@@ -1069,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 15 May 2027</td>
+<td class="center">Expires 17 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-11-11" class="published">11 November 2026</time>
+<time datetime="2026-11-13" class="published">13 November 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-15">15 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-17">17 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1151,7 +1151,7 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 15 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 17 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -6616,10 +6616,12 @@ the Mission's <code>proposal_hash</code> (<a href="#mission-record" class="auto 
 </li>
         </ul>
 <p id="section-9.2-6">Only the Mission <code>issuer</code> reports <code>state</code>, <code>termination</code>,
+<code>proposal_hash</code>, <code>approval_basis</code>, and <code>authority_source</code>; another AS
+reports <code>authority_hash</code>, where it does, only as the introspected
+token carries it (<a href="#only-issuer-reports-state" class="auto internal xref">Section 9.2.3</a>). The
 <code>proposal_hash</code>, <code>authority_hash</code>, <code>approval_basis</code>, and
-<code>authority_source</code> (<a href="#only-issuer-reports-state" class="auto internal xref">Section 9.2.3</a>). The last four are
-audit and correlation signals, not enforcement inputs
-(<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>); each is disclosed only as
+<code>authority_source</code> members are audit and correlation signals, not
+enforcement inputs (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>); each is disclosed only as
 <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 9.2.1</a> permits.<a href="#section-9.2-6" class="pilcrow">¶</a></p>
 <p id="section-9.2-7">For a malformed, unknown, individually expired, or otherwise
 unresolvable token, the AS responds per <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> (<code>active: false</code>)
@@ -6716,12 +6718,15 @@ inactive token. The caller authorization and minimization rules
 <a href="#section-9.2.3" class="section-number selfRef">9.2.3. </a><a href="#name-issuer-only-members" class="section-name selfRef">Issuer-Only Members</a>
           </h4>
 <p id="section-9.2.3-1">An AS <span class="bcp14">MUST NOT</span> include <code>mission.state</code>, <code>mission.termination</code>,
-<code>proposal_hash</code>, <code>authority_hash</code>, <code>approval_basis</code>, or
-<code>authority_source</code> in an introspection response unless it holds the
-Mission, that is, unless it is the Mission <code>issuer</code>. Introspection at
-a non-issuer Resource AS, which returns only the claim-shape members,
-is specified by the cross-domain companion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>).<a href="#section-9.2.3-1" class="pilcrow">¶</a></p>
+<code>proposal_hash</code>, <code>approval_basis</code>, or <code>authority_source</code> in an
+introspection response unless it holds the Mission, that is, unless
+it is the Mission <code>issuer</code>. An AS that is not the Mission <code>issuer</code>
+            <span class="bcp14">MUST NOT</span> include in the <code>mission</code> member a member that the
+introspected token's <code>mission</code> claim does not carry; an
+<code>authority_hash</code> it includes <span class="bcp14">MUST</span> be the value that claim carries,
+unchanged, never one it recomputes from the authority it holds
+(<a href="#consent-binding" class="auto internal xref">Section 17.1.1</a>). A profile can restrict a <code>mission</code> member it
+defines to the Mission <code>issuer</code> in the same way.<a href="#section-9.2.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="introspected-consumption">
@@ -10457,6 +10462,12 @@ resolve before interoperating.<a href="#appendix-D-36" class="pilcrow">¶</a></p
           <p id="appendix-E-4.1.1">Approval: an implied-authority statement the AS holds for an entry
 is rendered with that entry as a disclosure of risk, apart from the
 derived Authority Set (#2046).<a href="#appendix-E-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="compact" id="appendix-E-4.2">
+          <p id="appendix-E-4.2.1">Introspection: an AS that is not the Mission <code>issuer</code> reports only
+members the token's <code>mission</code> claim carries, and <code>authority_hash</code>
+only as carried; <code>state</code>, <code>termination</code>, and the Mission Record
+members stay with the issuer (#2016).<a href="#appendix-E-4.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-E-5">-02<a href="#appendix-E-5" class="pilcrow">¶</a></p>
