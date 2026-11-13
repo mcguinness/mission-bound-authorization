@@ -46,7 +46,7 @@ vi.mock("../src/kernel/request-provenance.js", async (importOriginal) => {
 
 import { randomBytes } from "node:crypto";
 import type { Server } from "node:http";
-import { DERIVATION_POLICY, parseRequestProvenanceConfig, type RequestProvenanceConfig } from "@mission/demo-data";
+import { DERIVATION_POLICY, PROGRESSIVE_PROFILE, parseRequestProvenanceConfig, type RequestProvenanceConfig } from "@mission/demo-data";
 import { createRequestIntake, type JsonObject, type Presenter } from "@mission/request-provenance";
 import { openStore } from "@mission/store";
 import { CompactSign, calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
@@ -71,7 +71,9 @@ import {
   SqliteRequestProvenanceStore,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
+import { assembledCeilingOffer, progressiveFromProfile } from "../src/kernel/progressive.js";
 import { verifyRequestProvenance } from "../src/kernel/request-provenance.js";
+import type { AuthorityEntry } from "../src/kernel/types.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js";
@@ -82,6 +84,9 @@ type JsonRecord = { [key: string]: Json };
 const TYPE = "mission-request-provenance";
 const PORT = 14916;
 const ISSUER = `http://localhost:${PORT}`;
+/** A Progressive deployment, where an in-ceiling expansion completes synchronously as a drawdown. */
+const DRAWDOWN_PORT = 14917;
+const DRAWDOWN_ISSUER = `http://localhost:${DRAWDOWN_PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
 const CLIENT = "ap-agent";
@@ -133,7 +138,7 @@ const otherJkt = await calculateJwkThumbprint(await exportJWK((await generateKey
 const EXCHANGE_PRESENTER: Presenter = { client_id: CLIENT, cnf: { jkt: dpopJkt } };
 
 /** Capture and sign through the intake library on the controlled clock: `iat` now, captured 5 s before. */
-async function mint(o: { presenter?: Presenter; intent?: JsonObject } = {}) {
+async function mint(o: { presenter?: Presenter; intent?: JsonObject; audience?: string } = {}) {
   let offsetMs = -5000;
   const intake = createRequestIntake({
     issuer: INTAKE,
@@ -153,7 +158,7 @@ async function mint(o: { presenter?: Presenter; intent?: JsonObject } = {}) {
     presenter: o.presenter ?? EXCHANGE_PRESENTER,
   });
   offsetMs = 0;
-  return intake.sign({ captureId: receipt.captureId, workflow: "wf-1", audience: ISSUER, intent: (o.intent ?? INTENT) as JsonObject });
+  return intake.sign({ captureId: receipt.captureId, workflow: "wf-1", audience: o.audience ?? ISSUER, intent: (o.intent ?? INTENT) as JsonObject });
 }
 
 const decodePart = (part: string): JsonRecord => JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as JsonRecord;
@@ -229,11 +234,30 @@ class ObservedStore implements RequestProvenanceStore {
   }
 }
 
+/** An assembly the client talks to: its issuer, the client's key there, and its Approver sessions. */
+interface Target {
+  issuer: string;
+  agentKey: CryptoKey;
+  sessions: ApprovalSessionStore;
+}
+
 const SESSIONS = new ApprovalSessionStore();
 const store = new ObservedStore();
 let as: BuiltAs;
 let server: Server;
-let agentKey: CryptoKey;
+let main: Target;
+
+/** The Progressive deployment's published drawdown policies and options, its replay store the default one on its kernel's database. */
+const PUBLISHED = progressiveFromProfile(PROGRESSIVE_PROFILE);
+/** The ceiling its approval surface offers: the payments ceiling under the one-added-action drawdown policy. */
+const CEILING_OFFER = {
+  authority_ceiling: DERIVATION_POLICY.ceiling.filter((e) => e.resource === RESOURCE) as unknown as AuthorityEntry[],
+  drawdown_policy: { id: "drawdown-std", version: "1" },
+};
+const DRAWDOWN_SESSIONS = new ApprovalSessionStore();
+let drawdownAs: BuiltAs;
+let drawdownServer: Server;
+let drawdownTarget: Target;
 
 /** A test evidence type beside the provenance type, whose verification always fails. */
 const REFUSING_TYPE = "urn:test:intent-evidence:creation-refuses";
@@ -259,25 +283,39 @@ beforeAll(async () => {
     requestProvenance: { config: TRUST, store },
   } as Parameters<typeof buildAuthorizationServer>[0]);
   server = as.provider.listen(PORT);
-  agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
+  main = { issuer: ISSUER, agentKey: (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey, sessions: SESSIONS };
+  drawdownAs = await buildAuthorizationServer({
+    issuer: DRAWDOWN_ISSUER,
+    approvalSessions: DRAWDOWN_SESSIONS,
+    activationPolicies: PUBLISHED.policies,
+    progressive: { ...PUBLISHED.options, ceilingOffer: () => CEILING_OFFER },
+    requestProvenance: { config: TRUST },
+  } as Parameters<typeof buildAuthorizationServer>[0]);
+  drawdownServer = drawdownAs.provider.listen(DRAWDOWN_PORT);
+  drawdownTarget = {
+    issuer: DRAWDOWN_ISSUER,
+    agentKey: (await importJWK(drawdownAs.agentClientJwk as never, "ES256")) as CryptoKey,
+    sessions: DRAWDOWN_SESSIONS,
+  };
 });
 
 afterAll(() => {
   server?.close();
+  drawdownServer?.close();
   unregisterIntentSubmissionEvidenceType(REFUSING_TYPE);
   controlledClock.restore();
 });
 
-async function clientAssertion(): Promise<string> {
+async function clientAssertion(t: Target): Promise<string> {
   return new SignJWT({})
     .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
     .setIssuer(CLIENT)
     .setSubject(CLIENT)
-    .setAudience(ISSUER)
+    .setAudience(t.issuer)
     .setIssuedAt()
     .setExpirationTime("2m")
     .setJti(crypto.randomUUID())
-    .sign(agentKey);
+    .sign(t.agentKey);
 }
 
 interface Reply {
@@ -299,9 +337,9 @@ const pkceChallenge = async () =>
   Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(PKCE_VERIFIER))).toString("base64url");
 
 /** A pushed authorization request as ap-agent, its value of mission_intent the given envelope, with an optional proposal. */
-async function push(submission: unknown, proposal?: unknown): Promise<Reply> {
+async function push(submission: unknown, proposal?: unknown, t: Target = main): Promise<Reply> {
   return reply(
-    await fetch(`${ISSUER}/request`, {
+    await fetch(`${t.issuer}/request`, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -314,7 +352,7 @@ async function push(submission: unknown, proposal?: unknown): Promise<Reply> {
         login_hint: "alice",
         mission_intent: JSON.stringify(submission),
         ...(proposal ? { authorization_details: JSON.stringify(proposal) } : {}),
-        client_assertion: await clientAssertion(),
+        client_assertion: await clientAssertion(t),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     }),
@@ -322,8 +360,8 @@ async function push(submission: unknown, proposal?: unknown): Promise<Reply> {
 }
 
 /** POST /token as ap-agent with a DPoP proof under the exchanges' key, with the nonce retry. */
-async function tokenRequest(params: Record<string, string>): Promise<Reply> {
-  const htu = `${ISSUER}/token`;
+async function tokenRequest(params: Record<string, string>, t: Target = main): Promise<Reply> {
+  const htu = `${t.issuer}/token`;
   const send = async (extra: Record<string, unknown> = {}) =>
     fetch(htu, {
       method: "POST",
@@ -337,7 +375,7 @@ async function tokenRequest(params: Record<string, string>): Promise<Reply> {
       },
       body: new URLSearchParams({
         ...params,
-        client_assertion: await clientAssertion(),
+        client_assertion: await clientAssertion(t),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -362,35 +400,38 @@ function keep(jar: Jar, res: Response): void {
  * through a push with no evidence, its authority the read action alone: a
  * child may take it, and an expansion widens it.
  */
-async function issueMission(): Promise<{ missionId: string; accessToken: string }> {
-  const par = await push({ intent: INTENT }, entryOf(READ));
+async function issueMission(
+  t: Target = main,
+  o: { proposal?: unknown; decided?: Record<string, unknown> } = {},
+): Promise<{ missionId: string; accessToken: string }> {
+  const par = await push({ intent: INTENT }, o.proposal ?? entryOf(READ), t);
   expect(par.status, JSON.stringify(par.body)).toBe(201);
   const jar: Jar = new Map();
-  const auth = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: CLIENT, request_uri: par.body.request_uri as string })}`, {
+  const auth = await fetch(`${t.issuer}/auth?${new URLSearchParams({ client_id: CLIENT, request_uri: par.body.request_uri as string })}`, {
     redirect: "manual",
   });
   keep(jar, auth);
   const uid = (auth.headers.get("location") ?? "").split("/interaction/")[1] as string;
   expect(uid).toBeTruthy();
-  const headers = browserApprovalHeaders(SESSIONS, uid, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000), subject: "alice" }, cookieOf(jar));
-  const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers });
+  const headers = browserApprovalHeaders(t.sessions, uid, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000), subject: "alice" }, cookieOf(jar));
+  const page = await fetch(`${t.issuer}/interaction/${uid}`, { headers });
   expect(page.status).toBe(200);
-  let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+  let res = await fetch(`${t.issuer}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
     headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve", render_revision: page.headers.get(RENDER_REVISION_HEADER) }),
+    body: JSON.stringify({ decision: "approve", render_revision: page.headers.get(RENDER_REVISION_HEADER), ...o.decided }),
   });
   keep(jar, res);
   let location = res.headers.get("location") ?? "";
-  while (location.startsWith(ISSUER)) {
+  while (location.startsWith(t.issuer)) {
     res = await fetch(location, { redirect: "manual", headers: { cookie: cookieOf(jar) } });
     keep(jar, res);
     location = res.headers.get("location") ?? "";
   }
   const code = new URL(location).searchParams.get("code") as string;
   expect(code, location).toBeTruthy();
-  const tok = await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: PKCE_VERIFIER, resource: RESOURCE });
+  const tok = await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: PKCE_VERIFIER, resource: RESOURCE }, t);
   expect(tok.status, JSON.stringify(tok.body)).toBe(200);
   const accessToken = tok.body.access_token as string;
   return { missionId: (decodeJwt(accessToken) as { mission: { id: string } }).mission.id, accessToken };
@@ -414,18 +455,21 @@ function createChild(parent: { accessToken: string }, evidence: unknown[], o: { 
 function expand(
   predecessor: { accessToken: string },
   evidence: unknown[],
-  o: { crid?: string; actions?: string[]; deferred?: boolean } = {},
+  o: { crid?: string; actions?: string[]; proposal?: unknown; deferred?: boolean; target?: Target } = {},
 ): Promise<Reply> {
-  return tokenRequest({
-    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-    subject_token: predecessor.accessToken,
-    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-    creation_request_id: o.crid ?? crypto.randomUUID(),
-    ...(o.deferred === false ? {} : { completion_mode: "deferred" }),
-    mission_intent: JSON.stringify(envelope(evidence)),
-    authorization_details: JSON.stringify(entryOf(o.actions ?? WIDENED)),
-  });
+  return tokenRequest(
+    {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: predecessor.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      creation_request_id: o.crid ?? crypto.randomUUID(),
+      ...(o.deferred === false ? {} : { completion_mode: "deferred" }),
+      mission_intent: JSON.stringify(envelope(evidence)),
+      authorization_details: JSON.stringify(o.proposal ?? entryOf(o.actions ?? WIDENED)),
+    },
+    o.target ?? main,
+  );
 }
 
 const poll = (deferralCode: string) => tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: deferralCode });
@@ -824,5 +868,36 @@ describe("concurrent exchanges (@spec request-provenance#replay, #939 slice 3a)"
     const results = await Promise.all([expand(predecessor, [signed.entry]), expand(predecessor, [signed.entry])]);
     expect(results.map((r) => r.body.error).sort()).toEqual(["authorization_pending", "invalid_mission_intent_evidence"]);
     expectEvidenceRefusal(results.find((r) => r.body.error !== "authorization_pending") as Reply, "replay");
+  });
+});
+
+describe("a ceiling drawdown accepts the type (@spec request-provenance#replay, progressive#in-ceiling-expansion, #939 slice 3a)", () => {
+  /** Read actions under the vendor constraint, as the ceiling's read entry states them. */
+  const reads = (actions: string[]) => [{ type: "mission_resource_access", resource: RESOURCE, actions, constraints: { vendors: ["acme"] } }];
+
+  it("commits the pair inside the successor's creation under the operation's reference, on the default store, and records the facts on the successor; an exact retry after exp recovers that successor without verifying again", async () => {
+    const decided = assembledCeilingOffer(CEILING_OFFER as never, drawdownAs.kernel.resourceContracts()) as unknown as Record<string, unknown>;
+    const predecessor = await issueMission(drawdownTarget, { proposal: reads(READ), decided });
+    const signed = await mint({ audience: DRAWDOWN_ISSUER });
+    const crid = crypto.randomUUID();
+    const widened = reads([...READ, "payments:invoice.list"]);
+    const before = verifications();
+    const completed = await expand(predecessor, [signed.entry], { crid, proposal: widened, target: drawdownTarget });
+    expect(completed.status, JSON.stringify(completed.body)).toBe(200);
+    expect(verifications()).toBe(before + 1);
+    const successor = drawdownAs.kernel.get(completed.body.mission_id as string) as MissionRecord;
+    expect(successor.approval_basis.type).toBe("ceiling_drawdown");
+    const accepted = drawdownAs.requestProvenanceStore?.accepted(INTAKE, signed.jti, Date.now());
+    expect(accepted?.submissionRef).toBe(creationAcceptanceRef("expansion", CLIENT, crid));
+    expect(accepted?.presenter).toEqual({ clientId: CLIENT, cnf: { jkt: dpopJkt } });
+    expect(successor.submission_evidence).toEqual([
+      { type: TYPE, artifact_hash: accepted?.artifactHash, verified_at: accepted?.verifiedAt, facts: accepted?.facts },
+    ]);
+    // The response is lost; the client retries once the assertion has expired.
+    controlledClock.advance((signed.exp + 5 + 1) * 1000 - Date.now());
+    const retried = await expand(predecessor, [signed.entry], { crid, proposal: widened, target: drawdownTarget });
+    expect(retried.status, JSON.stringify(retried.body)).toBe(200);
+    expect(retried.body.mission_id).toBe(successor.id);
+    expect(verifications()).toBe(before + 1);
   });
 });
