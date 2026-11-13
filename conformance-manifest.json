@@ -35,12 +35,12 @@
     "content_sha256": "f2b396959fa4779fe264efc023daab2313f5939d09590c060b452b2593aadf56"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
-    "content_sha256": "921c383cf8768d561e12d1b308d64e0e2e5bbc34a857f347fcbbf0a8d1d63243"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "d7965c2ede61672d610ded5498b6afe3c57a6d9230a903e51713d765e79975cf"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
-    "content_sha256": "3b0e17cee2fa13b891a498a016808851edc931af76d8c8d54fbee79ec03d368e"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "1eaceedeac0ac5ecd7cbedd433b853657aa8a7451df77b975fb9429a7698b66d"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "1199e650a853bb0006c2384c589157f263547a7e",
@@ -71,16 +71,16 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "54ca93942823ce3994039dab548518df88495c07",
-    "content_sha256": "ed860c198d9f812d1422617aa30efbbb122beb0493783abbcdaaacd45df7caa0"
+    "revision": "1e7e81d7685da1149625929ef5475aca54310bbf",
+    "content_sha256": "00ddecefcef8fa55db21fb4e45abf4d72602a531a80db2d2a923de4e6ddfc1a4"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
-    "content_sha256": "96fdafec3635a416aa03edd70762528b824e7fa59f8aeb0f8398bde977ed475d"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "1fb7b5002c503d599109496260c8f05d38a381542b7143ac593a035068057067"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
-    "revision": "c1307f579ed5c96693321ada82523b60c61519fa",
-    "content_sha256": "c258ea34df404bdf3173b4c2326bbb12a9764a15e53c721865ae0fd07ea72933"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "abc3c981207cb62dc26b217b7d56d6dbcd7954754ac1508fb110c2a424c30a1e"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
@@ -111,12 +111,12 @@
     "content_sha256": "deac6430d37a6f3d0bf6b8f565ef12ac7af1df6113c2a0bfa1593fde0a4f43f3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "7cc78dfd1a44275037d6dd380bc6f494021d150f",
-    "content_sha256": "53ea4caebb952caf862671a5cdc3ce94f6c9559d21eb7cb014d8d2ee6bdf2579"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "d652a30db54f5740bd353e03f956616d19996ae8490495c8eea8b1859b5e9501"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
-    "content_sha256": "b2e006607d309e3a8f1b1e6d034ca9bd74d5c1dbcd53e38a1677546065242060"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "b6cd085f2f123022ed0ebf513bd351ed73c754e8431077dd2e5664cd69e1f108"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "65037204039a9db7a234ed095700bf63461827fd",
@@ -163,8 +163,8 @@
     "content_sha256": "0e40820c2dbbd7d2e20c5f99bf13adefcfd6a13449e0096d57a12372bf49a6a9"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
-    "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
-    "content_sha256": "326fffad3b3d743d6dc9cd9bb9e2fb5d831933a4aee401817490c9379cee8859"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "4b1b6cd1bba59d2497c83cfcac1f95a2de476c4b4f35161403556cb622caa003"
    }
   }
  },
@@ -20203,7 +20203,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the type's eligibility test, and the delegation-authorization policy where it leaves a matcher unstated, is applied afresh at every exchange, and absence is never a grant"
+    "normative": "the type's eligibility test, and the delegation-authorization policy where it leaves an eligibility condition unstated, is applied afresh at every exchange, and absence is never a grant"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21695,6 +21695,75 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Scoped to core.introspected-consumption (#904 option b): issuer-local resolution (#1203, D412) is an optional alternative inside the opaque mode, which no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed. A per-use read stops later requests only; excluding an effect admitted before a revocation commits needs a serialization boundary (#250), which this row does not claim."
+  },
+  {
+   "id": "core.introspection.issuer-only-members",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "only-issuer-reports-state",
+   "text": "An AS MUST NOT include `mission.state`, `mission.termination`, `proposal_hash`, `approval_basis`, or `authority_source` in an introspection response unless it holds the Mission, that is, unless it is the Mission `issuer`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an AS that is not the Mission `issuer` reports none of `state`, `termination`, `proposal_hash`, `approval_basis` or `authority_source` in any introspection response, active or inactive, even for a token that names the Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 option A (D1266). Todo: the reference serves Mission introspection only at the Mission issuer (provider.ts introspection verifies issuer: opts.issuer, refuses a token whose mission.issuer differs from the record's, and the kernel stores no record from another issuer), and no AS other than the issuer implements introspection, so no test can witness the non-issuer side; nothing here builds an introspection endpoint for one."
+  },
+  {
+   "id": "core.introspection.non-issuer-carried-members-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "only-issuer-reports-state",
+   "text": "An AS that is not the Mission `issuer` MUST NOT include in the `mission` member a member that the introspected token's `mission` claim does not carry",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the `mission` member a non-issuer AS reports contains only members present in the introspected token's `mission` claim; it never adds live state, a value from a Mission Record it does not hold, or a member the claim does not carry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 option A (D1266). Todo: the reference serves Mission introspection only at the Mission issuer (provider.ts introspection verifies issuer: opts.issuer, refuses a token whose mission.issuer differs from the record's, and the kernel stores no record from another issuer), and no AS other than the issuer implements introspection, so no test can witness the non-issuer side; nothing here builds an introspection endpoint for one."
+  },
+  {
+   "id": "core.introspection.non-issuer-authority-hash-carried",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "only-issuer-reports-state",
+   "text": "an `authority_hash` it includes MUST be the value that claim carries, unchanged, never one it recomputes from the authority it holds",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an `authority_hash` a non-issuer AS reports is the exact value the introspected token's `mission` claim carries, the issuer's authenticated commitment; it never reports one it computed from the authority it holds, such as an audience-scoped subset"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 option A (D1266). Todo: the reference serves Mission introspection only at the Mission issuer (provider.ts introspection verifies issuer: opts.issuer, refuses a token whose mission.issuer differs from the record's, and the kernel stores no record from another issuer), and no AS other than the issuer implements introspection, so no test can witness the non-issuer side; nothing here builds an introspection endpoint for one."
   },
   {
    "id": "core.anchors.entry-commitment",
@@ -69059,6 +69128,72 @@
     }
    ],
    "notes": "#1180, D378 (the delayed-redemption witness). The test revokes the Mission, confirms the issuer refuses a new grant, redeems the outstanding grant five seconds before its exp, and shows the partner resource honoring the local token until the grant's exp and refusing it after; exposure from revocation exceeds the 120 s local lifetime. The rest of the sentence, that the Resource AS issues no renewal authority on the grant, is cross-domain.resource-as.no-renewal-authority."
+  },
+  {
+   "id": "cross-domain.introspection-at-resource-as.claim-shape-only",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "introspection-at-resource-as",
+   "text": "A Resource AS that supports introspection for a local token it minted from a cross-domain grant returns the claim-shape members only: `id`, `issuer`, and `authority_hash`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS introspecting a local token minted from a cross-domain grant reports in its `mission` member only `id`, `issuer` and `authority_hash`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 (D1266): Cross-Domain is unchanged; the binding's Issuer-Only Members now admits this response generically. Todo: the reference Resource AS serves no introspection endpoint (it exposes registerClient, redeem and metadata only)."
+  },
+  {
+   "id": "cross-domain.introspection-at-resource-as.omits-state",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "introspection-at-resource-as",
+   "text": "It MUST omit `mission.state` and `mission.termination` rather than report a stale value as current.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a Resource AS's introspection response for a local token minted from a cross-domain grant carries neither `mission.state` nor `mission.termination`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 (D1266): Cross-Domain is unchanged; the binding's Issuer-Only Members now admits this response generically. Todo: the reference Resource AS serves no introspection endpoint (it exposes registerClient, redeem and metadata only)."
+  },
+  {
+   "id": "cross-domain.introspection-at-resource-as.carried-not-recomputed",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "introspection-at-resource-as",
+   "text": "`authority_hash`, when included, is the issuer's commitment carried through the grant, not a value the Resource AS recomputes from its audience-scoped subset",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an `authority_hash` a Resource AS reports is the value the cross-domain grant carried, never one it computed from its audience-scoped subset"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2016 (D1266): Cross-Domain is unchanged; the binding's Issuer-Only Members now admits this response generically. Todo: the reference Resource AS serves no introspection endpoint (it exposes registerClient, redeem and metadata only)."
   },
   {
    "id": "continuation.ica-transport.refusal-codes",
