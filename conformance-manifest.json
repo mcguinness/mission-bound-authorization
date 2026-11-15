@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "1e7e81d7685da1149625929ef5475aca54310bbf",
-    "content_sha256": "00ddecefcef8fa55db21fb4e45abf4d72602a531a80db2d2a923de4e6ddfc1a4"
+    "revision": "4d1344a21bff965bc9a44584ffe5ed02ced315ff",
+    "content_sha256": "8028fa30ea7b787fffd4785823b77ad7f445b764bd94b6c8f6bf8b6ae75b951c"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
@@ -18210,7 +18210,7 @@
    "id": "core.scope-projection.ungrantable-requested-scope-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "scope-projection-requested",
-   "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot grant",
+   "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot safely project",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -18223,7 +18223,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request that explicitly names a scope value the issuance cannot grant (one the target's mapping names but no carried entry makes safe, or any scope value associated with a target that consumes authorization_details) is refused with invalid_scope rather than issued with an omitted or silently reduced scope"
+    "normative": "a request that explicitly names a scope value the issuance cannot safely project, one that no carried entry the target enforces through scope makes safe (a mapped value no carried entry makes safe, or a resource scope for a target that consumes the applicable entries as authorization_details), is refused with invalid_scope rather than issued with an omitted or silently reduced scope"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -18277,7 +18277,79 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption."
+   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption. Re-quoted for #2072 (D1321): the refusal is per value. Both observed clauses stay within it, because an authorization_details-only target has no entry it enforces through scope that makes a resource scope safe. Coverage re-verified against the same eight tests, unchanged."
+  },
+  {
+   "id": "core.scope-projection.mixed-audience-per-value-subset",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "anchor": "scope-projection-per-audience",
+   "text": "Each projected value then meets the subset condition on its own, across all access the value enables at that audience",
+   "role": "AS",
+   "strength": "stated",
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "level": "cross-component",
+   "observation": {
+    "normative": "at one audience that enforces a read entry through a projected scope and consumes a constrained action entry as authorization_details, the AS projects the read scope only when all access it enables there falls within one applicable entry, never by association with an entry or by combining entries; at that resource server a projected read succeeds, a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2072, owner ruling D1321 (option A). todo until a mixed-audience witness exists: the reference has no audience that consumes some entries as authorization_details and enforces others through a projected scope. The witness the ruling requires: a projected read succeeds, a covered constrained write succeeds, an over-limit write fails despite the read scope, and an unsafe requested write scope is refused (core.scope-projection.ungrantable-requested-scope-refused), each clause mutation-proved."
+  },
+  {
+   "id": "core.scope-projection.requested-not-refused-for-other-entries",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "anchor": "scope-projection-requested",
+   "text": "It MUST NOT refuse a value only because the target consumes other entries as `authorization_details`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "level": "endpoint",
+   "observation": {
+    "normative": "at an audience that consumes some carried entries as authorization_details, a requested scope value that an entry the audience enforces through scope makes safe is granted and reported, not refused invalid_scope"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2072, owner ruling D1321 (option A). todo: the reference has no mixed audience, so no request reaches this rule; every reference audience is scope-only or consumes all its entries as authorization_details."
+  },
+  {
+   "id": "core.scope-projection.client-requests-scope-only-for-scope-enforced",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "anchor": "scope-projection-requested",
+   "text": "A Mission-creating client requests a resource `scope` only for authority the target enforces through `scope`, never for an entry the target consumes as `authorization_details`",
+   "role": "client",
+   "strength": "stated",
+   "surface": "par",
+   "assertion": "output-bound",
+   "level": "cross-component",
+   "observation": {
+    "normative": "a Mission-creating client names a resource scope value in its request only for authority the target enforces through scope, and names none for an entry the target consumes as authorization_details"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2072, owner ruling D1321. The sentence replaces the target-wide client rule, which had no row. todo: no client witness."
   },
   {
    "id": "core.scope-projection.requested-scope-stands-for-entries",
