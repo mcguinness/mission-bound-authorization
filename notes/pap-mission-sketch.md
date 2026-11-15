@@ -22,18 +22,22 @@ what version 1.0 changed in the sketch.
 - PAP's gap is still authority, not execution. Scopes are account-wide, and
   an agent approval, made "on an instruction the User gave it", rests on the
   agent's word: the Company never sees the instruction (Ops 5, 8.1).
-- PAP's roadmap names the fix it wants: mandates, "where the User signs once
-  for a class of actions with limits", with "the User approves on the
-  Company's own page or in its app" as one of three approaches (roadmap,
-  Signed approvals). Mission is that approach, built from OAuth the Company
+- PAP's roadmap points the same way. Under Signed approvals, it lists "the
+  User approves on the Company's own page or in its app" as one approach to
+  letting a Company verify an approval, and says that mandates, "where the
+  User signs once for a class of actions with limits", would build on
+  signed approval. Mission applies the Company's-own-page approach to the
+  User's instruction rather than to each revision, using OAuth the Company
   already runs: **a Mission is the User's instruction, approved on the
   Company's own sign-in page, which the Company checks when the agent's
-  approval arrives.**
+  approval arrives.** It does not verify a per-revision user approval
+  (Section 4).
 - The first profile adds no endpoint, no approval member, and no error
   code. The cost sits in the Company's AS and in the service that hosts its
   governed actions. The AS accepts the Mission Intent through PAR, which
-  PAP 1.0 already supports (Spec 4.2), becomes a core Mission Issuer, and
-  binds Mission tokens to DPoP keys. The service checks the carried
+  PAP 1.0 already supports (Spec 4.2), becomes a core Mission Issuer, issues
+  tokens only for the services the Mission names, and binds Mission tokens
+  to DPoP keys. The service checks the carried
   authority when an approval arrives.
 - The earlier Draft 00 should still be narrowed to this profile. Section 5
   lists what moves out and what each cut loses.
@@ -59,8 +63,9 @@ what version 1.0 changed in the sketch.
   server (Spec 3.2).
 - **Operations get the execution semantics right.** An approval covers one
   revision, and the Company performs only what that revision describes
-  (Ops 3). APIs, MCP servers, conversations, and websites all use the same
-  approval and the same checks (Ops 4, 6). A retry with the same approval
+  (Ops 3). APIs, MCP servers, and conversations take the approval on a
+  repeat of the request that returned the operation, websites take it at one
+  endpoint, and all make the same checks (Ops 4, 6). A retry with the same approval
   never performs twice, an unknown outcome is never reported as a failure,
   and the Company remembers an operation until the approved revision
   expires (Ops 7). A Company can decline an approval for its own reasons,
@@ -108,8 +113,9 @@ Mission addresses G1 to G4. G5 and G6 are PAP fixes (Section 6.1).
 Operations performs an action only after the Company checks an approval, on
 the request that performs it, and in PAP the Company is both the
 authorization server and the resource server. So the Company can read
-Mission state locally at the moment of commitment. That makes the approval
-checks the natural, and nearly free, place to enforce a Mission.
+Mission state at the moment of commitment, locally where the service is
+inside the issuer's trusted implementation boundary (core). That makes the
+approval checks the natural, and cheap, place to enforce a Mission.
 
 | PAP concept | Mission concept |
 | --- | --- |
@@ -133,8 +139,8 @@ define.
 
 | Side | Change |
 | --- | --- |
-| Company AS | Accept `mission_intent` and `authorization_details` through PAR at Direct Sign-In, and through the Mission Device Authorization companion at Device Sign-In (Section 3.4). Render the task and its authority on the existing consent page. Store the Mission. Issue a Mission-bound refresh token as a grant of its own, bound to the agent's DPoP key. Gate refresh on Mission state. Project the read scope for the default resource, and issue tokens for the actions service that carry the granted entries. |
-| Company actions service | Host the governed actions at a service with its own resource identifier (Spec 4.5): an API, an MCP server, or the conversation endpoint where the Company Agent performs them. Under a Mission token, return an operation for every governed action, check the carried authority when an approval arrives (Section 3.7), and record the Mission with what it performs. |
+| Company AS | Accept `mission_intent` and `authorization_details` through PAR at Direct Sign-In, and through the Mission Device Authorization companion at Device Sign-In (Section 3.4). Render the task and its authority on the existing consent page. Store the Mission. Issue a Mission-bound refresh token as a grant of its own, bound to the agent's DPoP key. Gate refresh on Mission state. Project the read scope for the default resource, issue tokens for the actions service that carry the granted entries, and refuse a token for a service outside the Authority Set with `invalid_target`. |
+| Company actions service | Host the governed actions at a service with its own resource identifier (Spec 4.5): an API or an MCP server. Under a Mission token, return an operation for every governed action, check the carried authority when an approval arrives (Section 3.7), and record the Mission with what it performs. |
 | Company account settings | List the agent's active Missions, each with its goal, what was performed under it, and a revoke control. |
 | Company prerequisites | A scope hinted `changes: "none"` that covers the reads a governed task needs (Section 3.3), and DPoP at the actions service (Section 3.5). |
 | Personal Agent | Discover the extension. Declare it and `operations` version 3 (Spec 3.4). Sign in with PAR for each task, as a separate grant, with DPoP proofs. Keep each task's tokens in the trusted runtime, not the model. Approve with `approver="agent"` under the Mission token. Stop when the Company lacks the extension. Revoke the Mission when the task ends. |
@@ -195,7 +201,8 @@ operations on its website (Ops 2).
     Mission entry for the action names one of them. A task that uses one
     interface needs one entry.
   - A Common Constraint name (`max_amount`, `time_window`) has its
-    resource-access meaning.
+    resource-access meaning. The action's amount that `max_amount` bounds
+    is the net charge the contract version defines (Section 3.7).
   - Any other name is an operation `terms` key and constrains that term to
     equal the given value.
 - An action listed with `max_amount` is chargeable. The AS refuses an entry
@@ -280,16 +287,18 @@ in the Session (Spec 3.4):
 Poppy-Extensions: "operations";v="3", "karlmcguinness.com/mission";v="1"
 ```
 
-Operations already forbids returning an operation to a request that does
-not declare version 3 (Ops 2). A Mission-aware service refuses a Mission
-token on a request that does not declare both with `extension_required`
-(Spec 3.3), since it handles a governed action under a Mission token only
-with them.
+The Company also recognizes a Mission from the token itself, so it never
+refuses a request for lacking the Mission declaration alone (Spec 3.3).
+`operations` version 3 is different: Operations forbids returning an
+operation to a request that does not declare it (Ops 2). Under a Mission
+token, the actions service then refuses the governed action: an API with
+`extension_required` naming `operations` (Spec 3.3), and an MCP tool with
+an ordinary tool error, since an MCP server returns `extension_required`
+only to refuse the agent entirely (Ops 2).
 
-Operations returned to an agent that declares the extension carry `action`,
-the identifier from which the checks derive. PAP implementations ignore
-fields they do not recognize (Spec 3.3), so the added member is backward
-compatible.
+The operation carries nothing new. The Company knows the action from the
+request it computed the operation from (Ops 3), and Section 6.1 asks PAP
+for an `action` member that agents could check.
 
 ### 3.4 Creating a Mission
 
@@ -320,8 +329,14 @@ client_assertion=<private_key_jwt>
 The DPoP proof on the pushed request lets the Company bind the code to the
 key (Spec 4.2). `prompt=consent` is PAP's rule unless the redirect returns
 only to the device that opened the authorization URL (Spec 4.2). The
-request carries no `resource`, as PAP recommends, so the grant covers every
-service the Company offers (Spec 4.5).
+request carries no `resource`, as PAP recommends (Spec 4.5). A Mission
+grant still covers only the resources its Authority Set names: a later
+token request for another service gets `invalid_target` (core). That departs
+from PAP's rule that a sign-in without `resource` covers every service the
+Company offers (Spec 4.5), and Section 6.1 asks PAP to allow it for a grant
+whose own authority is narrower. A task that needs to read at another
+service, such as an MCP server for product search, carries a read entry for
+it.
 
 The Submission envelope:
 
@@ -361,8 +376,9 @@ The read entry projects to `orders:read`, which the Company's APIs already
 enforce unchanged. The exchange entry is consumed by the actions service.
 One entry per action suffices. Earlier rounds split each action into read,
 confirm, and cancel entries, because Draft 0.1 let an agent read and cancel
-operations. Operations version 3 has neither, and a request without an
-approval performs nothing. So the money cap applies only when an approval
+operations. Operations version 3 has no cancel, reads an operation's
+status only at the website endpoint (Ops 6), and performs nothing for a
+request without an approval. So the money cap applies only when an approval
 arrives, and the agent can still see a quote above the cap (Section 3.6).
 
 The agent then opens `authorize?client_id=...&request_uri=...` in the User's
@@ -413,6 +429,8 @@ for a token at the actions service (Spec 4.5):
   "access_token": "eyJhbGciOi…Zt7m",
   "token_type": "DPoP",
   "expires_in": 600,
+  "mission_id": "msn_8RfX2Lqv9TqM",
+  "mission_expires_at": "2026-11-16T00:00:00Z",
   "authorization_details": [ "…the exchange entry…" ]
 }
 ```
@@ -439,27 +457,31 @@ for a token at the actions service (Spec 4.5):
   scope, but it cannot host governed actions under this profile. The
   binding is stricter than core and needs no core change.
 - **The actions-service token carries no `scope`.** RFC 6749 has no empty
-  `scope`, so the response cannot report the difference from the grant's
-  scope by omission; core states the same limit. The response reports the
-  grant in `authorization_details`, and the agent reads that, never
-  `scope`, for this token. Section 6.1 asks PAP to say so for a per-service
-  token without scopes.
+  `scope`, and core states the same limit. Under Spec 4.7, the response's
+  omitted `scope` would read as the requested scopes granted, which here
+  would wrongly say `orders:read`. The response reports the grant in
+  `authorization_details`, and the agent reads that, never `scope`, for
+  this token. Section 6.1 asks PAP to say how a per-service token without
+  scopes is reported.
 - No credential outlives `mission_expires_at`, per core.
 - Access tokens stay opaque to the agent. Core profiles an RFC 9068 JWT or
   an opaque token resolved through introspection or issuer-local
-  resolution. The latter suits a Company that is both the AS and the
-  resource server.
+  resolution. Issuer-local resolution needs the service inside the
+  issuer's trusted implementation boundary; common ownership does not
+  qualify it (core). A service a provider runs, such as one behind a hosted
+  issuer (Spec 3.2), uses a JWT or introspection.
 - **Sessions are not constrained.** A refresh token serves any of the
   User's Sessions (Spec 4.4, 5.4), so a Mission does too. An agent should
-  still give each task its own Session, as PAP suggests for parallel tasks
-  (Spec 5), so that carts and conversations do not mix. Nothing in the
-  profile depends on it.
+  still give each task its own Session, which PAP allows for parallel
+  tasks (Spec 5), so that carts and conversations do not mix. Nothing in
+  the profile depends on it, except that a Session using a Mission declares
+  `operations` version 3 (Section 3.3).
 
 ### 3.6 Requests under a Mission token
 
 At the default resource, a Mission token carries only the read scope, so
 every write endpoint there already refuses it with `insufficient_scope`. So
-does the Company Agent at a conversation endpoint on the default resource,
+does the Company Agent, which version 1 never makes an actions service,
 because a signed-in conversation "respects the token's scopes" (Spec 8.11).
 At the actions service, the extension adds two rules:
 
@@ -501,11 +523,13 @@ The Company's added check:
 ```
 request(req, token):                                    # after Spec 5.3 and Spec 7 checks
   if token has no Mission:
-    if req carries approver="agent", the Company governs the action,
-       and policy.missions_required:
-      decline: approval_declined                        # Ops 6, "such as approver"
-    continue as PAP
+    continue as PAP, except that once Ops 6 checks 1 to 3 pass:
+      if req carries approver="agent", the Company governs the action,
+         and policy.missions_required:
+        decline: approval_declined                      # Ops 6, "such as approver"
 
+  if the Mission's state != active or now >= its expires_at:   # every request
+    refuse 401 invalid_token
   op = the operation req asks for, as the Company computes it (Ops 3)
   if no granted entry names op.action:                  # Section 3.6, rule 2
     refuse 403 insufficient_scope, mission_denial="insufficient_authority"
@@ -536,10 +560,11 @@ decide(op, token, t):
     refuse 403 insufficient_scope, mission_denial="insufficient_authority"
   A = granted entries for this service whose actions include op.action,
       each with any requires_action_approval: false removed     # false = absent
-  if any entry in A has a resource_match value or constraint key the
-     Company does not enforce for op.action:                    # includes requires_action_approval: true
+  U = entries in A with a resource_match value or constraint key the
+      Company does not enforce for op.action                    # includes requires_action_approval: true
+  C = entries in A, less U, for which every constraint holds for op at t   # U gives no authority
+  if C is empty and U is not empty:
     refuse 403 insufficient_scope, mission_denial="constraint_unrecognized"
-  C = entries in A for which every constraint holds for op at t
   if C is empty:
     refuse 403 insufficient_scope, mission_denial="insufficient_authority"
   return C
@@ -552,18 +577,21 @@ holds(key, value, op, t):
   any other enforced key  -> op.terms[key] equals value
 ```
 
-- **Every applicable entry is checked before one is chosen.** A key the
-  Company does not enforce, in any entry that names the action, fails the
-  request closed (core and resource-access). Only then are the remaining
-  entries treated as alternative grants. Entry order never changes the
-  outcome.
+- **An entry the Company cannot fully enforce gives no authority.** An
+  entry that names the action with a key or `resource_match` the Company
+  does not enforce authorizes nothing, and another entry the Company can
+  fully enforce may still authorize the whole request on its own (core,
+  resource-access). Entries are alternative grants, never combined, and
+  entry order never changes the outcome.
 - **The Mission checks are token checks.** Ops 6 makes its own checks
   "after the Session header checks in spec 5.3 and the token checks in
   spec 7". A Mission refusal is the resource server's enforcement of the
   token's carried authority, so it is a token check and uses core's
   `insufficient_scope` (core, Denial Responses). At the actions service, a
   Mission token carries no scope, so the covering entries stand in for the
-  scope check Spec 7 makes for an ordinary token.
+  scope check Spec 7 makes for an ordinary token. The coverage check
+  applies only to a request that would perform; one without an approval
+  performs nothing and gets the operation (Section 3.6).
 - **`requires_action_approval: true` fails closed.** It is never among the
   Company's enforced keys in version 1 (Section 3.3), so the AS refuses it,
   and an entry that carries it anyway fails with `constraint_unrecognized`.
@@ -617,7 +645,8 @@ holds(key, value, op, t):
   PAP workflow of Section 3.10, outside this profile.
 - **`policy.missions_required` is the Company's adoption lever.** The
   Company declines an agent approval under an ordinary token for an action
-  it governs. Ops 6 lets a Company decline "for its own reasons, such as
+  it governs, once Ops 6's checks pass, which is when Ops 6 allows a
+  decline. Ops 6 lets a Company decline "for its own reasons, such as
   `approver`", with no reason codes, so nothing new appears on the wire.
   User approvals keep working as PAP defines them.
 
@@ -630,17 +659,21 @@ bodies (Ops 4, 6).
 | Mission token: no granted entry names the action, or none covers the approved request (amount, terms, contract version, time window) | 403 | `DPoP error="insufficient_scope", mission_denial="insufficient_authority"`, no `scope` attribute | No operation |
 | Mission token: a granted entry names the action with a key or `resource_match` the Company does not enforce | 403 | `… mission_denial="constraint_unrecognized"`, no `scope` | No operation |
 | Mission token at a write endpoint of the default resource | 403 | `DPoP error="insufficient_scope"`, as for any token without the needed scope. It carries `mission_denial="insufficient_authority"` and no `scope` where the endpoint recognizes the Mission token. | Whatever the endpoint returns today |
-| Mission token with the Company Agent on the default resource | 200 or 202 | None | An `authorization` event (Spec 8.11) |
+| Mission token with the Company Agent | 200 or 202 | None | An `authorization` event (Spec 8.11) |
 | Mission not active, or past its `expires_at`, at admission or on any request | 401 | `DPoP error="invalid_token"` | None |
-| Mission token on a request that does not declare both extensions | 403 | None | `{ "error": "extension_required", "extension": "karlmcguinness.com/mission" }` (Spec 3.3) |
+| Mission token at an API, on a request that does not declare `operations` version 3 | 403 | None | `{ "error": "extension_required", "extension": "operations" }` (Spec 3.3). An MCP tool returns an ordinary tool error instead (Ops 2). |
 | Ordinary token, agent approval, where the Company requires Missions | 403 | None | `approval_declined` (Ops 6) |
 | A Company eligibility rule fails at admission | 403 | None | `approval_declined`, with a `reason` stating that nothing was changed |
+
+At an MCP server, a Mission refusal is the same challenge on the HTTP
+response, with `resource_metadata` (Spec 7).
 
 - **No `scope` on a Mission refusal.** Where the Company recognizes the
   Mission token, its `insufficient_scope` carries no `scope` attribute,
   because no scope remedies a Mission refusal. RFC 6750 makes the attribute
-  optional, and PAP's "which the response names in the `scope` attribute"
-  (Spec 7) describes the ordinary case rather than requiring it.
+  optional. PAP's error table says the response names the missing scopes
+  "in the `scope` attribute" (Spec 7); this profile reads that as the
+  ordinary case, and Section 6.1 asks PAP to say so.
 - **Who sees `mission_denial`.** The Company sends it only in a response to
   a validly signed, audience-correct Mission token (core). An agent treats a
   value it does not recognize as `insufficient_authority` (core).
@@ -657,8 +690,8 @@ bodies (Ops 4, 6).
   a new sign-in for the named scopes (Spec 7, 8.11), for Mission tokens
   only. Only an agent that declares the extension holds Mission tokens, so
   every agent this reaches implements it.
-- **On `invalid_token`**, the agent refreshes once. If the refresh fails
-  with `mission_error`, the agent stops the task.
+- **On `invalid_token`**, the agent refreshes once. If the refresh fails,
+  with or without `mission_error`, the agent stops the task.
 - **On `approval_declined`**, the agent follows Ops 6. It does not send the
   approval again, and it approves no new revision for the action without
   asking the User.
@@ -693,14 +726,13 @@ Afterward:
   before the Company acknowledged the revocation (Section 3.7).
 - Operations performed before the end continue. Authority was checked at
   the commit point.
-- An operation returned but not performed stays unperformed. An approval
-  of it under another Mission's token is checked against that Mission
-  (Section 3.7), and one under an ordinary token is ordinary PAP (Section
-  3.10).
-- To learn the outcome of an operation whose result was in doubt (Ops 7)
-  after the Mission ends, the agent uses an ordinary signed-in Session, or
-  asks the User. That is recovery under the account's own authority, not
-  Mission authority.
+- An operation returned but not performed stays unperformed. The agent
+  does not approve it under another credential: a credential held outside
+  the Mission is no fallback for its task (core). A User who still wants it
+  starts a new Mission or acts on their own authority.
+- The outcome of an operation whose result was in doubt (Ops 7) shows in
+  account settings against the Mission (Section 3.7), where the User can
+  see it. The agent does not look it up with another credential.
 - Other Missions are unaffected: each is a separate grant (Section 3.5).
 
 ### 3.9 Channels
@@ -708,9 +740,9 @@ Afterward:
 | Channel | Rule |
 | --- | --- |
 | OpenAPI | Governed actions sit at an API with its own resource, and approvals arrive in `Poppy-Approval` (Ops 6). Write endpoints on the default resource refuse the Mission token. |
-| MCP | An MCP server already takes tokens for its own resource (Spec 7), so it can be the actions service. Tools return operations as error results and take approvals in `_meta` (Ops 4, 6). An entry names the server's `url`. A server that accepts only Bearer tokens cannot host governed actions (Section 3.5). |
-| Conversations | A conversation endpoint that declares its own resource (Spec 4.5) can be an actions service: the Company Agent returns operations and takes approvals in messages (Ops 4, 6), and performs only under the Section 3.7 check. Otherwise the Company Agent, held to the read scope, asks for authorization (Spec 8.11), which the agent treats as a Mission refusal (Section 3.7). A message's text never approves (Ops 6). |
-| Web | Out of version 1. A Mission sign-in neither requests nor receives `poppy:browser-sign-in`, so a browser the agent joins under a Mission is signed out (Spec 6). Website operations, approved at `endpoint` and performed with the browser's own access (Ops 4, 6), never act under a Mission. A User who acts in their own browser, signed in to their own account, acts on their own authority. |
+| MCP | An MCP server already takes tokens for its own resource (Spec 7), so it can be the actions service. Tools return operations as error results and take approvals in `_meta` (Ops 4, 6). An entry names the server's `url`. A Mission refusal is the Section 3.7 challenge on the HTTP response, with `resource_metadata` (Spec 7). A server that accepts only Bearer tokens cannot host governed actions (Section 3.5). |
+| Conversations | Not an actions service in version 1. The Company Agent is held to the read scope, so a governed action there brings an `authorization` event (Spec 8.11), which the agent treats as a Mission refusal (Section 3.7). That event names the scopes needed and has no form for a Mission refusal, so a conversation endpoint waits on one before it can host governed actions (Section 4). A message's text never approves (Ops 6). |
+| Web | Out of version 1. A Mission sign-in neither requests nor receives `poppy:browser-sign-in`: the AS refuses it with `invalid_scope`, since no carried entry makes it safe (core, Requested Scope Values). So a browser the agent joins under a Mission is signed out (Spec 6). Website operations, approved at `endpoint` and performed with the browser's own access (Ops 4, 6), never act under a Mission. A User who acts in their own browser, signed in to their own account, acts on their own authority. |
 
 ### 3.10 What the agent developer writes
 
@@ -731,8 +763,10 @@ token = refresh(grant, resource=actions_service)   # Spec 4.5
 
 r = call(token, POST /actions/orders/ord_7Hk2/exchanges, ...)
 if r is approval_required:
-    check r.operation.terms against the request (Ops 5)
+    check r.operation.terms against the request and the Mission (Ops 5)
     r = call(token, the same request, approval(r.operation, approver="agent"))
+    if r is approval_required:                     # a new revision in answer to the approval
+        ask the User; approve with approver="user" only if they agree   # Ops 5
 if r is insufficient_scope:                        # with or without mission_denial or scope
     tell the User this Mission does not cover it; no new scopes, no other credential
 if r is approval_declined:
@@ -787,7 +821,7 @@ what is done under a Mission token.
 | An approval is held to the action contract the User approved; a changed contract needs a new Mission | Contract version recorded in the Mission Record; approval check |
 | The Mission checked is the one whose token carries the approval | Approval check (Section 3.7) |
 | Revoking one Mission never ends another Mission or the agent's ordinary access | Separate grants (Section 3.5) |
-| A Mission token copied from one User's device does not work for another User of the same agent | DPoP binding of the Mission refresh token and actions-service tokens (Section 3.5) |
+| A Mission refresh token, or a Mission token for the actions service, copied from one User's device does not work for another User of the same agent | DPoP binding (Section 3.5). A read token that the default resource accepts as Bearer is not covered (Spec 10.7). |
 | The planner cannot choose a broader task credential | Agent's trusted runtime. The Company cannot verify this. |
 
 | Not provided in version 1 | Consequence | Where it comes back |
@@ -799,15 +833,18 @@ what is done under a Mission token.
 | Conditions outside `terms` | Only `terms` and Common Constraints are checked. Summary prose is not. | Ops 3 already requires every effect in `terms`. A Company governing an action puts its conditions there. |
 | Other credentials the agent holds | An ordinary write-capable token is not bounded by any Mission. It can approve with `approver="user"` on the agent's word (T11). Core forbids this for a Mission's task, but the Company cannot observe the violation. | Company policy: decline agent approvals under ordinary tokens (Section 3.7), and issue agents no write-capable scope for the governed actions, so every agent write to them goes through a Mission |
 | Governed actions on the default resource | A Company hosts them at a service with its own resource. | Section 6.2, item 5 |
+| Governed actions through the Company Agent | A conversation endpoint is not an actions service (Section 3.9). | A conversation form of the Mission refusal (Section 6.1, item 6), or a later version |
 | Missions across Companies | Each Company sees only its own Mission. Aggregate limits are the agent's job. | Cross-Domain companion, opt-in, at the cost of correlation (Section 5) |
 
 The profile claims no assurance level beyond Baseline Issuance. It adds two
 capabilities on top:
 
-- **A state check at approval, serialized with revocation.** This is the
-  Architecture's freshness half-step: issuer-local resolution on each
-  request, plus the serialization boundary between a revocation and an
-  effect, which the Architecture says a per-use read alone does not supply.
+- **A state check at approval, serialized with revocation.** The
+  Architecture's freshness half-step is a freshness surface with a
+  published staleness bound, which a per-use read of Mission state
+  provides. The approval check adds what the Architecture says such a read
+  lacks: a serialization boundary between a revocation and an effect. It is
+  still not a level of its own.
 - **Enforcement of the carried authority at one resource server**, the
   actions service, for actions that go through operations.
 
@@ -829,8 +866,8 @@ sharpens the first.
    a Mission token that carries no write scope and by Section 3.6.
 2. **It puts machinery into the first profile that PAP or core already
    supply.**
-   - `parameter_digest`: PAP revisions are immutable and held by the Company
-     (Ops 3).
+   - `parameter_digest`: a PAP revision's terms never change, so an approval
+     names exact terms (Ops 3).
    - `account_ref`: the Company binds the account to the grant.
    - `request_id`: the operation ID already serves.
    - Ten `pap_*` constraints: `terms`-key equality plus `max_amount` covers
@@ -850,7 +887,7 @@ sharpens the first.
 | Proposal endpoint, `request_id`, `revises_operation_id`, `expected_revision` | Remove | Nothing. Ops 4 and Ops 7 cover it. |
 | `session_id` at PAR | Remove (rounds 1 to 4 retained it) | Nothing. Sign-in no longer knows the Session (Spec 5.4). |
 | `account_ref` | Remove | Cross-client account comparison, which no check needs |
-| `parameter_digest` | Remove | A client-side tamper check of a revision the Company holds and cannot change (Ops 3) |
+| `parameter_digest` | Remove | A client-side tamper check of a revision the Company cannot change (Ops 3) |
 | `pap_*` constraints and the retail profile | Replace with `terms`-key equality and Common Constraints | Range checks other than `max_amount` and `time_window` |
 | `pap_commit_limit` | Defer to Metering | Cumulative counts (Section 4) |
 | Scope-omission exception | Remove | Nothing |
@@ -860,7 +897,7 @@ sharpens the first.
 | One Mission per Session | Remove (rounds 3 and 4 retained it as one Session per Mission) | Nothing. Missions are separate grants (Section 3.5), and a Mission never joins a browser (Section 3.9). |
 | Cross-domain projection, ID-JAG (Section 16 of Draft 00) | Out of version 1 | Section 4 |
 | 30 conformance cases | Replace with the tests in Section 7 | Coverage of removed mechanisms only |
-| Separate proposal/read and commit entries | Remove (rounds 1 to 4 retained them as per-phase entries) | Nothing. Operations version 3 has no read or cancel, and a request without an approval performs nothing. |
+| Separate proposal/read and commit entries | Remove (rounds 1 to 4 retained them as per-phase entries) | Nothing. Operations version 3 has no cancel and no read outside the website endpoint, and a request without an approval performs nothing. |
 | Admission inside one transaction with the state check | Retain, as approval admission (Section 3.7) | Nothing |
 
 ## 6. Upstream asks
@@ -879,9 +916,18 @@ call.
    4.7). RFC 6749 cannot express an empty grant, so a service authorized by
    `authorization_details` needs its token response's `scope` left out
    without meaning "the scopes requested".
-4. On the roadmap's Signed approvals topic, offer this profile as the
-   "Company's own page" approach to mandates: the Company holds the record
-   the User approved and checks each agent approval against it.
+4. On the roadmap's Signed approvals topic, offer this profile for
+   mandates, using the "Company's own page" approach for the User's
+   instruction: the Company holds the record the User approved and checks
+   each agent approval against it. It does not verify a per-revision user
+   approval, which the topic's proposals address.
+5. Let a grant whose own authority is narrower cover fewer services. Spec
+   4.5 requires a token for any service the Company offers after a sign-in
+   without `resource`; core refuses a Mission token for a resource outside
+   its Authority Set with `invalid_target`.
+6. Say that an `insufficient_scope` may omit `scope` where no scope remedies
+   the refusal (Spec 7), and give the conversation `authorization` event a
+   form for such a refusal (Spec 8.11).
 
 ### 6.2 To the Mission family
 
@@ -898,7 +944,7 @@ call.
 4. **#1205, ordinary credentials.** Ruled (D412). Core forbids a client
    acting under a Mission to present an ordinary credential for the task,
    except through a deployment-defined enforcement path that establishes
-   the Mission. Section 3.10's rule follows core.
+   the Mission. Sections 3.8 and 3.10 follow core.
 5. **New, not filed: per-entry consumption at one audience.** Core projects
    `scope` for a target that consumes only `scope`, and refuses a requested
    `scope` value associated with a target that consumes
@@ -913,23 +959,27 @@ call.
 
 Each test uses a Mission for "exchange `itm_4Qa` on `ord_7Hk2` for
 `stormline-insulated-m`, `max_amount` 75.00 USD", at the actions service
-`https://api.example.com/actions`, unless the setup says otherwise.
+`https://api.example.com/actions`, unless the setup says otherwise. T1,
+T3(c), T14, and T16 send an agent approval the Mission does not cover. A
+conforming agent does not send one (Ops 5); these tests send it directly,
+as a mistaken or compromised agent would, to show that the Company refuses
+it.
 
 | # | Setup | Action | Required result |
 | --- | --- | --- | --- |
 | T1 | Revision at 90.00 USD | Request the exchange under the Mission token without an approval, then with an agent approval of that revision | First: `403 approval_required` with the operation. Second: `403`, `insufficient_scope`, `mission_denial="insufficient_authority"`, no `scope` attribute; nothing performed, no charge. Afterward, the agent sends no sign-in or refresh for more scopes, no retry with another credential, and no approval of that revision under this Mission. |
 | T2 | Revision at 70.00 USD | Approve it with `approver="agent"` under the Mission token | The action's own success response. Exactly one exchange. The Company's record of the performed operation names the Mission, and account settings list it under the Mission. |
-| T3 | Mission tokens | (a) Call a write endpoint on the default resource. (b) Ask the Company Agent on the default resource to perform the exchange. (c) At the actions service, request the exchange for a different SKU, then approve it. (d) Request an action the actions service does not govern. (e) Request the approved exchange without an approval. | (a) `403 insufficient_scope`, no effect. (b) An `authorization` event (Spec 8.11) and no effect; the agent does not sign in again. (c) `approval_required` with an operation, and its approval is refused with `insufficient_authority`; no effect. (d) `403`, `insufficient_authority`, no operation. (e) `approval_required` with the operation. |
+| T3 | Mission tokens | (a) Call a write endpoint on the default resource. (b) Ask the Company Agent to perform the exchange. (c) At the actions service, request the exchange for a different SKU, then approve it. (d) Request an action the actions service does not govern. (e) Request the approved exchange without an approval. | (a) `403 insufficient_scope`, no effect. (b) An `authorization` event (Spec 8.11) and no effect; the agent does not sign in again. (c) `approval_required` with an operation, and its approval is refused with `insufficient_authority`; no effect. (d) `403`, `insufficient_authority`, no operation. (e) `approval_required` with the operation. |
 | T4 | The Company requires Missions for agent approvals | An ordinary token with the action's write scope approves the exchange, first with `approver="agent"`, then with `approver="user"` | `403 approval_declined`, nothing performed; then performed as ordinary PAP, with no Mission recorded. |
 | T5 | A revocation and an approval of the same operation run concurrently, repeated many times, with revocation both in settings and by RFC 7009 | Approve. After the revocation is acknowledged, approve again and refresh. | Every admitted approval committed before the revocation was acknowledged, and none after. Refused attempts have no effect. After acknowledgement: the approval returns `401 invalid_token`, and refresh returns `invalid_grant` with `mission_error="revoked"`. Actions admitted earlier complete. |
 | T6 | Mission A covers this exchange; Mission B covers returning `itm_9Zp` | (a) A's token approves B's return operation. (b) An operation for this exchange, returned under an ordinary token in another Session, is approved under A's token. | (a) `403`, `insufficient_authority`; B's operation is not performed. (b) Performed once, recorded with Mission A: the Mission checked is the one whose token carries the approval. |
-| T7 | Two exchange entries: one covers the revision; the other carries a key the Company stopped enforcing after issuance | Approve, with the entries in each order | `403`, `mission_denial="constraint_unrecognized"` in both orders. No effect. |
+| T7 | Two exchange entries: one covers the revision; the other carries a key the Company stopped enforcing after issuance | Approve, with the entries in each order, then with only the unenforced entry granted | With both entries: performed, in both orders, because the enforceable entry authorizes the whole request on its own (core). With only the unenforced entry: `403`, `mission_denial="constraint_unrecognized"`, no effect. |
 | T8 | (a) An authority proposal whose exchange entry carries `requires_action_approval: true`. (b) A grant that carries such an entry anyway. | (a) Sign in. (b) Approve with `user`, then with `agent`. | (a) The AS refuses the entry, or omits it and the granted `authorization_details` shows the omission. It never grants the entry with the key dropped. (b) `403`, `mission_denial="constraint_unrecognized"` for both approvals. No effect. |
 | T9 | An authority proposal whose exchange entry carries `requires_action_approval: false` | Sign in, then approve a covered revision with `agent` | The granted `authorization_details` echoes the entry without the key, because `false` is the same as absent. The action is performed. |
 | T10 | The Company lists `operations` version 3 but not the extension | The agent starts the Mission workflow | The agent makes no action request and tells the User why. It submits the authority neither as bare `scope` nor as `authorization_details`. |
-| T11 | An operation returned under the Mission token at 90.00 USD; the agent also holds an ordinary credential | Approve it at the actions service with the ordinary credential and `approver="user"` | (a) Where the Company issues agents any write-capable scope for the action: performed as ordinary PAP, with no Mission recorded. The label is the agent's statement (Ops 8.1). (b) Where the Company issues agents no write-capable scope for the governed actions: no such credential exists, so the approval cannot happen. |
-| T12 | Two operations for the same exchange, with two operation IDs, returned in two interfaces; the Company relies on a one-exchange-per-item rule | Approve both concurrently under the Mission token | Exactly one is performed, once. The other is declined (`approval_declined`) with nothing changed. Without such a rule, both may be performed, because the Mission alone does not count them (Section 4); only Metering's `max_calls` of 1 refuses the second. Recommended: the Company gives one action one operation ID across interfaces (Ops 3), so Ops 7 alone keeps it at most once. |
-| T13 | The Company lists `browser_session_endpoint` and returns operations on its website | (a) A Mission sign-in that requests `poppy:browser-sign-in`. (b) The agent joins its browser with the Mission read token. | (a) The AS refuses the scope with `invalid_scope`. (b) Step 2 of the join refuses the token with `insufficient_scope` (Spec 6); the agent does not sign in again and joins signed out. No website operation is performed under the Mission. |
+| T11 | An operation returned under the Mission token at 90.00 USD; a non-conforming agent also holds an ordinary credential | It approves the operation at the actions service with the ordinary credential and `approver="user"`, which core forbids for the Mission's task | (a) Where the Company issues agents any write-capable scope for the action: performed as ordinary PAP, with no Mission recorded. The label is the agent's statement (Ops 8.1), and the Company cannot observe the violation (Section 4). (b) Where the Company issues agents no write-capable scope for the governed actions: no such credential exists, so the approval cannot happen. |
+| T12 | Requests for the same exchange in two interfaces, which the Company treated as two actions with two operation IDs (Ops 3); the Company relies on a one-exchange-per-item rule | Approve both concurrently under the Mission token | Exactly one is performed, once. The other is declined (`approval_declined`) with nothing changed. Without such a rule, both may be performed, because the Mission alone does not count them (Section 4); only Metering's `max_calls` of 1 refuses the second. Recommended: the Company gives one action one operation ID across interfaces (Ops 3), so Ops 7 alone keeps it at most once. |
+| T13 | The Company lists `browser_session_endpoint` and returns operations on its website | (a) A Mission sign-in that requests `poppy:browser-sign-in`. (b) The agent joins its browser with the Mission read token. | (a) The AS refuses the scope with `invalid_scope` (core, Requested Scope Values). (b) Step 2 of the join refuses the token with `insufficient_scope` (Spec 6); the agent does not sign in again and joins signed out. No website operation is performed under the Mission. |
 | T14 | (a) Revision 2 of the exchange adds a 10.00 USD fee to a 70.00 USD net. (b) A `return` operation, an action listed without `max_amount`, takes a 5.00 USD restocking fee out of its refund in revision 2. (c) A revision charges 170.00 USD for the replacement, credits 100.00 USD for the returned jacket, and adds 3.00 USD tax. | Approve each with `agent` | (a) `403`, `insufficient_authority`: the net charge, 80.00 USD, exceeds the cap. (b) `403`, `insufficient_authority`: the deduction from the refund is a charge component, which an action listed without `max_amount` never carries. (c) Performed: the net charge, 73.00 USD, is within the cap, which a gross reading would wrongly refuse. No effect in (a) or (b). |
 | T15 | An approval waits on the Mission lock, held by a concurrent writer, while (a) the Mission's `expires_at`, (b) the revision's `expires_at`, or (c) the covering entry's `time_window` end passes | Release the lock | (a) `401 invalid_token`. (b) A new revision (`approval_required`), nothing performed. (c) `403`, `insufficient_authority`. No effect in any case. Every admitted approval's admission instant precedes the bound. |
 | T16 | The jacket Mission is approved under `exchange` contract v1. The Company then deploys v2, which adds a `protection_plan` term with a monthly charge. | Request the exchange under v2, then approve it with `agent` under the Mission token | `403`, `insufficient_authority`; nothing performed. A new Mission approved under v2 performs it. |
@@ -937,7 +987,7 @@ Each test uses a Mission for "exchange `itm_4Qa` on `ord_7Hk2` for
 | T18 | The Company lists `exchange` with `order_id`, `item_id`, and `max_amount`, but not `replacement_sku`. The User's permission names the insulated replacement. | The agent starts the Mission workflow | The agent sends no pushed request with an exchange entry that leaves out the replacement until the User chooses, in the agent's own interface. If the User accepts the broader task, the consent page shows an exchange entry with no replacement constraint. If the User chooses per-revision approval, the agent approves each revision with `user` after showing it, under an ordinary token, outside the Mission. |
 | T19 | A Mission token at a write endpoint of the default resource, both legacy (it sends `scope="orders:write"`) and Mission-aware | Call the endpoint | `403`, `insufficient_scope`, no effect. The Mission-aware endpoint sends `mission_denial="insufficient_authority"` and no `scope`. In both cases the agent requests no scope, starts no sign-in, and makes no retry with another credential. |
 | T20 | A Mission refresh token copied to another User's device of the same agent, which has its own DPoP key and can get client assertions (Spec 10.7) | Refresh | `invalid_grant`: the proof's key is not the one the token is bound to (Spec 4.4). No token is issued. |
-| T21 | A Mission token on a request to the actions service that declares `operations` version 3 but not the extension | Request the exchange | `403 extension_required` naming the extension. Nothing performed, and no operation returned. |
+| T21 | A Mission token on a request to the actions service that does not declare `operations` version 3 | Request the exchange at the API, then call the tool at an MCP actions service | At the API, `403 extension_required` naming `operations`; at the MCP server, an ordinary tool error. Nothing performed, and no operation returned. |
 
 ## 8. Adoption path
 
@@ -964,12 +1014,13 @@ family Internet-Draft. On the family side,
 
 | Draft 0.1 sketch (rounds 1 to 4) | Version 1.0 sketch | Why |
 | --- | --- | --- |
-| Checks at the operations confirm endpoint | Checks when an approval arrives, at the actions service (Section 3.7) | Operations version 3 has no confirm endpoint; the approval travels with the repeated request (Ops 6). |
+| Checks at the operations confirm endpoint | Checks when an approval arrives, at the actions service (Section 3.7) | Operations version 3 sends the approval with the repeated request; only websites use an endpoint (Ops 6). |
 | `approved_by: "standing_permission"` | `approver="agent"` | Ops 5, 6 |
 | `user_approval_required` and a `403` for an unbacked standing permission | `approval_declined` | Ops 6 lets a Company decline for reasons such as `approver`. |
 | `poppy:read` projection; no `poppy:write` | A Company read scope hinted `changes: "none"` | PAP 1.0 scopes are the Company's own (Spec 4.7). |
 | A separate operations resource | An actions service with its own resource | Per-service tokens (Spec 4.5) |
-| Per-phase `a.read`, `a.confirm`, `a.cancel` entries | One entry per action | No operation read or cancel in Operations version 3 |
+| Per-phase `a.read`, `a.confirm`, `a.cancel` entries | One entry per action | No cancel, and no read outside the website endpoint, in Operations version 3 |
+| The Company Agent proposed; confirmation happened at the operations endpoint | The Company Agent is held to the read scope | A conversation's operations are approved in the conversation (Ops 6), and its `authorization` event has no form for a Mission refusal (Spec 8.11). |
 | `session_id` bound at PAR; one Session per Mission, enforced with `invalid_session` | Removed; Missions are separate grants | Sign-in does not know the Session (Spec 5.4). |
 | Refresh token bound by client authentication | Also DPoP-bound | Spec 10.7 |
 | An eligibility failure recorded, then `failed` | Declined | Ops 6 |
