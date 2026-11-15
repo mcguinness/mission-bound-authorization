@@ -258,7 +258,9 @@ operations on its website (Ops 2).
   Projection). So the agent requests, for the default resource
   `https://{organization.domain}`, Company scopes hinted `changes: "none"`
   that the task's reads need (Spec 4.7), and the authority proposal carries
-  a read entry they project from. The AS's projection mapping is the
+  a read entry they project from. Those reads include the effects of the
+  governed actions, such as the order, which is how the agent settles an
+  outcome in doubt (Ops 7, Section 3.10). The AS's projection mapping is the
   Company's own configuration (core projection step 2); the hints let the
   agent choose before sign-in. A Company with no such scope cannot offer
   this profile: core refuses the projection (step 5), and a PAP sign-in that
@@ -268,7 +270,7 @@ operations on its website (Ops 2).
   the action entries and no `scope` (core projection step 4). The default
   resource and the actions service are distinct audiences, so each follows
   one rule, and neither specification needs an exception. Section 6.2 asks
-  whether one resource could serve both.
+  whether one resource could serve both: #2072.
 - The actions service identifies itself by its resource identifier for
   every path beneath it, so the default `exact` `resource_match` applies to
   every governed request.
@@ -543,7 +545,6 @@ request(req, token):                                    # after Spec 5.3 and Spe
 
   in one transaction that locks the Mission record:     # revocation takes the same lock
     t = now                                             # the admission instant
-    if op is performed or being performed: respond as Ops 7
     if t >= the approved revision's expires_at: respond as Ops 6 check 3
     if the Mission's state != active or t >= its expires_at:
       refuse 401 invalid_token
@@ -552,7 +553,9 @@ request(req, token):                                    # after Spec 5.3 and Spe
     recheck at t the Company's eligibility rules that depend on mutable
       state, such as one exchange per order item; if one fails:
       decline: approval_declined, reason "nothing was changed"   # Ops 6
-    record op as being performed at t, with the Mission
+    claim op: compare-and-set op's at-most-once record from unclaimed
+      to being performed at t, with the Mission         # one claim for every approval path
+    if the claim fails: respond as Ops 7                # another approval holds it
   perform once                                          # Ops 7
 
 decide(op, token, t):
@@ -612,7 +615,7 @@ holds(key, value, op, t):
 - **Admission is judged at one instant and serializes with revocation.** An
   approval is admitted only if, at the instant it commits, four things hold:
   - the Mission is active and before its `expires_at`;
-  - the operation is not yet performed or being performed;
+  - its claim on the operation succeeds (below);
   - the approved revision is unexpired;
   - a covering entry's `time_window`, if any, contains that instant.
 
@@ -622,6 +625,19 @@ holds(key, value, op, t):
   approval that waits on the lock past a bound is refused. Once the Company
   acknowledges a revocation, it admits no further approval under that
   Mission.
+- **One claim per operation, across every approval path.** The Mission
+  lock serializes an approval with that Mission's revocation, not with
+  approvals under other Missions. An operation can be approved under any
+  Mission whose token accompanies the approval, or with an ordinary token
+  (Ops 3), so every path claims the operation through one compare-and-set
+  on its at-most-once record, the record Ops 7 already requires the Company
+  to keep. The claim is taken inside the Mission transaction, after every
+  Mission check, so a refused or declined approval claims nothing. Two
+  approvals of the same operation under different Missions take different
+  Mission locks, but only one claim succeeds, and the other is answered as
+  Ops 7. This is a prerequisite on the Company's Operations implementation:
+  its at-most-once record supports an atomic conditional claim that the
+  Mission transaction, and the ordinary approval path, both use.
 - **An eligibility failure is a decline.** The same transaction rechecks
   the Company's own eligibility rules that depend on mutable state, such as
   one exchange per order item. An approval that fails one is declined
@@ -657,7 +673,7 @@ bodies (Ops 4, 6).
 | Condition | Status | `WWW-Authenticate` | Body |
 | --- | --- | --- | --- |
 | Mission token: no granted entry names the action, or none covers the approved request (amount, terms, contract version, time window) | 403 | `DPoP error="insufficient_scope", mission_denial="insufficient_authority"`, no `scope` attribute | No operation |
-| Mission token: a granted entry names the action with a key or `resource_match` the Company does not enforce | 403 | `… mission_denial="constraint_unrecognized"`, no `scope` | No operation |
+| Mission token: a granted entry names the action with a key or `resource_match` the Company does not enforce, and no fully enforceable entry covers the request | 403 | `… mission_denial="constraint_unrecognized"`, no `scope` | No operation |
 | Mission token at a write endpoint of the default resource | 403 | `DPoP error="insufficient_scope"`, as for any token without the needed scope. It carries `mission_denial="insufficient_authority"` and no `scope` where the endpoint recognizes the Mission token. | Whatever the endpoint returns today |
 | Mission token with the Company Agent | 200 or 202 | None | An `authorization` event (Spec 8.11) |
 | Mission not active, or past its `expires_at`, at admission or on any request | 401 | `DPoP error="invalid_token"` | None |
@@ -730,9 +746,12 @@ Afterward:
   does not approve it under another credential: a credential held outside
   the Mission is no fallback for its task (core). A User who still wants it
   starts a new Mission or acts on their own authority.
-- The outcome of an operation whose result was in doubt (Ops 7) shows in
-  account settings against the Mission (Section 3.7), where the User can
-  see it. The agent does not look it up with another credential.
+- An operation whose outcome was in doubt (Ops 7) stays unresolved until
+  its outcome is established. While the Mission is active, the agent
+  establishes it with the Mission's read token before approving anything
+  new for the action (Section 3.10). After the Mission ends, the outcome
+  shows in account settings against the Mission (Section 3.7), where the
+  User can see it; the agent does not look it up with another credential.
 - Other Missions are unaffected: each is a separate grant (Section 3.5).
 
 ### 3.9 Channels
@@ -763,16 +782,24 @@ token = refresh(grant, resource=actions_service)   # Spec 4.5
 
 r = call(token, POST /actions/orders/ord_7Hk2/exchanges, ...)
 if r is approval_required:
-    check r.operation.terms against the request and the Mission (Ops 5)
-    r = call(token, the same request, approval(r.operation, approver="agent"))
-    if r is approval_required:                     # a new revision in answer to the approval
+    op = r.operation
+    check op.terms against the request and the Mission (Ops 5)
+    a = approval(op, approver="agent")
+    r = call(token, the same request, a)
+    unresolved = false
+    while r failed, timed out, or is 503:          # op's outcome is unknown
+        unresolved = true
+        r = call(token, the same request, a)       # the same approval, never a new one (Ops 7)
+    if r is approval_required and unresolved:      # a new operation says nothing about op
+        outcome = read the order with read_token   # Ops 7: find out another way
+        if outcome is performed: report the task done; stop
+        if outcome is unknown: tell the User; approve nothing new; stop
+    if r is approval_required:                     # a new revision; op was not performed
         ask the User; approve with approver="user" only if they agree   # Ops 5
 if r is insufficient_scope:                        # with or without mission_denial or scope
     tell the User this Mission does not cover it; no new scopes, no other credential
 if r is approval_declined:
     tell the User; never resend it, never approve a new revision without asking   # Ops 6
-if r failed or timed out:
-    send it again with the same approval            # Ops 7
 when task completes: revoke(grant.refresh_token)
 ```
 
@@ -820,6 +847,8 @@ what is done under a Mission token.
 | No limit the User set is dropped silently | Agent maps every limit to a listed key, or takes the User's choice through its own interface (Section 3.3) |
 | An approval is held to the action contract the User approved; a changed contract needs a new Mission | Contract version recorded in the Mission Record; approval check |
 | The Mission checked is the one whose token carries the approval | Approval check (Section 3.7) |
+| Each operation is performed at most once, across every Mission and ordinary approval | One atomic claim on the operation's at-most-once record, shared by every approval path (Section 3.7) |
+| An agent never seeks a new approval for an action whose earlier approval has an unknown outcome | Agent: the outcome is established with the Mission's read token first (Section 3.10). The Company cannot verify this. |
 | Revoking one Mission never ends another Mission or the agent's ordinary access | Separate grants (Section 3.5) |
 | A Mission refresh token, or a Mission token for the actions service, copied from one User's device does not work for another User of the same agent | DPoP binding (Section 3.5). A read token that the default resource accepts as Bearer is not covered (Spec 10.7). |
 | The planner cannot choose a broader task credential | Agent's trusted runtime. The Company cannot verify this. |
@@ -945,15 +974,17 @@ call.
    acting under a Mission to present an ordinary credential for the task,
    except through a deployment-defined enforcement path that establishes
    the Mission. Sections 3.8 and 3.10 follow core.
-5. **New, not filed: per-entry consumption at one audience.** Core projects
+5. **#2072, per-entry consumption at one audience.** Core projects
    `scope` for a target that consumes only `scope`, and refuses a requested
    `scope` value associated with a target that consumes
    `authorization_details` (core, Requested Scope Values). Version 1
    therefore keeps the actions service apart from the default resource. If
    core confirmed that one audience may consume `authorization_details` for
    some entries and a projected `scope` for others, a Company could keep its
-   governed actions on its default resource. Recommendation: file it before
-   asking a Company to split an API.
+   governed actions on its default resource. Filed as a `decide` question,
+   recommending that reading. Until it is ruled, the separate actions
+   service is version 1's choice, not a recommendation to split existing
+   APIs.
 
 ## 7. Decisive tests
 
@@ -988,6 +1019,8 @@ it.
 | T19 | A Mission token at a write endpoint of the default resource, both legacy (it sends `scope="orders:write"`) and Mission-aware | Call the endpoint | `403`, `insufficient_scope`, no effect. The Mission-aware endpoint sends `mission_denial="insufficient_authority"` and no `scope`. In both cases the agent requests no scope, starts no sign-in, and makes no retry with another credential. |
 | T20 | A Mission refresh token copied to another User's device of the same agent, which has its own DPoP key and can get client assertions (Spec 10.7) | Refresh | `invalid_grant`: the proof's key is not the one the token is bound to (Spec 4.4). No token is issued. |
 | T21 | A Mission token on a request to the actions service that does not declare `operations` version 3 | Request the exchange at the API, then call the tool at an MCP actions service | At the API, `403 extension_required` naming `operations`; at the MCP server, an ordinary tool error. Nothing performed, and no operation returned. |
+| T22 | The agent's approval of the 70.00 USD revision times out. The Company performed the exchange, then forgot the operation after the revision's `expires_at` (Ops 7). | The agent resends the same approval | The retry returns `approval_required` with a new operation. The agent neither approves it nor asks the User to until it reads the order with the Mission's read token. It finds the exchange performed and reports the task done. Exactly one exchange. Where the read cannot settle the outcome, the agent tells the User and approves nothing new. |
+| T23 | Missions A and C both cover this exchange, and the agent also holds an ordinary grant with the write scope | Approvals of the same revision under A's token, C's token, and the ordinary token arrive concurrently, as a buggy or retrying agent could send them, repeated many times | Exactly one is performed, once. The others are answered as Ops 7: the first response, or `503` while performing. The performed operation's record names the Mission of the approval that claimed it, or none for the ordinary token. Revoking A concurrently never lets an approval under A claim after the revocation is acknowledged. |
 
 ## 8. Adoption path
 
