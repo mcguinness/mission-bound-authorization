@@ -1069,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 17 May 2027</td>
+<td class="center">Expires 19 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-11-13" class="published">13 November 2026</time>
+<time datetime="2026-11-15" class="published">15 November 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-17">17 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-19">19 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1151,7 +1151,7 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 17 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 19 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -5419,6 +5419,14 @@ or<a href="#section-7.7.1-3.3.1" class="pilcrow">¶</a></p>
 <p id="section-7.7.2-1">For a multi-audience token, the AS establishes the condition
 independently for each audience; a single-audience token
 (<a href="#token-response" class="auto internal xref">Section 7.3</a>) remains preferred.<a href="#section-7.7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.7.2-2">One audience can consume <code>authorization_details</code> for some applicable
+entries and enforce others through a projected <code>scope</code>. Each projected
+value then meets the subset condition on its own, across all access the
+value enables at that audience: associating the value with one entry
+does not establish it, and the rights of several entries are never
+combined to establish it. A projected <code>scope</code> never widens or bypasses
+an entry the audience consumes as <code>authorization_details</code>
+(<a href="#rs-requirements" class="auto internal xref">Section 9.1.1</a>).<a href="#section-7.7.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope-projection-steps">
@@ -5478,10 +5486,11 @@ whenever the granted scope differs from the requested scope, and its
 grammar defines no empty scope, so an issuance cannot report an
 ungranted requested value by omission. The AS <span class="bcp14">MUST</span> refuse, with
 <code>invalid_scope</code> (<a href="#error-mapping" class="auto internal xref">Section 11</a>), a request that explicitly names a
-<code>scope</code> value the issuance cannot grant: a value the target's trusted
-mapping names but no carried entry makes safe (step 3), or any <code>scope</code>
-value the AS associates with a target that consumes
-<code>authorization_details</code> (step 4).<a href="#section-7.7.4-2" class="pilcrow">¶</a></p>
+<code>scope</code> value the issuance cannot safely project: a value that no
+carried entry the target enforces through <code>scope</code> makes safe (step 3).
+It <span class="bcp14">MUST NOT</span> refuse a value only because the target consumes other
+entries as <code>authorization_details</code> (step 4,
+<a href="#scope-projection-per-audience" class="auto internal xref">Section 7.7.2</a>).<a href="#section-7.7.4-2" class="pilcrow">¶</a></p>
 <p id="section-7.7.4-3">An unknown, ambiguous, or stale mapping fails projection step 5 and yields
 the <code>invalid_target</code> error code even when the request also names a
 <code>scope</code> value; <code>invalid_scope</code> applies only under a mapping the AS
@@ -5489,9 +5498,10 @@ trusts.<a href="#section-7.7.4-3" class="pilcrow">¶</a></p>
 <p id="section-7.7.4-4">Where the AS emits a projected <code>scope</code>, a requested <code>scope</code> narrows
 it to the requested values, and the token response reports the
 values granted (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). A Mission-creating
-client does not request a resource <code>scope</code> for a target that consumes
-<code>authorization_details</code>; for a <code>scope</code>-only target, a requested
-<code>scope</code> selects among the values the projection can grant. Scope
+client requests a resource <code>scope</code> only for authority the target
+enforces through <code>scope</code>, never for an entry the target consumes as
+<code>authorization_details</code>; for that authority, a requested <code>scope</code>
+selects among the values the projection can grant. Scope
 values with their own semantics, such as <code>openid</code> (<span>[<a href="#OpenID.Core" class="cite xref">OpenID.Core</a>]</span>),
 are unaffected and combine with <code>authorization_details</code> as
 <span><a href="https://rfc-editor.org/rfc/rfc9396#section-3.1" class="relref">Section 3.1</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> permits.<a href="#section-7.7.4-4" class="pilcrow">¶</a></p>
@@ -10350,9 +10360,16 @@ only as carried; <code>state</code>, <code>termination</code>, and the Mission R
 members stay with the issuer (#2016).<a href="#appendix-E-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-E-4.3">
-          <p id="appendix-E-4.3.1">The normative-definition rule of Authorization Server Metadata
+          <p id="appendix-E-4.3.1">Scope projection: one audience can consume <code>authorization_details</code>
+for some entries and receive a projected <code>scope</code> for others, each
+projected value meeting the subset condition on its own; a requested
+<code>scope</code> value is refused only when it cannot be safely projected
+(#2072).<a href="#appendix-E-4.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="compact" id="appendix-E-4.4">
+          <p id="appendix-E-4.4.1">The normative-definition rule of Authorization Server Metadata
 covers every advertised type that has a defining specification, not
-only <code>mission_resource_access</code> (#2009).<a href="#appendix-E-4.3.1" class="pilcrow">¶</a></p>
+only <code>mission_resource_access</code> (#2009).<a href="#appendix-E-4.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-E-5"><strong>Examples</strong><a href="#appendix-E-5" class="pilcrow">¶</a></p>
