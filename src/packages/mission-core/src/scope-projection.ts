@@ -285,7 +285,11 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
     };
   }
   if (mode === "mixed") {
-    onlyMembers(o, ["version", "mission_aware", "mode", "scopes", "mission_constraints_supported"], path);
+    onlyMembers(
+      o,
+      ["version", "mission_aware", "mode", "scopes", "mission_constraints_supported"],
+      path,
+    );
     const supported = parseSupported(o.mission_constraints_supported, path);
     return {
       version,
@@ -717,11 +721,16 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
     if (explicit && requested) {
       const unsafe = requested.find((v) => !safeSet.has(v));
       if (unsafe !== undefined) {
-        return ungrantable(unsafe, "no carried entry the audience enforces through scope makes it safe");
+        return ungrantable(
+          unsafe,
+          "no carried entry the audience enforces through scope makes it safe",
+        );
       }
     }
     const emitted = [...safeSet].filter((v) => !requested || requested.includes(v)).sort();
-    return emitted.length ? { outcome: "emit", scope: emitted.join(" "), values: emitted } : { outcome: "omit" };
+    return emitted.length
+      ? { outcome: "emit", scope: emitted.join(" "), values: emitted }
+      : { outcome: "omit" };
   }
   if (explicit && requested) {
     const unsafe = requested.find((v) => !safeSet.has(v));
