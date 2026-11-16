@@ -831,9 +831,16 @@ export async function verifyIntentSubmissionEvidence(
  * (a deferred expansion's activation). An entry whose type defines `resume`
  * relies on its acceptance record under `ctx.accepted`, and is refused when
  * the step names no accepted submission or no record matches. Every other
- * entry keeps the fact recorded at acceptance, as the carrier always did, and
- * is not verified again. Returns the facts the step records: the resumed
- * fact for a resumable entry, the recorded one otherwise.
+ * entry of a type this server accepts keeps the fact recorded at acceptance,
+ * as the carrier always did, and is not verified again. Returns the facts the
+ * step records: the resumed fact for a resumable entry, the recorded one
+ * otherwise.
+ *
+ * An entry or kept fact of a type this server does not accept (never
+ * registered, or withdrawn since acceptance) refuses
+ * `invalid_mission_intent_evidence`, in both branches: whether it relies on
+ * an acceptance record cannot be known, and a record it requires is not
+ * waived because the implementation that checks it is gone (#2070 review).
  *
  * The kept entries and facts must agree, entry by entry, by type and
  * `artifact_hash`; a disagreement, or a resumable fact kept with no entry,
@@ -848,10 +855,14 @@ export async function resumeRecordedIntentSubmissionEvidence(
 ): Promise<IntentSubmissionEvidenceFact[] | undefined> {
   const refused = (message: string) => new IntentError("invalid_mission_intent_evidence", message);
   if (!evidence?.length) {
-    // A pending operation kept facts alone: no type relying on an
-    // acceptance record may be among them.
+    // A pending operation kept facts alone: each must be of a type this
+    // server accepts, and none of a type relying on an acceptance record.
     for (const fact of recorded ?? []) {
-      if (evidenceTypeFor(fact.type, types)?.resume !== undefined) {
+      const impl = evidenceTypeFor(fact.type, types);
+      if (impl === undefined) {
+        throw refused(`unknown evidence type: ${fact.type}`);
+      }
+      if (impl.resume !== undefined) {
         throw refused(`evidence acceptance record refused (${fact.type}): the pending operation kept no evidence entry to resume`);
       }
     }
@@ -867,7 +878,10 @@ export async function resumeRecordedIntentSubmissionEvidence(
       throw refused("the pending operation's evidence entries and recorded facts do not agree");
     }
     const impl = evidenceTypeFor(entry.type, types);
-    if (impl?.resume === undefined) {
+    if (impl === undefined) {
+      throw refused(`unknown evidence type: ${entry.type}`);
+    }
+    if (impl.resume === undefined) {
       facts.push(fact);
       continue;
     }

@@ -61,6 +61,7 @@ import {
   creationAcceptanceRef,
   DEFERRED_GRANT_TYPE,
   IntentError,
+  type IntentSubmissionEvidenceType,
   type MissionRecord,
   type ProviderCapability,
   provisionalIntentHash,
@@ -68,8 +69,10 @@ import {
   type RequestProvenanceAcceptance,
   type RequestProvenanceRecord,
   type RequestProvenanceStore,
+  resumeRecordedIntentSubmissionEvidence,
   SqliteRequestProvenanceStore,
   unregisterIntentSubmissionEvidenceType,
+  verifyIntentSubmissionEvidence,
 } from "../src/index.js";
 import { assembledCeilingOffer, progressiveFromProfile } from "../src/kernel/progressive.js";
 import { verifyRequestProvenance } from "../src/kernel/request-provenance.js";
@@ -727,6 +730,125 @@ describe("the deferred expansion's activation (@spec request-provenance#replay, 
     expectActivationRefused(await poll(code), "the pending operation names no accepted submission");
     expect(successors()).toBe(0);
   });
+
+  /** The server's configured evidence types: removing one models the deployment withdrawing it. */
+  const configuredTypes = () =>
+    (as.kernel as unknown as { opts: { submissionEvidenceTypes: Map<string, unknown> } }).opts.submissionEvidenceTypes;
+
+  it("refuses the activation when the accepted type has been withdrawn and its acceptance record is missing: access_denied, with no successor, and every later poll repeats it after the type and the record return (#2070 review)", async () => {
+    const { code, successors } = await approvedDeferral();
+    const registry = configuredTypes();
+    const impl = registry.get(TYPE);
+    expect(impl).toBeDefined();
+    registry.delete(TYPE);
+    store.lost = true;
+    try {
+      expectActivationRefused(await poll(code), `unknown evidence type: ${TYPE}`);
+      expect(successors()).toBe(0);
+      controlledClock.advance(6000);
+      const again = await poll(code);
+      expect({ status: again.status, error: again.body.error, successors: successors() }).toEqual({
+        status: 400,
+        error: "access_denied",
+        successors: 0,
+      });
+    } finally {
+      registry.set(TYPE, impl);
+      store.lost = false;
+    }
+    controlledClock.advance(6000);
+    const restored = await poll(code);
+    expect({ status: restored.status, error: restored.body.error, successors: successors() }).toEqual({
+      status: 400,
+      error: "access_denied",
+      successors: 0,
+    });
+  });
+
+  it("refuses the activation of a deferral that kept the facts alone when their type has been withdrawn: access_denied, with no successor (#2070 review)", async () => {
+    const { code, successors } = await approvedDeferral();
+    as.kernel.db.prepare("UPDATE expansion_deferrals SET evidence_json = NULL WHERE deferral_code = ?").run(code);
+    const registry = configuredTypes();
+    const impl = registry.get(TYPE);
+    expect(impl).toBeDefined();
+    registry.delete(TYPE);
+    try {
+      expectActivationRefused(await poll(code), `unknown evidence type: ${TYPE}`);
+    } finally {
+      registry.set(TYPE, impl);
+    }
+    expect(successors()).toBe(0);
+  });
+
+  it("refuses the activation of a deferral that kept the facts alone of a type relying on its acceptance record: access_denied, with no successor", async () => {
+    const { code, successors } = await approvedDeferral();
+    as.kernel.db.prepare("UPDATE expansion_deferrals SET evidence_json = NULL WHERE deferral_code = ?").run(code);
+    expectActivationRefused(await poll(code), "the pending operation kept no evidence entry to resume");
+    expect(successors()).toBe(0);
+  });
+});
+
+describe("resuming kept evidence relies only on a type this server accepts (@spec request-provenance#replay, #939 slice 3a, #2070 review)", () => {
+  const KEPT = "urn:test:intent-evidence:resume-kept";
+  const RELIES = "urn:test:intent-evidence:resume-relies";
+  const kept: IntentSubmissionEvidenceType = {
+    validate() {},
+    async verify() {
+      return { kept: true };
+    },
+  };
+  let resumes = 0;
+  const relies: IntentSubmissionEvidenceType = {
+    ...kept,
+    async resume() {
+      resumes += 1;
+      return { facts: { resumed: true }, verified_at: "2026-01-01T00:00:00.000Z" };
+    },
+  };
+  const ctx = {
+    intentHash: provisionalIntentHash(ISSUER, INTENT as never),
+    issuer: ISSUER,
+    presenter: { clientId: CLIENT, cnf: { jkt: "resume-helper-jkt" } },
+    now: new Date(),
+  };
+  const accepted = { ref: creationAcceptanceRef("expansion", CLIENT, "resume-helper") };
+  const entry = (type: string) => ({ type, assertion: "resume-helper" });
+  /** The facts acceptance recorded for one entry of `type`, verified where the server accepts it. */
+  const recordedFor = (type: string) =>
+    verifyIntentSubmissionEvidence([entry(type)] as never, ctx, [], {}, new Map([[type, type === KEPT ? kept : relies]]));
+
+  it("keeps the recorded fact of an accepted type that does not resume, beside its entry and alone, and resumes one that does", async () => {
+    const types = new Map([
+      [KEPT, kept],
+      [RELIES, relies],
+    ]);
+    const recorded = await recordedFor(KEPT);
+    await expect(resumeRecordedIntentSubmissionEvidence([entry(KEPT)] as never, recorded, ctx, types)).resolves.toEqual(recorded);
+    await expect(resumeRecordedIntentSubmissionEvidence(undefined, recorded, ctx, types)).resolves.toEqual(recorded);
+    const before = resumes;
+    const resumed = await resumeRecordedIntentSubmissionEvidence(
+      [entry(RELIES)] as never,
+      await recordedFor(RELIES),
+      { ...ctx, accepted },
+      types,
+    );
+    expect(resumed?.[0]?.facts).toEqual({ resumed: true });
+    expect(resumes).toBe(before + 1);
+  });
+
+  it.each([KEPT, RELIES])(
+    "refuses an entry, or a fact kept alone, of a type this server does not accept (%s), rather than keeping its fact",
+    async (type) => {
+      const recorded = await recordedFor(type);
+      const before = resumes;
+      for (const evidence of [[entry(type)], undefined]) {
+        await expect(
+          resumeRecordedIntentSubmissionEvidence(evidence as never, recorded, { ...ctx, accepted }, new Map()),
+        ).rejects.toMatchObject({ code: "invalid_mission_intent_evidence", message: `unknown evidence type: ${type}` });
+      }
+      expect(resumes).toBe(before);
+    },
+  );
 });
 
 describe("one replay store across carriers (@spec request-provenance#replay, #939 slice 3a)", () => {

@@ -1593,8 +1593,9 @@ export class MissionKernel {
    * step of an accepted submission whose pending operation kept the entries
    * as presented and the facts verified at acceptance (a deferred
    * expansion's activation). An entry of a type that defines `resume` relies
-   * on its acceptance record under `accepted`; every other entry keeps its
-   * recorded fact and is not verified again
+   * on its acceptance record under `accepted`; every other entry of a type
+   * this server accepts keeps its recorded fact and is not verified again,
+   * and a type it does not accept is refused
    * ({@link resumeRecordedIntentSubmissionEvidence}). Returns the facts the
    * step records.
    */
