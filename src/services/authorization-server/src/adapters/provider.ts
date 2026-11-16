@@ -4449,6 +4449,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     });
   };
   /**
+   * @spec mission#approval-context-changes, mission-template#template-consent
+   * (#2057, D1293): a disclosure's committed rendering context, with the
+   * Dispatch Policies and activation policies this issuer holds now.
+   */
+  const templateRendering = (proposal: TemplateProposal, disclosed: ReturnType<typeof templateDisclosure>) =>
+    templateConsentRendering(proposal, disclosed, {
+      dispatchPolicies: opts.dispatchPolicies,
+      activationPolicies: kernel.activationPolicies(),
+    });
+  /**
    * @spec mission-template#prohibited-classes, mission-template#template-consent
    * (#813): under the `standing-payment-dispatch` capability, what a template
    * consent needs: the kernel's budget store, and the registered clients a
@@ -6558,15 +6568,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // that login's CSRF secret in the form; any other is offered the login.
       const csrf = opts.approvalSessions?.csrfFor(ctx.get("cookie"), proposal.id);
       // @spec mission#approval-context-changes, mission-template#template-consent
-      // (#1446, D718; #813): under the `standing-payment-dispatch`
-      // capability, a rendering to an authenticated principal retains its
-      // own render revision committing what the page showed; the decision
-      // names it and approves exactly that. Only that rendering reads and
+      // (#1446, D718; #813; #2057, D1293): a rendering to an authenticated
+      // principal retains its own render revision committing what the page
+      // showed, superseding that principal's earlier one; the decision names
+      // it and approves exactly that. A rendering that refuses the disclosure
+      // retains none, so it never approves. Under the
+      // `standing-payment-dispatch` capability, only that rendering reads and
       // shows the budget counters (D877).
       let revision: string | undefined;
-      const viewer = standingPaymentOn && proposal.state === "pending" ? renderPrincipal(ctx, proposal.id) : undefined;
+      const viewer = proposal.state === "pending" ? renderPrincipal(ctx, proposal.id) : undefined;
       const disclosed = templateDisclosure(proposal, viewer !== undefined);
-      const rendering = viewer ? templateConsentRendering(proposal, disclosed) : undefined;
+      const rendering = viewer ? templateRendering(proposal, disclosed) : undefined;
       if (viewer && rendering) {
         revision = retainRenderRevision<TemplateConsentContext>(
           provider,
@@ -6615,13 +6627,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // secret as a field; an approval service posts JSON with it in the
       // header. The form is answered with a redirect back to the page.
       const form = (ctx.get("content-type") ?? "").startsWith("application/x-www-form-urlencoded");
-      const refuse = (status: number, error: string, description?: string) => {
+      const refuse = (status: number, error: string, description?: string, extra: Record<string, unknown> = {}) => {
         ctx.status = status;
         if (form) {
           ctx.set("content-type", "text/html; charset=utf-8");
           ctx.body = `<!doctype html><title>Template consent</title>\n<p class="decision-refused">${escapeHtml(description ?? error)}</p>`;
         } else {
-          ctx.body = { error, ...(description ? { error_description: description } : {}) };
+          ctx.body = { error, ...(description ? { error_description: description } : {}), ...extra };
         }
       };
       const decided = (status: number, result: Record<string, unknown>) => {
@@ -6696,44 +6708,45 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         else refuse(403, "access_denied", rendered.refusal);
         return;
       }
-      // @spec mission#approval-context-changes, mission-template#template-consent
-      // (#1446, D718; #813): under the `standing-payment-dispatch`
-      // capability, the decision approves only the latest rendering made to
-      // this principal, and only while the context it committed is unchanged.
+      // @spec mission#approval-context-changes, mission-template#template-consent,
+      // derivation-limits#approval-rendering (#1446, D718; #813; #2057,
+      // D1293): the decision approves only the latest rendering made to this
+      // principal, and only while the context it committed is unchanged. A
+      // revision rendered to another principal, superseded, or never made
+      // (a rendering that refused the disclosure retains none) approves
+      // nothing; a changed context retires the revision.
+      const renderKey = resolved.interactive
+        ? opts.approvalSessions?.sessionKey(ctx.get("cookie"), id)
+        : serviceRenderKey(ctx.get("x-service-token"), principal.sub, principal.subject ?? principal.sub);
+      const held = renderKey ? currentRenderRevision<TemplateConsentContext>(provider, id, renderKey) : undefined;
+      if (!held || body.render_revision !== held.revision || held.clientId !== TEMPLATE_CONSENT_RENDERING) {
+        refuse(409, "rendering_required", "approve the latest rendering of this template consent made to you; it was not rendered, or was rendered again");
+        return;
+      }
+      const current = templateRendering(proposal, rendered);
+      if (!current || current.commitment !== held.commitment) {
+        retireRenderRevision(provider, id, renderKey as string, held.revision);
+        refuse(409, "approval_context_changed", "the template consent changed since it was rendered; review it again", {
+          ...(current ? { changed: changedParts<TemplateConsentContext>(held.context, current.context) } : {}),
+        });
+        return;
+      }
+      // @spec mission#approval-authentication, mission-template#template-consent
+      // (#813): under the `standing-payment-dispatch` capability, the
+      // provenance of a human consent at the approval floor: only a browser
+      // login that satisfied an invoked floor establishes it.
       let consent: TemplateConsentProvenance | undefined;
-      let renderKey: string | undefined;
-      let renderedRevision: string | undefined;
-      if (standingPaymentOn) {
-        renderKey = resolved.interactive
-          ? opts.approvalSessions?.sessionKey(ctx.get("cookie"), id)
-          : serviceRenderKey(ctx.get("x-service-token"), principal.sub, principal.subject ?? principal.sub);
-        const held = renderKey ? currentRenderRevision<TemplateConsentContext>(provider, id, renderKey) : undefined;
-        if (!held || body.render_revision !== held.revision || held.clientId !== TEMPLATE_CONSENT_RENDERING) {
-          refuse(409, "rendering_required", "approve the latest rendering of this template consent made to you; it was not rendered, or was rendered again");
-          return;
-        }
-        const current = templateConsentRendering(proposal, rendered);
-        if (!current || current.commitment !== held.commitment) {
-          retireRenderRevision(provider, id, renderKey as string, held.revision);
-          refuse(409, "approval_context_changed", "the template consent changed since it was rendered; review it again");
-          return;
-        }
-        renderedRevision = held.revision;
-        // @spec mission#approval-authentication, mission-template#template-consent
-        // (#813): the provenance of a human consent at the approval floor:
-        // only a browser login that satisfied an invoked floor establishes it.
-        if (resolved.interactive && floor.outcome === "satisfied") {
-          consent = {
-            interactive: true,
-            principal: { iss: opts.issuer, sub: principal.sub },
-            acr: principal.acr,
-            auth_time: principal.auth_time,
-            floors: floor.floors,
-            render_revision: held.revision,
-            proposal_id: proposal.id,
-            decided_at: kernel.nowDate().toISOString(),
-          };
-        }
+      if (standingPaymentOn && resolved.interactive && floor.outcome === "satisfied") {
+        consent = {
+          interactive: true,
+          principal: { iss: opts.issuer, sub: principal.sub },
+          acr: principal.acr,
+          auth_time: principal.auth_time,
+          floors: floor.floors,
+          render_revision: held.revision,
+          proposal_id: proposal.id,
+          decided_at: kernel.nowDate().toISOString(),
+        };
       }
       try {
         // The template commits the policy snapshot and the ceiling just
@@ -6759,7 +6772,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             ...standingPaymentConsent(consent),
           },
         );
-        if (renderKey && renderedRevision) retireRenderRevision(provider, id, renderKey, renderedRevision);
+        retireRenderRevision(provider, id, renderKey as string, held.revision);
         templateProposals.settle(id, { state: "approved", template_id: template.id });
         decided(201, {
           template_id: template.id,

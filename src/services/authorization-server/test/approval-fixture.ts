@@ -73,6 +73,23 @@ export async function renderedRevision(issuer: string, uid: string, headers: Rec
   return revision;
 }
 
+/**
+ * @spec mission-template#template-consent, mission#approval-context-changes
+ * (#2057, D1293): render a template proposal's consent page to the principal
+ * `headers` authenticate, as the Approver reviews it before deciding, and
+ * return the rendering's revision. An approval names it (`render_revision`);
+ * without the latest one, no template consent approves.
+ */
+export async function renderedTemplateRevision(issuer: string, id: string, headers: Record<string, string>): Promise<string> {
+  const { "content-type": _type, "x-csrf-token": _csrf, ...rendering } = headers;
+  const res = await fetch(`${issuer}/templates/proposals/${id}`, { headers: rendering });
+  const revision = res.headers.get(RENDER_REVISION_HEADER);
+  if (res.status !== 200 || !revision) {
+    throw new Error(`no template consent rendering for ${id}: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  }
+  return revision;
+}
+
 /** Trusted test driver credential; never part of the client fixture. */
 const TOKEN = "test-only-independent-approver-759";
 const principal: ServiceTokenPrincipal = {

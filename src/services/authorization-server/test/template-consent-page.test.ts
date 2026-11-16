@@ -33,9 +33,11 @@ import {
   TEMPLATE_CEILING_STATEMENT,
 } from "../src/adapters/template-consent.js";
 import { ApprovalSessionStore, type AuthorityEntry, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import {
   browserApprovalHeaders,
   floorApprovalHeaders,
+  renderedTemplateRevision,
   TEST_APPROVAL_PRINCIPALS,
   trustedApprovalHeaders,
 } from "./approval-fixture.js";
@@ -95,9 +97,9 @@ async function proposed(policy?: string): Promise<string> {
   return body.proposal_id;
 }
 
-async function page(id: string, cookie?: string): Promise<{ status: number; html: string }> {
+async function page(id: string, cookie?: string): Promise<{ status: number; html: string; revision: string | null }> {
   const res = await fetch(`${ISSUER}/templates/proposals/${id}`, cookie ? { headers: { cookie } } : {});
-  return { status: res.status, html: await res.text() };
+  return { status: res.status, html: await res.text(), revision: res.headers.get(RENDER_REVISION_HEADER) };
 }
 
 /** The Template Ceiling the page renders. */
@@ -122,6 +124,14 @@ async function decide(id: string, decision: string, headers: Record<string, stri
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify({ decision, ...extra }),
   });
+}
+
+/**
+ * The Approver reviews the consent page in the user agent `headers`
+ * authenticate, then approves on that rendering (#2057, D1293).
+ */
+async function approve(id: string, headers: Record<string, string>) {
+  return decide(id, "approve", headers, { render_revision: await renderedTemplateRevision(ISSUER, id, headers) });
 }
 
 /** An Approver logged in on the consent page's user agent, keyed by the proposal. */
@@ -173,7 +183,7 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
 
   it("an approval by the authenticated Approver creates the template, with that Approver of record and the authority source it activates retained beside the consented template_version", async () => {
     const id = await proposed();
-    const res = await decide(id, "approve", loggedIn(id));
+    const res = await approve(id, loggedIn(id));
     const body = (await res.json()) as { template_id: string; template_version: string; template_hash: string };
     expect(res.status, JSON.stringify(body)).toBe(201);
     const template = as.templateStore.get(body.template_id);
@@ -198,7 +208,7 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     });
     const { proposal_id: id } = (await res.json()) as { proposal_id: string };
     expect(res.status).toBe(201);
-    const approved = await decide(id, "approve", loggedIn(id));
+    const approved = await approve(id, loggedIn(id));
     const body = (await approved.json()) as { template_id: string };
     expect(approved.status, JSON.stringify(body)).toBe(201);
     const template = as.templateStore.get(body.template_id);
@@ -226,7 +236,7 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     } finally {
       EDITABLE.content = original;
     }
-    const approved = await decide(id, "approve", loggedIn(id));
+    const approved = await approve(id, loggedIn(id));
     expect(approved.status).toBe(201);
     expect(items((await page(await proposed("test-editable"))).html, "dispatch-bounds")[2]).toContain("never above 3.");
   });
@@ -245,10 +255,11 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     const { proposal_id: id } = (await res.json()) as { proposal_id: string };
     expect(res.status).toBe(201);
     const session = loggedIn(id);
-    const rendered = renderedCeiling((await page(id, session.cookie)).html);
+    const shown = await page(id, session.cookie);
+    const rendered = renderedCeiling(shown.html);
     expect(JSON.stringify(rendered)).not.toContain("forged.example");
     expect(JSON.stringify(rendered)).toContain("mcp://payments.demo/tools/");
-    const approved = await decide(id, "approve", session);
+    const approved = await decide(id, "approve", session, { render_revision: shown.revision });
     const { template_id } = (await approved.json()) as { template_id: string };
     expect(approved.status).toBe(201);
     expect(as.templateStore.get(template_id)?.ceiling).toEqual(rendered);
@@ -272,7 +283,7 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     } finally {
       catalog.text = original;
     }
-    expect((await decide(id, "approve", loggedIn(id))).status).toBe(201);
+    expect((await approve(id, loggedIn(id))).status).toBe(201);
   });
 
   it("decides only for an authenticated Approver, never one the request names, and selects no Subject; a denial creates no template", async () => {
@@ -310,16 +321,16 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
       expect(((await refused.json()) as { error: string }).error).toBe("access_denied");
     }
     expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
-    const approved = await decide(id, "approve", floorApprovalHeaders(SESSIONS, id, "", { subject: null }));
+    const approved = await approve(id, floorApprovalHeaders(SESSIONS, id, "", { subject: null }));
     expect(approved.status).toBe(201);
   });
 
   it("refuses an Approver not authorized to activate the template's authority source, creating no template", async () => {
     const id = await proposed();
-    const refused = await decide(id, "approve", loggedIn(id, "dana"));
+    const refused = await approve(id, loggedIn(id, "dana"));
     expect(refused.status).toBe(400);
     expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
-    expect((await decide(id, "approve", loggedIn(id))).status).toBe(201);
+    expect((await approve(id, loggedIn(id))).status).toBe(201);
   });
 
   it("refuses at the proposal: a named approver, approval event or issuer, a missing service token, a malformed body, a ceiling entry outside the action grammar or the absolute-URI rule, and a Dispatch Policy this issuer does not hold", async () => {
@@ -410,7 +421,8 @@ describe("template consent under a configuration requiring a contract reference 
     expect(res.status, created.error_description).toBe(201);
     const id = created.proposal_id;
     const session = browserApprovalHeaders(SESSIONS2, id, { sub: "bob" }, "");
-    const html = await (await fetch(`${ISSUER2}/templates/proposals/${id}`, { headers: { cookie: session.cookie } })).text();
+    const shown = await fetch(`${ISSUER2}/templates/proposals/${id}`, { headers: { cookie: session.cookie } });
+    const html = await shown.text();
     const rendered = renderedCeiling(html);
     const reads = rendered.filter((e) => (e.actions as string[]).includes(READ));
     expect(reads.length).toBeGreaterThan(0);
@@ -418,7 +430,7 @@ describe("template consent under a configuration requiring a contract reference 
     const approved = await fetch(`${ISSUER2}/templates/proposals/${id}/decide`, {
       method: "POST",
       headers: { "content-type": "application/json", ...session },
-      body: JSON.stringify({ decision: "approve" }),
+      body: JSON.stringify({ decision: "approve", render_revision: shown.headers.get(RENDER_REVISION_HEADER) }),
     });
     const decided = (await approved.json()) as { template_id: string; error_description?: string };
     expect(approved.status, decided.error_description).toBe(201);

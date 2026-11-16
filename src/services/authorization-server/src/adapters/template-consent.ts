@@ -17,6 +17,12 @@
  * changed, or a per-child figure changed, after the proposal is neither
  * rendered nor consented to; the proposal is then refused and proposed
  * again.
+ *
+ * The pins give content consistency, not proof the Approver saw the page
+ * (#2057, D1293). Each rendering to an authenticated principal therefore
+ * retains a render revision committing what it showed
+ * ({@link templateConsentRendering}), and an approval must present the
+ * latest revision rendered to that principal, with its context unchanged.
  */
 import { randomBytes } from "node:crypto";
 import {
@@ -434,14 +440,22 @@ export function actionApprovalLine(
 }
 
 /**
- * @spec mission#approval-context-changes, mission-template#template-consent
- * (#1446, D583, D718; #813): the context a template consent rendering showed,
- * committed so a decision approves exactly what was rendered.
+ * @spec mission#approval-context-changes, mission-template#template-consent,
+ * derivation-limits#approval-rendering (#1446, D583, D718; #813; #2057,
+ * D1293): the context a template consent rendering showed, committed so a
+ * decision approves exactly what was rendered: the proposal and its pins (the
+ * Dispatch Policy reference and the per-child figure), the policies this
+ * issuer held when it rendered, and the disclosure (the ceiling, statements,
+ * bounds, terms, per-child grants and any standing-payment terms). A policy
+ * edit that leaves every pin equal still changes the commitment.
  */
 export interface TemplateConsentContext {
   proposal_id: string;
   body: TemplateProposalBody;
   dispatch_policy: ActivationPolicyRef;
+  child_derivation_figure: StandingConsentMaximum;
+  /** The Dispatch Policies and the activation policies held, each as one digest; null where none is held. */
+  held_policies: { dispatch_policies: string | null; activation_policies: string | null };
   disclosure: TemplateConsentDisclosure;
 }
 
@@ -449,12 +463,18 @@ export interface TemplateConsentContext {
 export function templateConsentRendering(
   proposal: TemplateProposal,
   rendered: { disclosure: TemplateConsentDisclosure } | TemplateConsentRefusal,
+  held: { dispatchPolicies: DispatchPolicies | undefined; activationPolicies: unknown },
 ): { context: TemplateConsentContext; commitment: string } | undefined {
   if ("refusal" in rendered) return undefined;
   const context: TemplateConsentContext = {
     proposal_id: proposal.id,
     body: proposal.body,
     dispatch_policy: proposal.dispatch_policy,
+    child_derivation_figure: proposal.child_derivation_figure,
+    held_policies: {
+      dispatch_policies: held.dispatchPolicies === undefined ? null : contentDigest(held.dispatchPolicies),
+      activation_policies: held.activationPolicies === undefined ? null : contentDigest(held.activationPolicies),
+    },
     disclosure: rendered.disclosure,
   };
   return { context, commitment: contentDigest(context) };

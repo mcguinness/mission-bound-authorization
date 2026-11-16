@@ -19,6 +19,7 @@ const controlledClock = await vi.hoisted(async () => {
 import { activationPolicyDigest } from "@mission/core";
 import { AUTHORITY_SOURCES, DERIVATION_POLICY, DEV_SERVICE_TOKEN, demoReconciliationTemplate, TOPOLOGY } from "@mission/demo-data";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import { approvalDerivationRendering } from "../src/adapters/provider.js";
 import {
   ALL_PROVIDER_CAPABILITIES,
@@ -312,12 +313,16 @@ describe("the Mission Template consent page follows the Derivation Limits switch
     const list = new RegExp(`<ul class="${cls}">(.*?)</ul>`).exec(html);
     return list ? [...(list[1] as string).matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1] as string) : [];
   };
-  const decide = (h: SwitchedAs, id: string) =>
-    fetch(`${h.issuer}/templates/proposals/${id}/decide`, {
+  /** The Approver reviews the page in one login, then approves on that rendering (#2057). */
+  const decide = async (h: SwitchedAs, id: string) => {
+    const headers = loggedIn(id);
+    const shown = await fetch(`${h.issuer}/templates/proposals/${id}`, { headers: { cookie: headers.cookie as string } });
+    return fetch(`${h.issuer}/templates/proposals/${id}/decide`, {
       method: "POST",
-      headers: { "content-type": "application/json", ...loggedIn(id) },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify({ decision: "approve", render_revision: shown.headers.get(RENDER_REVISION_HEADER) }),
     });
+  };
   const BOUNDS = ["At most 5 dispatched instances are active at once.", "At most 30 dispatches per minute."];
 
   it("on, the page renders each dispatched instance's derivation-limit rule beside max_active and the dispatch rate", async () => {

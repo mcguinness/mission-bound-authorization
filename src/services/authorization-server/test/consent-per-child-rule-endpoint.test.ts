@@ -331,12 +331,16 @@ describe("the Mission Template consent page renders the per-child rule the templ
   };
   const loggedIn = (id: string) => browserApprovalHeaders(SESSIONS, id, { sub: "bob" }, "");
   const page = async (id: string) => (await fetch(`${ISSUER}/templates/proposals/${id}`, { headers: { cookie: loggedIn(id).cookie as string } })).text();
-  const decide = (id: string) =>
-    fetch(`${ISSUER}/templates/proposals/${id}/decide`, {
+  /** The Approver reviews the page in one login, then approves on that rendering (#2057). */
+  const decide = async (id: string) => {
+    const headers = loggedIn(id);
+    const shown = await fetch(`${ISSUER}/templates/proposals/${id}`, { headers: { cookie: headers.cookie as string } });
+    return fetch(`${ISSUER}/templates/proposals/${id}/decide`, {
       method: "POST",
-      headers: { "content-type": "application/json", ...loggedIn(id) },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify({ decision: "approve", render_revision: shown.headers.get(RENDER_REVISION_HEADER) }),
     });
+  };
 
   it("renders, for each delegable ceiling entry, the per-child rule, its maximum and its local scope, and the approval retains that figure: an instance dispatched after the deployment's figure is raised retains 3", async () => {
     const id = await propose();
