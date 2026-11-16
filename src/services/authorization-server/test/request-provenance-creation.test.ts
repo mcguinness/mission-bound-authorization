@@ -613,6 +613,24 @@ describe("exact retry after a lost response (@spec request-provenance#replay, ch
     expect(acceptanceOf(fresh.entry.assertion)).toBeUndefined();
   });
 
+  it("a submission other than an exact retry is verified in full: after exp, the accepted assertion under a new creation_request_id is refused at the time window at child creation and at expansion, while the exact retry still recovers", async () => {
+    const parent = await issueMission();
+    const signed = await mint();
+    const crid = crypto.randomUUID();
+    const childId = expectChild(await createChild(parent, [signed.entry], { crid }));
+    const accepted = acceptanceOf(signed.entry.assertion);
+    controlledClock.advance((signed.exp + 5 + 1) * 1000 - Date.now());
+    const missions = as.kernel.allMissions().length;
+    const before = verifications();
+    expectEvidenceRefusal(await createChild(parent, [signed.entry]), "exp has passed");
+    expectEvidenceRefusal(await expand(parent, [signed.entry]), "exp has passed");
+    expect(verifications()).toBe(before + 2);
+    expect(as.kernel.allMissions().length).toBe(missions);
+    expect(acceptanceOf(signed.entry.assertion)).toEqual(accepted);
+    expect(expectChild(await createChild(parent, [signed.entry], { crid }))).toBe(childId);
+    expect(verifications()).toBe(before + 2);
+  });
+
   it("child creation: the other recovery conditions still apply: an exact retry after the recorded child was revoked is refused", async () => {
     const parent = await issueMission();
     const signed = await mint();
