@@ -8104,9 +8104,33 @@
      "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a template instance: the record attributes the approval to the template's consenting human at the consent instant, triggered by the Dispatcher, under its own dispatch event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a policy_drawdown child: the record attributes the approval to the parent's Approver at the parent's approval instant, triggered by the parent's client, under its own creation event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a ceiling_drawdown successor: the record attributes the approval to the ceiling's consenting Approver at the ceiling consent instant, decided by the drawdown policy and triggered by the requesting client, under its own event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a governed_policy activation: the record attributes the approval to the root's consenting human at the consent instant, decided by policy and triggered by the requesting client, under its own approval event",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption. #2065 follow-up (D1329, ruling 3): the four standing-consent-attribution witnesses (template, policy_drawdown, ceiling_drawdown, governed_policy) run with the consent an hour before creation, and assert that the recorded approved_at is the retained consent instant and differs from the Mission's created_at. That separates the retained value from the creation clock on every basis, which the frozen-clock template witness could not; the approved_at mutation (the creation instant recorded) fails them (#2069). The row stays partial: the refusal of a mismatched, externally asserted instant still has an intake only on governed_policy."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
@@ -9303,9 +9327,33 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a template instance: the record attributes the approval to the template's consenting human at the consent instant, triggered by the Dispatcher, under its own dispatch event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a policy_drawdown child: the record attributes the approval to the parent's Approver at the parent's approval instant, triggered by the parent's client, under its own creation event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a ceiling_drawdown successor: the record attributes the approval to the ceiling's consenting Approver at the ceiling consent instant, decided by the drawdown policy and triggered by the requesting client, under its own event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a governed_policy activation: the record attributes the approval to the root's consenting human at the consent instant, decided by policy and triggered by the requesting client, under its own approval event",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local issuer obligation. Witnesses carried from the Contract's member rows (core.approval-basis.standing-consent-activation-required, -activation-actor-required, -root-commitment-required, core.approval-basis.approved-at-standing-consent), one per implemented basis (template, policy_drawdown, ceiling_drawdown, governed_policy); each compares the stored approval_basis whole with toEqual, all four members included. Coverage stays partial because D1134 promotes nothing in this move, not for a known gap: the per-member mutation proofs are recorded on those rows and were not re-run for this one, so tested follows a mutation proof under this row."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local issuer obligation. Witnesses carried from the Contract's member rows (core.approval-basis.standing-consent-activation-required, -activation-actor-required, -root-commitment-required, core.approval-basis.approved-at-standing-consent), one per implemented basis (template, policy_drawdown, ceiling_drawdown, governed_policy); each compares the stored approval_basis whole with toEqual, all four members included. Coverage stays partial because D1134 promotes nothing in this move, not for a known gap: the per-member mutation proofs are recorded on those rows and were not re-run for this one, so tested follows a mutation proof under this row. #2065 follow-up (D1329, ruling 3): the four standing-consent-attribution witnesses additionally assert, on every basis with the consent an hour before creation, that approved_at is the consented root's human approval instant (not the creation instant) and that activation_actor is the triggering party, not the consenting human. They do not assert activation or root_commitment. The row stays partial: those members are asserted only by the whole-basis toEqual witnesses already cited, and no mutation proof has yet been run under this row."
   },
   {
    "id": "core.mission-creating-paths.root-approval-authenticate",
