@@ -444,7 +444,9 @@ function migrateExpansionDeferrals(db: Database): void {
     // submission's evidence entries as presented, and the reference under
     // which the exchange accepted it, so the activation relies on each
     // entry's acceptance record. A deferral opened before them has neither,
-    // and keeps the facts verified at initiation alone.
+    // and keeps the facts verified at initiation alone. Both are kept for the
+    // row's lifetime, as PAR's deferral keeps its entries (#2070 review
+    // ruling 6); minimizing a terminal row is #2082.
     "evidence_json",
     "acceptance_ref",
   ]) {

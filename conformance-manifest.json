@@ -97735,9 +97735,27 @@
      "name": "the deferred expansion's activation (@spec request-provenance#replay, request-provenance#recorded-facts, #939 slice 3a, D1119 Q1 and Q2) > refuses the activation when the deferral names no accepted submission: access_denied, with no successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "the deferred expansion's activation (@spec request-provenance#replay, request-provenance#recorded-facts, #939 slice 3a, D1119 Q1 and Q2) > refuses the activation when the accepted type has been withdrawn and its acceptance record is missing: access_denied, with no successor, and every later poll repeats it after the type and the record return (#2070 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "the deferred expansion's activation (@spec request-provenance#replay, request-provenance#recorded-facts, #939 slice 3a, D1119 Q1 and Q2) > refuses the activation of a deferral that kept the facts alone when their type has been withdrawn: access_denied, with no successor (#2070 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "the deferred expansion's activation (@spec request-provenance#replay, request-provenance#recorded-facts, #939 slice 3a, D1119 Q1 and Q2) > refuses the activation of a deferral that kept the facts alone of a type relying on its acceptance record: access_denied, with no successor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#939 slice 2a-2. Each later step (the authorization endpoint's re-validation of the stored pushed request, the rendering, the decision, a deferred activation) finds the committed record by the assertion's (iss, jti) and refuses invalid_mission_intent_evidence when it is missing (as in an in-memory store after a restart), belongs to another submission than the step's par:<jti>, or binds another Intent, presenter or assertion bytes; a deferred activation whose pending approval names no accepted submission, or another, is refused. The intended AS cannot differ alone at an endpoint, since the provisional intent_hash commits the issuer; a unit test of the dispatch proves that comparison alone, and a step presenting a confirmation key the push did not establish. Mutations: removing each comparison, or treating a missing record as accepted, fails its test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it whose stored record is missing, or whose stored record binds another Intent, is refused access_denied, recording invalid_mission_intent_evidence, with no Mission. Mutations: a later step that does not compare the record's Intent, and one that proceeds without a record, each fail a restart test. The authorization endpoint, rendering and decision of a push accepted before a restart cannot run after it, since the pushed request, its interaction and the Approver's session are the provider's, in its memory (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay); the deferred activation, on the kernel's database, is the later step that survives a restart, and those three are witnessed within one process. #939 slice 3a: a deferred expansion's activation is refused access_denied, with no successor and every later poll repeating it, when the record is missing, belongs to another submission than the deferral's creation reference, or the deferral names no accepted submission. Mutation: an activation that lands the facts kept at initiation without the record fails all three."
+   "notes": "#939 slice 2a-2. Each later step (the authorization endpoint's re-validation of the stored pushed request, the rendering, the decision, a deferred activation) finds the committed record by the assertion's (iss, jti) and refuses invalid_mission_intent_evidence when it is missing (as in an in-memory store after a restart), belongs to another submission than the step's par:<jti>, or binds another Intent, presenter or assertion bytes; a deferred activation whose pending approval names no accepted submission, or another, is refused. The intended AS cannot differ alone at an endpoint, since the provisional intent_hash commits the issuer; a unit test of the dispatch proves that comparison alone, and a step presenting a confirmation key the push did not establish. Mutations: removing each comparison, or treating a missing record as accepted, fails its test. #1963: the AS keeps the pairs and their acceptance records in SqliteRequestProvenanceStore on the kernel's database, one table unique on (iss, jti), so they are exactly as durable as the kernel: in memory without a kernel file, and in the kernel's file (WAL, synchronous=FULL, under its recovery witness) with one. Beside a file-backed kernel store a supplied replay store refuses construction before the file is opened (enabling the type (@spec request-provenance#replay, D1119 Q5, D1151, #1963) > refuses construction with a file-backed kernel store and a supplied, non-durable replay store, whose restart would forget the replay history and acceptance records, before the kernel file is opened); the default store starts there. After a restart, a deferred activation staged before it whose stored record is missing, or whose stored record binds another Intent, is refused access_denied, recording invalid_mission_intent_evidence, with no Mission. Mutations: a later step that does not compare the record's Intent, and one that proceeds without a record, each fail a restart test. The authorization endpoint, rendering and decision of a push accepted before a restart cannot run after it, since the pushed request, its interaction and the Approver's session are the provider's, in its memory (replay across a restart (@spec request-provenance#replay, D1119 Q5, #1963) > does not keep the pushed request across a restart: it is the provider's, in its memory, so the authorization endpoint refuses its request_uri invalid_request_uri, while the committed pair still refuses the assertion as replay); the deferred activation, on the kernel's database, is the later step that survives a restart, and those three are witnessed within one process. #939 slice 3a: a deferred expansion's activation is refused access_denied, with no successor and every later poll repeating it, when the record is missing, belongs to another submission than the deferral's creation reference, or the deferral names no accepted submission. Mutation: an activation that lands the facts kept at initiation without the record fails all three. #2070 review finding 1: a record the type requires is not waived because the type is withdrawn. The activation refuses an entry, or a fact kept alone, of a type this server no longer accepts, access_denied with no successor, and every later poll repeats it after the type and the record return; a fact kept alone of a type relying on its record is refused too. Mutations: removing the refusal in the entries branch, or in the facts-only branch, each lets the poll deliver a successor (200)."
   },
   {
    "id": "request-provenance.replay.expiry-after-acceptance",
@@ -97978,6 +97996,59 @@
     }
    ],
    "notes": "#939 slice 3a (D1119 Q4, D1315). The child-creation and expansion exchanges fingerprint the evidence entries exactly as presented, the assertion string included, and look the (client, creation_request_id) operation up before verifying any evidence. A retry with the original assertion after a lost response, past the assertion's exp plus the allowance, recovers the recorded child, the same pending deferral, or a ceiling drawdown's successor, with the counted verifier not called and nothing created again. A retry under the same creation_request_id with a fresh assertion is refused invalid_request as a different operation, verifies nothing, and creates no Mission or deferral. The other recovery conditions still apply: a revoked recorded child, and a deferred expansion retried without completion_mode deferred, are refused though the fingerprint matches. Mutations: skipping either exchange's fingerprint comparison recovers the fresh-assertion retry (the recorded child, or the recorded continuation) and fails its test; verifying the evidence before the recovery lookup refuses the after-exp retries and fails them; dropping the recorded child's state check, or the deferred mode's opt-in check, recovers its retry and fails its test."
+  },
+  {
+   "id": "request-provenance.replay.non-retry-full-verification",
+   "spec": "draft-mcguinness-oauth-mission-request-provenance.md",
+   "anchor": "replay",
+   "text": "Any submission other than an exact retry follows {{verification}} in full, including the replay check.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "request-provenance.verification"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "On a child-creation or expansion exchange, a submission that is not an exact retry of a recorded operation is verified in full, including the replay check: the accepted assertion presented under a new creation_request_id is refused with invalid_mission_intent_evidence at the time window once its exp has passed, while the exact retry still recovers, and at the replay check before then, wherever its pair was committed; an assertion naming another presenter is refused at the presenter step."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "exact retry after a lost response (@spec request-provenance#replay, child-delegation#creation-request-id, expansion#creation-idempotency, #939 slice 3a, D1119 Q4) > a submission other than an exact retry is verified in full: after exp, the accepted assertion under a new creation_request_id is refused at the time window at child creation and at expansion, while the exact retry still recovers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "one replay store across carriers (@spec request-provenance#replay, #939 slice 3a) > an assertion committed at child creation is refused as replay at expansion, and one committed at expansion is refused as replay at child creation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "one replay store across carriers (@spec request-provenance#replay, #939 slice 3a) > a pair committed at a token exchange is refused as replay at PAR, and one committed at PAR as replay at child creation (the same pair re-signed for each presenter)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "child creation accepts mission-request-provenance (@spec request-provenance#verification, request-provenance#replay, submission-evidence#presenter-binding, #939 slice 3a) > refuses invalid_mission_intent_evidence an assertion naming another key, and one with no cnf, and creates nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "expansion accepts mission-request-provenance (@spec request-provenance#verification, request-provenance#replay, submission-evidence#presenter-binding, #939 slice 3a) > refuses invalid_mission_intent_evidence an assertion naming another key, and one with no cnf, and opens no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#939 slice 3a, #2070 review ruling 3. The exact-retry path is the creation fingerprint (request-provenance.replay.creation-recovery-exact-retry); every other submission reaches the type's verification, steps 1 to 10. Witnesses at the exchanges: after exp, the accepted assertion under a new creation_request_id is refused at step 7 at child creation and at expansion, verifying again, while the exact retry recovers without verifying; before exp, a pair committed at one exchange or at PAR is refused as replay at the others; at both exchanges an assertion naming another key, or no cnf, is refused at step 9. Each verification step is witnessed through the verifier on the request-provenance.verification rows, and the exchanges call that verifier, as the verification counts show. A reuse of a creation_request_id with other evidence is refused invalid_request on the fingerprint before verification and accepts nothing: the surface's other recovery conditions. Mutation: a type that resumes any assertion it already accepted, instead of verifying it in full, creates a child at the time-window witness (200) and fails both token-exchange replay witnesses; the PAR leg re-signs the pair for each presenter, so it presents other bytes."
   },
   {
    "id": "request-provenance.recorded-facts.exact",
@@ -115181,7 +115252,7 @@
     "normative": "An evidence entry naming a client_id or a cnf key binding other than the presenter the containing exchange established (its authenticated client and, where the exchange uses proof of possession, that key) fails verification, refused with invalid_mission_intent_evidence; an entry naming the established presenter verifies."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
@@ -115200,9 +115271,33 @@
      "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a presenter carrying cnf, since a push establishes no confirmation key (D1119 Q3)",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "child creation accepts mission-request-provenance (@spec request-provenance#verification, request-provenance#replay, submission-evidence#presenter-binding, #939 slice 3a) > accepts an assertion naming the exchange's DPoP key, commits its (iss, jti) under the operation's reference, and records its facts on the child",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "child creation accepts mission-request-provenance (@spec request-provenance#verification, request-provenance#replay, submission-evidence#presenter-binding, #939 slice 3a) > refuses invalid_mission_intent_evidence an assertion naming another key, and one with no cnf, and creates nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "expansion accepts mission-request-provenance (@spec request-provenance#verification, request-provenance#replay, submission-evidence#presenter-binding, #939 slice 3a) > accepts an assertion naming the exchange's DPoP key, commits its (iss, jti) under the operation's reference when it returns the pending continuation, and the deferral keeps that reference and the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-creation.test.ts",
+     "name": "expansion accepts mission-request-provenance (@spec request-provenance#verification, request-provenance#replay, submission-evidence#presenter-binding, #939 slice 3a) > refuses invalid_mission_intent_evidence an assertion naming another key, and one with no cnf, and opens no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1988. The AS establishes the presenter through the containing exchange and hands it to the evidence type. At Template Dispatch the presenter carries the DPoP key the dispatch exchange's proof established (cnf.jkt), so an entry naming that key verifies and one naming another key is refused invalid_mission_intent_evidence, with no Mission. Mutation: handing the type only the client, as before #1988, refuses the entry naming the established key. At PAR, which establishes the client and no confirmation key, mission-request-provenance refuses a presenter naming another client and one carrying cnf (D1119 Q3). partial: child creation and expansion already pass {clientId, cnf: {jkt}} to verification, but no test there yet witnesses an entry naming the established key verifying and another refused; #939's slice 3 adds them."
+   "notes": "#1988. The AS establishes the presenter through the containing exchange and hands it to the evidence type. At Template Dispatch the presenter carries the DPoP key the dispatch exchange's proof established (cnf.jkt), so an entry naming that key verifies and one naming another key is refused invalid_mission_intent_evidence, with no Mission. Mutation: handing the type only the client, as before #1988, refuses the entry naming the established key. At PAR, which establishes the client and no confirmation key, mission-request-provenance refuses a presenter naming another client and one carrying cnf (D1119 Q3). #939 slice 3a (#2070 review ruling 7): at child creation and at expansion, which establish the client and the exchange's DPoP key, mission-request-provenance naming that key verifies and its facts are recorded, and one naming another key, or carrying no cnf, is refused invalid_mission_intent_evidence, creating nothing and opening no deferral. Mutation: an exchange presenter without cnf fails all four exchange witnesses: both acceptances are refused, and an assertion carrying no cnf is accepted. Scope: this row is the AS's presenter comparison at those carriers. It does not enable request-provenance at Template Dispatch, where the type is still refused (the dispatch witness uses a stub type); it does not settle device authorization's acceptance point (#1989); and it does not claim the client's request-provenance.replay.creation-recovery-original-evidence, which stays todo."
   }
  ]
 }
