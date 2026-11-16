@@ -13,6 +13,7 @@
  */
 import type { Server } from "node:http";
 import { ResourceContractDeclarations, type ResourceContractRef, resourceContractDigest } from "@mission/core";
+import { type MixedRsHandler, startMixedResourceServer } from "@mission/mixed-rs";
 import { startPlainResourceServer } from "@mission/plain-rs";
 import {
   DERIVATION_POLICY,
@@ -48,6 +49,7 @@ import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js"
 const PORT = 14620;
 const RS_PORT = 14621;
 const RS_INTROSPECT_PORT = 14622;
+const MIXED_RS_PORT = 14623;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const PLAIN = TOPOLOGY.resources.plainRs;
@@ -107,6 +109,9 @@ let as: BuiltAs;
 let asServer: Server;
 let rs: Server;
 let rsIntrospecting: Server;
+/** The mixed Resource Server at the plain RS audience (#2072). */
+let mixedRs: Server;
+let mixedHandler: MixedRsHandler;
 let agentKey: CryptoKey;
 let governedKey: CryptoKey;
 /** The TEST's own copy of the AT signing key it injected, to craft adversarial subject tokens. */
@@ -336,6 +341,23 @@ async function callRs(port: number, method: "GET" | "POST", accessToken: string,
   });
 }
 
+/** Call the mixed Resource Server with a DPoP-bound access token; a write carries `cost`. */
+async function callMixed(method: "GET" | "POST", accessToken: string, keys: Keys, cost?: string): Promise<Response> {
+  const url = `http://localhost:${MIXED_RS_PORT}/api/reports`;
+  const ath = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken))).toString(
+    "base64url",
+  );
+  return fetch(url, {
+    method,
+    headers: {
+      authorization: `DPoP ${accessToken}`,
+      dpop: await dpopProof(keys, method, url, { ath }),
+      ...(method === "POST" ? { "content-type": "application/json" } : {}),
+    },
+    ...(method === "POST" ? { body: JSON.stringify({ title: "Q3 audit", cost: { amount: cost, currency: "USD" } }) } : {}),
+  });
+}
+
 beforeAll(async () => {
   const signing = await generateKeyPair("RS256", { extractable: true });
   signingKey = signing.privateKey;
@@ -368,12 +390,17 @@ beforeAll(async () => {
     },
     RS_INTROSPECT_PORT,
   );
+  ({ server: mixedRs, handler: mixedHandler } = await startMixedResourceServer(
+    { ...base, baseUrl: `http://localhost:${MIXED_RS_PORT}` },
+    MIXED_RS_PORT,
+  ));
 });
 
 afterAll(() => {
   asServer?.close();
   rs?.close();
   rsIntrospecting?.close();
+  mixedRs?.close();
 });
 
 describe("scope projection at the token endpoint (@spec mission#scope-projection)", () => {
@@ -1925,6 +1952,27 @@ describe("a mixed audience (@spec mission#scope-projection-per-audience, mission
       // and the read scope authorizes no write there.
       expect((await callRs(RS_PORT, "GET", res.body.access_token as string, keys)).status).toBe(200);
       expect((await callRs(RS_PORT, "POST", res.body.access_token as string, keys)).status).toBe(403);
+    });
+  });
+
+  it("at the mixed Resource Server under the AS-issued token, the projected read succeeds, a write the capped entry covers is performed, and an over-limit write is refused despite the read scope, with no effect", async () => {
+    await withPlain(MIXED, async () => {
+      const keys = await newKeys();
+      const r = await authorize([entry([READ]), CAPPED_WRITE], { scope: "reports.read" });
+      expect(r.code, JSON.stringify(r)).toBeTruthy();
+      const res = await redeem(r.code as string, keys);
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      const at = res.body.access_token as string;
+      expect((await callMixed("GET", at, keys)).status).toBe(200);
+      const before = mixedHandler.reports.length;
+      const covered = await callMixed("POST", at, keys, "60.00");
+      expect(covered.status, await covered.clone().text()).toBe(201);
+      expect(mixedHandler.reports.length).toBe(before + 1);
+      expect(mixedHandler.reports.at(-1)?.cost).toEqual({ amount: "60.00", currency: "USD" });
+      const over = await callMixed("POST", at, keys, "150.00");
+      expect(over.status).toBe(403);
+      expect(over.headers.get("www-authenticate")).toMatch(/mission_denial="insufficient_authority"/);
+      expect(mixedHandler.reports.length).toBe(before + 1);
     });
   });
 
