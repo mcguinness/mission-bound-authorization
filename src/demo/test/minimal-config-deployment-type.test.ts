@@ -306,11 +306,11 @@ describe("a deployment-defined authorization_details type that declares no trans
       resource: SAAS_RESOURCE,
     });
     expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
-    expect(redeemed.body.mission_id).toBe(missionId);
-    expect(redeemed.body.authorization_details).toEqual([ENTRY]);
     accessToken = String(redeemed.body.access_token);
     refreshToken = String(redeemed.body.refresh_token ?? "");
     expect(refreshToken).not.toBe("");
+    expect(redeemed.body.mission_id).toBe(missionId);
+    expect(redeemed.body.authorization_details).toEqual([ENTRY]);
     const claims = decodeJwt(accessToken);
     expect(claims.aud).toBe(SAAS_RESOURCE);
     expect(claims.mission).toMatchObject({ id: missionId, issuer: asUrl });
