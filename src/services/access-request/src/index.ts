@@ -73,6 +73,56 @@ export interface DenialBinding {
   parameter_digest: string;
   /** @spec authzen#context-approval (#249): the denied request's contract reference, where one applied. */
   resource_contract?: unknown;
+  /**
+   * @spec authzen#requestable-denials (#2067, D1328): the denial reason the
+   * request answers (`action_approval_required`, this implementation's
+   * spelling of `approval_required`, or a re-evaluation's `out_of_scope` or
+   * `approval_expired`) and the action classes that applied, from the
+   * PDP-signed binding. Absent or malformed, auto-approval treats the request
+   * as one that needs an independent approver.
+   */
+  reason?: string;
+  action_classes?: readonly string[];
+}
+
+/**
+ * @spec authzen#requestable-denials: the high-consequence classes in which an
+ * approval request needs an independent approver.
+ */
+const HIGH_CONSEQUENCE_CLASSES: ReadonlySet<string> = new Set([
+  "irreversible_action",
+  "external_commitment",
+  "privileged_administration",
+]);
+
+/** The approver identity a synchronous auto-approval is recorded under. */
+export const AUTO_APPROVER = "policy:auto-approval";
+
+/** What a deployment's synchronous auto-approval policy sees of a submitted request. */
+export interface AutoApprovalRequest {
+  action: string;
+  mission_id: string;
+  mission_issuer: string;
+  parameter_digest: string;
+  subject: string;
+  reason?: string;
+  action_classes?: readonly string[];
+}
+
+/**
+ * @spec authzen#requestable-denials (#2067, D1328): a deployment "MUST NOT
+ * auto-approve a request for an `approval_required` denial", or a request
+ * renewing or replacing an approval an `out_of_scope` or `approval_expired`
+ * denial found insufficient, "in the irreversible, external-commitment, or
+ * privileged-administration classes without an independent approver". Only
+ * an `out_of_authority` request is outside the rule, and an unnamed class
+ * set counts as high-consequence, so neither a changed denial reason nor a
+ * missing member lets a request through unattended.
+ */
+export function requiresIndependentApprover(binding: Pick<DenialBinding, "reason" | "action_classes">): boolean {
+  if (binding.reason === "out_of_authority") return false;
+  const classes = binding.action_classes;
+  return classes === undefined || classes.length === 0 || classes.some((c) => HIGH_CONSEQUENCE_CLASSES.has(c));
 }
 
 const SCHEMA = `
@@ -115,6 +165,14 @@ export class AccessRequestService {
       approvalAudience: string;
       approvalTtlSeconds?: number;
       now?: () => Date;
+      /**
+       * @spec authzen#requestable-denials: the deployment's synchronous
+       * auto-approval policy, consulted at submission. It is never applied to
+       * a request that needs an independent approver
+       * ({@link requiresIndependentApprover}); such a request stays pending
+       * for one. Absent, every request waits for an approver.
+       */
+      autoApprove?: (request: AutoApprovalRequest) => boolean;
     },
   ) {
     this.db = openStore(SCHEMA);
@@ -160,6 +218,22 @@ export class AccessRequestService {
         resourceJson,
         this.now().getTime(),
       );
+    // @spec authzen#requestable-denials (#2067, D1328): synchronous
+    // auto-approval, bounded by the independent-approver rule whatever the
+    // denial reason.
+    const request: AutoApprovalRequest = {
+      action: binding.action,
+      mission_id: binding.mission_id,
+      mission_issuer: binding.mission_issuer,
+      parameter_digest: binding.parameter_digest,
+      subject: sub.requested.subject,
+      ...(binding.reason !== undefined ? { reason: binding.reason } : {}),
+      ...(binding.action_classes !== undefined ? { action_classes: binding.action_classes } : {}),
+    };
+    if (!requiresIndependentApprover(binding) && this.opts.autoApprove?.(request) === true) {
+      await this.adjudicate(taskId, "approve", AUTO_APPROVER);
+      return { taskId, state: "approved" };
+    }
     return { taskId, state: "pending" };
   }
 
@@ -301,6 +375,7 @@ export class AccessRequestService {
     if (typeof payload.mission_issuer !== "string" || payload.mission_issuer === "") {
       throw new Error("denial binding names no Mission issuer");
     }
+    const classes = payload.action_classes;
     return {
       decision_id: payload.decision_id as string,
       mission_id: payload.mission_id as string,
@@ -308,6 +383,10 @@ export class AccessRequestService {
       action: payload.action as string,
       parameter_digest: payload.parameter_digest as string,
       ...(payload.resource_contract !== undefined ? { resource_contract: payload.resource_contract } : {}),
+      ...(typeof payload.reason === "string" ? { reason: payload.reason } : {}),
+      ...(Array.isArray(classes) && classes.every((c) => typeof c === "string")
+        ? { action_classes: classes as string[] }
+        : {}),
     };
   }
 }
