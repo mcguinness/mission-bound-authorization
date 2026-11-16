@@ -18383,7 +18383,7 @@
    "observation": {
     "normative": "at one audience that enforces a read entry through a projected scope and consumes a constrained action entry as authorization_details, the AS projects the read scope only when all access it enables there falls within one applicable entry, never by association with an entry or by combining entries; at that resource server a projected read succeeds, a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope"
    },
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
@@ -18414,9 +18414,15 @@
      "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > checks a carried entry's constraints keys as an authorization_details audience: a key the audience is not known to enforce refuses invalid_target",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > at the mixed Resource Server under the AS-issued token, the projected read succeeds, a write the capped entry covers is performed, and an over-limit write is refused despite the read scope, with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#2072, owner ruling D1321 (option A). partial. Witnessed: the AS projects at a mixed audience only a value one carried entry makes safe across all access it enables (a read value enabling an action the read entry lacks is not projected, and is refused when requested), never a value only two entries together cover; the token carries scope reports.read and the capped write entry unprojected; carried constraints keys are checked as at an authorization_details audience; and at that audience the scope-only plain RS honors the projected read (200) and refuses the write with the read scope (403). Mutations, each restored: treating every mapped value as safe fails four core tests and the endpoint write-scope refusal; skipping the constraints-key check at a mixed audience fails the keys test. Not witnessed: that a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope, at one resource server that consumes authorization_details at the mixed audience. The reference has none: plain-rs is scope-only by design, mcp-saas accepts only Resource AS tokens, and mcp-payments authorizes through the PDP."
+   "notes": "#2072, owner ruling D1321 (option A); the resource-server half on the owner's go (D1326). The AS projects at a mixed audience only a value one carried entry makes safe across all access it enables (a read value enabling an action the read entry lacks is not projected, and is refused when requested), never a value only two entries together cover; the token carries scope reports.read and the capped write entry unprojected; carried constraints keys are checked as at an authorization_details audience. At that audience, under the AS-issued token: the scope-only plain RS honors the projected read and refuses the write; the mixed Resource Server (services/mixed-rs) honors the projected read, performs a write the capped entry covers (the report is recorded), and refuses an over-limit write despite the read scope with mission_denial=insufficient_authority and no effect. The unsafe requested write scope is refused (core.scope-projection.ungrantable-requested-scope-refused). Mutations, each restored: treating every mapped value as safe fails four mission-core tests and the endpoint write-scope refusal; skipping the constraints-key check fails the keys test; the mixed projection never emitting a value fails the cross-component read; the mixed RS granting a write on any scope value, its max_amount gate admitting any cost, and its write path ignoring every entry each fail the cross-component test."
   },
   {
    "id": "core.scope-projection.requested-not-refused-for-other-entries",
@@ -19140,6 +19146,49 @@
     }
    ],
    "notes": "#2033 (D1266). Proven by disabling the code it covers: the decision made conjunctive (`.some` to `.every`) fails all four on their permit assertions, refusing a request one entry covers on its own."
+  },
+  {
+   "id": "core.rs-enforcement.scope-never-broader-than-entry",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST NOT, when a token also carries `scope`, grant on the basis of a scope value any access broader than the corresponding `authorization_details` entry permits",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server receiving a token that carries both scope and authorization_details grants on a scope value no access broader than the corresponding entry permits: a write a carried read or write scope value names but no entry covers, and an over-limit write the capped entry refuses, are both refused with no effect"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mixed-rs/test/mixed-rs.test.ts",
+     "name": "the mixed Resource Server (@spec mission#scope-projection-per-audience, mission#rs-requirements, #2072) > never grants a write on a scope value: a token carrying a write scope and no covering entry is refused, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mixed-rs/test/mixed-rs.test.ts",
+     "name": "the mixed Resource Server (@spec mission#scope-projection-per-audience, mission#rs-requirements, #2072) > performs a write the capped entry covers, and refuses an over-limit write despite the read scope, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > at the mixed Resource Server under the AS-issued token, the projected read succeeds, a write the capped entry covers is performed, and an over-limit write is refused despite the read scope, with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2072 (D1326). Witnessed at the mixed Resource Server (services/mixed-rs), the reference server that reads both: its write path never reads scope, so a token carrying reports.read and reports.write with no covering entry is refused, and an over-limit write is refused despite the read scope, both with no effect, under locally signed and AS-issued tokens. Mutation, restored: the write path granting on any scope value fails both unit tests and the cross-component test. The other Mission-aware reference servers (mcp-payments, mcp-saas) authorize on authorization_details alone and never read scope; plain-rs is scope-only and receives only projections the AS proves safe."
   },
   {
    "id": "core.introspection.composite-active",
