@@ -952,8 +952,8 @@ Under the Q3 reconciliation Mission
 extraction sub-agent and presents a child-creation token exchange whose
 `subject_token` is the parent's Mission-bound access token, proving
 possession with a DPoP proof over the token's confirmation key
-(illustrative; this Mission's Authority Set extends the single-domain
-walkthrough's, its read entry's `delegation` carrying a `children`
+(illustrative; this Mission's Authority Set extends the shared Q3
+example's, its read entry's `delegation` carrying a `children`
 object ({{fanout}}), so its anchors differ from that example's):
 
 ~~~ http

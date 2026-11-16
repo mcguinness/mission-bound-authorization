@@ -35,12 +35,12 @@
     "content_sha256": "f2b396959fa4779fe264efc023daab2313f5939d09590c060b452b2593aadf56"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
-    "content_sha256": "921c383cf8768d561e12d1b308d64e0e2e5bbc34a857f347fcbbf0a8d1d63243"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "d7965c2ede61672d610ded5498b6afe3c57a6d9230a903e51713d765e79975cf"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
-    "content_sha256": "3b0e17cee2fa13b891a498a016808851edc931af76d8c8d54fbee79ec03d368e"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "1eaceedeac0ac5ecd7cbedd433b853657aa8a7451df77b975fb9429a7698b66d"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "1199e650a853bb0006c2384c589157f263547a7e",
@@ -71,16 +71,16 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "23c075817e70878a006c70ba87bd7aa75266535f",
-    "content_sha256": "0dd86f7bd5602e71807a2a48e537f9ffca57929b556163ecc107636345f62ede"
+    "revision": "4d1344a21bff965bc9a44584ffe5ed02ced315ff",
+    "content_sha256": "8028fa30ea7b787fffd4785823b77ad7f445b764bd94b6c8f6bf8b6ae75b951c"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
-    "content_sha256": "96fdafec3635a416aa03edd70762528b824e7fa59f8aeb0f8398bde977ed475d"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "1fb7b5002c503d599109496260c8f05d38a381542b7143ac593a035068057067"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
-    "revision": "c1307f579ed5c96693321ada82523b60c61519fa",
-    "content_sha256": "c258ea34df404bdf3173b4c2326bbb12a9764a15e53c721865ae0fd07ea72933"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "abc3c981207cb62dc26b217b7d56d6dbcd7954754ac1508fb110c2a424c30a1e"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
@@ -111,12 +111,12 @@
     "content_sha256": "deac6430d37a6f3d0bf6b8f565ef12ac7af1df6113c2a0bfa1593fde0a4f43f3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "7cc78dfd1a44275037d6dd380bc6f494021d150f",
-    "content_sha256": "53ea4caebb952caf862671a5cdc3ce94f6c9559d21eb7cb014d8d2ee6bdf2579"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "d652a30db54f5740bd353e03f956616d19996ae8490495c8eea8b1859b5e9501"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "477e473c4909b74d82ba82be67bba23c2b983e7a",
-    "content_sha256": "b2e006607d309e3a8f1b1e6d034ca9bd74d5c1dbcd53e38a1677546065242060"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "b6cd085f2f123022ed0ebf513bd351ed73c754e8431077dd2e5664cd69e1f108"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "65037204039a9db7a234ed095700bf63461827fd",
@@ -163,8 +163,8 @@
     "content_sha256": "0e40820c2dbbd7d2e20c5f99bf13adefcfd6a13449e0096d57a12372bf49a6a9"
    },
    "draft-mcguinness-oauth-mission-consent-evidence.md": {
-    "revision": "4a038caad9d7152409cc822046abbae76a86b54e",
-    "content_sha256": "326fffad3b3d743d6dc9cd9bb9e2fb5d831933a4aee401817490c9379cee8859"
+    "revision": "29e209dcc4cd067994da74ae8d1e1b6671fa8d8a",
+    "content_sha256": "4b1b6cd1bba59d2497c83cfcac1f95a2de476c4b4f35161403556cb622caa003"
    }
   }
  },
@@ -8104,9 +8104,33 @@
      "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a template instance: the record attributes the approval to the template's consenting human at the consent instant, triggered by the Dispatcher, under its own dispatch event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a policy_drawdown child: the record attributes the approval to the parent's Approver at the parent's approval instant, triggered by the parent's client, under its own creation event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a ceiling_drawdown successor: the record attributes the approval to the ceiling's consenting Approver at the ceiling consent instant, decided by the drawdown policy and triggered by the requesting client, under its own event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a governed_policy activation: the record attributes the approval to the root's consenting human at the consent instant, decided by policy and triggered by the requesting client, under its own approval event",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption. #2065 follow-up (D1329, ruling 3): the four standing-consent-attribution witnesses (template, policy_drawdown, ceiling_drawdown, governed_policy) run with the consent an hour before creation, and assert that the recorded approved_at is the retained consent instant and differs from the Mission's created_at. That separates the retained value from the creation clock on every basis, which the frozen-clock template witness could not; the approved_at mutation (the creation instant recorded) fails them (#2069). The row stays partial: the refusal of a mismatched, externally asserted instant still has an intake only on governed_policy."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
@@ -9303,9 +9327,33 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a template instance: the record attributes the approval to the template's consenting human at the consent instant, triggered by the Dispatcher, under its own dispatch event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a policy_drawdown child: the record attributes the approval to the parent's Approver at the parent's approval instant, triggered by the parent's client, under its own creation event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a ceiling_drawdown successor: the record attributes the approval to the ceiling's consenting Approver at the ceiling consent instant, decided by the drawdown policy and triggered by the requesting client, under its own event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a governed_policy activation: the record attributes the approval to the root's consenting human at the consent instant, decided by policy and triggered by the requesting client, under its own approval event",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local issuer obligation. Witnesses carried from the Contract's member rows (core.approval-basis.standing-consent-activation-required, -activation-actor-required, -root-commitment-required, core.approval-basis.approved-at-standing-consent), one per implemented basis (template, policy_drawdown, ceiling_drawdown, governed_policy); each compares the stored approval_basis whole with toEqual, all four members included. Coverage stays partial because D1134 promotes nothing in this move, not for a known gap: the per-member mutation proofs are recorded on those rows and were not re-run for this one, so tested follows a mutation proof under this row."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local issuer obligation. Witnesses carried from the Contract's member rows (core.approval-basis.standing-consent-activation-required, -activation-actor-required, -root-commitment-required, core.approval-basis.approved-at-standing-consent), one per implemented basis (template, policy_drawdown, ceiling_drawdown, governed_policy); each compares the stored approval_basis whole with toEqual, all four members included. Coverage stays partial because D1134 promotes nothing in this move, not for a known gap: the per-member mutation proofs are recorded on those rows and were not re-run for this one, so tested follows a mutation proof under this row. #2065 follow-up (D1329, ruling 3): the four standing-consent-attribution witnesses additionally assert, on every basis with the consent an hour before creation, that approved_at is the consented root's human approval instant (not the creation instant) and that activation_actor is the triggering party, not the consenting human. They do not assert activation or root_commitment. The row stays partial: those members are asserted only by the whole-basis toEqual witnesses already cited, and no mutation proof has yet been run under this row."
   },
   {
    "id": "core.mission-creating-paths.root-approval-authenticate",
@@ -13489,7 +13537,7 @@
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, a Progressive ceiling consent, or a governed_policy root's consent"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
@@ -13682,9 +13730,33 @@
      "name": "the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119) > states that drawdown successors carry the count forward and never exceed the established limit, or that no finite limit is guaranteed without one, only where a ceiling consent is offered",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a template instance: the record attributes the approval to the template's consenting human at the consent instant, triggered by the Dispatcher, under its own dispatch event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a policy_drawdown child: the record attributes the approval to the parent's Approver at the parent's approval instant, triggered by the parent's client, under its own creation event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a ceiling_drawdown successor: the record attributes the approval to the ceiling's consenting Approver at the ceiling consent instant, decided by the drawdown policy and triggered by the requesting client, under its own event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a governed_policy activation: the record attributes the approval to the root's consenting human at the consent instant, decided by policy and triggered by the requesting client, under its own approval event",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). #2040 (D1260 ruling 3): the per-child rule and maximum for each delegable entry with no child_creation_policy are witnessed at the other human approvals that admit policy-created children (consent-per-child-rule-endpoint.test.ts): the Progressive ceiling consent on the approval page (a block per delegable ceiling entry, whose figure the approval retains with the ceiling), the Expansion deferral page (a block per delegable successor entry at the figure the approval retains, and per entry of the ceiling re-consent it offers), and the Template consent page (a block per delegable ceiling entry). Each decision approves the figure rendered: the deferral's render revision commits the figures, so a change between rendering and decision is refused approval_context_changed naming child_derivation; the template proposal pins the figure and refuses the consent once it has changed; and the Mission approval is bound to the derivation policy content it rendered (#1446). #2040 review (ruling 4, consent-per-child-refusal-endpoint.test.ts): an approval whose per-child figure cannot be disclosed (a child_creation_policy not held at its digest, or stating a malformed maximum) is refused at a consented ceiling (an offered but unselected ceiling is not), an Expansion successor, an Expansion ceiling re-consent (only when selected) and a Template proposal (at the proposal, and at its page and decision if the policy is withdrawn later), committing nothing and leaving a deferral or proposal pending; a held, valid policy renders its rule and is approved; and recovery is a fresh rendering that shows the restored rule. With Derivation Limits off nothing is refused for it (controls, not cited). Review P2: the deferral's render revision commits child_grants, the per-child disclosure the page showed, and the Mission approval's commits the held activation policies (#1446), so a rendering that could not show a figure never approves it once the policy is restored, before a first decision or after a refused one. Proved by mutation: dropping child_grants from the deferral's commitment, or the held policies from the Mission approval's, fails the stale-rendering witnesses; dropping each surface's refusal fails its refusal witnesses; refusing an unselected offer or re-consent fails the unselected halves; and ignoring the Derivation Limits switch fails the off controls. #2040 governed (D1278 ruling 1, governed-per-child-rule.test.ts): the governed_policy basis has no consent page in the reference; the deployment's governance surface renders governedPolicyConsentDisclosure, which carries the rule for the Missions the root activates (no finite maximum is guaranteed: the root commits none) and each delegable root ceiling entry's per-child rule and maximum. The consent is recorded only with that disclosure's commitment, still matching the exact root, the committed policy state and the per-child figures; a missing or stale commitment, or a figure that cannot be shown, is refused before anything is written, and the consent retains the figures. Proved by mutation: dropping the commitment check or the missing-commitment check, omitting the figures or the policy state from the commitment, dropping the rendered rules, or dropping the undisclosable refusal each fails its witness. The Progressive basis's own successor-limit statement is witnessed on progressive.drawdown-derivation.ceiling-consent-disclosure and cited here too. Still partial for one clause: \"no consent rendering or human approval is attributed to an admitted Mission's own creation\" has no cited witness on this row for any basis. Candidates for the owner's review, not cited because their assertions and proofs were not verified here: the drawdown approval_basis attribution in progressive-drawdown-endpoint.test.ts, the template approval_basis assertions in template.test.ts, and child-approved-at.test.ts. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails). #2040 proved by mutation: dropping the ceiling block, the deferral page's blocks or the template's blocks fails each surface's page witness; dropping the figures from the deferral's committed context fails the binding witness; and dropping the template's changed-figure refusal fails the pin witness."
+   "notes": "#1119 (D327). Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). #2040 (D1260 ruling 3): the per-child rule and maximum for each delegable entry with no child_creation_policy are witnessed at the other human approvals that admit policy-created children (consent-per-child-rule-endpoint.test.ts): the Progressive ceiling consent on the approval page (a block per delegable ceiling entry, whose figure the approval retains with the ceiling), the Expansion deferral page (a block per delegable successor entry at the figure the approval retains, and per entry of the ceiling re-consent it offers), and the Template consent page (a block per delegable ceiling entry). Each decision approves the figure rendered: the deferral's render revision commits the figures, so a change between rendering and decision is refused approval_context_changed naming child_derivation; the template proposal pins the figure and refuses the consent once it has changed; and the Mission approval is bound to the derivation policy content it rendered (#1446). #2040 review (ruling 4, consent-per-child-refusal-endpoint.test.ts): an approval whose per-child figure cannot be disclosed (a child_creation_policy not held at its digest, or stating a malformed maximum) is refused at a consented ceiling (an offered but unselected ceiling is not), an Expansion successor, an Expansion ceiling re-consent (only when selected) and a Template proposal (at the proposal, and at its page and decision if the policy is withdrawn later), committing nothing and leaving a deferral or proposal pending; a held, valid policy renders its rule and is approved; and recovery is a fresh rendering that shows the restored rule. With Derivation Limits off nothing is refused for it (controls, not cited). Review P2: the deferral's render revision commits child_grants, the per-child disclosure the page showed, and the Mission approval's commits the held activation policies (#1446), so a rendering that could not show a figure never approves it once the policy is restored, before a first decision or after a refused one. Proved by mutation: dropping child_grants from the deferral's commitment, or the held policies from the Mission approval's, fails the stale-rendering witnesses; dropping each surface's refusal fails its refusal witnesses; refusing an unselected offer or re-consent fails the unselected halves; and ignoring the Derivation Limits switch fails the off controls. #2040 governed (D1278 ruling 1, governed-per-child-rule.test.ts): the governed_policy basis has no consent page in the reference; the deployment's governance surface renders governedPolicyConsentDisclosure, which carries the rule for the Missions the root activates (no finite maximum is guaranteed: the root commits none) and each delegable root ceiling entry's per-child rule and maximum. The consent is recorded only with that disclosure's commitment, still matching the exact root, the committed policy state and the per-child figures; a missing or stale commitment, or a figure that cannot be shown, is refused before anything is written, and the consent retains the figures. Proved by mutation: dropping the commitment check or the missing-commitment check, omitting the figures or the policy state from the commitment, dropping the rendered rules, or dropping the undisclosable refusal each fails its witness. The Progressive basis's own successor-limit statement is witnessed on progressive.drawdown-derivation.ceiling-consent-disclosure and cited here too. #2065 (D1305): the last clause, \"no consent rendering or human approval is attributed to an admitted Mission's own creation\", is witnessed on all four bases (standing-consent-attribution.test.ts), each admitted Mission read back from the store, its standing consent given at T0 and the Mission created an hour later. The record attributes the only human approval behind it to the standing consent: approval_basis.type is the standing-consent type, never direct; adjudication is absent (template, policy_drawdown) or kind policy (ceiling_drawdown, governed_policy), never human; consent_principal is the standing consent's Approver; approved_at is the consent instant, not the Mission's created_at; activation_actor is the triggering party (the Dispatcher, the parent's client, the requesting client), not the consenting human; and approval_event_id is the Mission's own, never the standing approval's event. The rendering half is observed through the same members: this AS attributes a consent rendering to a Mission's creation only as a step of that Mission's own human approval event, recorded as a direct basis or a human adjudication; it retains no other per-Mission rendering (render revisions are held per interaction and retired at the decision) and records no Consent Evidence (derivation-limits.rendering.standing-consent-evidence, blocked). Proved by mutation: on the template, policy_drawdown and ceiling_drawdown bases, recording the Mission as a direct approval by the standing Approver, setting approved_at to the creation instant, substituting a fresh human as consent_principal, setting activation_actor to the consenting human, and recording a human adjudication each fail the witness at that member. On governed_policy, a mutation of the basis alone can stop first at the existing governed record gates (the accountable assertion must agree with approval_basis, and a human assertion needs auth_time), before the witness runs; a paired mutation of the basis and its accountable assertion (for example approved_at set to the creation instant in both) passes those gates and fails the witness at that member (#2069 review, D1305). Setting approval_event_id to the standing approval's event fails the template and governed witnesses; for policy_drawdown and ceiling_drawdown that event is another Mission's own, and the store's unique approval_event_id refuses the creation, so the member is store-enforced there, not mutation-proved. The candidates named before were not cited: template.test.ts asserts approved_at under a clock frozen at the consent instant, so it equals created_at; progressive-drawdown-endpoint.test.ts runs on the real clock, where the consent and the drawdown can share a millisecond, and asserts no inequality; child-approved-at.test.ts asserts the instant only. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails). #2040 proved by mutation: dropping the ceiling block, the deferral page's blocks or the template's blocks fails each surface's page witness; dropping the figures from the deferral's committed context fails the binding witness; and dropping the template's changed-figure refusal fails the pin witness."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -18210,7 +18282,7 @@
    "id": "core.scope-projection.ungrantable-requested-scope-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "scope-projection-requested",
-   "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot grant",
+   "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot safely project",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -18223,7 +18295,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request that explicitly names a scope value the issuance cannot grant (one the target's mapping names but no carried entry makes safe, or any scope value associated with a target that consumes authorization_details) is refused with invalid_scope rather than issued with an omitted or silently reduced scope"
+    "normative": "a request that explicitly names a scope value the issuance cannot safely project, one that no carried entry the target enforces through scope makes safe (a mapped value no carried entry makes safe, or a resource scope for a target that consumes the applicable entries as authorization_details), is refused with invalid_scope rather than issued with an omitted or silently reduced scope"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -18275,9 +18347,143 @@
      "name": "projectScope (@spec mission#scope-projection) > earlyScopeRefusal: a value for an authorization_details audience or one the mapping does not name; an unknown audience is left to issuance",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > refuses invalid_scope a requested write scope no entry the audience enforces through scope makes safe, creating no Mission",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > grants a requested read value at an audience that consumes the write entry as authorization_details, and refuses a requested write value no entry makes safe",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption."
+   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption. Re-quoted for #2072 (D1321): the refusal is per value. Both observed clauses stay within it, because an authorization_details-only target has no entry it enforces through scope that makes a resource scope safe. Coverage re-verified against the same eight tests, unchanged. #2072 witness: at a mixed audience, a requested write value no entry the audience enforces through scope makes safe is refused invalid_scope at the authorization decision, creating no Mission (endpoint), and by the mission-core projection (unit); treating every mapped value as safe fails both."
+  },
+  {
+   "id": "core.scope-projection.mixed-audience-per-value-subset",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "anchor": "scope-projection-per-audience",
+   "text": "Each projected value then meets the subset condition on its own, across all access the value enables at that audience",
+   "role": "AS",
+   "strength": "stated",
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "level": "cross-component",
+   "observation": {
+    "normative": "at one audience that enforces a read entry through a projected scope and consumes a constrained action entry as authorization_details, the AS projects the read scope only when all access it enables there falls within one applicable entry, never by association with an entry or by combining entries; at that resource server a projected read succeeds, a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope"
+   },
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > projects the read value the read entry makes safe and carries the constrained write entry unprojected",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > measures a value across all access it enables: a read value that also enables an action the read entry lacks is not projected, and is refused when requested",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > never combines entries: a value only the read and write entries together cover is not projected",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > checks a carried entry's constraints keys as an authorization_details audience: a key the audience is not known to enforce refuses invalid_target",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2072, owner ruling D1321 (option A). partial. Witnessed: the AS projects at a mixed audience only a value one carried entry makes safe across all access it enables (a read value enabling an action the read entry lacks is not projected, and is refused when requested), never a value only two entries together cover; the token carries scope reports.read and the capped write entry unprojected; carried constraints keys are checked as at an authorization_details audience; and at that audience the scope-only plain RS honors the projected read (200) and refuses the write with the read scope (403). Mutations, each restored: treating every mapped value as safe fails four core tests and the endpoint write-scope refusal; skipping the constraints-key check at a mixed audience fails the keys test. Not witnessed: that a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope, at one resource server that consumes authorization_details at the mixed audience. The reference has none: plain-rs is scope-only by design, mcp-saas accepts only Resource AS tokens, and mcp-payments authorizes through the PDP."
+  },
+  {
+   "id": "core.scope-projection.requested-not-refused-for-other-entries",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "anchor": "scope-projection-requested",
+   "text": "It MUST NOT refuse a value only because the target consumes other entries as `authorization_details`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "level": "endpoint",
+   "observation": {
+    "normative": "at an audience that consumes some carried entries as authorization_details, a requested scope value that an entry the audience enforces through scope makes safe is granted and reported, not refused invalid_scope"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > grants a requested read value at an audience that consumes the write entry as authorization_details, and refuses a requested write value no entry makes safe",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > refuses at intake only a value the mixed audience's mapping does not name",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2072, owner ruling D1321 (option A). Witnessed at the plain RS audience run as a mixed audience (mode mixed: reports.read projected, a max_amount-capped write entry consumed as authorization_details): PAR and the token endpoint grant a requested reports.read and the token carries scope reports.read; the mission-core projection grants the requested read value and the intake refuses only a value the mixed mapping does not name. Mutations, each restored: a mixed audience refusing a requested value as an authorization_details one fails the endpoint test and two core tests; the intake refusing any value at a non-scope-only audience fails the endpoint test and the intake test."
+  },
+  {
+   "id": "core.scope-projection.client-requests-scope-only-for-scope-enforced",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "anchor": "scope-projection-requested",
+   "text": "A Mission-creating client requests a resource `scope` only for authority the target enforces through `scope`, never for an entry the target consumes as `authorization_details`",
+   "role": "client",
+   "strength": "stated",
+   "surface": "par",
+   "assertion": "output-bound",
+   "level": "cross-component",
+   "observation": {
+    "normative": "a Mission-creating client names a resource scope value in its request only for authority the target enforces through scope, and names none for an entry the target consumes as authorization_details"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2072, owner ruling D1321. The sentence replaces the target-wide client rule, which had no row. todo: no client witness. The owner's review of PR #2073 (D1323): the evidence must show the client's request construction; successful AS handling alone cannot establish it. The mixed-audience endpoint tests construct their requests in the test, not in a reference client, so they do not witness this row."
   },
   {
    "id": "core.scope-projection.requested-scope-stands-for-entries",
@@ -20179,7 +20385,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the type's eligibility test, and the delegation-authorization policy where it leaves a matcher unstated, is applied afresh at every exchange, and absence is never a grant"
+    "normative": "the type's eligibility test, and the delegation-authorization policy where it leaves an eligibility condition unstated, is applied afresh at every exchange, and absence is never a grant"
    },
    "level": "endpoint",
    "coverage": "tested",

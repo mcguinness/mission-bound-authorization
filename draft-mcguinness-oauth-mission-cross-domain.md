@@ -868,8 +868,8 @@ resolve against the delegate it authenticated in its own namespace.
 
 Portable cross-domain matching SHOULD therefore use a `sub_profile`
 matcher, an actor-type class rather than a domain-relative identifier
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
-Constraints"). A Resource AS evaluates a conveyed `sub_profile`
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Delegate Eligibility"). A Resource AS evaluates a conveyed `sub_profile`
 matcher against the classification it asserts for its own delegates.
 A value names no equivalent class across trust domains unless
 pre-established trust ({{pre-established-trust}}) fixes a shared
@@ -1474,8 +1474,8 @@ defined by that profile's Mission Resource Access Profile
 
 # End-to-End Example (Non-Normative)
 
-This appendix continues the end-to-end example of the issuance profile's
-appendix across a trust boundary: from the home domain
+This appendix carries the family's shared Q3 reconciliation example
+across a trust boundary: from the home domain
 (`as.example.com`) into a partner domain, and then into the partner's
 internal microservice call chain. It is illustrative and adds no
 normative requirements. The final intra-domain hop shows one
@@ -1483,9 +1483,9 @@ deployment-local way to carry Mission context in a Transaction Token
 {{I-D.draft-ietf-oauth-transaction-tokens}}. Identifiers are
 illustrative. The Mission's `intent_hash` and `authority_hash` are
 its integrity anchors ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Integrity Anchors") over the issuance profile example's
-Intent and Authority Set, each with the partner values the scenario
-names appended.
+Section "Integrity Anchors") over the shared Q3 example's Intent and
+Authority Set, each with the partner values the scenario names
+appended.
 
 The chain crosses boundaries in two distinct ways, and seeing why is
 the point of the example:
@@ -1510,8 +1510,8 @@ from Status or Signals.
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in a partner ERP
 under Mission `msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY`. Stage 1 (Mission
-creation at the home AS) is the base profile's single-domain
-walkthrough, extended here in one way: the
+creation at the home AS) is the shared Q3 example's single-domain
+creation, extended here in one way: the
 Mission Intent's `target_resources` also names the partner ERP
 `https://erp.partner.example.com`, so the approved Authority Set
 additionally carries, for that resource, an `invoices.read` entry
@@ -1522,8 +1522,8 @@ Mission was recorded `active` with `authority_hash`
 `sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM` and
 `intent_hash`
 `sha-256:PKG6dLDsex-HyP9hs4NJpxqAocHYUmpDmoMH4UaoW-o` (this Mission
-is not the single-domain walkthrough's: its Intent and Authority Set
-extend that example's, so its identifier and anchors differ). The
+is not the shared Q3 example's: its Intent and Authority Set extend
+that example's, so its identifier and anchors differ). The
 partner ERP
 is behind the Resource AS `ras.partner.example.com`, so the agent's
 next step is a cross-domain projection rather than a home-domain

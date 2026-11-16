@@ -5,9 +5,12 @@
  *
  * The mapping is the trusted, versioned, per-audience statement of how a
  * target Resource Server enforces: `authorization_details` (the target
- * consumes the carried entries, so `scope` is omitted, step 4) or
+ * consumes the carried entries, so `scope` is omitted, step 4),
  * `scope_only` (the AS emits only `scope` values it proves safe, or refuses,
- * steps 3 and 5). An audience the mapping does not name is unknown and fails
+ * steps 3 and 5), or `mixed` (@spec mission#scope-projection-per-audience,
+ * #2072: the target consumes the carried entries and also enforces some
+ * authority through `scope`, so the AS emits the values it proves safe and
+ * omits the rest). An audience the mapping does not name is unknown and fails
  * closed. Each `scope_only` value declares the effective rights the target
  * grants for it and the controls the target enforces independently on that
  * path.
@@ -52,7 +55,7 @@ export function splitScope(value: unknown): { oidc: string[]; resource: string[]
 }
 
 /** How the target's enforcement path consumes a Mission-bound token. */
-export const SCOPE_PROJECTION_MODES = ["authorization_details", "scope_only"] as const;
+export const SCOPE_PROJECTION_MODES = ["authorization_details", "scope_only", "mixed"] as const;
 export type ScopeProjectionMode = (typeof SCOPE_PROJECTION_MODES)[number];
 
 /** The `resource_match` forms `mission_resource_access` defines. */
@@ -123,6 +126,14 @@ export type AudienceScopeMapping =
       mission_aware: boolean;
       mode: "scope_only";
       scopes: Record<string, ScopeValueMapping>;
+    }
+  | {
+      version: string;
+      mission_aware: boolean;
+      mode: "mixed";
+      /** The values the target enforces through `scope`, each with its full rights. */
+      scopes: Record<string, ScopeValueMapping>;
+      mission_constraints_supported?: string[];
     };
 
 export interface ScopeProjectionMapping {
@@ -265,23 +276,27 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
   const mode = o.mode;
   if (mode === "authorization_details") {
     onlyMembers(o, ["version", "mission_aware", "mode", "mission_constraints_supported"], path);
-    const supported = o.mission_constraints_supported;
-    if (supported === undefined) return { version, mission_aware: missionAware, mode };
-    const keysPath = `${path}.mission_constraints_supported`;
-    if (
-      !Array.isArray(supported) ||
-      !supported.every((k) => typeof k === "string" && k.length > 0)
-    ) {
-      throw new ScopeProjectionMappingError(keysPath, "must be an array of non-empty strings");
-    }
-    if (new Set(supported).size !== supported.length) {
-      throw new ScopeProjectionMappingError(keysPath, "must not repeat a value");
-    }
+    const supported = parseSupported(o.mission_constraints_supported, path);
     return {
       version,
       mission_aware: missionAware,
       mode,
-      mission_constraints_supported: [...supported],
+      ...(supported ? { mission_constraints_supported: supported } : {}),
+    };
+  }
+  if (mode === "mixed") {
+    onlyMembers(
+      o,
+      ["version", "mission_aware", "mode", "scopes", "mission_constraints_supported"],
+      path,
+    );
+    const supported = parseSupported(o.mission_constraints_supported, path);
+    return {
+      version,
+      mission_aware: missionAware,
+      mode,
+      scopes: parseScopes(o.scopes, path),
+      ...(supported ? { mission_constraints_supported: supported } : {}),
     };
   }
   if (mode !== "scope_only") {
@@ -291,7 +306,23 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
     );
   }
   onlyMembers(o, ["version", "mission_aware", "mode", "scopes"], path);
-  const scopes = obj(o.scopes, `${path}.scopes`);
+  return { version, mission_aware: missionAware, mode, scopes: parseScopes(o.scopes, path) };
+}
+
+function parseSupported(supported: unknown, path: string): string[] | undefined {
+  if (supported === undefined) return undefined;
+  const keysPath = `${path}.mission_constraints_supported`;
+  if (!Array.isArray(supported) || !supported.every((k) => typeof k === "string" && k.length > 0)) {
+    throw new ScopeProjectionMappingError(keysPath, "must be an array of non-empty strings");
+  }
+  if (new Set(supported).size !== supported.length) {
+    throw new ScopeProjectionMappingError(keysPath, "must not repeat a value");
+  }
+  return [...supported];
+}
+
+function parseScopes(v: unknown, path: string): Record<string, ScopeValueMapping> {
+  const scopes = obj(v, `${path}.scopes`);
   const names = Object.keys(scopes);
   if (names.length === 0)
     throw new ScopeProjectionMappingError(`${path}.scopes`, "must name at least one scope value");
@@ -305,7 +336,7 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
     }
     out[name] = parseScopeValue(scopes[name], `${path}.scopes.${name}`);
   }
-  return { version, mission_aware: missionAware, mode, scopes: out };
+  return out;
 }
 
 /**
@@ -429,7 +460,10 @@ export function scopeValueSafeForEntry(value: ScopeValueMapping, entry: unknown)
 }
 
 export type ScopeProjectionOutcome =
-  /** Step 4: every audience consumes `authorization_details`; emit no `scope`. */
+  /**
+   * Step 4: every audience consumes `authorization_details`, or a `mixed`
+   * audience has no value to project; emit no `scope`.
+   */
   | { outcome: "omit" }
   /** Steps 1-3: `scope` is exactly these values, each proven safe at every audience. */
   | { outcome: "emit"; scope: string; values: string[] }
@@ -554,7 +588,8 @@ export function entryOverlapsResource(
  * it is never dropped from the entry, which would widen it, and the entry is
  * never omitted to repair it. A `scope`-only audience is left to the
  * projection's condition 3 ({@link scopeValueSafeForEntry}): that target
- * reads `scope`, never the entry's `constraints`. Keyed on presence: an
+ * reads `scope`, never the entry's `constraints`. A `mixed` audience consumes
+ * the carried entries, so it is checked as an `authorization_details` one. Keyed on presence: an
  * entry with no `constraints` key needs no knowledge. An audience the
  * mapping does not name is refused before this check ({@link projectScope}).
  * Returns the refusal reason, or undefined.
@@ -650,11 +685,13 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
   let safe: Set<string> | undefined;
   for (const [i, m] of mappings.entries()) {
     modes.add(m.mode);
-    if (m.mode !== "scope_only") {
+    if (m.mode === "authorization_details") {
+      // No entry is enforced through `scope` at this audience, so no
+      // requested value can be safely projected.
       if (explicit && requested?.length) {
         return ungrantable(
           requested[0] as string,
-          `audience ${audiences[i]} consumes authorization_details`,
+          `audience ${audiences[i]} consumes authorization_details for every entry`,
         );
       }
       continue;
@@ -670,11 +707,31 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
     );
     safe = safe ? new Set([...safe].filter((s) => here.has(s))) : here;
   }
-  if (!modes.has("scope_only")) return { outcome: "omit" };
+  if (modes.size === 1 && modes.has("authorization_details")) return { outcome: "omit" };
   if (modes.size > 1) {
     return target("a scope claim cannot be omitted for one audience and emitted for another");
   }
   const safeSet = safe ?? new Set<string>();
+  // @spec mission#scope-projection-requested, #scope-projection-per-audience
+  // (#2072): at a `mixed` audience a value is refused only when it cannot be
+  // safely projected, never because the audience consumes other entries as
+  // `authorization_details`, and a value with nothing to project is omitted:
+  // the target still consumes the carried entries.
+  if (modes.has("mixed")) {
+    if (explicit && requested) {
+      const unsafe = requested.find((v) => !safeSet.has(v));
+      if (unsafe !== undefined) {
+        return ungrantable(
+          unsafe,
+          "no carried entry the audience enforces through scope makes it safe",
+        );
+      }
+    }
+    const emitted = [...safeSet].filter((v) => !requested || requested.includes(v)).sort();
+    return emitted.length
+      ? { outcome: "emit", scope: emitted.join(" "), values: emitted }
+      : { outcome: "omit" };
+  }
   if (explicit && requested) {
     const unsafe = requested.find((v) => !safeSet.has(v));
     if (unsafe !== undefined) {
@@ -729,8 +786,8 @@ export function earlyScopeRefusal(
   for (const aud of audiences) {
     const m = mapping?.audiences[aud];
     if (!m) continue;
-    if (m.mode !== "scope_only") {
-      return `requested scope value ${requested[0]} cannot be granted: audience ${aud} consumes authorization_details`;
+    if (m.mode === "authorization_details") {
+      return `requested scope value ${requested[0]} cannot be granted: audience ${aud} consumes authorization_details for every entry`;
     }
     const unknown = requested.find((v) => !Object.hasOwn(m.scopes, v));
     if (unknown !== undefined) {
