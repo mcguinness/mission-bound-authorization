@@ -303,27 +303,22 @@ describe("a Mission Template consent decision approves only the latest rendering
   it("a held policy edited between the rendering and the decision changes the context: a child creation policy another entry commits, or another Dispatch Policy, edited in place is refused approval_context_changed naming held_policies, creating no template, and the rendering it presented is retired", async () => {
     const id = await proposed();
     const session = login(id);
-    const edits: Array<() => Promise<{ status: number; body: { error?: string; changed?: string[] } }>> = [
-      async () => {
-        const { revision } = await render(id, session);
-        return replaced(B_ID, snapshot(9), () => approve(id, session, revision));
-      },
-      async () => {
-        const { revision } = await render(id, session);
-        const refused = await editedDispatch("test-other", 9, () => approve(id, session, revision));
-        // Retired: restored, the same rendering still approves nothing.
-        const retired = await approve(id, session, revision);
-        expect(retired.status).toBe(409);
-        expect(retired.body.error).toBe("rendering_required");
-        return refused;
-      },
+    type Decision = () => ReturnType<typeof approve>;
+    const edits: Array<(decision: Decision) => ReturnType<typeof approve>> = [
+      (decision) => replaced(B_ID, snapshot(9), decision),
+      (decision) => editedDispatch("test-other", 9, decision),
     ];
     for (const edit of edits) {
-      const refused = await edit();
+      const { revision } = await render(id, session);
+      const refused = await edit(() => approve(id, session, revision));
       expect(refused.status).toBe(409);
       expect(refused.body.error).toBe("approval_context_changed");
       expect(refused.body.changed).toEqual(["held_policies"]);
       noTemplate(id);
+      // Retired: restored, the same rendering still approves nothing.
+      const retired = await approve(id, session, revision);
+      expect(retired.status).toBe(409);
+      expect(retired.body.error).toBe("rendering_required");
     }
   });
 
