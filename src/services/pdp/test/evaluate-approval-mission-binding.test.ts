@@ -324,3 +324,82 @@ describe("parameter_violation is never requestable (@spec authzen#requestable-de
     expect(over.context.next_action).not.toBe("request");
   });
 });
+
+describe("a replacement approval request on an out_of_scope or approval_expired denial (@spec authzen#requestable-denials, #2067, D1328)", () => {
+  const view = missionView("msn_2067");
+  const bound = { issuer: view.issuer, id: view.id };
+  const STALE_DIGEST = `sha-256:${Buffer.alloc(32, 3).toString("base64url")}`;
+  type AccessRequest = { binding_token: string; denial_binding: string };
+  /** The denial's access_request and its PDP-signed binding, decoded. */
+  const accessRequestOf = (d: { context: Record<string, unknown> }) => {
+    const ar = d.context.access_request as AccessRequest | undefined;
+    return { ar, binding: ar ? decodeJwt(ar.binding_token) : undefined };
+  };
+
+  it("an out_of_scope denial for a parameter change after approval carries next_action request and an access_request bound to this evaluation: its decision id, Mission issuer and id, action, current parameter digest and contract", async () => {
+    // The approval covers the parameters as they were when it was given.
+    const approval = await ars.approve({ ...unsignedApproval(), parameter_digest: STALE_DIGEST }, bound);
+    const d = await evaluate(request(bound, "125.00", approval), gated(view));
+    expect(d.decision).toBe(false);
+    expect(d.context.denial_reason).toBe("out_of_scope");
+    expect(d.context.next_action).toBe("request");
+    const { ar, binding } = accessRequestOf(d);
+    expect(ar).toBeDefined();
+    expect(ar?.denial_binding).toBe(d.context.evaluation_id);
+    expect(binding).toMatchObject({
+      decision_id: d.context.decision_id,
+      mission_id: view.id,
+      mission_issuer: view.issuer,
+      action: ACTION,
+      parameter_digest: DIGEST,
+      resource_contract: CONTRACT,
+      reason: "out_of_scope",
+    });
+  });
+
+  it("an approval_expired denial carries next_action request and an access_request bound to this evaluation", async () => {
+    // Given 301 seconds ago, past the deployment's 300-second maximum age.
+    const approval = await ars.approve({ ...unsignedApproval(), approved_at: new Date(CLOCK_MS - 301_000).toISOString() }, bound);
+    const d = await evaluate(request(bound, "125.00", approval), gated(view));
+    expect(d.decision).toBe(false);
+    expect(d.context.denial_reason).toBe("approval_expired");
+    expect(d.context.next_action).toBe("request");
+    const { ar, binding } = accessRequestOf(d);
+    expect(ar).toBeDefined();
+    expect(binding).toMatchObject({
+      decision_id: d.context.decision_id,
+      mission_id: view.id,
+      mission_issuer: view.issuer,
+      action: ACTION,
+      parameter_digest: DIGEST,
+      resource_contract: CONTRACT,
+      reason: "approval_expired",
+    });
+  });
+
+  it("after an expansion, a predecessor-bound approval presented under the successor is denied out_of_scope with an access_request bound to the successor and this evaluation", async () => {
+    const predecessor = missionView("msn_2067_predecessor");
+    const successor = missionView("msn_2067_successor");
+    const approval = await ars.approve(unsignedApproval(), { issuer: predecessor.issuer, id: predecessor.id });
+    const d = await evaluate(request({ issuer: successor.issuer, id: successor.id }, "125.00", approval), gated(successor));
+    expect(d.decision).toBe(false);
+    expect(d.context.denial_reason).toBe("out_of_scope");
+    expect(d.context.next_action).toBe("request");
+    const { binding } = accessRequestOf(d);
+    expect(binding).toMatchObject({
+      decision_id: d.context.decision_id,
+      mission_id: successor.id,
+      mission_issuer: successor.issuer,
+      parameter_digest: DIGEST,
+    });
+  });
+
+  it("an approval_unverifiable denial is never requestable: no access_request and next_action none, where approval policy is requestable", async () => {
+    const approval = await ars.approve(unsignedApproval(), undefined);
+    const d = await evaluate(request(bound, "125.00", approval), gated(view));
+    expect(d.decision).toBe(false);
+    expect(d.context.denial_reason).toBe("approval_unverifiable");
+    expect(d.context.access_request).toBeUndefined();
+    expect(d.context.next_action).toBe("none");
+  });
+});
