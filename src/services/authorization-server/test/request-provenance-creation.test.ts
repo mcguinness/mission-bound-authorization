@@ -45,8 +45,11 @@ vi.mock("../src/kernel/request-provenance.js", async (importOriginal) => {
 });
 
 import { randomBytes } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { DERIVATION_POLICY, PROGRESSIVE_PROFILE, parseRequestProvenanceConfig, type RequestProvenanceConfig } from "@mission/demo-data";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { DERIVATION_POLICY, PROGRESSIVE_PROFILE, parseRequestProvenanceConfig, type RequestProvenanceConfig, TOPOLOGY } from "@mission/demo-data";
 import { createRequestIntake, type JsonObject, type Presenter } from "@mission/request-provenance";
 import { openStore } from "@mission/store";
 import { CompactSign, calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
@@ -60,11 +63,13 @@ import {
   type BuiltAs,
   creationAcceptanceRef,
   DEFERRED_GRANT_TYPE,
+  initSigningKeyRing,
   IntentError,
   type IntentSubmissionEvidenceType,
   type MissionRecord,
   type ProviderCapability,
   provisionalIntentHash,
+  reconcileKernelRecovery,
   registerIntentSubmissionEvidenceType,
   type RequestProvenanceAcceptance,
   type RequestProvenanceRecord,
@@ -1086,4 +1091,102 @@ describe("a ceiling drawdown accepts the type (@spec request-provenance#replay, 
       creationAcceptanceRef("expansion", CLIENT, crid),
     );
   });
+});
+
+describe("the deferred expansion's activation across a restart that withdraws the type (@spec request-provenance#replay, #939 slice 3a, #2070 review)", () => {
+  const RESTART_PORT = 14924;
+  const RESTART_ISSUER = `http://localhost:${RESTART_PORT}`;
+  const restartSessions = new ApprovalSessionStore();
+  const root = mkdtempSync(join(tmpdir(), "rp-creation-restart-"));
+  const paths = {
+    store: join(root, "state", "kernel.db"),
+    witness: join(root, "witness", "kernel.witness"),
+    ring: join(root, "keys", "as-signing-keys.json"),
+  };
+  const running: Array<{ as: BuiltAs; server: Server }> = [];
+
+  /** The AS on the kernel file, with the provenance type configured or not, listening on its port. */
+  async function bootOnFile(withType: boolean): Promise<{ as: BuiltAs; server: Server; target: Target }> {
+    const built = await buildAuthorizationServer({
+      issuer: RESTART_ISSUER,
+      allowHeadlessAdjudication: true,
+      serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+      approvalSessions: restartSessions,
+      capabilities: new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES]),
+      actorProfiles: aiAgents("subagent-extractor"),
+      kernelStore: { file: paths.store, witness: paths.witness },
+      signingKeys: { ring: paths.ring },
+      ...(withType ? { requestProvenance: { config: TRUST } } : {}),
+    } as Parameters<typeof buildAuthorizationServer>[0]);
+    const listening = built.provider.listen(RESTART_PORT);
+    await new Promise<void>((r) => listening.once("listening", () => r()));
+    const inst = { as: built, server: listening };
+    running.push(inst);
+    const agentKey = (await importJWK(built.agentClientJwk as never, "ES256")) as CryptoKey;
+    return { ...inst, target: { issuer: RESTART_ISSUER, agentKey, sessions: restartSessions } };
+  }
+
+  /** Stop the AS and release its kernel file and witness. */
+  async function stop(inst: { as: BuiltAs; server: Server }): Promise<void> {
+    const at = running.findIndex((r) => r.as === inst.as);
+    if (at >= 0) running.splice(at, 1);
+    inst.server.closeAllConnections();
+    await new Promise<void>((r) => inst.server.close(() => r()));
+    inst.as.suspensionScheduler?.stop();
+    inst.as.kernel.close();
+  }
+
+  beforeAll(async () => {
+    mkdirSync(dirname(paths.store), { recursive: true });
+    mkdirSync(dirname(paths.witness), { recursive: true });
+    reconcileKernelRecovery({ storeFile: paths.store, witnessFile: paths.witness, action: "init" });
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    await initSigningKeyRing(paths.ring, RESTART_ISSUER, { asToken, asStatus, asTxn, asContinuation });
+  });
+
+  afterAll(async () => {
+    for (const inst of [...running]) await stop(inst);
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("refuses an approved deferral staged before a restart whose configuration no longer accepts the type: access_denied, with no successor, and every later poll repeats it", async () => {
+    const first = await bootOnFile(true);
+    const predecessor = await issueMission(first.target);
+    const signed = await mint({ audience: RESTART_ISSUER });
+    const code = expectPending(await expand(predecessor, [signed.entry], { target: first.target }));
+    expect(
+      first.as.expansionDeferrals.approve(code, {
+        approver: { iss: RESTART_ISSUER, sub: "bob" },
+        authentication: { surface: "browser", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) },
+        approvalEventId: "apev-rp-creation-restart",
+        approvedUntil: FIXTURE_EXPIRES_AT,
+      }),
+    ).toBe(true);
+    await stop(first);
+
+    const second = await bootOnFile(false);
+    // The approved deferral and the committed pair are the kernel file's: the restart keeps both.
+    expect(second.as.kernel.db.prepare("SELECT state FROM expansion_deferrals WHERE deferral_code = ?").get(code)).toEqual({
+      state: "approved",
+    });
+    expect(
+      second.as.kernel.db
+        .prepare("SELECT state FROM request_provenance_pairs WHERE iss = ? AND jti = ?")
+        .get(INTAKE, String(claimsOf(signed.entry.assertion).jti)),
+    ).toEqual({ state: "committed" });
+    const successors = () => second.as.kernel.allMissions().filter((m) => m.predecessor === predecessor.missionId).length;
+    const pollHere = (deferralCode: string) => tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: deferralCode }, second.target);
+    const refused = await pollHere(code);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("access_denied");
+    expect(String(refused.body.error_description)).toContain(`unknown evidence type: ${TYPE}`);
+    expect(successors()).toBe(0);
+    controlledClock.advance(6000);
+    const again = await pollHere(code);
+    expect({ status: again.status, error: again.body.error, successors: successors() }).toEqual({
+      status: 400,
+      error: "access_denied",
+      successors: 0,
+    });
+  }, 60_000);
 });
