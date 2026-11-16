@@ -43,6 +43,7 @@ import { REQUEST_PROVENANCE_EVIDENCE_TYPE } from "./kernel/request-provenance.js
 import { createRequestProvenanceEvidenceType } from "./kernel/request-provenance-evidence.js";
 import { type RequestProvenanceStore, SqliteRequestProvenanceStore } from "./kernel/request-provenance-store.js";
 import type { IntentSubmissionEvidenceType } from "./kernel/intent.js";
+import type { DeploymentDefinedTypes } from "./kernel/authorization-details-metadata.js";
 import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
 import {
   type AuthorityDependencyDeclaration,
@@ -466,6 +467,8 @@ export {
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
   type AuthorizationDetailsTypeMetadata,
+  type DeploymentDefinedType,
+  type DeploymentDefinedTypes,
 } from "./kernel/authorization-details-metadata.js";
 export * from "./kernel/types.js";
 export {
@@ -1663,6 +1666,16 @@ export async function buildAuthorizationServer(opts: {
    */
   transformationCapabilities?: TransformationCapabilities;
   /**
+   * @spec mission#other-types, mission#transformation-capabilities (#2019):
+   * deployment-defined `authorization_details` types supported beside
+   * `mission_resource_access`, each with its metadata entry and documented
+   * definition, declaring no transformation capability. Each is advertised in
+   * `authorization_details_types_supported` and the types metadata endpoint,
+   * accepted in an authority proposal and a token request, and carried as
+   * approved. Absent: `mission_resource_access` alone, the shipped server.
+   */
+  additionalAuthorizationDetailsTypes?: DeploymentDefinedTypes;
+  /**
    * The deployment's enabled capabilities (`adapters/capabilities.ts`).
    * Absent: every capability is on, which is the full reference assembly. A
    * disabled capability refuses with its path's standard error, and with
@@ -1987,6 +2000,7 @@ export async function buildAuthorizationServer(opts: {
     // every later narrowing apply the declared capability.
     narrowing: transformationCapabilities.narrowing,
     transformationCapabilities,
+    ...(opts.additionalAuthorizationDetailsTypes ? { deploymentTypes: opts.additionalAuthorizationDetailsTypes } : {}),
     ...(authorityDependencyGate ? { authorityDependencyGate } : {}),
     // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
     // trusted entry-to-audience mapping (the same mapping the provider reads

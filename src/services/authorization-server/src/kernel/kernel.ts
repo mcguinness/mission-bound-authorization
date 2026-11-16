@@ -229,6 +229,7 @@ import {
   parseDrawdownRecordingRule,
   type RegisteredDrawdownRecordingRule,
 } from "./drawdown-approval-record.js";
+import { type DeploymentDefinedTypes, deploymentTypesViolation } from "./authorization-details-metadata.js";
 import { StandingPaymentStore } from "./standing-payment.js";
 import { TemplateApprovalRecordStore } from "./template-approval-record.js";
 import {
@@ -1025,6 +1026,14 @@ export interface KernelOptions {
    */
   transformationCapabilities?: { readonly delegation: boolean; readonly projection: boolean };
   /**
+   * @spec mission#other-types, mission#transformation-capabilities (#2019):
+   * the deployment-defined `authorization_details` types this server supports
+   * beside `mission_resource_access`, each with its documented definition.
+   * None declares a transformation capability, so an entry of one is only
+   * ever carried as approved. Absent: `mission_resource_access` alone.
+   */
+  deploymentTypes?: DeploymentDefinedTypes;
+  /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
    * `authority_source` from this and from nothing else: never from
@@ -1330,6 +1339,11 @@ export class MissionKernel {
   private readonly sourceResolver: AuthoritySourceResolver;
 
   constructor(private readonly opts: KernelOptions) {
+    // @spec mission#transformation-capabilities (#2019): a deployment-defined
+    // type that declares a transformation, or redefines the built-in type,
+    // refuses construction.
+    const typesViolation = opts.deploymentTypes ? deploymentTypesViolation(opts.deploymentTypes) : undefined;
+    if (typesViolation) throw new Error(typesViolation);
     // @spec derivation-limits#effective-limit (#2018): a policy ceiling is a
     // Derivation Limits setting, so a deployment that does not implement the
     // profile and sets one is misconfigured, refused here rather than ignored.
@@ -1621,6 +1635,11 @@ export class MissionKernel {
     return type === "mission_resource_access" && (caps ? caps.projection === true : true);
   }
 
+  /** @spec mission#other-types (#2019): the deployment-defined types this server supports, if any. */
+  deploymentTypes(): DeploymentDefinedTypes | undefined {
+    return this.opts.deploymentTypes;
+  }
+
   narrowingDeclaration(): NarrowingDeclaration {
     return this.opts.narrowing ?? NARROWING_IN_FULL;
   }
@@ -1754,7 +1773,7 @@ export class MissionKernel {
 
   /** @spec mission#authority-proposal — intake of the submitted proposal. */
   validateProposal(raw: string, targetResources: string[]): AuthorityEntry[] {
-    const proposal = validateAuthorityProposal(raw, targetResources);
+    const proposal = validateAuthorityProposal(raw, targetResources, this.opts.deploymentTypes);
     // @spec resource-access#resource-contract (#249): a proposed reference is
     // a proposal; one configuration does not name as current refuses here,
     // at intake, before anything is derived or rendered.
