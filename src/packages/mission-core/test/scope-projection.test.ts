@@ -813,3 +813,116 @@ describe("delegated routing (@spec mission#rs-enforcement)", () => {
     });
   });
 });
+
+/**
+ * @spec mission#scope-projection-per-audience, mission#scope-projection-requested
+ * (#2072, D1321): one audience consumes `authorization_details` for some
+ * entries and enforces others through a projected `scope`. Each projected
+ * value meets the subset condition on its own, across all access it enables;
+ * a requested value is refused only when it cannot be safely projected, never
+ * because the audience consumes other entries as `authorization_details`.
+ */
+describe("a mixed audience (@spec mission#scope-projection-per-audience, #2072)", () => {
+  const CAP = { amount: "100.00", currency: "USD" };
+  const mixed = (
+    scopes: Record<string, ScopeValueMapping>,
+    supported = ["max_amount"],
+  ): ScopeProjectionMapping => ({
+    audiences: {
+      [RS]: {
+        version: "m1",
+        mission_aware: true,
+        mode: "mixed",
+        scopes,
+        mission_constraints_supported: supported,
+      },
+    },
+  });
+  const READ_ENTRY = entry(["read"]);
+  const WRITE_ENTRY = entry(["write"], { constraints: { max_amount: CAP } });
+  const project = (m: ScopeProjectionMapping, entries: unknown[], requested?: string[]) =>
+    projectScope({
+      projectionDeclared: () => true,
+      mapping: m,
+      audiences: [RS],
+      entries,
+      ...(requested ? { requested: { values: requested, explicit: true } } : {}),
+    });
+
+  it("parses a mixed audience with its scope values and enforced constraints keys, and rejects an unknown member", () => {
+    const raw = {
+      audiences: {
+        [RS]: {
+          version: "m1",
+          mission_aware: true,
+          mode: "mixed",
+          scopes: { "r.read": { rights: value(["read"]).rights, mandatory_controls: {} } },
+          mission_constraints_supported: ["max_amount"],
+        },
+      },
+    };
+    const m = parseScopeProjectionMapping(raw);
+    expect(m.audiences[RS]).toMatchObject({
+      mode: "mixed",
+      mission_constraints_supported: ["max_amount"],
+    });
+    expect(Object.keys((m.audiences[RS] as { scopes: object }).scopes)).toEqual(["r.read"]);
+    const bad = structuredClone(raw) as { audiences: Record<string, Record<string, unknown>> };
+    (bad.audiences[RS] as Record<string, unknown>).extra = true;
+    expect(() => parseScopeProjectionMapping(bad)).toThrow(ScopeProjectionMappingError);
+  });
+
+  it("projects the read value the read entry makes safe and carries the constrained write entry unprojected", () => {
+    const m = mixed({ "r.read": value(["read"]), "r.write": value(["write"]) });
+    expect(project(m, [READ_ENTRY, WRITE_ENTRY])).toEqual({
+      outcome: "emit",
+      scope: "r.read",
+      values: ["r.read"],
+    });
+  });
+
+  it("grants a requested read value at an audience that consumes the write entry as authorization_details, and refuses a requested write value no entry makes safe", () => {
+    const m = mixed({ "r.read": value(["read"]), "r.write": value(["write"]) });
+    expect(project(m, [READ_ENTRY, WRITE_ENTRY], ["r.read"])).toEqual({
+      outcome: "emit",
+      scope: "r.read",
+      values: ["r.read"],
+    });
+    const write = project(m, [READ_ENTRY, WRITE_ENTRY], ["r.write"]);
+    expect(write).toMatchObject({ outcome: "refuse", error: "invalid_scope" });
+    expect((write as { reason: string }).reason).toMatch(
+      /r\.write cannot be granted: no carried entry the audience enforces through scope makes it safe/,
+    );
+  });
+
+  it("measures a value across all access it enables: a read value that also enables an action the read entry lacks is not projected, and is refused when requested", () => {
+    const m = mixed({ "r.read": value(["read", "export"]) });
+    expect(project(m, [READ_ENTRY, WRITE_ENTRY])).toEqual({ outcome: "omit" });
+    expect(project(m, [READ_ENTRY, WRITE_ENTRY], ["r.read"])).toMatchObject({
+      outcome: "refuse",
+      error: "invalid_scope",
+    });
+  });
+
+  it("never combines entries: a value only the read and write entries together cover is not projected", () => {
+    const m = mixed({ "r.rw": value(["read", "write"]) });
+    expect(project(m, [READ_ENTRY, entry(["write"])])).toEqual({ outcome: "omit" });
+  });
+
+  it("checks a carried entry's constraints keys as an authorization_details audience: a key the audience is not known to enforce refuses invalid_target", () => {
+    const m = mixed({ "r.read": value(["read"]) }, []);
+    expect(project(m, [READ_ENTRY, WRITE_ENTRY])).toMatchObject({
+      outcome: "refuse",
+      error: "invalid_target",
+    });
+    expect(unenforcedConstraintRefusal(m, [RS], [WRITE_ENTRY])).toMatch(
+      /not known to enforce the constraints key max_amount/,
+    );
+  });
+
+  it("refuses at intake only a value the mixed audience's mapping does not name", () => {
+    const m = mixed({ "r.read": value(["read"]) });
+    expect(earlyScopeRefusal(m, [RS], ["r.read"])).toBeUndefined();
+    expect(earlyScopeRefusal(m, [RS], ["r.admin"])).toMatch(/does not name it/);
+  });
+});

@@ -18347,9 +18347,21 @@
      "name": "projectScope (@spec mission#scope-projection) > earlyScopeRefusal: a value for an authorization_details audience or one the mapping does not name; an unknown audience is left to issuance",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > refuses invalid_scope a requested write scope no entry the audience enforces through scope makes safe, creating no Mission",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > grants a requested read value at an audience that consumes the write entry as authorization_details, and refuses a requested write value no entry makes safe",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption. Re-quoted for #2072 (D1321): the refusal is per value. Both observed clauses stay within it, because an authorization_details-only target has no entry it enforces through scope that makes a resource scope safe. Coverage re-verified against the same eight tests, unchanged."
+   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption. Re-quoted for #2072 (D1321): the refusal is per value. Both observed clauses stay within it, because an authorization_details-only target has no entry it enforces through scope that makes a resource scope safe. Coverage re-verified against the same eight tests, unchanged. #2072 witness: at a mixed audience, a requested write value no entry the audience enforces through scope makes safe is refused invalid_scope at the authorization decision, creating no Mission (endpoint), and by the mission-core projection (unit); treating every mapped value as safe fails both."
   },
   {
    "id": "core.scope-projection.mixed-audience-per-value-subset",
@@ -18371,9 +18383,40 @@
    "observation": {
     "normative": "at one audience that enforces a read entry through a projected scope and consumes a constrained action entry as authorization_details, the AS projects the read scope only when all access it enables there falls within one applicable entry, never by association with an entry or by combining entries; at that resource server a projected read succeeds, a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope"
    },
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2072, owner ruling D1321 (option A). todo until a mixed-audience witness exists: the reference has no audience that consumes some entries as authorization_details and enforces others through a projected scope. The witness the ruling requires: a projected read succeeds, a covered constrained write succeeds, an over-limit write fails despite the read scope, and an unsafe requested write scope is refused (core.scope-projection.ungrantable-requested-scope-refused), each clause mutation-proved."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > projects the read value the read entry makes safe and carries the constrained write entry unprojected",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > measures a value across all access it enables: a read value that also enables an action the read entry lacks is not projected, and is refused when requested",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > never combines entries: a value only the read and write entries together cover is not projected",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > checks a carried entry's constraints keys as an authorization_details audience: a key the audience is not known to enforce refuses invalid_target",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2072, owner ruling D1321 (option A). partial. Witnessed: the AS projects at a mixed audience only a value one carried entry makes safe across all access it enables (a read value enabling an action the read entry lacks is not projected, and is refused when requested), never a value only two entries together cover; the token carries scope reports.read and the capped write entry unprojected; carried constraints keys are checked as at an authorization_details audience; and at that audience the scope-only plain RS honors the projected read (200) and refuses the write with the read scope (403). Mutations, each restored: treating every mapped value as safe fails four core tests and the endpoint write-scope refusal; skipping the constraints-key check at a mixed audience fails the keys test. Not witnessed: that a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope, at one resource server that consumes authorization_details at the mixed audience. The reference has none: plain-rs is scope-only by design, mcp-saas accepts only Resource AS tokens, and mcp-payments authorizes through the PDP."
   },
   {
    "id": "core.scope-projection.requested-not-refused-for-other-entries",
@@ -18395,9 +18438,28 @@
    "observation": {
     "normative": "at an audience that consumes some carried entries as authorization_details, a requested scope value that an entry the audience enforces through scope makes safe is granted and reported, not refused invalid_scope"
    },
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2072, owner ruling D1321 (option A). todo: the reference has no mixed audience, so no request reaches this rule; every reference audience is scope-only or consumes all its entries as authorization_details."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > grants a requested read value at an audience that consumes the write entry as authorization_details, and refuses a requested write value no entry makes safe",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > refuses at intake only a value the mixed audience's mapping does not name",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2072, owner ruling D1321 (option A). Witnessed at the plain RS audience run as a mixed audience (mode mixed: reports.read projected, a max_amount-capped write entry consumed as authorization_details): PAR and the token endpoint grant a requested reports.read and the token carries scope reports.read; the mission-core projection grants the requested read value and the intake refuses only a value the mixed mapping does not name. Mutations, each restored: a mixed audience refusing a requested value as an authorization_details one fails the endpoint test and two core tests; the intake refusing any value at a non-scope-only audience fails the endpoint test and the intake test."
   },
   {
    "id": "core.scope-projection.client-requests-scope-only-for-scope-enforced",
@@ -18421,7 +18483,7 @@
    },
    "coverage": "todo",
    "tests": [],
-   "notes": "#2072, owner ruling D1321. The sentence replaces the target-wide client rule, which had no row. todo: no client witness."
+   "notes": "#2072, owner ruling D1321. The sentence replaces the target-wide client rule, which had no row. todo: no client witness. The owner's review of PR #2073 (D1323): the evidence must show the client's request construction; successful AS handling alone cannot establish it. The mixed-audience endpoint tests construct their requests in the test, not in a reference client, so they do not witness this row."
   },
   {
    "id": "core.scope-projection.requested-scope-stands-for-entries",
