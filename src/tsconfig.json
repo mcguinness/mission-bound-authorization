@@ -24,6 +24,7 @@
     { "path": "demo" },
     { "path": "services/ras" },
     { "path": "services/plain-rs" },
+    { "path": "services/mixed-rs" },
     { "path": "services/aauth-ps" },
     { "path": "services/aauth-resource" }
   ]
