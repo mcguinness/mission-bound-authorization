@@ -2839,8 +2839,8 @@ async function evaluateInner(
   // When policy requires an action-bound approval, a presented one that fails
   // a check is denied with the ARAP re-evaluation reason and ARAP's default
   // `next_action`, never `action_approval_required`; with none presented, the
-  // denial is `action_approval_required`, marked requestable
-  // (@spec requestable-denials).
+  // denial is `action_approval_required`. Each is marked requestable
+  // (@spec requestable-denials, #2067, D1328) except `approval_unverifiable`.
   // @spec txn-authorization#applicability — the requirement is the DEPLOYMENT
   // predicate OR the matched entry's effective Common Constraint, so a
   // delegated leaf carrying `requires_action_approval: true` is gated even
@@ -2856,6 +2856,51 @@ async function evaluateInner(
     (actionClasses.length === 0
       ? opts.requiresActionApproval?.(req.action.name, actionClass) === true
       : anyClass((c) => opts.requiresActionApproval?.(req.action.name, c) === true)) || credentialRequiresApproval;
+  /**
+   * @spec authzen#requestable-denials, authzen#context-approval (#2067,
+   * D1313, D1328): a fresh `access_request` for this denied evaluation, or
+   * nothing where the deployment does not mark denials requestable. Its
+   * PDP-signed binding names THIS evaluation and the values it established:
+   * the decision id, the evaluated Mission's qualified identity (after an
+   * expansion, the successor's), the action, the request's
+   * `parameter_digest` and contract reference, never a presented approval's.
+   * The denial reason and the applicable action classes ride with it, so the
+   * Access Request Service bounds auto-approval for a renewal or replacement
+   * request exactly as for a first one.
+   */
+  const requestableAccessRequest = async (
+    reason: "action_approval_required" | "out_of_scope" | "approval_expired",
+  ): Promise<Record<string, unknown> | undefined> => {
+    if (!opts.requestable || !req.context.parameter_digest) return undefined;
+    // ARAP: the access request is valid only while the denial binding is.
+    const requestableExp = Math.floor(now().getTime() / 1000) + 300;
+    const binding = await new SignJWT({
+      decision_id: decisionId,
+      // @spec authzen#context-approval (#2067, D1313): the qualified
+      // Mission identity the approval will be bound to, from the view
+      // this PDP evaluated, never from the request.
+      mission_id: view.id,
+      mission_issuer: view.issuer,
+      action: req.action.name,
+      parameter_digest: req.context.parameter_digest,
+      // @spec authzen#context-approval (#249): the approved Resource's
+      // contract reference rides the PDP-signed binding material the
+      // Access Request Service binds its approval to (ARAP 12.3.1).
+      ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
+      reason,
+      action_classes: actionClasses.length > 0 ? [...actionClasses] : actionClass !== undefined ? [actionClass] : [],
+    })
+      .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
+      .setIssuedAt()
+      .setExpirationTime(requestableExp)
+      .sign(opts.requestable.sign);
+    return {
+      endpoint: opts.requestable.endpoint,
+      denial_binding: decisionId,
+      binding_token: binding,
+      expires_at: new Date(requestableExp * 1000).toISOString(),
+    };
+  };
   // @spec resource-access#initial-common-constraints (#1375): an entry carrying
   // `requires_action_approval: true` is satisfied only by an approval that
   // passes every check below; without one, an applicable entry that requires
@@ -2865,10 +2910,20 @@ async function evaluateInner(
   if (policyRequiresApproval || candidates.every(entryRequiresApproval)) {
     const check = approvalCheck();
     if (check !== undefined && !check.satisfied) {
-      return {
-        decision: false,
-        context: base({ denial_reason: check.reason, reason: check.reason, next_action: ARAP_NEXT_ACTION[check.reason] }),
-      };
+      const ctx: Record<string, unknown> = base({
+        denial_reason: check.reason,
+        reason: check.reason,
+        next_action: ARAP_NEXT_ACTION[check.reason],
+      });
+      // @spec authzen#requestable-denials (#2067, D1328): an `out_of_scope` or
+      // `approval_expired` re-evaluation denial is requestable, for a
+      // replacement approval bound to this evaluation; the approval presented
+      // stays insufficient. `approval_unverifiable` never is.
+      if (check.reason !== "approval_unverifiable") {
+        const accessRequest = await requestableAccessRequest(check.reason);
+        if (accessRequest) ctx.access_request = accessRequest;
+      }
+      return { decision: false, context: ctx };
     }
     if (check === undefined) {
       const ctx: Record<string, unknown> = base({
@@ -2876,34 +2931,8 @@ async function evaluateInner(
         reason: "action_approval_required",
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
       });
-      if (opts.requestable && req.context.parameter_digest) {
-        // ARAP: the access request is valid only while the denial binding is.
-        const requestableExp = Math.floor(now().getTime() / 1000) + 300;
-        const binding = await new SignJWT({
-          decision_id: decisionId,
-          // @spec authzen#context-approval (#2067, D1313): the qualified
-          // Mission identity the approval will be bound to, from the view
-          // this PDP evaluated, never from the request.
-          mission_id: view.id,
-          mission_issuer: view.issuer,
-          action: req.action.name,
-          parameter_digest: req.context.parameter_digest,
-          // @spec authzen#context-approval (#249): the approved Resource's
-          // contract reference rides the PDP-signed binding material the
-          // Access Request Service binds its approval to (ARAP 12.3.1).
-          ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
-        })
-          .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
-          .setIssuedAt()
-          .setExpirationTime(requestableExp)
-          .sign(opts.requestable.sign);
-        ctx.access_request = {
-          endpoint: opts.requestable.endpoint,
-          denial_binding: decisionId,
-          binding_token: binding,
-          expires_at: new Date(requestableExp * 1000).toISOString(),
-        };
-      }
+      const accessRequest = await requestableAccessRequest("action_approval_required");
+      if (accessRequest) ctx.access_request = accessRequest;
       return { decision: false, context: ctx };
     }
   }
