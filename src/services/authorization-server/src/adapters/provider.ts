@@ -7548,7 +7548,8 @@ async function handleMissionDispatchGrant(
   if (!record) {
     // @spec mission#intent-submission-evidence — STAGE-2 verification (required
     // types resolved BEFORE derivation; the presenter is the AUTHENTICATED
-    // dispatcher). It runs AFTER the completed-operation recovery lookup above:
+    // dispatcher, with the DPoP key this exchange established, #1988). It runs
+    // AFTER the completed-operation recovery lookup above:
     // an artifact that expired after the first Dispatch completed MUST NOT
     // break recovery; a new Dispatch still verifies.
     let submissionEvidence: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>>;
@@ -7556,7 +7557,7 @@ async function handleMissionDispatchGrant(
       submissionEvidence = await kernel.verifySubmissionEvidence({
         intent,
         ...(submission.evidence ? { evidence: submission.evidence } : {}),
-        presenter: { clientId: client.clientId },
+        presenter: { clientId: client.clientId, cnf: { jkt } },
         required: requiredEvidenceTypesFor(opts, client),
         requestContext: { carrier: "mission-dispatch" },
       });

@@ -8104,9 +8104,33 @@
      "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a template instance: the record attributes the approval to the template's consenting human at the consent instant, triggered by the Dispatcher, under its own dispatch event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a policy_drawdown child: the record attributes the approval to the parent's Approver at the parent's approval instant, triggered by the parent's client, under its own creation event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a ceiling_drawdown successor: the record attributes the approval to the ceiling's consenting Approver at the ceiling consent instant, decided by the drawdown policy and triggered by the requesting client, under its own event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a governed_policy activation: the record attributes the approval to the root's consenting human at the consent instant, decided by policy and triggered by the requesting client, under its own approval event",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant. #1915 stage 2 (D1056): the rule moved unchanged from the OAuth binding's Standing-Consent Bases block to Approval Governance's Approval Basis Contract; the row follows it (the precedent of core.approval-basis.adjudication-no-flatten, D1049). Its tests are unchanged. Applies to a Contract adopter (#1985, D1164): after #1974, a standing-consent basis can meet the OAuth binding without adopting the Approval Basis Contract, so `core.standing-consent` alone does not establish adoption. #2065 follow-up (D1329, ruling 3): the four standing-consent-attribution witnesses (template, policy_drawdown, ceiling_drawdown, governed_policy) run with the consent an hour before creation, and assert that the recorded approved_at is the retained consent instant and differs from the Mission's created_at. That separates the retained value from the creation clock on every basis, which the frozen-clock template witness could not; the approved_at mutation (the creation instant recorded) fails them (#2069). The row stays partial: the refusal of a mismatched, externally asserted instant still has an intake only on governed_policy."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
@@ -9303,9 +9327,33 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a template instance: the record attributes the approval to the template's consenting human at the consent instant, triggered by the Dispatcher, under its own dispatch event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a policy_drawdown child: the record attributes the approval to the parent's Approver at the parent's approval instant, triggered by the parent's client, under its own creation event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a ceiling_drawdown successor: the record attributes the approval to the ceiling's consenting Approver at the ceiling consent instant, decided by the drawdown policy and triggered by the requesting client, under its own event",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-consent-attribution.test.ts",
+     "name": "a Mission created under a standing consent has no human approval, and so no consent rendering, of its own (#2065; @spec derivation-limits#approval-rendering, approval-governance#standing-consent-bases) > a governed_policy activation: the record attributes the approval to the root's consenting human at the consent instant, decided by policy and triggered by the requesting client, under its own approval event",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local issuer obligation. Witnesses carried from the Contract's member rows (core.approval-basis.standing-consent-activation-required, -activation-actor-required, -root-commitment-required, core.approval-basis.approved-at-standing-consent), one per implemented basis (template, policy_drawdown, ceiling_drawdown, governed_policy); each compares the stored approval_basis whole with toEqual, all four members included. Coverage stays partial because D1134 promotes nothing in this move, not for a known gap: the per-member mutation proofs are recorded on those rows and were not re-run for this one, so tested follows a mutation proof under this row."
+   "notes": "#1967 (D1134) retired core.mission-creating-paths.standing-consent-profile-conforms (todo) and core.mission-creating-paths.standing-consent-contract (partial), which bound every standing-consent basis and its activating issuer to the Approval Basis Contract. That universal applicability ends: an intentional normative relaxation, since a profile defined elsewhere can meet the OAuth binding's local requirements by another mechanism. Mapping: the profile clause becomes core.mission-creating-paths.standing-consent-profile-specifies (binding) plus approval-governance.contract.adopting-profile-conforms (Governance, stated); the issuer clause becomes core.mission-creating-paths.standing-consent-issuer-records (binding) plus approval-governance.contract.activating-issuer-conforms (Governance, stated). No coverage is promoted. This row is the binding's local issuer obligation. Witnesses carried from the Contract's member rows (core.approval-basis.standing-consent-activation-required, -activation-actor-required, -root-commitment-required, core.approval-basis.approved-at-standing-consent), one per implemented basis (template, policy_drawdown, ceiling_drawdown, governed_policy); each compares the stored approval_basis whole with toEqual, all four members included. Coverage stays partial because D1134 promotes nothing in this move, not for a known gap: the per-member mutation proofs are recorded on those rows and were not re-run for this one, so tested follows a mutation proof under this row. #2065 follow-up (D1329, ruling 3): the four standing-consent-attribution witnesses additionally assert, on every basis with the consent an hour before creation, that approved_at is the consented root's human approval instant (not the creation instant) and that activation_actor is the triggering party, not the consenting human. They do not assert activation or root_commitment. The row stays partial: those members are asserted only by the whole-basis toEqual witnesses already cited, and no mutation proof has yet been run under this row."
   },
   {
    "id": "core.mission-creating-paths.root-approval-authenticate",
@@ -18299,9 +18347,21 @@
      "name": "projectScope (@spec mission#scope-projection) > earlyScopeRefusal: a value for an authorization_details audience or one the mapping does not name; an unknown audience is left to issuance",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > refuses invalid_scope a requested write scope no entry the audience enforces through scope makes safe, creating no Mission",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > grants a requested read value at an audience that consumes the write entry as authorization_details, and refuses a requested write value no entry makes safe",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption. Re-quoted for #2072 (D1321): the refusal is per value. Both observed clauses stay within it, because an authorization_details-only target has no entry it enforces through scope that makes a resource scope safe. Coverage re-verified against the same eight tests, unchanged."
+   "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption. Re-quoted for #2072 (D1321): the refusal is per value. Both observed clauses stay within it, because an authorization_details-only target has no entry it enforces through scope that makes a resource scope safe. Coverage re-verified against the same eight tests, unchanged. #2072 witness: at a mixed audience, a requested write value no entry the audience enforces through scope makes safe is refused invalid_scope at the authorization decision, creating no Mission (endpoint), and by the mission-core projection (unit); treating every mapped value as safe fails both."
   },
   {
    "id": "core.scope-projection.mixed-audience-per-value-subset",
@@ -18323,9 +18383,46 @@
    "observation": {
     "normative": "at one audience that enforces a read entry through a projected scope and consumes a constrained action entry as authorization_details, the AS projects the read scope only when all access it enables there falls within one applicable entry, never by association with an entry or by combining entries; at that resource server a projected read succeeds, a write the constrained entry covers succeeds, and an over-limit write fails despite the read scope"
    },
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2072, owner ruling D1321 (option A). todo until a mixed-audience witness exists: the reference has no audience that consumes some entries as authorization_details and enforces others through a projected scope. The witness the ruling requires: a projected read succeeds, a covered constrained write succeeds, an over-limit write fails despite the read scope, and an unsafe requested write scope is refused (core.scope-projection.ungrantable-requested-scope-refused), each clause mutation-proved."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > projects the read value the read entry makes safe and carries the constrained write entry unprojected",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > measures a value across all access it enables: a read value that also enables an action the read entry lacks is not projected, and is refused when requested",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > never combines entries: a value only the read and write entries together cover is not projected",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > checks a carried entry's constraints keys as an authorization_details audience: a key the audience is not known to enforce refuses invalid_target",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > at the mixed Resource Server under the AS-issued token, the projected read succeeds, a write the capped entry covers is performed, and an over-limit write is refused despite the read scope, with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2072, owner ruling D1321 (option A); the resource-server half on the owner's go (D1326). The AS projects at a mixed audience only a value one carried entry makes safe across all access it enables (a read value enabling an action the read entry lacks is not projected, and is refused when requested), never a value only two entries together cover; the token carries scope reports.read and the capped write entry unprojected; carried constraints keys are checked as at an authorization_details audience. At that audience, under the AS-issued token: the scope-only plain RS honors the projected read and refuses the write; the mixed Resource Server (services/mixed-rs) honors the projected read, performs a write the capped entry covers (the report is recorded), and refuses an over-limit write despite the read scope with mission_denial=insufficient_authority and no effect. The unsafe requested write scope is refused (core.scope-projection.ungrantable-requested-scope-refused). Mutations, each restored: treating every mapped value as safe fails four mission-core tests and the endpoint write-scope refusal; skipping the constraints-key check fails the keys test; the mixed projection never emitting a value fails the cross-component read; the mixed RS granting a write on any scope value, its max_amount gate admitting any cost, and its write path ignoring every entry each fail the cross-component test."
   },
   {
    "id": "core.scope-projection.requested-not-refused-for-other-entries",
@@ -18347,9 +18444,28 @@
    "observation": {
     "normative": "at an audience that consumes some carried entries as authorization_details, a requested scope value that an entry the audience enforces through scope makes safe is granted and reported, not refused invalid_scope"
    },
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#2072, owner ruling D1321 (option A). todo: the reference has no mixed audience, so no request reaches this rule; every reference audience is scope-only or consumes all its entries as authorization_details."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > grants a requested read value at an audience that consumes the write entry as authorization_details, and refuses a requested write value no entry makes safe",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, #2072) > refuses at intake only a value the mixed audience's mapping does not name",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#2072, owner ruling D1321 (option A). Witnessed at the plain RS audience run as a mixed audience (mode mixed: reports.read projected, a max_amount-capped write entry consumed as authorization_details): PAR and the token endpoint grant a requested reports.read and the token carries scope reports.read; the mission-core projection grants the requested read value and the intake refuses only a value the mixed mapping does not name. Mutations, each restored: a mixed audience refusing a requested value as an authorization_details one fails the endpoint test and two core tests; the intake refusing any value at a non-scope-only audience fails the endpoint test and the intake test."
   },
   {
    "id": "core.scope-projection.client-requests-scope-only-for-scope-enforced",
@@ -18373,7 +18489,7 @@
    },
    "coverage": "todo",
    "tests": [],
-   "notes": "#2072, owner ruling D1321. The sentence replaces the target-wide client rule, which had no row. todo: no client witness."
+   "notes": "#2072, owner ruling D1321. The sentence replaces the target-wide client rule, which had no row. todo: no client witness. The owner's review of PR #2073 (D1323): the evidence must show the client's request construction; successful AS handling alone cannot establish it. The mixed-audience endpoint tests construct their requests in the test, not in a reference client, so they do not witness this row."
   },
   {
    "id": "core.scope-projection.requested-scope-stands-for-entries",
@@ -19030,6 +19146,49 @@
     }
    ],
    "notes": "#2033 (D1266). Proven by disabling the code it covers: the decision made conjunctive (`.some` to `.every`) fails all four on their permit assertions, refusing a request one entry covers on its own."
+  },
+  {
+   "id": "core.rs-enforcement.scope-never-broader-than-entry",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST NOT, when a token also carries `scope`, grant on the basis of a scope value any access broader than the corresponding `authorization_details` entry permits",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server receiving a token that carries both scope and authorization_details grants on a scope value no access broader than the corresponding entry permits: a write a carried read or write scope value names but no entry covers, and an over-limit write the capped entry refuses, are both refused with no effect"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mixed-rs/test/mixed-rs.test.ts",
+     "name": "the mixed Resource Server (@spec mission#scope-projection-per-audience, mission#rs-requirements, #2072) > never grants a write on a scope value: a token carrying a write scope and no covering entry is refused, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mixed-rs/test/mixed-rs.test.ts",
+     "name": "the mixed Resource Server (@spec mission#scope-projection-per-audience, mission#rs-requirements, #2072) > performs a write the capped entry covers, and refuses an over-limit write despite the read scope, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > at the mixed Resource Server under the AS-issued token, the projected read succeeds, a write the capped entry covers is performed, and an over-limit write is refused despite the read scope, with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2072 (D1326). Witnessed at the mixed Resource Server (services/mixed-rs), the reference server that reads both: its write path never reads scope, so a token carrying reports.read and reports.write with no covering entry is refused, and an over-limit write is refused despite the read scope, both with no effect, under locally signed and AS-issued tokens. Mutation, restored: the write path granting on any scope value fails both unit tests and the cross-component test. The other Mission-aware reference servers (mcp-payments, mcp-saas) authorize on authorization_details alone and never read scope; plain-rs is scope-only and receives only projections the AS proves safe."
   },
   {
    "id": "core.introspection.composite-active",
@@ -115319,6 +115478,47 @@
     }
    ],
    "notes": "#1724 D5 (D847). Proved by five defects: the resolver's expected issuer taken from the response (only the throughout-impostor witness fails; the existing iss-only test is caught by check 4 regardless); metadata naming another issuer accepted; keys from a fixed path at the issuer instead of the metadata's jwks_uri; the Status endpoint guessed from where the metadata was read. The launcher's own issuer check (mas-pilot-launcher.test.ts) is not cited: without it the helper still refuses, so its test fails only on the message."
+  },
+  {
+   "id": "submission-evidence.presenter-binding.match-established",
+   "spec": "draft-mcguinness-oauth-mission-submission-evidence.md",
+   "anchor": "presenter-binding",
+   "text": "An entry that names an authorized presenter (a `client_id`, a `cnf` key binding {{RFC7800}}) MUST match the established presenter, and a mismatch fails that entry's verification.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "submission-evidence.verification"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An evidence entry naming a client_id or a cnf key binding other than the presenter the containing exchange established (its authenticated client and, where the exchange uses proof of possession, that key) fails verification, refused with invalid_mission_intent_evidence; an entry naming the established presenter verifies."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "Submission Evidence at dispatch sees the exchange's presenter (@spec submission-evidence#presenter-binding, mission#intent-submission-evidence, #1988) > verifies the entry with the DPoP key the dispatch exchange established, and refuses an entry naming another key invalid_mission_intent_evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a presenter other than the client the push authenticated",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-provenance-wiring.test.ts",
+     "name": "the Intent and the presenter at PAR (@spec request-provenance#verification, submission-evidence#presenter-binding, #939 slice 2a-2) > refuses invalid_mission_intent_evidence a presenter carrying cnf, since a push establishes no confirmation key (D1119 Q3)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1988. The AS establishes the presenter through the containing exchange and hands it to the evidence type. At Template Dispatch the presenter carries the DPoP key the dispatch exchange's proof established (cnf.jkt), so an entry naming that key verifies and one naming another key is refused invalid_mission_intent_evidence, with no Mission. Mutation: handing the type only the client, as before #1988, refuses the entry naming the established key. At PAR, which establishes the client and no confirmation key, mission-request-provenance refuses a presenter naming another client and one carrying cnf (D1119 Q3). partial: child creation and expansion already pass {clientId, cnf: {jkt}} to verification, but no test there yet witnesses an entry naming the established key verifying and another refused; #939's slice 3 adds them."
   }
  ]
 }
