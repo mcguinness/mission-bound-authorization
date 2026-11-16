@@ -174,8 +174,14 @@ async function startInteraction(requestUri: string): Promise<{ uid: string; jar:
   return { uid: location.split("/interaction/")[1] as string, jar };
 }
 
-/** Resolve the approval as Bob, returning the code and the approval page rendered to him, read from the wire unchanged. */
-async function approveReadingPage(pending: { uid: string; jar: CookieJar }): Promise<{ code: string; page: string }> {
+/**
+ * Resolve the approval as Bob: the code, or the refusal the console met, and
+ * the approval page rendered to him before the decision, read from the wire
+ * unchanged.
+ */
+async function approveReadingPage(
+  pending: { uid: string; jar: CookieJar },
+): Promise<{ code?: string; refusal?: string; pages: string[] }> {
   const pageUrl = `${asUrl}/interaction/${pending.uid}`;
   const pages: string[] = [];
   const realFetch = globalThis.fetch;
@@ -185,12 +191,19 @@ async function approveReadingPage(pending: { uid: string; jar: CookieJar }): Pro
     return res;
   });
   try {
-    const code = (await resolveMissionApproval(asUrl, bob, pending, "approve", "alice")) as string;
-    expect(pages).toHaveLength(1);
-    return { code, page: pages[0] as string };
+    return { code: (await resolveMissionApproval(asUrl, bob, pending, "approve", "alice")) as string, pages };
+  } catch (e) {
+    return { refusal: (e as Error).message, pages };
   } finally {
     spy.mockRestore();
   }
+}
+
+/** The derived authority an approval page renders, as the entries it shows. */
+function renderedAuthority(page: string): unknown {
+  const shown = /<h2>Derived authority \(what approval grants\)<\/h2><pre>([\s\S]*?)<\/pre>/.exec(page)?.[1];
+  if (shown === undefined) return undefined;
+  return JSON.parse(shown.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"));
 }
 
 beforeAll(async () => {
@@ -248,6 +261,7 @@ afterAll(async () => {
 
 describe("a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities)", () => {
   // State carried from step to step, in order.
+  let code = "";
   let missionId = "";
   let accessToken = "";
   let refreshToken = "";
@@ -262,13 +276,16 @@ describe("a deployment-defined authorization_details type that declares no trans
     expect(types[TYPE]).not.toHaveProperty("mission_transformation_capabilities");
   });
 
-  it("PAR accepts a proposal of the type, and an authenticated Approver's approval commits it exactly as proposed, the page rendering it (@spec mission#proposal-derivation, mission#transformation-capabilities)", async () => {
+  it("PAR accepts a proposal of the type, and an authenticated Approver approves it as rendered: the record commits the entry exactly as proposed (@spec mission#proposal-derivation, mission#transformation-capabilities)", async () => {
     const pushed = await par([ENTRY]);
     expect(pushed.status, JSON.stringify(pushed.body)).toBe(201);
     const before = as.kernel.allMissions().length;
     const approved = await approveReadingPage(await startInteraction(String(pushed.body.request_uri)));
-    expect(approved.page).toContain(TYPE);
-    expect(approved.page).toContain("ledger:vendor.export");
+    // The page Bob reviewed renders the derived authority: the entry, unchanged.
+    expect(approved.pages).toHaveLength(1);
+    expect(renderedAuthority(approved.pages[0] as string)).toEqual([ENTRY]);
+    expect(approved.refusal).toBeUndefined();
+    code = String(approved.code);
     const created = as.kernel.allMissions().slice(before);
     expect(created).toHaveLength(1);
     const record = created[0] as unknown as Json;
@@ -277,22 +294,23 @@ describe("a deployment-defined authorization_details type that declares no trans
     expect(record.proposed_authority).toEqual([ENTRY]);
     // Carried as approved: the same members and values, `resource_match` kept.
     expect(record.authority_set).toEqual([ENTRY]);
+  });
+
+  it("the code exchange issues the entry exactly as approved in the response and the token, with no scope projected from it (@spec mission#token-response, mission#transformation-capabilities)", async () => {
     dpopKeys = await generateKeyPair("ES256", { extractable: true });
     const redeemed = await tokenGrantRequest(asUrl, as.agentClientJwk, dpopKeys, {
       grant_type: "authorization_code",
-      code: approved.code,
+      code,
       redirect_uri: REDIRECT_URI,
       code_verifier: VERIFIER,
       resource: SAAS_RESOURCE,
     });
     expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
     expect(redeemed.body.mission_id).toBe(missionId);
+    expect(redeemed.body.authorization_details).toEqual([ENTRY]);
     accessToken = String(redeemed.body.access_token);
     refreshToken = String(redeemed.body.refresh_token ?? "");
     expect(refreshToken).not.toBe("");
-  });
-
-  it("the code exchange issues the entry exactly as approved in the response and the token, with no scope projected from it (@spec mission#token-response, mission#transformation-capabilities)", () => {
     const claims = decodeJwt(accessToken);
     expect(claims.aud).toBe(SAAS_RESOURCE);
     expect(claims.mission).toMatchObject({ id: missionId, issuer: asUrl });
@@ -321,13 +339,14 @@ describe("a deployment-defined authorization_details type that declares no trans
     accessToken = String(refreshed.body.access_token);
   });
 
-  it("derivation does not narrow a proposal of the type: one narrower than the entry the policy admits is refused invalid_authorization_details, creating no Mission (@spec mission#proposal-derivation, mission#transformation-capabilities)", async () => {
+  it("derivation does not narrow a proposal of the type: one narrower than the entry the policy admits is refused invalid_authorization_details, rendering and creating no Mission (@spec mission#proposal-derivation, mission#transformation-capabilities)", async () => {
     const pushed = await par([NARROWED]);
     expect(pushed.status, JSON.stringify(pushed.body)).toBe(201);
     const before = as.kernel.allMissions().length;
-    await expect(
-      resolveMissionApproval(asUrl, bob, await startInteraction(String(pushed.body.request_uri)), "approve", "alice"),
-    ).rejects.toThrow("approval did not yield a code: invalid_authorization_details");
+    const refused = await approveReadingPage(await startInteraction(String(pushed.body.request_uri)));
+    expect(refused.code).toBeUndefined();
+    expect(refused.refusal).toBe("approval did not yield a code: invalid_authorization_details");
+    expect(refused.pages.map(renderedAuthority).filter((shown) => shown !== undefined)).toEqual([]);
     expect(as.kernel.allMissions()).toHaveLength(before);
   });
 
