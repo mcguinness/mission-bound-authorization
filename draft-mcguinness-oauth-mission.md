@@ -3116,6 +3116,15 @@ For a multi-audience token, the AS establishes the condition
 independently for each audience; a single-audience token
 ({{token-response}}) remains preferred.
 
+One audience can consume `authorization_details` for some applicable
+entries and enforce others through a projected `scope`. Each projected
+value then meets the subset condition on its own, across all access the
+value enables at that audience: associating the value with one entry
+does not establish it, and the rights of several entries are never
+combined to establish it. A projected `scope` never widens or bypasses
+an entry the audience consumes as `authorization_details`
+({{rs-requirements}}).
+
 ### Projection Steps {#scope-projection-steps}
 
 To emit `scope` for an entry, the AS:
@@ -3158,10 +3167,11 @@ whenever the granted scope differs from the requested scope, and its
 grammar defines no empty scope, so an issuance cannot report an
 ungranted requested value by omission. The AS MUST refuse, with
 `invalid_scope` ({{error-mapping}}), a request that explicitly names a
-`scope` value the issuance cannot grant: a value the target's trusted
-mapping names but no carried entry makes safe (step 3), or any `scope`
-value the AS associates with a target that consumes
-`authorization_details` (step 4).
+`scope` value the issuance cannot safely project: a value that no
+carried entry the target enforces through `scope` makes safe (step 3).
+It MUST NOT refuse a value only because the target consumes other
+entries as `authorization_details` (step 4,
+{{scope-projection-per-audience}}).
 
 An unknown, ambiguous, or stale mapping fails projection step 5 and yields
 the `invalid_target` error code even when the request also names a
@@ -3171,9 +3181,10 @@ trusts.
 Where the AS emits a projected `scope`, a requested `scope` narrows
 it to the requested values, and the token response reports the
 values granted ({{Section 5.1 of RFC6749}}). A Mission-creating
-client does not request a resource `scope` for a target that consumes
-`authorization_details`; for a `scope`-only target, a requested
-`scope` selects among the values the projection can grant. Scope
+client requests a resource `scope` only for authority the target
+enforces through `scope`, never for an entry the target consumes as
+`authorization_details`; for that authority, a requested `scope`
+selects among the values the projection can grant. Scope
 values with their own semantics, such as `openid` ({{OpenID.Core}}),
 are unaffected and combine with `authorization_details` as
 {{Section 3.1 of RFC9396}} permits.
@@ -6546,6 +6557,11 @@ resolve before interoperating.
   members the token's `mission` claim carries, and `authority_hash`
   only as carried; `state`, `termination`, and the Mission Record
   members stay with the issuer (#2016).
+- Scope projection: one audience can consume `authorization_details`
+  for some entries and receive a projected `scope` for others, each
+  projected value meeting the subset condition on its own; a requested
+  `scope` value is refused only when it cannot be safely projected
+  (#2072).
 - The normative-definition rule of Authorization Server Metadata
   covers every advertised type that has a defining specification, not
   only `mission_resource_access` (#2009).

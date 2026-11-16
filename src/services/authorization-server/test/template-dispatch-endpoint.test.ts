@@ -952,6 +952,51 @@ describe("Dispatch idempotency at /token (@spec mission-template#dispatch, missi
   });
 });
 
+describe("Submission Evidence at dispatch sees the exchange's presenter (@spec submission-evidence#presenter-binding, mission#intent-submission-evidence, #1988)", () => {
+  // A test evidence type that agrees only with the presenter the exchange
+  // established: the dispatcher's client and the DPoP key the exchange's
+  // proof carried, named by the entry's assertion. Registered by this block
+  // only; the shipped registry is empty.
+  const CNF_TYPE = "urn:test:intent-evidence:dispatch-cnf";
+  beforeAll(() => {
+    registerIntentSubmissionEvidenceType(CNF_TYPE, {
+      validate(entry) {
+        if (typeof entry.assertion !== "string") throw new Error("assertion required");
+      },
+      async verify({ entry, presenter }) {
+        if (presenter.cnf?.jkt !== entry.assertion) throw new Error("presenter.cnf does not name the key the exchange established");
+        return { presenter_client: presenter.clientId, presenter_jkt: presenter.cnf.jkt };
+      },
+    });
+  });
+  afterAll(() => unregisterIntentSubmissionEvidenceType(CNF_TYPE));
+
+  const envelope = (goal: string, assertion: string): string =>
+    JSON.stringify({
+      intent: { goal, target_resources: [RESOURCE], expires_at: FAR_FUTURE },
+      evidence: [{ type: CNF_TYPE, assertion }],
+    });
+
+  it("verifies the entry with the DPoP key the dispatch exchange established, and refuses an entry naming another key invalid_mission_intent_evidence", async () => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    const { template_id } = (await created.json()) as { template_id: string };
+    const dispatcherJkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
+
+    const ok = await dispatch({ templateId: template_id, intent: envelope("reconcile Acme invoices", dispatcherJkt), dispatchEventId: `evt-cnf-${crypto.randomUUID()}` });
+    const okBody = (await ok.json()) as { mission_id?: string };
+    expect(ok.status, JSON.stringify(okBody)).toBe(200);
+    const facts = as.kernel.get(okBody.mission_id as string)?.submission_evidence?.[0]?.facts;
+    expect(facts).toEqual({ presenter_client: "ap-agent", presenter_jkt: dispatcherJkt });
+
+    const other = await calculateJwkThumbprint(await exportJWK((await generateKeyPair("ES256", { extractable: true })).publicKey));
+    const refused = await dispatch({ templateId: template_id, intent: envelope("reconcile Acme invoices", other), dispatchEventId: `evt-cnf-${crypto.randomUUID()}` });
+    const refusedBody = (await refused.json()) as { error?: string; mission_id?: string };
+    expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
+    expect(refusedBody.error).toBe("invalid_mission_intent_evidence");
+    expect(refusedBody.mission_id).toBeUndefined();
+  });
+});
+
 describe("DPoP proof freshness on the dispatch grant (@spec RFC 9449 Section 4.3, #1173)", () => {
   const nowS = (): number => Math.floor(Date.now() / 1000);
   const outside = () => [

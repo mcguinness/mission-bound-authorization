@@ -1887,3 +1887,56 @@ describe("the per-entry projection conditions at the token endpoint (@spec resou
     });
   });
 });
+
+/**
+ * @spec mission#scope-projection-per-audience, mission#scope-projection-requested
+ * (#2072, D1321): the plain RS audience run as a mixed audience. It enforces
+ * a read entry through the projected `reports.read` and consumes a
+ * `max_amount`-constrained write entry as `authorization_details`.
+ */
+describe("a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072)", () => {
+  const MIXED = {
+    version: "mixed-1",
+    mission_aware: false,
+    mode: "mixed",
+    scopes: {
+      "reports.read": { rights: rights([READ]), mandatory_controls: {} },
+      "reports.write": { rights: rights([WRITE]), mandatory_controls: {} },
+    },
+    mission_constraints_supported: ["max_amount"],
+  };
+  const CAPPED_WRITE = entry([WRITE], { constraints: { max_amount: { amount: "100.00", currency: "USD" } } });
+  const claims = (jwt: string): Json => JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
+
+  it("grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write", async () => {
+    await withPlain(MIXED, async () => {
+      const keys = await newKeys();
+      const r = await authorize([entry([READ]), CAPPED_WRITE], { scope: "reports.read" });
+      expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+      expect(r.code, JSON.stringify(r)).toBeTruthy();
+      const res = await redeem(r.code as string, keys);
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      const payload = claims(res.body.access_token as string);
+      expect(payload.scope).toBe("reports.read");
+      expect(payload.authorization_details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ actions: [WRITE], constraints: CAPPED_WRITE.constraints })]),
+      );
+      // The scope-only plain RS at this audience enforces the projected read,
+      // and the read scope authorizes no write there.
+      expect((await callRs(RS_PORT, "GET", res.body.access_token as string, keys)).status).toBe(200);
+      expect((await callRs(RS_PORT, "POST", res.body.access_token as string, keys)).status).toBe(403);
+    });
+  });
+
+  it("refuses invalid_scope a requested write scope no entry the audience enforces through scope makes safe, creating no Mission", async () => {
+    await withPlain(MIXED, async () => {
+      const before = as.kernel.allMissions().length;
+      const r = await authorize([entry([READ]), CAPPED_WRITE], { scope: "reports.write" });
+      expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+      expect(r.code).toBeUndefined();
+      expect(r.error).toBe("invalid_scope");
+      expect(r.description).toMatch(/reports\.write cannot be granted: no carried entry the audience enforces through scope makes it safe/);
+      expect(as.kernel.allMissions().length).toBe(before);
+    });
+  });
+});
