@@ -18280,7 +18280,7 @@
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
      "name": "a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072) > refuses invalid_scope a requested write scope no entry the audience enforces through scope makes safe, creating no Mission",
      "level": "endpoint",
-     "surface": "token-endpoint"
+     "surface": "authorization-endpoint"
     },
     {
      "file": "src/packages/mission-core/test/scope-projection.test.ts",
