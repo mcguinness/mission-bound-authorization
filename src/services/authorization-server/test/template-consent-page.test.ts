@@ -421,7 +421,7 @@ describe("template consent under a configuration requiring a contract reference 
     expect(res.status, created.error_description).toBe(201);
     const id = created.proposal_id;
     const session = browserApprovalHeaders(SESSIONS2, id, { sub: "bob" }, "");
-    const shown = await fetch(`${ISSUER2}/templates/proposals/${id}`, { headers: { cookie: session.cookie } });
+    const shown = await fetch(`${ISSUER2}/templates/proposals/${id}`, { headers: { cookie: session.cookie as string } });
     const html = await shown.text();
     const rendered = renderedCeiling(html);
     const reads = rendered.filter((e) => (e.actions as string[]).includes(READ));
