@@ -46953,7 +46953,7 @@
    "id": "authzen.requestable-denials.auto-approval-bounded",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "requestable-denials",
-   "text": "a deployment SHOULD rate-limit and anomaly-check synchronous auto-approval, and MUST NOT auto-approve a request for an `approval_required` denial in the irreversible, external-commitment, or privileged-administration classes without an independent approver",
+   "text": "a deployment SHOULD rate-limit and anomaly-check synchronous auto-approval, and MUST NOT auto-approve a request for an `approval_required` denial, or a request renewing or replacing an approval on an `out_of_scope` or `approval_expired` denial, in the irreversible, external-commitment, or privileged-administration classes without an independent approver",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -46965,7 +46965,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "synchronous auto-approval of a requestable denial is rate-limited and anomaly-checked, and a high-consequence approval_required denial is never auto-approved without an independent approver"
+    "normative": "synchronous auto-approval is rate-limited and anomaly-checked, and never approves, without an independent approver, a request in the irreversible, external-commitment or privileged-administration classes for an approval_required denial or one renewing or replacing an approval on an out_of_scope or approval_expired denial"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -47384,9 +47384,9 @@
    "id": "authzen.response-context.next-action-request-needs-fresh-access-request",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "response-context",
-   "text": "`request` MUST be accompanied by a fresh `context.access_request`.",
+   "text": "a denial the PDP marks requestable carries a fresh `context.access_request` beside it",
    "role": "PDP",
-   "strength": "MUST",
+   "strength": "stated",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47396,7 +47396,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a denial carrying next_action: request always carries a fresh context.access_request alongside it"
+    "normative": "a denial the PDP marks requestable (next_action request) carries a fresh context.access_request bound to that denied evaluation"
    },
    "level": "unit",
    "coverage": "todo",

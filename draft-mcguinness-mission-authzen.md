@@ -2019,16 +2019,19 @@ This profile defines the following AuthZEN response `context` members:
 : OPTIONAL. An object: ARAP's requestable-denial context object,
   imported as ARAP defines it; this profile adds no members and no
   additional required members. Present on an `out_of_authority` or
-  `approval_required` denial when the deployment exposes it as
-  requestable ({{requestable-denials}}). The access request the PEP
+  `approval_required` denial, or an `out_of_scope` or `approval_expired`
+  re-evaluation denial, when the deployment exposes it as requestable
+  ({{requestable-denials}}). The access request the PEP
   submits references the denied evaluation by the top-level
   `context.evaluation_id`, as {{ARAP}} specifies. Its presence does not
   change the `decision: false` result and does not grant access.
 
 `next_action`:
 : OPTIONAL on a denial. A string: `request`, `retry`, or `none`
-  ({{ARAP}}). `request` MUST be accompanied by a fresh
-  `context.access_request`. `retry` marks the denial transient: the
+  ({{ARAP}}). `request` names the access-request path: a denial the
+  PDP marks requestable carries a fresh `context.access_request`
+  beside it, and without one `request` authorizes no submission.
+  `retry` marks the denial transient: the
   same request is expected to succeed on re-evaluation after a delay.
   `none` marks it terminal for policy and local action alike. ARAP
   defines `next_action` for the denial of a re-evaluation that
@@ -2490,13 +2493,27 @@ the OAuth binding's open lifecycle state space
 
 A deny is terminal for the attempted action: the agent does not proceed
 on a denial. A deny need not end the task, however. For an
-`out_of_authority` or `approval_required` denial, the PDP MAY mark the
-denial **requestable** by including a `context.access_request` object,
+`out_of_authority` or `approval_required` denial, or an `out_of_scope`
+or `approval_expired` denial of a re-evaluation that presented an
+approval ({{context-approval}}), the PDP MAY mark the denial
+**requestable** by including a `context.access_request` object,
 composing this profile with ARAP {{ARAP}}. The PEP then submits an ARAP
 access request bound to the denied evaluation; an independent approver
 or policy adjudicates it, synchronously when policy auto-approves and
 otherwise asynchronously through ARAP's task handle; and on approval
 the PEP re-evaluates.
+
+A requestable `out_of_scope` or `approval_expired` denial asks for a
+replacement approval. The `context.access_request` the PDP includes
+in it MUST be bound to the denied evaluation: its `evaluation_id`, and
+the qualified Mission identity, action, `parameter_digest` and
+resource contract reference that evaluation established, never those
+of the presented approval; after a Mission expansion, they are the
+successor's. The presented approval stays insufficient: an approval
+granted on the new request satisfies only a fresh evaluation against
+current authority and state. The PDP MUST NOT mark an
+`approval_unverifiable` denial requestable, and that denial carries
+`next_action: none`.
 
 The PDP MUST NOT mark a `parameter_violation` denial requestable or
 include `context.access_request` in it, and the denial carries
@@ -2514,10 +2531,12 @@ instead of holding it up front.
 Auto-approval is bounded the same way in-ceiling drawdown is
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}): a deployment SHOULD
 rate-limit and anomaly-check synchronous auto-approval, and MUST NOT
-auto-approve a request for an `approval_required` denial in the
-irreversible, external-commitment, or privileged-administration classes
-without an independent approver, so a compromised agent cannot drive the
-request loop to escalate itself unattended.
+auto-approve a request for an `approval_required` denial, or a request
+renewing or replacing an approval on an `out_of_scope` or
+`approval_expired` denial, in the irreversible, external-commitment, or
+privileged-administration classes without an independent approver, so a
+compromised agent cannot drive the request loop to escalate itself
+unattended, whatever the denial reason.
 
 An ARAP approval is input context, not a bearer grant: the PDP remains
 authoritative at enforcement, so the PEP MUST obtain a fresh decision,
@@ -3313,7 +3332,12 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   Requestable Denials: a `parameter_violation` denial is never
   requestable, and after a Mission expansion the fresh evaluation runs
   under the successor, whose action-bound approval the expansion's
-  approval does not supply.
+  approval does not supply. An `out_of_scope` or `approval_expired`
+  re-evaluation denial may be marked requestable for a replacement
+  approval, its `access_request` bound to the denied evaluation and its
+  auto-approval bounded as for `approval_required`; an
+  `approval_unverifiable` denial never is, and `next_action: request`
+  without an `access_request` authorizes no submission.
 
 - History Context: the specification defining a predicate type states
   whether it selects an operation and which of its members names it.
