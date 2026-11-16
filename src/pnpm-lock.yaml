@@ -378,6 +378,9 @@ importers:
       '@mission/access-request':
         specifier: workspace:*
         version: link:../access-request
+      '@mission/mixed-rs':
+        specifier: workspace:*
+        version: link:../mixed-rs
       '@mission/pdp':
         specifier: workspace:*
         version: link:../pdp
@@ -464,6 +467,15 @@ importers:
       '@mission/store':
         specifier: workspace:*
         version: link:../../packages/store
+      jose:
+        specifier: ^6.1.3
+        version: 6.2.3
+
+  services/mixed-rs:
+    dependencies:
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../../packages/mission-core
       jose:
         specifier: ^6.1.3
         version: 6.2.3

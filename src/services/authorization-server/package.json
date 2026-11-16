@@ -25,6 +25,7 @@
   "devDependencies": {
     "@mission/access-request": "workspace:*",
     "@mission/pdp": "workspace:*",
+    "@mission/mixed-rs": "workspace:*",
     "@mission/plain-rs": "workspace:*",
     "@mission/ras": "workspace:*",
     "@mission/request-provenance": "workspace:*",
