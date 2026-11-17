@@ -44666,7 +44666,7 @@
    "id": "authzen.speculative-evaluations.same-terms",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "speculative-evaluations",
-   "text": "Each item is evaluated on the same terms as an ordinary evaluation: both authority bounds, Resource policy, and every check of the Decision Base and the composed feature profiles apply.",
+   "text": "Each item is evaluated on the same terms as an ordinary evaluation: both authority bounds, Resource policy, and every check of the Decision Base and the composed feature profiles apply, except that the PDP makes no idempotency claim ({{idempotency-claim}}) and reserves no metered bound for the item, so a preview cannot see an existing claim or an exhausted counter.",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -44677,7 +44677,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each speculative item is decided by every check an evaluation applies: an item within the Mission's and the credential's authority previews the conditions an ordinary evaluation of the same request returns, an item over a Mission constraint previews a parameter_violation deny, and an item the Authority Set does not name previews an out_of_authority deny"
+    "normative": "each speculative item is decided by every check an evaluation applies, short of the idempotency claim and the metered-bound reservation: an item within the Mission's and the credential's authority previews the conditions an ordinary evaluation of the same request returns, an item over a Mission constraint previews a parameter_violation deny, and an item the Authority Set does not name previews an out_of_authority deny"
    },
    "level": "unit",
    "coverage": "tested",
@@ -44689,7 +44689,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#2067 (D1313). Proved by mutation: skipping the max_amount check for speculative items fails the test on the over-cap item's deny assertion."
+   "notes": "#2067 (D1313). The exception (no claim, no reservation) is the no-side-effect half witnessed under authzen.speculative-evaluations.no-counted-effects. Proved by mutation: skipping the max_amount check for speculative items fails the test on the over-cap item's deny assertion."
   },
   {
    "id": "authzen.speculative-evaluations.item-context-collision",

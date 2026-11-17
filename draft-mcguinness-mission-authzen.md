@@ -1991,7 +1991,10 @@ endpoint that does not recognize it finds no evaluation to perform.
 
 Each item is evaluated on the same terms as an ordinary evaluation: both
 authority bounds, Resource policy, and every check of the Decision Base
-and the composed feature profiles apply. An item whose Mission the PDP
+and the composed feature profiles apply, except that the PDP makes no
+idempotency claim ({{idempotency-claim}}) and reserves no metered bound
+for the item, so a preview cannot see an existing claim or an exhausted
+counter. An item whose Mission the PDP
 cannot establish from `context.mission`, an unrecognized Mission
 included, fails closed: the PDP returns no permit preview for it and
 never evaluates it without that Mission ({{pdp-consistency-checks}}).
@@ -2015,8 +2018,8 @@ object:
 No item carries an `evaluation_id`, `conditions`, `obligations`, or
 `decision_evidence`, so no preview can be redeemed, cached, or presented
 as a permit. A preview reflects what the PDP establishes when it
-evaluates the item. It reserves nothing, so the evaluation that follows
-can decide differently, for example with `duplicate_suppressed` or
+evaluates the item, so the evaluation that follows can decide
+differently, for example with `duplicate_suppressed` or
 `quota_exceeded`.
 
 Submitted as items under one shared `context.mission`, the two
@@ -3495,7 +3498,8 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   each evaluated on the same terms as an evaluation and answered with a
   preview: `prospective_conditions` on a permit, a reason on a deny, never
   an `evaluation_id`, `conditions` or Decision Evidence. A speculative
-  evaluation emits no evidence, claims and reserves nothing, enters no
+  evaluation emits no evidence, claims and reserves nothing (so a preview
+  cannot see an existing claim or an exhausted counter), enters no
   Mission history and starts no approval workflow, and its audit records
   and denial-binding state count toward no attempt, completion or
   prerequisite. A PEP refuses a preview presented for execution, a
