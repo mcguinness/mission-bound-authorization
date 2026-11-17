@@ -186,7 +186,11 @@ defines the abstract decision contract for enforcing a Mission-bound
 credential at the point of use: a Policy Enforcement Point (PEP)
 obtains a permit from a Policy Decision Point (PDP) before each
 consequential action, and every decision or refusal MUST produce a
-runtime enforcement evidence record. The runtime profile fixes the
+runtime enforcement evidence record. A speculative evaluation under the
+AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}, Section
+"Speculative Evaluations") is a preview, not a decision on a
+consequential action, and produces neither kind of record. The runtime
+profile fixes the
 minimum record content and leaves the concrete record schema and
 integrity envelope to this document, so a Standards-Track
 decision-API binding, and any future binding, emits the same
@@ -2784,6 +2788,10 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Introduction: a speculative evaluation under the AuthZEN profile is a
+  preview, not a decision on a consequential action, and produces no
+  decision or refusal record (#2067).
 
 - Extension Members: a `mission_history` entry carries the identifier
   of the operation its predicate's type selects, if any, as `action`,
