@@ -18,6 +18,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { evaluateRemote, isDecisionChannelRefusal, speculateRemote } from "../src/client.js";
 import { createDecisionEvidenceEmitter } from "../src/decision-evidence.js";
 import { createEphemeralDecisionPoint, type EphemeralDecisionPoint } from "../src/decision-point.js";
+import { createDurationLeaseLedger } from "../src/duration-lease.js";
 import {
   type DecisionOptions,
   type EvaluateOptions,
@@ -218,6 +219,38 @@ describe("speculative previews (@spec authzen#speculative-evaluations, #2067)", 
     // The same input as an evaluation is refused and recorded (control).
     await expect(p.decide(asEvaluation(noTarget), decisionOptions())).rejects.toThrow(/operation_target_invalid/);
     expect(refusals.map((r) => r.denial_reason)).toEqual(["operation_target_invalid"]);
+  });
+});
+
+describe("a speculative evaluation reserves no metered capacity (@spec authzen#speculative-evaluations, #2067)", () => {
+  it("a speculative evaluation of a duration-leased action opens no lease activity, and a speculative renewal extends none", async () => {
+    const ledger = createDurationLeaseLedger({ [EXECUTE]: 60 });
+    const p = createEphemeralDecisionPoint({
+      emitterId: RESOURCE,
+      audience: RESOURCE,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      durationLeases: ledger,
+      speculativeEvaluations: true,
+    });
+    const leased = payment("leased");
+    leased.context = { ...leased.context, action_class: "consequential_read" };
+    const opening = await p.speculate?.({ context: shared(), items: [leased] }, decisionOptions());
+    expect(opening?.items[0]?.decision, JSON.stringify(opening?.items[0])).toBe(true);
+    expect(ledger.activities()).toEqual([]);
+
+    // An evaluation of the same request opens the activity (control).
+    const opened = await p.decide(asEvaluation(leased), decisionOptions());
+    expect(opened.decision).toBe(true);
+    const activities = ledger.activities();
+    expect(activities).toHaveLength(1);
+
+    // A speculative renewal of it previews, and extends nothing.
+    const renewal = { ...leased, id: "renewal", context: { ...leased.context, prior_evaluation_id: opened.context.evaluation_id } };
+    const renewed = await p.speculate?.({ context: shared(), items: [renewal] }, decisionOptions());
+    expect(renewed?.items[0]?.decision, JSON.stringify(renewed?.items[0])).toBe(true);
+    expect(ledger.activities()).toEqual(activities);
   });
 });
 
