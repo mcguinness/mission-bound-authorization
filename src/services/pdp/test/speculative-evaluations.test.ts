@@ -380,7 +380,7 @@ describe("speculative evaluation over the reference decision channel (@spec auth
     const server = await start({ speculative: true, calls });
     const request: SpeculativeEvaluationRequest = {
       context: shared(),
-      items: [read("in-scope"), read("other-scope", { audience: OTHER_RESOURCE, target: OTHER_RESOURCE }), read("other-target", { target: OTHER_RESOURCE })],
+      items: [read("in-scope"), read("other-scope", { audience: OTHER_RESOURCE }), read("other-target", { target: OTHER_RESOURCE })],
     };
     expect(await speculateRemote(request, { url: server.url, pepId: PEP_ID, secret: "not-the-secret" })).toEqual({
       error: "decision_channel_refused",
