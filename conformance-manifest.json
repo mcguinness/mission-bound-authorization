@@ -45082,7 +45082,7 @@
     "normative": "a speculative preview handed to the PEP in place of a decision, for a single-use hold and a metered wire, is refused decision_evidence_unverifiable with a Refusal Record and no Execution Evidence, nothing consumed in the write or wire consumed-identifier stores, nothing charged and nothing executed"
    },
    "level": "cross-component",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
@@ -45091,7 +45091,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#2067 (D1313). The refusal is the existing decision_evidence_unverifiable: a preview carries no Decision Evidence. Proved by mutation at the PEP: disabling both retained-evidence checks (the refusal of a permit with no retained record, and the refusal of one with no retained audience) lets the PEP build an attempt for the preview and record Execution Evidence, failing the test on its refusal assertion and, with that removed, on the no-Execution-Evidence assertion. Defense in depth: under that mutation a later PEP check still suppresses before redemption, so the consumption clause is proved by the PDP-side mutation that makes the preview executable (the hold then executes and is consumed)."
+   "notes": "#2067 (D1313). Partial. The refusal is the existing decision_evidence_unverifiable: a preview carries no Decision Evidence. The PEP-side mutation proves two clauses: disabling both retained-evidence checks (the refusal of a permit with no retained record, and the refusal of one with no retained audience) lets the PEP treat the preview as a permit and build an attempt, so the test fails on its refusal assertion (refused before any attempt) and, with that assertion removed, on its no-Execution-Evidence assertion. It does not prove the no-effect or no-consumption clauses: under that mutation later PEP use checks (the enforcement-boundary version, read from the retained record, and valid_until, absent from a preview) still suppress before release and redemption, and a preview carries no use_limit, so no PEP-side mutation short of disabling those further checks coherently consumes a permit. Those clauses are asserted, and proved only by the PDP-side mutation that makes the preview executable (the hold then executes and is consumed)."
   },
   {
    "id": "authzen.speculative-evaluations.never-falls-back",
