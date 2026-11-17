@@ -199,10 +199,10 @@ specification defines the OpenID AuthZEN profile of that contract. Its
 Decision Base maps the decision inputs onto the AuthZEN Authorization
 API request, shapes permit and denial responses, and binds every
 runtime failure condition to a wire-visible identifier, so two
-implementations interoperate on decisions with the base alone. Six
+implementations interoperate on decisions with the base alone. Seven
 optional feature profiles compose on the base: Transaction Assurance,
 Runtime Evidence, Obligations, the Access Request and Approval Profile
-(ARAP), History, and Batch.
+(ARAP), History, Batch, and Speculative Evaluations.
 
 --- middle
 
@@ -251,7 +251,7 @@ interoperate on decisions alone. It defines:
   profile's failure conditions onto wire-visible identifiers
   ({{runtime-denial-classification}}, {{failure-condition-coverage}}).
 
-Six optional feature profiles compose on the base
+Seven optional feature profiles compose on the base
 ({{profiles-and-capabilities}}):
 
 - **Transaction Assurance**: the parameter-digest and idempotency-key
@@ -267,7 +267,10 @@ Six optional feature profiles compose on the base
 - **History**: policy-selected predicates over prior Decision and
   Execution Evidence ({{context-history}});
 - **Batch**: evaluations over the AuthZEN evaluations endpoint
-  ({{batch-evaluations}}).
+  ({{batch-evaluations}});
+- **Speculative Evaluations**: previews of whether candidate actions
+  would be permitted, without attempting them
+  ({{speculative-evaluations}}).
 
 Two companions extend the request without changing the base. Mission
 Capability Binding
@@ -303,7 +306,7 @@ The end-to-end flow is:
 
 # Profiles and Capabilities {#profiles-and-capabilities}
 
-This profile is a Decision Base plus six feature profiles. Each feature
+This profile is a Decision Base plus seven feature profiles. Each feature
 profile depends on the Decision Base alone; none depends on another:
 
 ~~~
@@ -314,6 +317,7 @@ Decision Base
  +-- ARAP
  +-- History
  +-- Batch
+ +-- Speculative Evaluations
 ~~~
 
 Feature profile selection is issuer or deployment policy plus
@@ -435,6 +439,21 @@ Batch:
     action, at the same enforcement strength.
   - Assurance: transport amortization only, never a change in per-item
     enforcement semantics.
+
+Speculative Evaluations:
+: - Prerequisites: the Decision Base.
+  - Roles: a requester authorized on the decision channel asks whether
+    candidate actions would be permitted; the PDP answers each with a
+    preview; a PEP refuses a preview presented for execution
+    ({{speculative-evaluations}}).
+  - Required members: the speculative request's shared `context` and
+    `items`, and the response `items`, whose permit previews carry
+    `prospective_conditions`.
+  - Absence: a requester learns whether an action is permitted only by
+    an evaluation, which is an attempt. A speculative request is never
+    evaluated as one.
+  - Assurance: planning without attempting: a preview spends no metered
+    capacity, consumes no permit, and enters no Mission history.
 
 # Conventions and Terminology {#conventions-and-definitions}
 
@@ -1938,6 +1957,129 @@ Evidence `contributing_constraints`:
 }
 ~~~
 
+## Speculative Evaluations {#speculative-evaluations}
+
+This section defines the Speculative Evaluations feature profile
+({{profiles-and-capabilities}}). A speculative evaluation asks whether
+candidate actions would be permitted under a Mission without attempting
+any of them, so a planner can weigh actions before the PEP requests a
+decision for the one it performs. A speculative result is a preview. It
+is not a decision on a consequential action, it authorizes nothing, and
+the action still needs an ordinary evaluation before it runs.
+
+A PDP claiming this feature profile serves speculative evaluation at an
+endpoint of its own, distinct from the evaluation and evaluations
+endpoints, at a location the deployment configures. The request is a
+JSON object with these members:
+
+`context`:
+: REQUIRED. An object: the decision context every item shares. It MUST
+  carry `context.mission` ({{context-mission}}).
+
+`items`:
+: REQUIRED. A non-empty array of objects. Each carries `id`, a string
+  unique within the request, and the `subject`, `resource`, `action`
+  and, optionally, `context` members of an evaluation request
+  ({{pdp-request}}).
+
+The PDP evaluates each item as the evaluation request formed from its
+`subject`, `resource` and `action` and its `context` merged with the
+shared `context`. A member present in both the item's `context` and the
+shared `context` is an item error, never an override of either. The
+request carries no top-level `subject`, `resource` or `action`, so an
+endpoint that does not recognize it finds no evaluation to perform.
+
+Each item is evaluated on the same terms as an ordinary evaluation: both
+authority bounds, Resource policy, and every check of the Decision Base
+and the composed feature profiles apply. An item whose Mission the PDP
+cannot establish from `context.mission`, an unrecognized Mission
+included, fails closed: the PDP returns no permit preview for it and
+never evaluates it without that Mission ({{pdp-consistency-checks}}).
+
+The response carries `items`, one entry per request item in request
+order, each with the item's `id`, a boolean `decision`, and a `context`
+object:
+
+- A permit preview carries `prospective_conditions`: the decision
+  conditions ({{decision-conditions}}) an ordinary evaluation of the
+  item would return at that instant.
+- A deny carries `reason`, a value from
+  {{runtime-denial-classification}}, and MAY carry `next_action` and
+  `retry_after` ({{response-context}}).
+- An item the PDP cannot evaluate carries AuthZEN's per-evaluation
+  `error` object {{AUTHZEN}}: a malformed item, a member present in both
+  contexts, an input the PDP refuses before evaluation
+  ({{pdp-consistency-checks}}), or an item outside the requester's
+  authorized enforcement scope.
+
+No item carries an `evaluation_id`, `conditions`, `obligations`, or
+`decision_evidence`, so no preview can be redeemed, cached, or presented
+as a permit. A preview reflects what the PDP establishes when it
+evaluates the item. It reserves nothing, so the evaluation that follows
+can decide differently, for example with `duplicate_suppressed` or
+`quota_exceeded`.
+
+Submitted as items under one shared `context.mission`, the two
+journal-entry writes of the batch example ({{batch-evaluations}})
+receive these previews:
+
+~~~ json
+{
+  "items": [
+    {
+      "id": "je_2026Q3_inv_8421",
+      "decision": true,
+      "context": {
+        "prospective_conditions": {
+          "parameter_digest":
+            "sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-v3TfCI",
+          "valid_until": "2026-11-02T08:15:00Z",
+          "use_limit": 1
+        }
+      }
+    },
+    {
+      "id": "je_2026Q3_inv_9310",
+      "decision": false,
+      "context": { "reason": "parameter_violation" }
+    }
+  ]
+}
+~~~
+
+A speculative evaluation is not an attempt. For a speculative
+evaluation, the PDP MUST NOT emit Decision Evidence or a Refusal Record,
+assign a Decision Evidence `sequence` position, claim an idempotency key
+({{idempotency-claim}}), or consume or reserve a metered bound, a
+duration lease included ({{I-D.draft-mcguinness-mission-metering}}).
+Nothing it produces enters Mission history ({{context-history}}), and it
+MUST NOT start an approval workflow.
+
+The PDP MAY keep an audit record of a speculative evaluation. A
+speculative deny the PDP would mark requestable
+({{requestable-denials}}) MAY carry `context.access_request`; the item
+has no `evaluation_id` for an access request to reference, so its
+denial binding is ARAP's PDP-signed `binding_token` form {{ARAP}}, and
+an approval obtained through it satisfies only a fresh ordinary
+evaluation. Such an audit record and such denial-binding state MUST be
+distinguishable from those of an evaluation, and MUST NOT count as an
+attempt, a completion, or a prerequisite in any calculation, such as a
+metered bound, a use limit, or a history predicate
+({{context-history}}).
+
+These guarantees hold through every component downstream of the PDP. A
+PEP MUST NOT treat a speculative result as a permit: one presented for
+execution is refused before any attempt, so it releases no effect,
+consumes no permit, and produces no Execution Evidence.
+
+Speculation never falls back to ordinary evaluation. A PDP MUST NOT
+evaluate a speculative request, or any item of one, as an ordinary
+evaluation, and a PDP claiming this feature profile MUST reject, as an
+AuthZEN request error rather than an attempt, an evaluation or
+evaluations request that carries a top-level `items` member. A requester
+whose PDP does not advertise this feature profile's capability URN
+({{capability-discovery}}) does not speculate.
+
 ## Timeouts, Retries, and Overload {#transport-behavior}
 
 An evaluation exchange carries metered and single-use consequences.
@@ -2894,6 +3036,8 @@ Decision Evidence, Execution Evidence, and Refusal Records of the
 runtime evidence companion
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for every decision,
 execution outcome, and pre-decision refusal this profile produces. A
+speculative evaluation ({{speculative-evaluations}}) is not a decision
+on a consequential action and produces none of these records. A
 PEP/PDP pair claiming only the Decision Base satisfies the runtime
 profile's baseline evidence duty in its own internal form instead
 ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -3107,7 +3251,9 @@ A PDP additionally claiming the Runtime Evidence profile
 ({{profiles-and-capabilities}}) MUST emit the records of
 {{I-D.draft-mcguinness-mission-runtime-evidence}} for every decision,
 and a Refusal Record for an in-scope request it refuses before
-evaluation ({{pdp-consistency-checks}}). A PDP claiming only the
+evaluation ({{pdp-consistency-checks}}). A speculative evaluation is
+not a decision for this purpose and produces no record
+({{speculative-evaluations}}). A PDP claiming only the
 Decision Base records a decision or refusal in its own internal form,
 sufficient to satisfy the runtime profile's baseline evidence duty
 ({{I-D.draft-mcguinness-mission-runtime}}) without this profile's
@@ -3192,6 +3338,18 @@ rate-limit access requests per Mission and surface request provenance to
 Approvers, so a compromised agent driving repeated requestable denials
 is visible to the humans adjudicating them.
 
+The speculative endpoint ({{speculative-evaluations}}) is a policy
+oracle that answers without an attempt, so probing it costs the prober
+no metered capacity and leaves no Decision Evidence. A PDP MUST answer a
+speculative request only from a requester it has authenticated, and
+only for items within the enforcement scope that requester is
+authorized for, as it does for an evaluation; an item outside that
+scope is an item error with no decision work. A deployment SHOULD
+further limit speculation to requesters authorized to ask about the
+item's subject and the Mission the request names, and SHOULD rate-limit
+it per Mission. An unrecognized `context.mission` fails closed for the
+affected items.
+
 ## Materialized View Fidelity
 
 A PDP that evaluates against a materialized view enlarging the
@@ -3253,7 +3411,7 @@ obligation type it uses, `step-up` ({{step-up}}), is registered by
 
 ## AuthZEN Policy Decision Point Capabilities Registration {#iana-capabilities}
 
-This document requests registration of the following seven
+This document requests registration of the following eight
 capabilities in the AuthZEN Policy Decision Point Capabilities registry
 established by {{AUTHZEN}}: one for the Decision Base and one for each
 feature profile ({{profiles-and-capabilities}}).
@@ -3307,6 +3465,13 @@ feature profile ({{profiles-and-capabilities}}).
 - Change Controller: the author of this document
 - Specification Document(s): this document
 
+- Capability Name: :mission-runtime-speculative
+- Capability URN: urn:ietf:params:authzen:mission-runtime-speculative
+- Capability Description: support for the Speculative Evaluations
+  feature profile ({{profiles-and-capabilities}}).
+- Change Controller: the author of this document
+- Specification Document(s): this document
+
 ## HTTP Field Name Registration
 
 This document registers the following in the "Hypertext Transfer
@@ -3322,6 +3487,23 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Changes a requirement (#2067): Speculative Evaluations, a seventh
+  optional feature profile with its own capability URN, previews whether
+  candidate actions would be permitted without attempting them. A
+  speculative request carries a shared `context.mission` and `items`,
+  each evaluated on the same terms as an evaluation and answered with a
+  preview: `prospective_conditions` on a permit, a reason on a deny, never
+  an `evaluation_id`, `conditions` or Decision Evidence. A speculative
+  evaluation emits no evidence, claims and reserves nothing, enters no
+  Mission history and starts no approval workflow, and its audit records
+  and denial-binding state count toward no attempt, completion or
+  prerequisite. A PEP refuses a preview presented for execution, a
+  speculative request is never evaluated as an attempt, an evaluation
+  request carrying `items` is a request error, and the speculative
+  endpoint is treated as a policy oracle. Runtime Evidence and the PDP
+  checklist exclude speculative evaluations from the records emitted for
+  every decision.
 
 - Changes a requirement (#2067): Approval Context binds an action
   approval to the qualified Mission identity, `issuer` and `id`, which
