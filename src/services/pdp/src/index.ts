@@ -59,6 +59,16 @@ export {
   type PdpRefusalReason,
   type PdpRefusalRecorder,
   pdpRefusalOf,
+  carriesSpeculativeItems,
+  speculate,
+  type SpeculateFn,
+  type SpeculativeEvaluationItem,
+  type SpeculativeEvaluationRequest,
+  type SpeculativeEvaluationResponse,
+  type SpeculativeItemResult,
+  SpeculativeRequestInvalid,
+  SpeculativeRequestMisdirected,
+  speculativeRequestFault,
 } from "./evaluate.js";
 export { createPdpRefusalRecorder, type PdpRefusalRecord, type PdpRefusalRecorderConfig } from "./refusal-record.js";
 export {
@@ -231,7 +241,7 @@ export {
   type PdpHttpServerHandle,
   type PdpRemoteServerConfig,
 } from "./server.js";
-export { evaluateRemote, isDecisionChannelRefusal, remoteClaimChannel, type RemotePdpClientConfig, requestMacParts } from "./client.js";
+export { evaluateRemote, isDecisionChannelRefusal, remoteClaimChannel, type RemotePdpClientConfig, requestMacParts, speculateRemote } from "./client.js";
 export { channelDeadlineMs, createDecisionChannel } from "./decision-channel.js";
 export {
   claimsWithinScope,

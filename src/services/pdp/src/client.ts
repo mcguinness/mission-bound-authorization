@@ -14,7 +14,7 @@
 import { randomUUID } from "node:crypto";
 import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex } from "./channel-mac.js";
 import type { ClaimChannel } from "./decision-point.js";
-import type { Decision, EvaluationRequest } from "./evaluate.js";
+import type { Decision, EvaluationRequest, SpeculativeEvaluationRequest, SpeculativeEvaluationResponse } from "./evaluate.js";
 import type { ClaimResolution, SettlementResult, UnresolvedClaim } from "./idempotency-claims.js";
 
 export interface RemotePdpClientConfig {
@@ -197,6 +197,31 @@ export async function evaluateRemote(req: EvaluationRequest, cfg: RemotePdpClien
     return parsed as unknown as Decision;
   } catch {
     return channelDeny("decision_channel_malformed_response");
+  }
+}
+
+/**
+ * @spec authzen#speculative-evaluations (#2067, D1313): submit a speculative
+ * request to the `/speculate` route next to the `/evaluate` endpoint
+ * `cfg.url` names, over the same signed channel. The answer is the PDP's
+ * previews, or the channel or request error that stopped them; never a
+ * decision.
+ */
+export async function speculateRemote(
+  request: SpeculativeEvaluationRequest,
+  cfg: RemotePdpClientConfig,
+): Promise<SpeculativeEvaluationResponse | { error: string; status?: number }> {
+  const exchanged = await signedExchange(claimRoute(cfg, "/speculate"), JSON.stringify({ request }), cfg);
+  if (!exchanged.ok) {
+    const status = exchanged.extra?.channel_status;
+    return { error: exchanged.reason, ...(typeof status === "number" ? { status } : {}) };
+  }
+  try {
+    const parsed: unknown = JSON.parse(exchanged.raw);
+    if (!object(parsed) || !Array.isArray(parsed.items)) return { error: "decision_channel_malformed_response" };
+    return parsed as unknown as SpeculativeEvaluationResponse;
+  } catch {
+    return { error: "decision_channel_malformed_response" };
   }
 }
 

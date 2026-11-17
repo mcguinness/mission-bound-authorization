@@ -11,20 +11,20 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "2aee5525ed1bca8a5f5bf41335eff7830c5f42d0",
-    "content_sha256": "bc1632b4c8ab450eaede6ca2b34fdd449c3a5f0a08363154b3e6aa546c526aed"
+    "revision": "902428bf26707b909e477e4b24a960d3aac22be0",
+    "content_sha256": "010e3043c5b409300c68213e0982318eae5a29ce32b9a911b85be270719b323e"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "75a9ab4f36678ef1f251af310f29e1ce2deaba47",
-    "content_sha256": "b34895dbd37c79241c96c6729ce05935ad70c86b53e0a0992ee2b763bb94d8f1"
+    "revision": "9a9089c6bcdfda365c0f5114d60df0df27a0b7a9",
+    "content_sha256": "de0c0cb1f91482113522d32887df291554e63d2ce7f2952942757d57ea9345e8"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "cd45cb42bde51b0d4d3b6a098095f70e11229794",
-    "content_sha256": "ee18b94778764846a4a6e5955970e5a24a1ffed0eabbf109fb86b50bbe20017b"
+    "revision": "84a4b1a094e7ef3c0e4249e09994829523fe98b8",
+    "content_sha256": "a0e28d624e53041ecde9426c6e557a014c367987de662e162f9f6bbc77e0cd27"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "aa284101326ff8dce48925418b3c8c6f858ea264",
@@ -299,6 +299,7 @@
    "authzen.obligations",
    "authzen.arap",
    "authzen.batch",
+   "authzen.speculative-evaluations",
    "approval-context.manifest",
    "child-delegation.carryover",
    "child-delegation.subtree-rendering",
@@ -44662,6 +44663,495 @@
    "tests": []
   },
   {
+   "id": "authzen.speculative-evaluations.same-terms",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "Each item is evaluated on the same terms as an ordinary evaluation: both authority bounds, Resource policy, and every check of the Decision Base and the composed feature profiles apply, except that the PDP makes no idempotency claim ({{idempotency-claim}}) and reserves no metered bound for the item, so a preview cannot see an existing claim or an exhausted counter.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each speculative item is decided by every check an evaluation applies, short of the idempotency claim and the metered-bound reservation: an item within the Mission's and the credential's authority previews the conditions an ordinary evaluation of the same request returns, an item over a Mission constraint previews a parameter_violation deny, and an item the Authority Set does not name previews an out_of_authority deny"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > a permit preview carries prospective_conditions and no conditions, evaluation_id or Decision Evidence, and a deny carries the profile's reason",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The exception (no claim, no reservation) is the no-side-effect half witnessed under authzen.speculative-evaluations.no-counted-effects. Proved by mutation: skipping the max_amount check for speculative items fails the test on the over-cap item's deny assertion."
+  },
+  {
+   "id": "authzen.speculative-evaluations.item-context-collision",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "A member present in both the item's `context` and the shared `context` is an item error, never an override of either.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an item whose context repeats a member of the shared context (context.mission or the state observation) is answered with an item error naming the member, never evaluated under either value, while the request's other items are still evaluated"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > a member present in both an item's context and the shared context is an item error, never an override, and the other items are still evaluated",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: merging the item's context over the shared context instead of refusing the collision fails the test on the item-error assertion."
+  },
+  {
+   "id": "authzen.speculative-evaluations.unestablished-mission-fails-closed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "An item whose Mission the PDP cannot establish from `context.mission`, an unrecognized Mission included, fails closed: the PDP returns no permit preview for it and never evaluates it without that Mission ({{pdp-consistency-checks}}).",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "items whose shared context.mission names a Mission other than the one the PDP establishes preview view_inconsistent denies with no permit preview; behind the decision channel, items whose Mission the PDP cannot resolve are item errors with no decision work, never evaluated under another Mission's options"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "an unrecognized context.mission fails closed for the affected items (@spec authzen#speculative-evaluations, #2067) > in process: a context.mission other than the Mission the PDP establishes yields no permit preview for any item",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative evaluation over the reference decision channel (@spec authzen#speculative-evaluations, #2067) > a Mission the PDP cannot establish fails closed for the affected items: no preview, never another Mission's options",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: skipping the view consistency check for speculative items fails the in-process test on its deny assertion (both items preview permits); having the server fall back to the options of the Mission it knows when it cannot resolve the requested one fails the channel test on its item-error assertion."
+  },
+  {
+   "id": "authzen.speculative-evaluations.response-items",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "The response carries `items`, one entry per request item in request order, each with the item's `id`, a boolean `decision`, and a `context` object",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the response answers every request item once, in request order, echoing its id with a boolean decision and a context; a permit preview's context carries prospective_conditions equal to the conditions an ordinary evaluation of the same request returns"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > a permit preview carries prospective_conditions and no conditions, evaluation_id or Decision Evidence, and a deny carries the profile's reason",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculation over a metered wire and a single-use hold leaves the consumed-identifier stores, the budget counters and reservations, the Decision Evidence sequence and the retained evidence unchanged",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: returning the decision context with its conditions beside prospective_conditions fails both tests on the context-members assertion."
+  },
+  {
+   "id": "authzen.speculative-evaluations.deny-reason",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "A deny carries `reason`, a value from {{runtime-denial-classification}}, and MAY carry `next_action` and `retry_after` ({{response-context}}).",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a speculative deny carries the profile's own denial reason (parameter_violation, out_of_authority), never another vocabulary's outcome name"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > a permit preview carries prospective_conditions and no conditions, evaluation_id or Decision Evidence, and a deny carries the profile's reason",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The reason values are this profile's, not the outcome names of the AuthZEN speculative sketches. Proved by mutation: answering every deny with the reason denied fails the test on the over-cap deny assertion."
+  },
+  {
+   "id": "authzen.speculative-evaluations.item-error",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "An item the PDP cannot evaluate carries AuthZEN's per-evaluation `error` object {{AUTHZEN}}: a malformed item, a member present in both contexts, an input the PDP refuses before evaluation ({{pdp-consistency-checks}}), or an item outside the requester's authorized enforcement scope.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an item that repeats a shared-context member, an item whose input the PDP refuses before evaluation (a missing operation target), and an item outside the requesting PEP's scope or registration are each answered with decision false and an AuthZEN error object, never a permit preview, while the other items are answered"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > a member present in both an item's context and the shared context is an item error, never an override, and the other items are still evaluated",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > an input the PDP would refuse before evaluation is an item error with no Refusal Record",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative evaluation over the reference decision channel (@spec authzen#speculative-evaluations, #2067) > the speculative endpoint answers only an authenticated requester, and only for items in its authorized scope",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Partial: a malformed item (no subject, resource or action) has no cited witness. The other three causes are tested, each proved by mutation: merging a colliding context, throwing the pre-evaluation refusal out of the whole speculation, and dropping the server's per-item scope gate each fail their test on the item-error assertion."
+  },
+  {
+   "id": "authzen.speculative-evaluations.not-executable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "No item carries an `evaluation_id`, `conditions`, `obligations`, or `decision_evidence`, so no preview can be redeemed, cached, or presented as a permit.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit preview's context carries only prospective_conditions: no evaluation_id, decision_id, conditions, obligations or decision_evidence; presented to the PEP for execution it is refused and nothing is consumed"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > a permit preview carries prospective_conditions and no conditions, evaluation_id or Decision Evidence, and a deny carries the profile's reason",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculation over a metered wire and a single-use hold leaves the consumed-identifier stores, the budget counters and reservations, the Decision Evidence sequence and the retained evidence unchanged",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculative result presented to the PEP for execution is refused decision_evidence_unverifiable before any attempt, and consumes nothing",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: keeping the decision's evaluation_id and conditions on the preview fails the PDP and PEP preview tests on the context-members assertion; giving a speculative permit its evaluation_id, conditions and Decision Evidence lets the PEP execute the hold (the presentation test fails on its refusal assertion and, with that assertion removed, on the consumed-identifier store)."
+  },
+  {
+   "id": "authzen.speculative-evaluations.no-counted-effects",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "For a speculative evaluation, the PDP MUST NOT emit Decision Evidence or a Refusal Record, assign a Decision Evidence `sequence` position, claim an idempotency key ({{idempotency-claim}}), or consume or reserve a metered bound, a duration lease included ({{I-D.draft-mcguinness-mission-metering}}).",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a speculation over a budget-metered wire (which an evaluation claims and charges) and a single-use hold leaves the claim domain's budget counters, held reservations and per-evaluation reservations unchanged, emits no Decision Evidence (the next real decision's retained record carries the next sequence position, with no gap), records no Refusal Record for an input refused before evaluation, and opens or extends no duration-lease activity; each read at the store that owns it"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculation over a metered wire and a single-use hold leaves the consumed-identifier stores, the budget counters and reservations, the Decision Evidence sequence and the retained evidence unchanged",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > an input the PDP would refuse before evaluation is an item error with no Refusal Record",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation reserves no metered capacity (@spec authzen#speculative-evaluations, #2067) > a speculative evaluation of a duration-leased action opens no lease activity, and a speculative renewal extends none",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative evaluation over the reference decision channel (@spec authzen#speculative-evaluations, #2067) > a PDP without the feature does not answer a speculative request, and nothing falls back to ordinary evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The reference meters max_budget only (no max_calls). The idempotency claim and the budget reservation share one transaction, so the claim clause is read through the reservation it makes. Proved by mutation: making the speculative path call the claim domain's claim reserves 125.00 on both counters and fails the store-comparison assertion; emitting and attaching Decision Evidence fails the preview-shape assertion and, with it removed, the next decision's sequence (4, not 2); emitting and discarding fails the sequence assertion alone; recording the pre-evaluation refusal fails the no-Refusal-Record assertion; committing the lease fails the opening assertion, and committing only renewals fails the renewal assertion. The channel test's control counts zero emissions for a served speculation."
+  },
+  {
+   "id": "authzen.speculative-evaluations.no-history",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "Nothing it produces enters Mission history ({{context-history}})",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a speculation, the evidence the PEP retains for the Mission (which history reads) is unchanged, and the next real decision's Decision Evidence continues the Mission's stream with no gap, so a history read stays complete"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculation over a metered wire and a single-use hold leaves the consumed-identifier stores, the budget counters and reservations, the Decision Evidence sequence and the retained evidence unchanged",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: advancing the Decision Evidence sequence for a speculative item (emitting and discarding) fails the test on the next decision's sequence assertion; a gap there is what makes a history read fail closed."
+  },
+  {
+   "id": "authzen.speculative-evaluations.no-approval-workflow",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "it MUST NOT start an approval workflow",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a speculation whose item is a requestable deny leaves the Access Request Service with no task and an empty approver queue; a task opens only when the requester submits the access request itself"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/speculative-denial.test.ts",
+     "name": "a requestable speculative deny and the approval workflow (@spec authzen#speculative-evaluations, authzen#requestable-denials, #2067) > a requestable speculative deny may carry an access_request whose denial binding marks itself speculative, and the speculation itself opens no Access Request Service task",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Partial: the cited test asserts the Access Request Service's task count and approver queue before and after the speculation, but no coherent mutation exists, since the reference PDP holds no Access Request Service handle and no reference component submits an access request on a PDP's behalf."
+  },
+  {
+   "id": "authzen.speculative-evaluations.requestable-deny-access-request",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "A speculative deny the PDP would mark requestable ({{requestable-denials}}) MAY carry `context.access_request`",
+   "role": "PDP",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a speculative approval_required deny, where the deployment marks such denials requestable, carries context.access_request in the PDP-signed binding_token form, with no evaluation_id on the item"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/speculative-denial.test.ts",
+     "name": "a requestable speculative deny and the approval workflow (@spec authzen#speculative-evaluations, authzen#requestable-denials, #2067) > a requestable speculative deny may carry an access_request whose denial binding marks itself speculative, and the speculation itself opens no Access Request Service task",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: dropping access_request from speculative denies fails the test on the binding_token assertion."
+  },
+  {
+   "id": "authzen.speculative-evaluations.records-distinguishable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "Such an audit record and such denial-binding state MUST be distinguishable from those of an evaluation, and MUST NOT count as an attempt, a completion, or a prerequisite in any calculation, such as a metered bound, a use limit, or a history predicate ({{context-history}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP-signed denial binding of a speculative deny marks itself speculative and names a speculative identifier, never an evaluation_id, so the access request and the task it opens are distinguishable from an evaluation's; no audit record or denial-binding state of a speculation counts toward a metered bound, a use limit or a history predicate"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/speculative-denial.test.ts",
+     "name": "a requestable speculative deny and the approval workflow (@spec authzen#speculative-evaluations, authzen#requestable-denials, #2067) > a requestable speculative deny may carry an access_request whose denial binding marks itself speculative, and the speculation itself opens no Access Request Service task",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Partial: the distinguishable clause is tested (dropping the binding's speculative claim, or giving the speculative identifier the dec_ prefix, each fails the test). The exclusion clause has no witness: the reference keeps no speculative audit record, and no calculation it performs reads denial-binding state."
+  },
+  {
+   "id": "authzen.speculative-evaluations.pep-refuses-speculative-result",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "A PEP MUST NOT treat a speculative result as a permit: one presented for execution is refused before any attempt, so it releases no effect, consumes no permit, and produces no Execution Evidence.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a speculative preview handed to the PEP in place of a decision, for a single-use hold and a metered wire, is refused decision_evidence_unverifiable with a Refusal Record and no Execution Evidence, nothing consumed in the write or wire consumed-identifier stores, nothing charged and nothing executed"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculative result presented to the PEP for execution is refused decision_evidence_unverifiable before any attempt, and consumes nothing",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#2067 (D1313). Partial. The refusal is the existing decision_evidence_unverifiable: a preview carries no Decision Evidence. The PEP-side mutation proves two clauses: disabling both retained-evidence checks (the refusal of a permit with no retained record, and the refusal of one with no retained audience) lets the PEP treat the preview as a permit and build an attempt, so the test fails on its refusal assertion (refused before any attempt) and, with that assertion removed, on its no-Execution-Evidence assertion. It does not prove the no-effect or no-consumption clauses: under that mutation later PEP use checks (the enforcement-boundary version, read from the retained record, and valid_until, absent from a preview) still suppress before release and redemption, and a preview carries no use_limit, so no PEP-side mutation short of disabling those further checks coherently consumes a permit. Those clauses are asserted, and proved only by the PDP-side mutation that makes the preview executable (the hold then executes and is consumed)."
+  },
+  {
+   "id": "authzen.speculative-evaluations.never-falls-back",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "A PDP MUST NOT evaluate a speculative request, or any item of one, as an ordinary evaluation",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP without the feature answers a speculative request with no route (404), runs no decision function and emits no evidence for it, and a decision point built without the feature has no speculative entry; with the feature, the same request is answered with previews and no evaluation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative evaluation over the reference decision channel (@spec authzen#speculative-evaluations, #2067) > a PDP without the feature does not answer a speculative request, and nothing falls back to ordinary evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: routing the speculative route to ordinary evaluation of each item when the feature is absent fails the test on the 404 assertion and, with it removed, on the zero-evaluation count."
+  },
+  {
+   "id": "authzen.speculative-evaluations.misdirected-request-error",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "speculative-evaluations",
+   "text": "a PDP claiming this feature profile MUST reject, as an AuthZEN request error rather than an attempt, an evaluation or evaluations request that carries a top-level `items` member",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an otherwise valid evaluation request carrying a top-level items member is refused as a request error (HTTP 400) with no decision function run, no Decision Evidence and no Refusal Record, whether or not the PDP serves speculation, and the in-process decision function refuses it the same way; the same request without the member is evaluated"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative evaluation over the reference decision channel (@spec authzen#speculative-evaluations, #2067) > an evaluation request carrying the speculative items member is a request error, with no decision, no evidence and no Refusal Record",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The reference refuses the member at every PDP, claiming or not. Proved by mutation: removing both the server's pre-check and the decision function's check lets the request through to an ordinary permit with Decision Evidence (fails on the refusal assertion); removing only the decision function's check fails the in-process assertion; removing only the server's pre-check runs the decision function (fails on the zero-call count)."
+  },
+  {
    "id": "authzen.transport.pep-bounds-timeout-fail-closed",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "transport-behavior",
@@ -46111,6 +46601,50 @@
     }
    ],
    "notes": "#1629 (D744 ruling 7). Witnessed by the History Context (#2015, #2017): the recorded member equals the PDP's own evaluated outcome (satisfied, and not_satisfied against an empty store) and differs from a supplied context.mission_history that asserts satisfied. Mutation-proved: recording the request's asserted results in place of the PDP's fails the asserted-outcome witness; omitting mission_history fails the satisfied witness (M8)."
+  },
+  {
+   "id": "authzen.evidence.speculative-evaluation-no-records",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "A speculative evaluation ({{speculative-evaluations}}) is not a decision on a consequential action and produces none of these records.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "authzen.runtime-evidence",
+     "authzen.speculative-evaluations"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a PDP claiming Runtime Evidence emits no Decision Evidence or Refusal Record for a speculative evaluation, and the next decision's Decision Evidence carries the next sequence position with no gap"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculation over a metered wire and a single-use hold leaves the consumed-identifier stores, the budget counters and reservations, the Decision Evidence sequence and the retained evidence unchanged",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > an input the PDP would refuse before evaluation is an item error with no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative evaluation over the reference decision channel (@spec authzen#speculative-evaluations, #2067) > a PDP without the feature does not answer a speculative request, and nothing falls back to ordinary evaluation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by the mutations of authzen.speculative-evaluations.no-counted-effects: emitting Decision Evidence (attached or discarded) fails the sequence assertion, and recording a Refusal Record fails the no-Refusal-Record assertion."
   },
   {
    "id": "authzen.context-history.unrecognized-predicate-refusal",
@@ -52546,6 +53080,44 @@
    "tests": []
   },
   {
+   "id": "authzen.conformance.pdp-checklist-speculative-no-records",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "conformance",
+   "text": "A speculative evaluation is not a decision for this purpose and produces no record ({{speculative-evaluations}}).",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "authzen.runtime-evidence",
+     "authzen.speculative-evaluations"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a PDP claiming Runtime Evidence emits no record for a speculative evaluation: no Decision Evidence, no sequence position, and no Refusal Record for an input it refuses before evaluation"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/speculative-evaluations.test.ts",
+     "name": "a speculative evaluation is not an attempt, through every downstream component (@spec authzen#speculative-evaluations, #2067) > a speculation over a metered wire and a single-use hold leaves the consumed-identifier stores, the budget counters and reservations, the Decision Evidence sequence and the retained evidence unchanged",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative previews (@spec authzen#speculative-evaluations, #2067) > an input the PDP would refuse before evaluation is an item error with no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by the same mutations as authzen.evidence.speculative-evaluation-no-records."
+  },
+  {
    "id": "authzen.security.access-request-service-must-be-trusted",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "security-considerations",
@@ -52610,6 +53182,57 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "authzen.security.speculative-oracle-authenticated-scoped",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "security-considerations",
+   "text": "A PDP MUST answer a speculative request only from a requester it has authenticated, and only for items within the enforcement scope that requester is authorized for, as it does for an evaluation; an item outside that scope is an item error with no decision work.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a speculative request with a wrong channel secret or from an unregistered PEP is refused (401) with no speculation run; from an authenticated PEP, an item whose audience is outside its scopes, or whose operation target is outside its registration, is an item error with no decision work and no Refusal Record, while its in-scope item is previewed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/speculative-evaluations.test.ts",
+     "name": "speculative evaluation over the reference decision channel (@spec authzen#speculative-evaluations, #2067) > the speculative endpoint answers only an authenticated requester, and only for items in its authorized scope",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The owner ruling sets no strength; MUST is chosen for authentication and scope, which the decision channel already requires of an evaluation. Proved by mutation: skipping the request MAC check lets the wrong-secret request be answered; dropping the per-item scope gate previews a permit for the out-of-scope item; dropping the per-item target gate sends the out-of-registration item to decision work; each fails the test."
+  },
+  {
+   "id": "authzen.security.speculative-oracle-subject-mission-and-rate",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "security-considerations",
+   "text": "A deployment SHOULD further limit speculation to requesters authorized to ask about the item's subject and the Mission the request names, and SHOULD rate-limit it per Mission.",
+   "role": "PDP",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.speculative-evaluations"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment limits speculation to requesters authorized for the item's subject and the named Mission, and rate-limits speculative requests per Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#2067 (D1313). Todo: the reference authorizes speculation by the PEP's enforcement scope only; it implements no per-subject or per-Mission speculation authorization and no rate limit."
   },
   {
    "id": "authzen.iana.pdp-must-advertise-full-urn",
