@@ -437,7 +437,11 @@ failure-mode table ({{failure-modes}}) is their operational form.
 **Evidenced**:
 : Every decision and every refusal path produces an
   integrity-protected record, and a high-consequence action also
-  produces execution-outcome evidence ({{evidence}}).
+  produces execution-outcome evidence ({{evidence}}). A speculative
+  evaluation under the AuthZEN profile
+  ({{I-D.draft-mcguinness-mission-authzen}}, Section "Speculative
+  Evaluations") is a preview, not a decision on a consequential action,
+  and produces neither kind of record.
 
 **Never widening**:
 : No runtime input expands authority beyond the issued Authority
@@ -4530,6 +4534,10 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Evidenced property (#2067): a speculative evaluation under the AuthZEN
+  profile is a preview, not a decision on a consequential action, and
+  produces no decision or refusal record.
 
 - Changes a requirement (#2044, D1275): under trifecta containment, an
   egress the harness profile's exposure qualification relieves is not
