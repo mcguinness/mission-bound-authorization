@@ -1189,6 +1189,16 @@ interface HistoryTrace {
 export type DecisionFn = (req: EvaluationRequest, opts: DecisionOptions) => Promise<Decision>;
 
 /**
+ * @spec authzen#speculative-evaluations (#2067, D1313): a decision point's
+ * speculative entry, for a planner weighing candidate actions. It returns
+ * previews, never a decision a PEP can execute.
+ */
+export type SpeculateFn = (
+  request: SpeculativeEvaluationRequest,
+  opts: DecisionOptions,
+) => Promise<SpeculativeEvaluationResponse>;
+
+/**
  * @spec authzen#response-context `evaluation_id`, runtime#idempotency (#917):
  * unique across restarts, not only within one process. The claim domain
  * stores it durably and the PEP's redemption store answers for it by value,
@@ -1272,17 +1282,18 @@ function declarationsOf(opts: Pick<EvaluateOptions, "operationDeclarations">): R
   return opts.operationDeclarations ?? RUNTIME_POSTURE.extensions?.execution_capabilities ?? [];
 }
 
-export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
-  // @spec runtime#input-resource-policy (#828): a decision reached without
-  // the Resource-policy bound would permit on the other bounds alone. Options
-  // assembled outside the type system (a widened or cast object) are checked
-  // here, before any evaluation work: no decision, never an implicit allow.
-  if (!isResourcePolicy(opts.resourcePolicy)) {
-    throw new ResourcePolicyConfigError("no Resource policy is bound to this decision");
-  }
-  // @spec authzen#context-history (#2017): a history binding assembled
-  // outside a decision point is checked here, before any evaluation work.
-  if (opts.history !== undefined) assertHistoryBinding(opts.history);
+/**
+ * @spec authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal:
+ * the checks {@link evaluate} applies before evaluation, in order: the first
+ * unusable input names the refusal, and otherwise the validated operation
+ * target is returned for the entry match. Pure: the caller records the
+ * refusal ({@link evaluate}) or reports it as an item error without a record
+ * ({@link speculate}, @spec authzen#speculative-evaluations).
+ */
+function preEvaluation(
+  req: EvaluationRequest,
+  opts: EvaluateOptions,
+): { refused: PdpRefusalReason } | { operationTarget: string } {
   // @spec authzen#pdp-request consistency check 11, authzen#context-operation-target,
   // resource-access#resource-matching (#1276, D457): every action this PDP
   // evaluates is evaluated against `mission_resource_access` authority, so the
@@ -1295,8 +1306,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   const operationTarget = (req as { resource?: { properties?: { operation_target?: unknown } } } | undefined)?.resource
     ?.properties?.operation_target;
   if (!isOperationTarget(operationTarget)) {
-    await recordPdpRefusal(opts.refusals, "operation_target_invalid", req);
-    throw new DecisionRequestRefused("operation_target_invalid");
+    return { refused: "operation_target_invalid" };
   }
   // @spec authzen#context-action-phase, authzen#failure-condition-coverage
   // (#1629, D744): "The PDP MUST refuse, before evaluation, a request whose
@@ -1329,8 +1339,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
           phaseAbsentOnPhasedOperation(declarationsOf(opts), actionName, undefined) ||
           phaseUnmatchedWithFurtherClasses(declarationsOf(opts), actionName, undefined));
   if (phaseUnusable) {
-    await recordPdpRefusal(opts.refusals, "phase_invalid", req);
-    throw new DecisionRequestRefused("phase_invalid");
+    return { refused: "phase_invalid" };
   }
   // @spec authzen#pdp-consistency-checks check 12, authzen#context-compensation-link,
   // authzen#failure-condition-coverage (#252): `compensates_evaluation_id`,
@@ -1349,8 +1358,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       ? !isEvaluationIdentifier(compensationLink)
       : actionPhase === "compensate";
   if (linkUnusable) {
-    await recordPdpRefusal(opts.refusals, "compensation_link_invalid", req);
-    throw new DecisionRequestRefused("compensation_link_invalid");
+    return { refused: "compensation_link_invalid" };
   }
   // @spec authzen#context-evaluation-binding, authzen#failure-condition-coverage,
   // runtime-evidence#pre-decision-refusal (#773): "The PDP MUST validate their
@@ -1362,8 +1370,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // a Refusal Record `evaluation_context_invalid`, with no decision, no
   // evaluation_id and no Decision Evidence.
   if (evaluationContextOf(req, opts) === "invalid") {
-    await recordPdpRefusal(opts.refusals, "evaluation_context_invalid", req);
-    throw new DecisionRequestRefused("evaluation_context_invalid");
+    return { refused: "evaluation_context_invalid" };
   }
   // @spec authzen#context-work-item, authzen#failure-condition-coverage
   // (#815): "The PDP MUST refuse, before evaluation, a request whose
@@ -1374,8 +1381,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // the evaluated denial `work_item_context_missing` (step 1b).
   const presentedWorkItem = (req as { context?: { work_item?: unknown } } | undefined)?.context?.work_item;
   if (presentedWorkItem !== undefined && parseWorkItem(presentedWorkItem) === undefined) {
-    await recordPdpRefusal(opts.refusals, "work_item_invalid", req);
-    throw new DecisionRequestRefused("work_item_invalid");
+    return { refused: "work_item_invalid" };
   }
   // @spec runtime#classification, authzen#pdp-consistency-checks,
   // runtime-evidence#pre-decision-refusal (#956, D814): every Enforcement Scope
@@ -1392,8 +1398,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   // other than the one compared below.
   const carriedClass = (req as { context?: { action_class?: unknown } } | undefined)?.context?.action_class;
   if (typeof carriedClass !== "string" || carriedClass === "") {
-    await recordPdpRefusal(opts.refusals, "action_class_missing", req);
-    throw new DecisionRequestRefused("action_class_missing");
+    return { refused: "action_class_missing" };
   }
   // @spec runtime#classification, authzen#pdp-consistency-checks (#1994,
   // owner review): a class the PEP assigned that differs from the class this
@@ -1411,9 +1416,33 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       isActionPhase(actionPhase) ? actionPhase : undefined,
     )
   ) {
-    await recordPdpRefusal(opts.refusals, "action_class_missing", req);
-    throw new DecisionRequestRefused("action_class_missing");
+    return { refused: "action_class_missing" };
   }
+  return { operationTarget };
+}
+
+export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
+  // @spec runtime#input-resource-policy (#828): a decision reached without
+  // the Resource-policy bound would permit on the other bounds alone. Options
+  // assembled outside the type system (a widened or cast object) are checked
+  // here, before any evaluation work: no decision, never an implicit allow.
+  if (!isResourcePolicy(opts.resourcePolicy)) {
+    throw new ResourcePolicyConfigError("no Resource policy is bound to this decision");
+  }
+  // @spec authzen#context-history (#2017): a history binding assembled
+  // outside a decision point is checked here, before any evaluation work.
+  if (opts.history !== undefined) assertHistoryBinding(opts.history);
+  // @spec authzen#speculative-evaluations (#2067, D1313): a request carrying
+  // the speculative request's `items` member is a speculation sent to the
+  // evaluation path. It is refused as a request error before any check, with
+  // no Refusal Record and no decision, never evaluated as an attempt.
+  if (carriesSpeculativeItems(req)) throw new SpeculativeRequestMisdirected();
+  const pre = preEvaluation(req, opts);
+  if ("refused" in pre) {
+    await recordPdpRefusal(opts.refusals, pre.refused, req);
+    throw new DecisionRequestRefused(pre.refused);
+  }
+  const { operationTarget } = pre;
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
   const requestDigest = evaluationRequestDigest(req);
@@ -1426,7 +1455,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       const join: JoinTrace = {};
       const bound: BoundTrace = {};
       const history: HistoryTrace = { selected: [], results: [] };
-      const decision = await evaluateInner(req, opts, operationTarget, contributions, claim, join, bound, history);
+      const decision = await evaluateInner(req, opts, operationTarget, contributions, claim, join, bound, history, "execute");
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
@@ -1464,6 +1493,205 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       span.end();
     }
   });
+}
+
+/**
+ * @spec authzen#speculative-evaluations (#2067, D1313): one item of a
+ * speculative request: the `subject`, `resource` and `action` of an
+ * evaluation and its own `context`, which the shared `context` completes.
+ */
+export interface SpeculativeEvaluationItem {
+  id: string;
+  subject: EvaluationRequest["subject"];
+  resource: EvaluationRequest["resource"];
+  action: EvaluationRequest["action"];
+  context?: Record<string, unknown>;
+}
+
+/**
+ * @spec authzen#speculative-evaluations: the speculative request. Its shared
+ * `context` carries `context.mission`; it has no top-level `subject`,
+ * `resource` or `action`, so an evaluation path that ignored `items` would
+ * find no evaluation to run.
+ */
+export interface SpeculativeEvaluationRequest {
+  context: Record<string, unknown>;
+  items: SpeculativeEvaluationItem[];
+}
+
+/**
+ * @spec authzen#speculative-evaluations: one item's preview. A permit preview
+ * carries `prospective_conditions`, a deny its `reason`, an item error
+ * AuthZEN's per-evaluation `error` object; none carries an `evaluation_id`,
+ * `conditions`, obligations or Decision Evidence.
+ */
+export interface SpeculativeItemResult {
+  id: string;
+  decision: boolean;
+  context: Record<string, unknown>;
+}
+
+export interface SpeculativeEvaluationResponse {
+  items: SpeculativeItemResult[];
+}
+
+/**
+ * @spec authzen#speculative-evaluations (#2067, D1313): an evaluation request
+ * carrying the speculative request's `items` member. It is a request error,
+ * never evaluated as an ordinary evaluation: the requester asked for a
+ * preview, and an attempt would spend the Mission's counters on it.
+ */
+export class SpeculativeRequestMisdirected extends Error {
+  constructor() {
+    super("a speculative request is not an evaluation request");
+    this.name = "SpeculativeRequestMisdirected";
+  }
+}
+
+/**
+ * @spec authzen#speculative-evaluations: a speculative request the PDP cannot
+ * read as a whole (no shared `context.mission`, no items, or an item without
+ * a unique `id`): a request error, with no item evaluated.
+ */
+export class SpeculativeRequestInvalid extends Error {
+  constructor(readonly why: string) {
+    super(`speculative request refused: ${why}`);
+    this.name = "SpeculativeRequestInvalid";
+  }
+}
+
+/**
+ * @spec authzen#speculative-evaluations: why a speculative request cannot be
+ * read as a whole, or `undefined`: its shared `context` must carry
+ * `context.mission`, and `items` must be a non-empty array of objects, each
+ * with an `id` unique within the request.
+ */
+export function speculativeRequestFault(request: unknown): string | undefined {
+  const body = objectOrUndefined(request);
+  const shared = objectOrUndefined(body?.context);
+  if (shared === undefined || objectOrUndefined(shared.mission) === undefined) {
+    return "the shared context carries no context.mission";
+  }
+  const items = body?.items;
+  if (!Array.isArray(items) || items.length === 0) return "no items";
+  const ids = items.map((item) => objectOrUndefined(item)?.id);
+  if (ids.some((id) => typeof id !== "string" || id.length === 0) || new Set(ids).size !== ids.length) {
+    return "every item needs a unique id";
+  }
+  return undefined;
+}
+
+/** Whether `req` carries the speculative request's own `items` member. */
+export function carriesSpeculativeItems(req: unknown): boolean {
+  return objectOrUndefined(req) !== undefined && Object.hasOwn(req as object, "items");
+}
+
+const objectOrUndefined = (v: unknown): Record<string, unknown> | undefined =>
+  v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
+
+/** @spec authzen#speculative-evaluations: AuthZEN's per-evaluation error, for an item the PDP cannot evaluate. */
+function itemError(id: string, status: number, message: string): SpeculativeItemResult {
+  return { id, decision: false, context: { error: { status, message } } };
+}
+
+/**
+ * @spec authzen#speculative-evaluations (#2067, D1313): the preview of one
+ * decision, rebuilt rather than filtered, so nothing executable survives: a
+ * permit's conditions become `prospective_conditions`; a deny keeps its
+ * reason, and the transient or requestable members beside it. No
+ * `evaluation_id`, `decision_id`, `conditions`, obligations, policy view or
+ * Decision Evidence.
+ */
+function previewOf(id: string, decision: Decision): SpeculativeItemResult {
+  const c = decision.context;
+  if (decision.decision) {
+    return { id, decision: true, context: { prospective_conditions: c.conditions } };
+  }
+  return {
+    id,
+    decision: false,
+    context: {
+      reason: c.reason,
+      ...(c.next_action !== undefined ? { next_action: c.next_action } : {}),
+      ...(c.retry_after !== undefined ? { retry_after: c.retry_after } : {}),
+      ...(c.access_request !== undefined ? { access_request: c.access_request } : {}),
+    },
+  };
+}
+
+/**
+ * @spec authzen#speculative-evaluations (#2067, D1313): evaluate each item of
+ * a speculative request as a preview. Every item runs every check an
+ * evaluation runs, the two authority bounds, Resource policy, the approval
+ * and history checks and the claim domain's `declares()` among them, and
+ * none of an evaluation's effects: no Decision Evidence and no `sequence`
+ * position, no Refusal Record, no idempotency claim or budget reservation,
+ * no lease opened or extended, and no unauthorized-execution flag raised
+ * from the history read. A requestable deny may carry `access_request`,
+ * whose PDP-signed binding marks itself speculative; submitting it is the
+ * requester's own, separate step.
+ *
+ * Items are evaluated in request order. A member present in both an item's
+ * `context` and the shared `context` is an item error, never an override;
+ * so is an input the PDP would refuse before evaluation, and an item no
+ * decision could be obtained for.
+ */
+export async function speculate(request: unknown, opts: EvaluateOptions): Promise<SpeculativeEvaluationResponse> {
+  if (!isResourcePolicy(opts.resourcePolicy)) {
+    throw new ResourcePolicyConfigError("no Resource policy is bound to this speculative evaluation");
+  }
+  if (opts.history !== undefined) assertHistoryBinding(opts.history);
+  const fault = speculativeRequestFault(request);
+  if (fault !== undefined) throw new SpeculativeRequestInvalid(fault);
+  const { context: shared, items } = request as { context: Record<string, unknown>; items: unknown[] };
+  // The speculative options: no emission path and no Refusal Record path,
+  // whatever the caller bound, and a history read that flags nothing.
+  const specOpts: EvaluateOptions = { ...opts };
+  delete specOpts.evidence;
+  delete specOpts.refusals;
+  if (opts.history !== undefined) specOpts.history = { ...opts.history, onUnauthorizedExecution: () => {} };
+  const results: SpeculativeItemResult[] = [];
+  for (const raw of items as Record<string, unknown>[]) {
+    const id = raw.id as string;
+    const subject = objectOrUndefined(raw.subject);
+    const resource = objectOrUndefined(raw.resource);
+    const action = objectOrUndefined(raw.action);
+    const own = raw.context === undefined ? {} : objectOrUndefined(raw.context);
+    if (subject === undefined || resource === undefined || action === undefined || own === undefined) {
+      results.push(itemError(id, 400, "malformed item"));
+      continue;
+    }
+    const collisions = Object.keys(own).filter((k) => Object.hasOwn(shared, k));
+    if (collisions.length > 0) {
+      results.push(itemError(id, 400, `member present in both the item and the shared context: ${collisions.join(", ")}`));
+      continue;
+    }
+    const req = { subject, resource, action, context: { ...shared, ...own } } as unknown as EvaluationRequest;
+    const pre = preEvaluation(req, specOpts);
+    if ("refused" in pre) {
+      results.push(itemError(id, 400, pre.refused));
+      continue;
+    }
+    try {
+      const decision = await evaluateInner(
+        req,
+        specOpts,
+        pre.operationTarget,
+        new Set<string>(),
+        {},
+        {},
+        {},
+        { selected: [], results: [] },
+        "speculate",
+      );
+      results.push(previewOf(id, decision));
+    } catch {
+      // No decision obtainable for this item (an unreachable Resource policy,
+      // an unanswerable FGA check): it fails closed, never a permit preview.
+      results.push(itemError(id, 503, "no decision obtainable"));
+    }
+  }
+  return { items: results };
 }
 
 /**
@@ -1636,6 +1864,15 @@ async function evaluateInner(
   join: JoinTrace,
   bound: BoundTrace,
   history: HistoryTrace,
+  /**
+   * @spec authzen#speculative-evaluations (#2067, D1313): `speculate` runs
+   * every check and none of the state-changing steps (the idempotency claim
+   * and its budget reservation, a retransmission, a lease commit). Never an
+   * option: a caller that could set it on an evaluation would obtain a
+   * permit with no claim behind it. Only {@link evaluate} and
+   * {@link speculate} pass it.
+   */
+  mode: "execute" | "speculate",
 ): Promise<Decision> {
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
@@ -1653,7 +1890,10 @@ async function evaluateInner(
   // token-validation and permit-boundary input. Read once and validated
   // below; never the entry-match operand (#1276, D457).
   const audience = req.resource.properties?.audience;
-  const decisionId = newDecisionId();
+  // @spec authzen#speculative-evaluations: a speculative item's internal
+  // identifier is never an evaluation identifier: it names only the denial
+  // binding of a requestable preview, and its prefix tells it apart.
+  const decisionId = mode === "speculate" ? `spc_${randomUUID()}` : newDecisionId();
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping
   // — set once step 4a below validates the mapping (before entitlement lookup,
   // so it is present on an entitlement-caused principal_mapping_failed denial
@@ -2889,6 +3129,10 @@ async function evaluateInner(
       ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
       reason,
       action_classes: actionClasses.length > 0 ? [...actionClasses] : actionClass !== undefined ? [actionClass] : [],
+      // @spec authzen#speculative-evaluations (#2067, D1313): denial-binding
+      // state kept for a speculative deny is distinguishable from that of an
+      // execution decision.
+      ...(mode === "speculate" ? { speculative: true } : {}),
     })
       .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
       .setIssuedAt()
@@ -3143,6 +3387,42 @@ async function evaluateInner(
     }
   }
 
+  /** The permit this evaluation reaches, once every step above has passed. */
+  const permit = (): Decision => ({
+    decision: true,
+    context: base({
+      entry_digest: committedEntryDigest(view.issuer, entry),
+      conditions: {
+        valid_until: validUntil,
+        ...(highConsequence || singleUseDefault ? { use_limit: 1 } : {}),
+        // @spec authzen#decision-conditions `work_item` (#815): "REQUIRED on a
+        // permit for a decision whose request carried `context.work_item`,
+        // and equal to it." The executing PEP compares it at every use.
+        ...(workItem !== undefined ? { work_item: workItem } : {}),
+        ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
+        // @spec authzen#response-context `action_phase` — the LIVE permit
+        // binding: the validated request phase, echoed so the executing PEP
+        // compares it against its own Operation Profile at every use. Present
+        // exactly when the operation is a phase of a compound action; the
+        // request mirror and the evidence member never substitute for it.
+        ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
+        // @spec authzen#response-context `resource_contract`,
+        // runtime#permit-binding (#249, D553): "REQUIRED on a permit for an
+        // action to which a resource contract applies, and equal to the
+        // validated request's `resource.properties.resource_contract`". The
+        // executing PEP compares it at every use.
+        ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
+        // @spec authzen#response-context `evaluation_context_digest`,
+        // runtime#evaluation-context-binding (#773): "The PDP MUST return the
+        // supplied context digest as a permit condition for a covered
+        // operation", equal to the validated request's. Echoed, never
+        // recomputed: the PDP holds neither the salt nor the PEP's
+        // observation.
+        ...(establishedContext !== undefined ? { evaluation_context_digest: establishedContext.digest } : {}),
+      },
+    }),
+  });
+
   // 9. Idempotency claim (@spec runtime#idempotency, authzen#parameter-digest,
   // #917): "Before issuing a permit for a keyed action in the
   // irreversible-action, external-commitment, or privileged-administration
@@ -3185,6 +3465,11 @@ async function evaluateInner(
       clock: () => now().getTime(),
       ...(budgetCharge !== undefined ? { budget: budgetCharge } : {}),
     };
+    // @spec authzen#speculative-evaluations (#2067, D1313): a speculative
+    // evaluation claims nothing and reserves nothing. Every check above ran;
+    // the claim and the budget reservation inside it do not, so the preview
+    // cannot see an existing claim or an exhausted counter.
+    if (mode === "speculate") return permit();
     // An unreachable domain throws here: no decision, so the PEP records
     // `pdp_unreachable` and nothing executes (runtime: "MUST fail closed
     // rather than issue a permit").
@@ -3223,7 +3508,9 @@ async function evaluateInner(
     if (outcome.metering !== undefined) claim.metering = outcome.metering;
   }
 
-  if (lease.kind === "leased") {
+  // @spec authzen#speculative-evaluations: a speculative evaluation opens or
+  // extends no lease.
+  if (lease.kind === "leased" && mode === "execute") {
     try {
       lease.commit(decisionId, deadline.validUntilMs);
     } catch (e) {
@@ -3236,38 +3523,5 @@ async function evaluateInner(
     // A keyed renewal's only effect is this extension: its claim settles here.
     if (claim.ticket && lease.renews !== undefined) claim.settled = LEASE_EXTENSION_OUTCOME;
   }
-  return {
-    decision: true,
-    context: base({
-      entry_digest: committedEntryDigest(view.issuer, entry),
-      conditions: {
-        valid_until: validUntil,
-        ...(highConsequence || singleUseDefault ? { use_limit: 1 } : {}),
-        // @spec authzen#decision-conditions `work_item` (#815): "REQUIRED on a
-        // permit for a decision whose request carried `context.work_item`,
-        // and equal to it." The executing PEP compares it at every use.
-        ...(workItem !== undefined ? { work_item: workItem } : {}),
-        ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
-        // @spec authzen#response-context `action_phase` — the LIVE permit
-        // binding: the validated request phase, echoed so the executing PEP
-        // compares it against its own Operation Profile at every use. Present
-        // exactly when the operation is a phase of a compound action; the
-        // request mirror and the evidence member never substitute for it.
-        ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
-        // @spec authzen#response-context `resource_contract`,
-        // runtime#permit-binding (#249, D553): "REQUIRED on a permit for an
-        // action to which a resource contract applies, and equal to the
-        // validated request's `resource.properties.resource_contract`". The
-        // executing PEP compares it at every use.
-        ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
-        // @spec authzen#response-context `evaluation_context_digest`,
-        // runtime#evaluation-context-binding (#773): "The PDP MUST return the
-        // supplied context digest as a permit condition for a covered
-        // operation", equal to the validated request's. Echoed, never
-        // recomputed: the PDP holds neither the salt nor the PEP's
-        // observation.
-        ...(establishedContext !== undefined ? { evaluation_context_digest: establishedContext.digest } : {}),
-      },
-    }),
-  };
+  return permit();
 }

@@ -40,10 +40,13 @@ import {
 import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
   type DecisionFn,
+  type DecisionOptions,
   type EvaluateOptions,
   evaluate,
   type PdpRefusalRecorder,
   recordPdpRefusal,
+  type SpeculateFn,
+  speculate,
 } from "./evaluate.js";
 import { isResourcePolicy, type ResourcePolicy, ResourcePolicyConfigError } from "./resource-policy.js";
 import type {
@@ -244,6 +247,12 @@ export interface DecisionPointConfig {
    * verifies.
    */
   approvalVerification?: ApprovalVerification;
+  /**
+   * @spec authzen#speculative-evaluations (#2067, D1313): whether this
+   * decision point serves speculative evaluation. Absent or false, it has no
+   * `speculate` entry at all, so a speculation can never reach `decide`.
+   */
+  speculativeEvaluations?: boolean;
 }
 
 export interface DecisionPoint {
@@ -269,6 +278,13 @@ export interface DecisionPoint {
    * reason through it.
    */
   recordTargetRefusal?: (request: unknown) => Promise<void>;
+  /**
+   * @spec authzen#speculative-evaluations (#2067, D1313): previews for a
+   * planner, present only where the decision point was built with the
+   * feature. A preview is never a decision: it carries no `evaluation_id`,
+   * `conditions` or Decision Evidence, so a PEP handed one refuses it.
+   */
+  speculate?: SpeculateFn;
 }
 
 /** The PDP-side bindings one decision point applies to every decision. */
@@ -335,6 +351,20 @@ function bindDecide(
   requester: ClaimRequester,
   consumptionStatus?: ConsumptionStatusFn,
 ): DecisionFn {
+  return async (req, opts) => evaluate(req, pointOptions(bindings, opts, requester, consumptionStatus));
+}
+
+/**
+ * The options one decision point applies to a caller's: every PDP-side
+ * binding is stripped from the caller's object and replaced with this
+ * point's own (see {@link bindDecide}).
+ */
+function pointOptions(
+  bindings: PointBindings,
+  opts: DecisionOptions,
+  requester: ClaimRequester,
+  consumptionStatus?: ConsumptionStatusFn,
+): EvaluateOptions {
   const {
     emitter,
     claims,
@@ -349,43 +379,53 @@ function bindDecide(
     history,
     approvalVerification,
   } = bindings;
-  return async (req, opts) => {
-    const forwarded = { ...opts } as Partial<EvaluateOptions>;
-    delete forwarded.evidence;
-    delete forwarded.claims;
-    delete forwarded.budgets;
-    if (bindings.budgets) forwarded.budgets = bindings.budgets;
-    delete forwarded.workItemAttributedClasses;
-    if (bindings.workItemAttributedClasses) forwarded.workItemAttributedClasses = bindings.workItemAttributedClasses;
-    delete forwarded.resourcePolicy;
-    delete forwarded.authorityDependency;
-    delete forwarded.requester;
-    delete forwarded.consumptionStatus;
-    delete forwarded.refusals;
-    delete forwarded.resourceContracts;
-    delete forwarded.durationLeases;
-    delete forwarded.phasedActions;
-    delete forwarded.evaluationContextBinding;
-    delete forwarded.operationDeclarations;
-    delete forwarded.history;
-    delete forwarded.approvalVerification;
-    if (emitter) forwarded.evidence = emitter;
-    if (durationLeases) forwarded.durationLeases = durationLeases;
-    if (claims) forwarded.claims = claims;
-    if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
-    if (authorityDependency) forwarded.authorityDependency = authorityDependency;
-    if (refusals) forwarded.refusals = refusals;
-    if (resourceContracts) forwarded.resourceContracts = resourceContracts;
-    if (phasedActions) forwarded.phasedActions = phasedActions;
-    if (evaluationContextBinding) forwarded.evaluationContextBinding = evaluationContextBinding;
-    if (operationDeclarations) forwarded.operationDeclarations = operationDeclarations;
-    if (history) forwarded.history = history;
-    if (approvalVerification) forwarded.approvalVerification = approvalVerification;
-    if (forwarded.view !== undefined) forwarded.view = attachBudgetBinding(forwarded.view, bindings.budgetBindings);
-    forwarded.requester = requester;
-    if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
-    return evaluate(req, forwarded as EvaluateOptions);
-  };
+  const forwarded = { ...opts } as Partial<EvaluateOptions>;
+  delete forwarded.evidence;
+  delete forwarded.claims;
+  delete forwarded.budgets;
+  if (bindings.budgets) forwarded.budgets = bindings.budgets;
+  delete forwarded.workItemAttributedClasses;
+  if (bindings.workItemAttributedClasses) forwarded.workItemAttributedClasses = bindings.workItemAttributedClasses;
+  delete forwarded.resourcePolicy;
+  delete forwarded.authorityDependency;
+  delete forwarded.requester;
+  delete forwarded.consumptionStatus;
+  delete forwarded.refusals;
+  delete forwarded.resourceContracts;
+  delete forwarded.durationLeases;
+  delete forwarded.phasedActions;
+  delete forwarded.evaluationContextBinding;
+  delete forwarded.operationDeclarations;
+  delete forwarded.history;
+  delete forwarded.approvalVerification;
+  if (emitter) forwarded.evidence = emitter;
+  if (durationLeases) forwarded.durationLeases = durationLeases;
+  if (claims) forwarded.claims = claims;
+  if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
+  if (authorityDependency) forwarded.authorityDependency = authorityDependency;
+  if (refusals) forwarded.refusals = refusals;
+  if (resourceContracts) forwarded.resourceContracts = resourceContracts;
+  if (phasedActions) forwarded.phasedActions = phasedActions;
+  if (evaluationContextBinding) forwarded.evaluationContextBinding = evaluationContextBinding;
+  if (operationDeclarations) forwarded.operationDeclarations = operationDeclarations;
+  if (history) forwarded.history = history;
+  if (approvalVerification) forwarded.approvalVerification = approvalVerification;
+  if (forwarded.view !== undefined) forwarded.view = attachBudgetBinding(forwarded.view, bindings.budgetBindings);
+  forwarded.requester = requester;
+  if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
+  return forwarded as EvaluateOptions;
+}
+
+/**
+ * @spec authzen#speculative-evaluations (#2067, D1313): the speculative
+ * entry, bound to the same PDP-side bindings as {@link bindDecide} and
+ * stripping a caller's the same way, so a speculative item is evaluated
+ * against this point's own claim domain declaration, budget source, policy
+ * and history. {@link speculate} itself emits nothing, records no refusal
+ * and claims nothing, whatever it is handed.
+ */
+function bindSpeculate(bindings: PointBindings, requester: ClaimRequester): SpeculateFn {
+  return async (request, opts) => speculate(request, pointOptions(bindings, opts, requester));
 }
 
 /**
@@ -406,7 +446,7 @@ function unboundRequester(): ClaimRequester {
  */
 export function createDecisionPoint(
   config: DecisionPointConfig & Required<Pick<DecisionPointConfig, "evidence" | "resourcePolicy">>,
-): Required<DecisionPoint>;
+): Required<Omit<DecisionPoint, "speculate">> & Pick<DecisionPoint, "speculate">;
 export function createDecisionPoint(
   config: DecisionPointConfig & Required<Pick<DecisionPointConfig, "resourcePolicy">>,
 ): DecisionPoint & Required<Pick<DecisionPoint, "decideAs" | "claimsFor">>;
@@ -462,6 +502,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
     claimsFor: (requester, redeemingExecution) => claimChannelFor(config.claims, requester, redeemingExecution),
     recordTargetRefusal: (request) => recordPdpRefusal(config.refusals, "operation_target_invalid", request),
+    ...(config.speculativeEvaluations === true ? { speculate: bindSpeculate(bindings, unboundRequester()) } : {}),
     ...(config.evidence
       ? {
           evidenceVerification: {
@@ -528,6 +569,8 @@ export function createEphemeralDecisionPoint(options: {
   approvalVerification?: ApprovalVerification;
   /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
   authorizesAudience?: (audience: string) => boolean;
+  /** @spec authzen#speculative-evaluations (#2067): bound exactly as in {@link createDecisionPoint}. */
+  speculativeEvaluations?: boolean;
 }): EphemeralDecisionPoint {
   const {
     emitterId,
@@ -545,6 +588,7 @@ export function createEphemeralDecisionPoint(options: {
     operationDeclarations,
     history,
     approvalVerification,
+    speculativeEvaluations,
   } = options;
   // @spec authzen#context-history (#2017): refused where it is bound.
   if (history !== undefined) assertHistoryBinding(history);
@@ -574,6 +618,7 @@ export function createEphemeralDecisionPoint(options: {
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
     claimsFor: (requester, redeemingExecution) => claimChannelFor(claims, requester, redeemingExecution),
     recordTargetRefusal: (request) => recordPdpRefusal(refusals, "operation_target_invalid", request),
+    ...(speculativeEvaluations === true ? { speculate: bindSpeculate(bindings, unboundRequester()) } : {}),
     evidenceVerification: { kid, publicKey, emitterId, audience },
     emitter,
   };

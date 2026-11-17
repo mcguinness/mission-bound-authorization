@@ -39,6 +39,7 @@ import type { DecisionEvidenceEmitter } from "./decision-evidence.js";
 import { type ClaimChannel, claimChannelFor } from "./decision-point.js";
 import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
+  carriesSpeculativeItems,
   type Decision,
   type DecisionOptions,
   DecisionRequestRefused,
@@ -47,6 +48,10 @@ import {
   evaluate,
   type PdpRefusalRecorder,
   recordPdpRefusal,
+  type SpeculativeItemResult,
+  SpeculativeRequestMisdirected,
+  speculate,
+  speculativeRequestFault,
 } from "./evaluate.js";
 import {
   type ClaimRequester,
@@ -143,6 +148,15 @@ export interface PdpRemoteServerConfig {
    * channel-boundary refusal). Defaults to the real `evaluate`.
    */
   evaluateFn?: typeof evaluate;
+  /**
+   * @spec authzen#speculative-evaluations (#2067, D1313): whether this PDP
+   * serves speculative evaluation at `POST /speculate`. Absent or false, the
+   * route does not exist (404) and nothing on it reaches any decision
+   * function: a speculation never falls back to ordinary evaluation.
+   */
+  speculativeEvaluations?: boolean;
+  /** Injectable in place of the real `speculate`, as `evaluateFn` is for `evaluate`. */
+  speculateFn?: typeof speculate;
   /**
    * @spec runtime#idempotency (#917): this PDP's claim domain, bound on this
    * side of the network hop exactly as `evidence` is: a request option naming
@@ -270,6 +284,16 @@ function sendRefusal(
 }
 
 /**
+ * @spec authzen#speculative-evaluations (#2067, D1313): the AuthZEN request
+ * error for a speculative request sent to the evaluation path. Unsigned and
+ * carrying no decision, so no client can read it as one.
+ */
+function sendSpeculativeMisdirected(res: ServerResponse): void {
+  res.writeHead(400, { "content-type": "application/json" });
+  res.end(JSON.stringify({ error: "invalid_request", reason: "speculative_request" }));
+}
+
+/**
  * Start the reference PDP HTTP listener on an ephemeral 127.0.0.1 port.
  * Every request to POST /evaluate runs the authentication, integrity,
  * freshness/replay, and scope-authorization gates, in that order, before
@@ -281,6 +305,7 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
   // the server listens.
   if (config.history !== undefined) assertHistoryBinding(config.history);
   const evaluateImpl = config.evaluateFn ?? evaluate;
+  const speculateImpl = config.speculateFn ?? speculate;
   const replayWindowMs = (config.replayWindowSeconds ?? 30) * 1000;
   const maxBodyBytes = config.maxBodyBytes ?? 65536;
   // pepId:nonce -> expiry ms. A reference adapter's in-memory replay guard;
@@ -299,11 +324,13 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
    * when one is sent), freshness and replay, a parsed body, and the scope
    * check on the audience `audienceOf` names. A failure at any gate is
    * answered here and returns `undefined`: the route does no work at all.
+   * `audienceOf: null` leaves the scope check to a route that applies it to
+   * each item it serves (`/speculate`), after every other gate has passed.
    */
   async function authenticate(
     req: IncomingMessage,
     res: ServerResponse,
-    audienceOf: (body: Record<string, unknown>) => unknown,
+    audienceOf: ((body: Record<string, unknown>) => unknown) | null,
     targetOf?: (body: Record<string, unknown>) => unknown,
   ): Promise<AuthenticatedRequest | undefined> {
     const chunks: Buffer[] = [];
@@ -369,9 +396,21 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
       sendRefusal(res, 400, "malformed_body");
       return undefined;
     }
-    const audience = body !== null && typeof body === "object" && !Array.isArray(body)
-      ? audienceOf(body as Record<string, unknown>)
-      : undefined;
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+      sendRefusal(res, 400, "malformed_body");
+      return undefined;
+    }
+    if (audienceOf === null) {
+      return {
+        pepId,
+        nonce,
+        issuedAt,
+        rawBody,
+        body: body as Record<string, unknown>,
+        requester: { pep_id: pepId, pep_epoch: pepEpoch ?? `unbound:${randomUUID()}` },
+      };
+    }
+    const audience = audienceOf(body as Record<string, unknown>);
     if (typeof audience !== "string") {
       sendRefusal(res, 400, "malformed_body");
       return undefined;
@@ -447,6 +486,57 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     );
     if (!authed) return;
     const evalRequest = authed.body.request as EvaluationRequest;
+    // @spec authzen#speculative-evaluations (#2067, D1313): an evaluation
+    // request carrying the speculative request's `items` member is an AuthZEN
+    // request error, refused before any decision work and never evaluated as
+    // an attempt, whether or not this PDP serves speculation.
+    if (carriesSpeculativeItems(evalRequest)) {
+      sendSpeculativeMisdirected(res);
+      return;
+    }
+    const opts = await serverOptions(evalRequest, authed);
+    let decision: Decision;
+    try {
+      decision = await evaluateImpl(evalRequest, opts);
+    } catch (e) {
+      // @spec authzen#pdp-request consistency check 11 (#1276, D457),
+      // authzen#context-action-phase (#1629): a request refused before
+      // evaluation (already recorded) gets a refusal, never a signed decision.
+      if (e instanceof DecisionRequestRefused) {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "decision_request_refused", reason: e.denial_reason }));
+        return;
+      }
+      if (e instanceof SpeculativeRequestMisdirected) {
+        sendSpeculativeMisdirected(res);
+        return;
+      }
+      // @spec runtime#idempotency (#917): an unreachable claim domain is no
+      // decision at all, never a permit without the claim. 503 is what the
+      // PEP's client turns into `pdp_unreachable`.
+      if (e instanceof ClaimDomainUnavailableError) {
+        res.writeHead(503, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "claim_domain_unavailable" }));
+        return;
+      }
+      // @spec runtime#input-resource-policy (#828): likewise an unreachable
+      // Resource policy: no decision, never a refusal it did not reach.
+      if (e instanceof ResourcePolicyUnavailableError) {
+        res.writeHead(503, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "resource_policy_unavailable" }));
+        return;
+      }
+      throw e;
+    }
+    sendSigned(res, authed, decision);
+  }
+
+  /**
+   * The decision options for one request: the caller's `getOptions` result
+   * with every PDP-side binding stripped and replaced with this server's own,
+   * and the authenticated requester bound.
+   */
+  async function serverOptions(evalRequest: EvaluationRequest, authed: AuthenticatedRequest): Promise<EvaluateOptions> {
     const opts = { ...(await config.getOptions(evalRequest)) } as EvaluateOptions;
     delete opts.evidence;
     delete opts.claims;
@@ -485,36 +575,67 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     opts.requester = authed.requester;
     const status = config.consumptionStatus?.(authed.pepId);
     if (status) opts.consumptionStatus = status;
-    let decision: Decision;
-    try {
-      decision = await evaluateImpl(evalRequest, opts);
-    } catch (e) {
-      // @spec authzen#pdp-request consistency check 11 (#1276, D457),
-      // authzen#context-action-phase (#1629): a request refused before
-      // evaluation (already recorded) gets a refusal, never a signed decision.
-      if (e instanceof DecisionRequestRefused) {
-        res.writeHead(400, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: "decision_request_refused", reason: e.denial_reason }));
-        return;
-      }
-      // @spec runtime#idempotency (#917): an unreachable claim domain is no
-      // decision at all, never a permit without the claim. 503 is what the
-      // PEP's client turns into `pdp_unreachable`.
-      if (e instanceof ClaimDomainUnavailableError) {
-        res.writeHead(503, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: "claim_domain_unavailable" }));
-        return;
-      }
-      // @spec runtime#input-resource-policy (#828): likewise an unreachable
-      // Resource policy: no decision, never a refusal it did not reach.
-      if (e instanceof ResourcePolicyUnavailableError) {
-        res.writeHead(503, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: "resource_policy_unavailable" }));
-        return;
-      }
-      throw e;
+    return opts;
+  }
+
+  /**
+   * @spec authzen#speculative-evaluations (#2067, D1313): previews over the
+   * same channel gates as a decision request. The channel's authentication,
+   * integrity and replay gates apply to the request as a whole; the scope
+   * gates apply to each item, so an item whose audience is outside the
+   * PEP's scopes, or whose operation target is outside its registration, is
+   * an item error with no decision work and no Refusal Record. Each item's
+   * options are resolved for the Mission the shared `context.mission`
+   * names; one the PDP cannot establish fails closed as an item error,
+   * never evaluated without the Mission. Nothing here emits, records,
+   * claims or reserves.
+   */
+  async function handleSpeculate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const authed = await authenticate(req, res, null);
+    if (!authed) return;
+    const request = authed.body.request;
+    const fault = speculativeRequestFault(request);
+    if (fault !== undefined) {
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "invalid_request", reason: fault }));
+      return;
     }
-    sendSigned(res, authed, decision);
+    const { context: shared, items } = request as { context: Record<string, unknown>; items: Record<string, unknown>[] };
+    const pep = config.peps.get(authed.pepId) as AuthorizedPep;
+    const scopes = typeof pep.scopes === "function" ? pep.scopes() : pep.scopes;
+    const results: SpeculativeItemResult[] = [];
+    for (const item of items) {
+      const id = item.id as string;
+      const resource = item.resource as EvaluationRequest["resource"] | undefined;
+      const audience = resource?.properties?.audience;
+      if (typeof audience !== "string" || !scopes.includes(audience)) {
+        results.push({ id, decision: false, context: { error: { status: 403, message: "pep_not_authorized_for_scope" } } });
+        continue;
+      }
+      const target = resource?.properties?.operation_target;
+      if (typeof target === "string" && !targetWithinRegistration(pep, scopes, target)) {
+        results.push({ id, decision: false, context: { error: { status: 403, message: "operation_target_invalid" } } });
+        continue;
+      }
+      const own = item.context !== null && typeof item.context === "object" ? (item.context as Record<string, unknown>) : {};
+      // The shared context wins here, so the options resolve for the shared
+      // Mission; `speculate` refuses a colliding member as an item error.
+      const merged = { ...item, context: { ...own, ...shared } } as unknown as EvaluationRequest;
+      let opts: EvaluateOptions;
+      try {
+        opts = await serverOptions(merged, authed);
+      } catch {
+        results.push({ id, decision: false, context: { error: { status: 400, message: "mission_unrecognized" } } });
+        continue;
+      }
+      try {
+        const [result] = (await speculateImpl({ context: shared, items: [item] }, opts)).items;
+        results.push(result ?? { id, decision: false, context: { error: { status: 500, message: "no preview" } } });
+      } catch {
+        results.push({ id, decision: false, context: { error: { status: 503, message: "no decision obtainable" } } });
+      }
+    }
+    sendSigned(res, authed, { items: results });
   }
 
   /**
@@ -554,14 +675,24 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
   }
 
   const CLAIM_ROUTES = new Set(["/claims/settle", "/claims/unresolved", "/claims/reconcile"]);
+  // @spec authzen#speculative-evaluations (#2067, D1313): the speculative
+  // route exists only where this PDP serves the feature; without it the
+  // route is unknown, so a speculation is never served as an evaluation.
+  const speculativeRoute = config.speculativeEvaluations === true;
   const httpServer: HttpServer = createServer((req, res) => {
     const route = req.url ?? "";
-    if (req.method !== "POST" || (route !== "/evaluate" && !CLAIM_ROUTES.has(route))) {
+    const known = route === "/evaluate" || CLAIM_ROUTES.has(route) || (route === "/speculate" && speculativeRoute);
+    if (req.method !== "POST" || !known) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "not_found" }));
       return;
     }
-    (route === "/evaluate" ? handleEvaluate(req, res) : handleClaims(route, req, res)).catch(() => {
+    (route === "/evaluate"
+      ? handleEvaluate(req, res)
+      : route === "/speculate"
+        ? handleSpeculate(req, res)
+        : handleClaims(route, req, res)
+    ).catch(() => {
       if (!res.headersSent) {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: "server_error" }));
