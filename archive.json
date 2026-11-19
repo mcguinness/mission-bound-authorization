@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-11-17T07:30:02.132933+00:00",
+  "timestamp": "2026-11-19T06:54:44.090817+00:00",
   "repo": "mcguinness/mission-bound-authorization",
   "labels": [
     {
@@ -62671,6 +62671,34 @@
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2087,
+      "id": "PR_kwDOTBXTi88AAAABQPRIJw",
+      "title": "docs: add presentation PDFs and white papers",
+      "url": "https://github.com/mcguinness/mission-bound-authorization/pull/2087",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Adds four PDFs under `docs/`:\n\n- `Mission-IETF127-Side-Meeting.pdf` (IETF 127 side-meeting deck)\n- `Mission-OAuth-Interim.pdf` (OAuth interim deck)\n- `Governing-the-Approved-Work.pdf` (white paper, \"Mission-Bound Authorization: Governing the Approved Work\")\n- `The End of the Credential Perimeter.pdf` (white paper)\n\n`.gitignore` ignores `*.pdf` for build output, so this adds a `!/docs/*.pdf` exception to track PDFs under `docs/`.\n\nNo draft, ledger or code changes.",
+      "createdAt": "2026-11-18T21:52:47Z",
+      "updatedAt": "2026-11-18T21:56:37Z",
+      "baseRepository": "mcguinness/mission-bound-authorization",
+      "baseRefName": "main",
+      "baseRefOid": "d5b5988154bccdb30943f1099a01fdb37a6e3f08",
+      "headRepository": "mcguinness/mission-bound-authorization",
+      "headRefName": "docs/slides-and-papers",
+      "headRefOid": "bfe8101421265aecb2d046d1065ce0f67d0829bd",
+      "closedAt": "2026-11-18T21:56:25Z",
+      "mergedAt": "2026-11-18T21:56:25Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "4bef9863cc8b42088603e516672f341b0bd29eb7"
+      },
       "comments": [],
       "reviews": []
     }
