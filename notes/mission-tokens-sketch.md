@@ -224,7 +224,8 @@ The resource owner approves, and the authorization server
 authenticates them. An approval decision creates the Mission and the
 authorization code together: the authorization server issues the code
 only when the Mission is recorded, and a declined or abandoned request
-creates neither.
+creates neither. The Mission can end before the client redeems the
+code; the redemption is then refused ({{gating}}).
 
 ## Token Response {#token-response}
 
@@ -233,6 +234,8 @@ its `access_token`, and the Approved Authority as
 `authorization_details` ({{Section 7 of RFC9396}}). The authorization
 server:
 
+- issues the mission token only while the Mission is `active`
+  ({{gating}});
 - MUST bind the mission token to the key of the DPoP proof in the
   token request ({{Section 5 of RFC9449}}), and MUST refuse a token
   request for a mission token that carries no DPoP proof, with
@@ -297,35 +300,69 @@ the request otherwise, with `invalid_request`
 
 A token issued from a Mission-bound subject token:
 
+- is an access token: the response's `issued_token_type` is
+  `urn:ietf:params:oauth:token-type:access_token`
+  ({{Section 2.2.1 of RFC8693}});
+- has the target the request names as its audience;
 - carries the same `mission` claim;
 - conveys `authorization_details` under the subset rule
-  ({{subset}}), judged against the subject token's authority;
+  ({{subset}});
 - has an expiry no later than the subject token's; and
 - is bound to the key of the request's DPoP proof
   ({{Section 5 of RFC9449}}).
 
+The authorization server MUST refuse, with `invalid_request`, such an
+exchange whose `requested_token_type` names any other token type, and
+MUST NOT include a `refresh_token` in its response, although
+{{Section 2.2.1 of RFC8693}} permits one. Code redemption and
+exchange are therefore the only paths that issue Mission-bound tokens,
+and both are gated ({{gating}}).
+
 ## The Subset Rule {#subset}
 
-Each entry of an issued token's `authorization_details` is either an
-entry of the subject token's authority, carried unchanged, or a
-narrowing of one such entry under a comparison that the entry's type
-defines. An issued entry never combines rights from several entries.
-Where a request asks for a narrowing that the entry's type defines no
-comparison for, or that the comparison cannot decide, the
-authorization server MUST refuse it with
-`invalid_authorization_details` ({{Section 6 of RFC9396}}). The Mission
-Resource Access Profile
-{{I-D.draft-mcguinness-oauth-mission-resource-access}} is an example of
-a type specification that defines such a comparison. This document
-defines no way to discover which narrowings an authorization server
-accepts; a client that needs one learns from the refusal.
+Each entry of the `authorization_details` of a token issued by
+exchange MUST meet three conditions:
+
+1. **Within the subject token's authority.** It is an entry of the
+   subject token's `authorization_details` carried unchanged, or a
+   narrowing of one such entry under a comparison that the entry's type
+   defines. It never combines rights from several entries.
+2. **Within the request.** Where the exchange carries
+   `authorization_details`, it is a requested entry or a narrowing of
+   one. An approved entry broader than the requested one is never
+   issued in its place.
+3. **For the audience.** It applies to every audience of the issued
+   token: its `locations` ({{Section 2.2 of RFC9396}}) include the
+   audience value, compared as strings, or its type defines how it
+   applies to that audience. An entry with neither applies nowhere.
+
+Where the exchange carries no `authorization_details`, the
+authorization server issues the entries of the subject token's
+authority that apply to the audience, unchanged. It MUST refuse, with
+`invalid_authorization_details` ({{Section 6 of RFC9396}}), an
+exchange that requests an entry outside the subject token's authority
+or one that does not apply to the audience, or that needs a
+comparison the entry's type does not define or cannot decide. It MUST
+refuse, with `invalid_target` ({{Section 2.2.2 of RFC8693}}), an
+exchange for an audience that no entry applies to.
+
+The rule applies at every exchange. When the subject token was itself
+issued by exchange, its authority, already narrowed and filtered to its
+audience, is the bound, so a chain only narrows. The Mission Resource
+Access Profile {{I-D.draft-mcguinness-oauth-mission-resource-access}}
+is an example of a type specification that defines a comparison. This
+document defines no way to discover which narrowings an authorization
+server accepts; a client that needs one learns from the refusal.
 
 ## Issuance Gating {#gating}
 
-The authorization server MUST NOT issue a token from a Mission-bound
-subject token unless the Mission is `active` at the instant of
-issuance. It refuses such an exchange with `invalid_request`
-({{Section 2.2.2 of RFC8693}}) and this member of the error response:
+The authorization server MUST NOT issue a Mission-bound token unless
+the Mission is `active` at the instant of issuance: neither the
+mission token when it redeems the code, nor a token from a
+Mission-bound subject token. It refuses a code redemption with
+`invalid_grant` ({{Section 5.2 of RFC6749}}) and an exchange with
+`invalid_request` ({{Section 2.2.2 of RFC8693}}), and adds this member
+to either error response:
 
 `mission_error`:
 : A string: the Mission's state, `revoked` or `expired`.
@@ -363,6 +400,12 @@ active response carries the `mission` member and the token's
 introspection endpoint and leaves who may call it to the authorization
 server; the authorization server SHOULD let the client introspect its
 own mission token, authenticating as it does at the token endpoint.
+An inactive response does not say why the token is inactive
+({{Section 2.2 of RFC7662}}). The mission token ends only when its
+Mission ends, so where the authorization server lets the client
+introspect it, an inactive response means the Mission has ended; for
+a token issued by exchange, it can also mean that the token alone
+expired or was revoked.
 
 **Acceptance after ending.** Ending a Mission stops issuance at once.
 A JWT access token already issued from it remains acceptable to a
@@ -388,8 +431,11 @@ For an operation it protects under this document, a resource server:
    grants nothing, and it never combines parts of several entries;
 4. never grants, on the basis of a `scope` value the token also
    carries, access broader than the corresponding entry permits; and
-5. establishes that the Mission is active, by introspection or by the
-   token's lifetime ({{lifecycle}}).
+5. relies on the Mission's state in one of two ways ({{lifecycle}}):
+   it introspects the token at use, and an active response shows that
+   the Mission is active at that instant; or it accepts a JWT until its
+   `exp`, and so may accept it for up to that time after the Mission
+   ends.
 
 A resource server MUST refuse an access token without the `mission`
 member for a Mission-governed operation, and declares such operations
@@ -404,7 +450,10 @@ Denials distinguish three causes: the Mission has ended
 where the resource server knows it); the operation is outside the
 carried authority (`insufficient_scope` {{RFC6750}}); or only the
 credential failed (`invalid_token`). Where more than one applies, an
-ended Mission takes precedence.
+ended Mission takes precedence. An inactive introspection response
+does not tell a resource server whether the credential or the Mission
+ended ({{Section 2.2 of RFC7662}}); it then responds `invalid_token`
+without `mission_error`.
 
 # Authorization Server Metadata {#metadata}
 
@@ -448,9 +497,11 @@ token presented with any fresh DPoP key would yield resource tokens.
 The security best current practice {{RFC9700}} applies.
 
 **The approval sets the ceiling.** The subset rule bounds every
-exchange, and a narrowing the type cannot compare is refused rather
-than guessed. Exchanges chain: a token issued from an issued token
-narrows further, never wider.
+exchange by the subject token's authority, the client's request, and
+the audience, and a narrowing the type cannot compare is refused
+rather than guessed. Exchanges chain: a token issued from an issued
+token narrows further, never wider. Neither a refresh token nor a
+reissued mission token offers another path ({{issued-token}}).
 
 **Acceptance after ending.** Tokens already issued outlive the ending
 by up to their lifetime ({{lifecycle}}).
@@ -470,7 +521,9 @@ tokens without a Mission for Mission-governed operations
 The Mission Identifier joins every token of a Mission, so a party that
 sees several can link them; it is opaque and carries no information
 about the resource owner or the work. The `mission` claim carries only
-the identifier and issuer.
+the identifier and issuer. A token issued by exchange carries only the
+entries that apply to its audience ({{subset}}), so a resource server
+does not learn authority approved for another.
 
 # IANA Considerations {#iana}
 
@@ -478,10 +531,10 @@ The `mission` claim and introspection member, and the `mission_error`
 member, share their names and meanings with Mission-Bound
 Authorization for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}},
 which requests the same registrations. In this document
-`mission_error` accompanies the `invalid_request` error code that RFC
-8693 requires for an exchange; in that document it accompanies
-`invalid_grant`. The documents are expected to converge on one
-registration.
+`mission_error` accompanies `invalid_grant` at code redemption, as in
+that document, and the `invalid_request` error code that RFC 8693
+requires for an exchange. The documents are expected to converge on
+one registration.
 
 This document requests registration of:
 
@@ -510,7 +563,7 @@ framework for approved bounded work
 | R1: an identifier distinct from the client, any token, and any refresh token family | The Mission Identifier in the `mission` claim; one mission token per Mission, never reissued ({{mission-token}}) |
 | R2: what was approved is fixed; more authority creates a new authorization | The fixed Mission and a new Mission for more authority ({{mission-token}}). It fixes the approved authority and the resource owner who approved, not the request; an accountable approver other than the resource owner, and a description of the work, are left to extensions. |
 | R3: no credential broader than the approved bounds, refusing where the comparison cannot decide | The subset rule at exchange ({{subset}}) |
-| R4: every issuance path refuses once ended | Issuance gating; exchange is the only issuance path, since no refresh token is issued ({{gating}}) |
+| R4: every issuance path refuses once ended | Issuance gating at code redemption and at exchange, the only issuance paths: no refresh token is issued with the mission token or by exchange ({{gating}}, {{issued-token}}) |
 | R5: a party holding no token ends one authorization without affecting the client's other work | Partly: the client revokes the mission token; a party holding no token uses the authorization server's own means, which this document requires but does not define ({{lifecycle}}) |
 | R6: issued credentials stop being accepted within a stated time | Exchanged token lifetime, or introspection ({{lifecycle}}) |
 | R7: a second party relates each credential to its authorization without inference | The `mission` claim and introspection member |
@@ -600,6 +653,27 @@ access_token
 &client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
 client-assertion-type%3Ajwt-bearer
 &client_assertion=eyJhbGciOiJFUzI1NiJ9...
+~~~
+
+The approved entry's `locations` include the payment service, so the
+entry applies there. The response carries an access token and no
+refresh token:
+
+~~~ json
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
+  "issued_token_type":
+    "urn:ietf:params:oauth:token-type:access_token",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "authorization_details": [
+    {
+      "type": "payment_initiation",
+      "actions": ["initiate"],
+      "locations": ["https://pay.example.com"]
+    }
+  ]
+}
 ~~~
 
 The issued token has audience `https://pay.example.com`, the same
