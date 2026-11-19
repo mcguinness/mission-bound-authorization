@@ -2320,14 +2320,16 @@ issuer-bound envelope:
 
    ~~~
    {
-     "typ": "<mission-intent | mission-proposed-authority
-             | mission-authority-set>",
+     "typ": "<the typ its anchor defines>",
      "iss": "<the AS issuer URL>",
      "value": <the committed object>
    }
    ~~~
 
-   Each anchor sets `typ` and `value` as follows:
+   The anchors this section defines set `typ` and `value` as
+   follows; the Authority Set entry commitment ({{entry-commitment}})
+   and an envelope anchor another specification defines
+   ({{commitment-mechanisms}}) set their own:
 
    - For `intent_hash`, `typ` is `mission-intent` and `value` is the
      approved Mission Intent object: the Submission envelope's
@@ -6343,8 +6345,9 @@ characters, recovers the canonical form.
 
 JCS sorts object member names and preserves array order. In these
 vectors, `iss` precedes `typ` precedes `value`; within an entry,
-`actions` precedes `constraints` precedes `resource` precedes `type`;
-and within `max_amount`, `amount` precedes `currency`.
+`actions` precedes `constraints` precedes `delegation` precedes
+`resource` precedes `type`; and within `max_amount`, `amount` precedes
+`currency`.
 
 `intent_hash`, over this Mission Intent as the envelope `value` with
 `typ` `mission-intent`:
@@ -6574,6 +6577,17 @@ resolve before interoperating.
   (#2009). The delegation examples keep a Resource Access entry, since
   delegation needs a type-defined delegation policy. Truncated tokens
   and proofs are marked as not verifying.
+
+**Clarifications (no requirement change)**
+
+- Integrity Anchors: the envelope template's `typ` is the value its
+  anchor defines, no longer a list of this section's three; the
+  Authority Set entry commitment and companion-defined envelope anchors
+  use the same envelope. No `typ`, domain separation or construction
+  changed (#2031).
+- Integrity Anchor Test Vectors: the member-order explanation includes
+  `delegation`, which two vectors carry. Every vector's input, canonical
+  bytes and digest is unchanged (#2030).
 
 -02
 
