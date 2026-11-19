@@ -58,6 +58,7 @@ import {
   type RegisteredActivationPolicy,
   verifiedActivationPolicy,
 } from "./activation-policy.js";
+import { floorRefusal } from "./approval-floor.js";
 import { signApprovalGovernanceRecord } from "./approval-governance.js";
 import { resolvedAnchors } from "./anchors.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
@@ -1415,17 +1416,25 @@ function standingPaymentAdmissionRefusal(
   }
   // @spec mission#approval-authentication (#2032): the instance's max_budget is
   // a consumption bound, so the retained consent records every floor that
-  // bound invokes; one recorded below it, or before a stricter bound floor was
-  // published, is not relied on.
+  // bound invokes, and its retained acr and authentication age at the
+  // decision instant meet each such floor's current definition. A consent
+  // recorded below a floor, before a floor was published, or under a weaker
+  // definition of the same floor id is not relied on.
   const options = input.standingPayment as StandingPaymentDispatchOptions;
-  const boundFloors = options.approvalFloor.floors
-    .filter((f) => f.applies_to.includes(CONSUMPTION_BOUND_CLASS))
-    .map((f) => f.id);
+  const boundFloorDefs = options.approvalFloor.floors.filter((f) => f.applies_to.includes(CONSUMPTION_BOUND_CLASS));
+  const boundFloors = boundFloorDefs.map((f) => f.id);
   const unmet = boundFloors.filter((id) => !consent.floors.includes(id));
   if (boundFloors.length === 0 || unmet.length > 0) {
     return `template ${template.id}'s consent does not meet the approval-authentication floor its instance's max_budget, a consumption bound, invokes: ${
       unmet.length > 0 ? `${unmet.join(", ")} not recorded` : "no published floor names that class"
     }`;
+  }
+  const decidedAtSeconds = Math.floor(Date.parse(consent.decided_at) / 1000);
+  for (const floor of boundFloorDefs) {
+    const refusal = floorRefusal(floor, consent.acr, consent.auth_time, decidedAtSeconds);
+    if (refusal) {
+      return `template ${template.id}'s consent was given under a weaker definition of the ${floor.id} floor than the one its instance's max_budget, a consumption bound, now invokes: ${refusal} at the consent decision`;
+    }
   }
   const pinned = kernel.standingPayments.budgetBinding(template.dispatch_policy.id);
   if (!pinned || pinned.owner !== terms.budget.owner || pinned.id !== terms.budget.id) {

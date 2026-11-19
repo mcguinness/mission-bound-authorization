@@ -1410,3 +1410,62 @@ describe("the consent a standing-payment dispatch relies on meets the consumptio
     expect(missionCount()).toBe(before);
   });
 });
+
+/**
+ * @spec mission#approval-authentication (#2032, owner review of #2061): the
+ * shipped bound floor republished under the same id with a stricter
+ * definition. Dispatch judges the retained consent's acr and authentication
+ * age at its decision instant against the floor's current definition, so a
+ * consent that recorded the id under the weaker definition is not relied on.
+ */
+const tightenedBoundFloor = (over: { accepted_acr?: string[]; max_authentication_age_seconds?: number }): ApprovalFloorPolicy => ({
+  ...APPROVAL_FLOOR,
+  floors: APPROVAL_FLOOR.floors.map((f) => (f.applies_to.includes(CONSUMPTION_BOUND_CLASS) ? { ...f, ...over } : f)),
+});
+
+describe("a same-id floor tightened after consent is not met by the retained consent (@spec mission#approval-authentication, #2032)", () => {
+  it("refuses dispatch_prohibited_class when the bound floor keeps its id but no longer accepts the retained acr, committing no Mission, and dispatches a consent recorded at the stricter acr", () => {
+    const shipped = APPROVAL_FLOOR.floors.find((f) => f.applies_to.includes(CONSUMPTION_BOUND_CLASS));
+    expect(shipped?.id).toBe("high-risk-authority");
+    expect(shipped?.accepted_acr).toEqual(["mfa"]);
+    const stricter = tightenedBoundFloor({ accepted_acr: ["stronger-mfa"] });
+    const old = consentTo();
+    expect(store.get(old.id)?.consent_provenance?.floors).toEqual(["high-risk-authority"]);
+    const before = missionCount();
+    const r = refusal(() => dispatch(old.id, {}, mappingOf(), stricter));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(
+      /weaker definition of the high-risk-authority floor .* the Approver's achieved acr does not satisfy the high-risk-authority floor at the consent decision/,
+    );
+    expect(missionCount()).toBe(before);
+    expect(kernel.standingPayments.dispatchedInstances(old.id)).toEqual([]);
+    const fresh = consentTo({}, { consent: humanConsent("human-approver", { acr: "stronger-mfa" }) });
+    expect(dispatch(fresh.id, {}, mappingOf(), stricter).mission.state).toBe("active");
+  });
+
+  it("refuses dispatch_prohibited_class when the bound floor keeps its id but lowers its maximum authentication age below the retained consent's age at the decision, committing no Mission", () => {
+    // Authenticated 200s before the consent decision at T0: within the
+    // shipped 300s, outside a republished 100s.
+    const aged = humanConsent("human-approver", { auth_time: Math.floor(clockMs / 1000) - 200 });
+    const t = consentTo({}, { consent: aged });
+    const stricter = tightenedBoundFloor({ max_authentication_age_seconds: 100 });
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id, {}, mappingOf(), stricter));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(
+      /weaker definition of the high-risk-authority floor .* the Approver's authentication is older than the high-risk-authority floor allows at the consent decision/,
+    );
+    expect(missionCount()).toBe(before);
+    expect(kernel.standingPayments.dispatchedInstances(t.id)).toEqual([]);
+  });
+
+  it("dispatches the same retained consent under the unchanged floor, judging its authentication age at the decision and not at dispatch", () => {
+    const aged = humanConsent("human-approver", { auth_time: Math.floor(clockMs / 1000) - 200 });
+    const t = consentTo({}, { consent: aged });
+    // 1000s after the decision the authentication is 1200s old, past the
+    // floor's 300s, yet the consent met the floor when it was decided.
+    clockMs = T0 + 1000 * 1000;
+    const { mission } = dispatch(t.id, {}, mappingOf(), APPROVAL_FLOOR);
+    expect(mission.state).toBe("active");
+  });
+});

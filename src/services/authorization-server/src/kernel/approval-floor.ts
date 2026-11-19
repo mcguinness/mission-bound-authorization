@@ -27,7 +27,12 @@
  */
 
 import { entryOverlapsResource, resourceWithin } from "@mission/core";
-import { CONSUMPTION_BOUND_CLASS, type ApprovalFloorClassification, type ApprovalFloorPolicy } from "@mission/demo-data";
+import {
+  CONSUMPTION_BOUND_CLASS,
+  type ApprovalFloor,
+  type ApprovalFloorClassification,
+  type ApprovalFloorPolicy,
+} from "@mission/demo-data";
 import type { AuthorityEntry } from "./types.js";
 
 /**
@@ -181,12 +186,26 @@ export function evaluateApprovalFloor(
   }
   const floors = policy.floors.filter((f) => invoked.has(f.id));
   for (const floor of floors) {
-    if (!floor.accepted_acr.includes(acr)) {
-      return { outcome: "refused", reason: `the Approver's achieved acr does not satisfy the ${floor.id} floor` };
-    }
-    if (ctx.nowSeconds - authTime > floor.max_authentication_age_seconds) {
-      return { outcome: "refused", reason: `the Approver's authentication is older than the ${floor.id} floor allows` };
-    }
+    const reason = floorRefusal(floor, acr, authTime, ctx.nowSeconds);
+    if (reason) return { outcome: "refused", reason };
   }
   return { outcome: "satisfied", floors: floors.map((f) => f.id) };
+}
+
+/**
+ * @spec mission#approval-authentication (#826, #2032): whether one floor holds
+ * for an achieved context judged at `atSeconds`: the `acr` is one the floor
+ * accepts by exact match, and the authentication is neither later than
+ * `atSeconds` nor older at that instant than the floor allows. Returns the
+ * refusal reason, or undefined when the floor holds. The approval decision
+ * judges at its own instant; dispatch re-judges a retained consent at the
+ * instant it was decided, under the floor's current definition.
+ */
+export function floorRefusal(floor: ApprovalFloor, acr: string, authTime: number, atSeconds: number): string | undefined {
+  if (authTime > atSeconds) return "the Approver's authentication time is in the future";
+  if (!floor.accepted_acr.includes(acr)) return `the Approver's achieved acr does not satisfy the ${floor.id} floor`;
+  if (atSeconds - authTime > floor.max_authentication_age_seconds) {
+    return `the Approver's authentication is older than the ${floor.id} floor allows`;
+  }
+  return undefined;
 }
