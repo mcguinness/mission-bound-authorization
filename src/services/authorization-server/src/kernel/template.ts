@@ -22,6 +22,7 @@
  */
 
 import { randomBytes } from "node:crypto";
+import { CONSUMPTION_BOUND_CLASS, type ApprovalFloorPolicy } from "@mission/demo-data";
 import {
   actionOutsideGrammar,
   authorityHash,
@@ -57,6 +58,7 @@ import {
   type RegisteredActivationPolicy,
   verifiedActivationPolicy,
 } from "./activation-policy.js";
+import { floorRefusal } from "./approval-floor.js";
 import { signApprovalGovernanceRecord } from "./approval-governance.js";
 import { resolvedAnchors } from "./anchors.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
@@ -768,6 +770,8 @@ export interface DispatchInput {
 export interface StandingPaymentDispatchOptions {
   /** The deployment's published prohibited-predicate mapping. */
   mapping: ProhibitedPredicateMapping;
+  /** The deployment's published approval-authentication floor policy. */
+  approvalFloor: ApprovalFloorPolicy;
 }
 
 export interface DispatchResult {
@@ -1410,6 +1414,28 @@ function standingPaymentAdmissionRefusal(
   if (template.dispatchers.includes(consent.principal.sub) || template.recipients.agents.includes(consent.principal.sub)) {
     return `template ${template.id} was consented by a Dispatcher or an Agent, not a human`;
   }
+  // @spec mission#approval-authentication (#2032): the instance's max_budget is
+  // a consumption bound, so the retained consent records every floor that
+  // bound invokes, and its retained acr and authentication age at the
+  // decision instant meet each such floor's current definition. A consent
+  // recorded below a floor, before a floor was published, or under a weaker
+  // definition of the same floor id is not relied on.
+  const options = input.standingPayment as StandingPaymentDispatchOptions;
+  const boundFloorDefs = options.approvalFloor.floors.filter((f) => f.applies_to.includes(CONSUMPTION_BOUND_CLASS));
+  const boundFloors = boundFloorDefs.map((f) => f.id);
+  const unmet = boundFloors.filter((id) => !consent.floors.includes(id));
+  if (boundFloors.length === 0 || unmet.length > 0) {
+    return `template ${template.id}'s consent does not meet the approval-authentication floor its instance's max_budget, a consumption bound, invokes: ${
+      unmet.length > 0 ? `${unmet.join(", ")} not recorded` : "no published floor names that class"
+    }`;
+  }
+  const decidedAtSeconds = Math.floor(Date.parse(consent.decided_at) / 1000);
+  for (const floor of boundFloorDefs) {
+    const refusal = floorRefusal(floor, consent.acr, consent.auth_time, decidedAtSeconds);
+    if (refusal) {
+      return `template ${template.id}'s consent was given under a weaker definition of the ${floor.id} floor than the one its instance's max_budget, a consumption bound, now invokes: ${refusal} at the consent decision`;
+    }
+  }
   const pinned = kernel.standingPayments.budgetBinding(template.dispatch_policy.id);
   if (!pinned || pinned.owner !== terms.budget.owner || pinned.id !== terms.budget.id) {
     return `the budget ${terms.budget.owner}/${terms.budget.id} is not the identity pinned for Dispatch Policy ${template.dispatch_policy.id}`;
@@ -1425,7 +1451,7 @@ function standingPaymentAdmissionRefusal(
     throw e;
   }
   return standingPaymentPredicateRefusal(
-    (input.standingPayment as StandingPaymentDispatchOptions).mapping,
+    options.mapping,
     terms,
     final,
     input.dispatchProhibitedActions ?? [],

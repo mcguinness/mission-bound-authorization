@@ -27,7 +27,7 @@ import { importJWK, SignJWT, type CryptoKey } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, recheckApprovalGovernanceRecord } from "../src/index.js";
 import { assembledCeilingOffer } from "../src/kernel/progressive.js";
-import { evaluateApprovalFloor } from "../src/kernel/approval-floor.js";
+import { carriesConsumptionBound, evaluateApprovalFloor } from "../src/kernel/approval-floor.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
@@ -590,6 +590,41 @@ describe("evaluateApprovalFloor guards the achieved context (@spec mission#appro
   });
 });
 
+describe("the floor covers a consumption bound the Mission Intent carries (@spec mission#approval-authentication, #2032)", () => {
+  const t = 2_000_000_000;
+
+  it("a consumption bound invokes the floor whatever the derived authority: refused below it, satisfied at it, not applicable without one", () => {
+    const bound = { interactive: true, nowSeconds: t, consumptionBound: true };
+    expect(evaluateApprovalFloor(APPROVAL_FLOOR, READ, { acr: "password", auth_time: t - 10 }, bound).outcome).toBe("refused");
+    expect(evaluateApprovalFloor(APPROVAL_FLOOR, READ, { acr: "mfa", auth_time: t - 10 }, bound)).toEqual({
+      outcome: "satisfied",
+      floors: ["high-risk-authority"],
+    });
+    expect(evaluateApprovalFloor(APPROVAL_FLOOR, READ, {}, { interactive: false, nowSeconds: t, consumptionBound: true }).outcome).toBe("refused");
+    expect(evaluateApprovalFloor(APPROVAL_FLOOR, READ, { acr: "password", auth_time: t - 10 }, { interactive: true, nowSeconds: t, consumptionBound: false })).toEqual({
+      outcome: "not_applicable",
+    });
+  });
+
+  it("refuses a consumption bound that no published floor names, whatever the Approver's authentication", () => {
+    const unnamed: ApprovalFloorPolicy = {
+      ...APPROVAL_FLOOR,
+      floors: APPROVAL_FLOOR.floors.map((f) => ({ ...f, applies_to: f.applies_to.filter((c) => c !== "consumption_bound") })),
+    };
+    const out = evaluateApprovalFloor(unnamed, READ, { acr: "mfa", auth_time: t - 10 }, { interactive: true, nowSeconds: t, consumptionBound: true });
+    expect(out).toMatchObject({ outcome: "refused", unclassified: true });
+  });
+
+  it("reads Mission Metering's four Intent bounds, and nothing else, as a consumption bound", () => {
+    for (const m of ["max_budget", "max_calls", "max_duration", "max_egress_volume"]) {
+      expect(carriesConsumptionBound({ goal: "g", [m]: {} }), m).toBe(true);
+    }
+    for (const intent of [{ goal: "g" }, { goal: "g", budget: {} }, [], null, "max_budget"]) {
+      expect(carriesConsumptionBound(intent)).toBe(false);
+    }
+  });
+});
+
 describe("evaluateApprovalFloor classifies through the shared matcher (@spec mission#approval-authentication, resource-access#subset, #1440)", () => {
   const t = 2_000_000_000;
   const SERVICE = "https://erp.example.com";
@@ -644,6 +679,11 @@ describe("the published floor policy loads strictly (@spec mission#approval-auth
     expect(loadApprovalFloor(JSON.stringify(valid)).floors[0]?.accepted_acr).toEqual(["mfa"]);
   });
 
+  it("loads a floor whose applies_to names consumption_bound (#2032)", () => {
+    const bound = { ...valid, floors: [{ ...valid.floors[0], applies_to: ["irreversible_action", "consumption_bound"] }] };
+    expect(loadApprovalFloor(JSON.stringify(bound)).floors[0]?.applies_to).toEqual(["irreversible_action", "consumption_bound"]);
+  });
+
   it("loads a classification's cross_domain statement, and leaves it absent where the classification states none (@spec mission-template#prohibited-classes, #1710)", () => {
     const stated = { ...valid, classification: [{ ...valid.classification[0], cross_domain: true }] };
     expect(loadApprovalFloor(JSON.stringify(stated)).classification[0]?.cross_domain).toBe(true);
@@ -659,6 +699,7 @@ describe("the published floor policy loads strictly (@spec mission#approval-auth
     ["no floors", { ...valid, floors: [] }],
     ["a headless approval surface", { ...valid, floors: [{ ...valid.floors[0], approval_surface: "headless" }] }],
     ["a cross_domain statement that is not a boolean (#1710)", { ...valid, classification: [{ ...valid.classification[0], cross_domain: "yes" }] }],
+    ["consumption_bound as an action's class, which no action carries (#2032)", { ...valid, classification: [{ ...valid.classification[0], actions: { "a:b": "consumption_bound" } }] }],
   ])("refuses %s", (_case, policy) => {
     expect(() => loadApprovalFloor(JSON.stringify(policy))).toThrow(/approval-floor\.json/);
   });
@@ -676,10 +717,9 @@ describe("the published floor policy loads strictly (@spec mission#approval-auth
 });
 
 describe("the deployment publishes its approval-authentication floor (@spec mission#approval-authentication, #1503, D620)", () => {
-  // The binding's high-risk action kinds. The AS admits no consumption bound
-  // (derive() refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS),
-  // so no derived entry can invoke the floor through one.
-  const HIGH_RISK = ["irreversible_action", "external_commitment", "privileged_administration"] as const;
+  // The binding's four high-risk classes: three action kinds, and a cumulative
+  // consumption bound, which the Mission Intent carries (#2032).
+  const HIGH_RISK = ["irreversible_action", "external_commitment", "privileged_administration", "consumption_bound"] as const;
 
   it("the published statement (config/approval-floor.json, the AS's default floor) declares its deployment scope and, for every high-risk class, a minimum Approver authentication: a browser surface, accepted acr values and an age bound", () => {
     expect(APPROVAL_FLOOR.policy_id).toMatch(/\S/);

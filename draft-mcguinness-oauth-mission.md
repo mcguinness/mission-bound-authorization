@@ -1620,9 +1620,9 @@ establishes both.
 
 A deployment MUST publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
-it enforces for Missions whose derived Authority Set carries high-risk
-authority, and the deployment scope it applies to. This document
-requires no particular serialization.
+it enforces for Missions whose derived Authority Set or Mission Intent
+carries high-risk authority, and the deployment scope it applies to.
+This document requires no particular serialization.
 
 High-risk authority means irreversible, external-commitment, or
 privileged-administration actions under the deployment's
@@ -6565,6 +6565,9 @@ resolve before interoperating.
 - The normative-definition rule of Authorization Server Metadata
   covers every advertised type that has a defining specification, not
   only `mission_resource_access` (#2009).
+- Approval authentication: the published floor covers high-risk
+  authority the Mission Intent carries, a cumulative consumption bound,
+  as well as the derived Authority Set (#2032).
 {: spacing="compact"}
 
 **Examples**

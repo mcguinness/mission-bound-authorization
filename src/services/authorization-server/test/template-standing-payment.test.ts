@@ -16,6 +16,8 @@
  */
 import {
   APPROVAL_FLOOR,
+  type ApprovalFloorPolicy,
+  CONSUMPTION_BOUND_CLASS,
   DERIVATION_POLICY,
   DISPATCH_PROHIBITED_ACTIONS,
   PROGRESSIVE_PROFILE,
@@ -273,7 +275,12 @@ const intentWith = (
   );
 
 /** Dispatch with the capability on (the `standingPayment` input), unless `over` removes it. */
-const dispatch = (templateId: string, over: Partial<DispatchInput> = {}, mapping = mappingOf()) =>
+const dispatch = (
+  templateId: string,
+  over: Partial<DispatchInput> = {},
+  mapping = mappingOf(),
+  approvalFloor: ApprovalFloorPolicy = APPROVAL_FLOOR,
+) =>
   dispatchFromTemplate(kernel, store, {
     templateId,
     dispatchEventId: `dsp-${seq++}`,
@@ -283,7 +290,7 @@ const dispatch = (templateId: string, over: Partial<DispatchInput> = {}, mapping
     policyVersion: POLICY_VERSION,
     dispatchPolicies: REGISTRY,
     dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
-    standingPayment: { mapping },
+    standingPayment: { mapping, approvalFloor },
     ...over,
   });
 
@@ -1342,5 +1349,123 @@ describe("standing-payment currencies compared exactly (@spec template#standing-
       "the Template Ceiling: entry 0 bounds payments:payment.execute in usd, not USD",
     );
     expect(() => assertStandingPaymentCeiling(terms, bounded("USD"), "the Template Ceiling")).not.toThrow();
+  });
+});
+
+/**
+ * @spec mission#approval-authentication (#2032): the consumption bound under
+ * its own stricter floor, apart from the action floor the payment invokes.
+ */
+const SEPARATE_BOUND_FLOOR: ApprovalFloorPolicy = {
+  ...APPROVAL_FLOOR,
+  floors: [
+    ...APPROVAL_FLOOR.floors.map((f) => ({
+      ...f,
+      applies_to: f.applies_to.filter((c) => c !== CONSUMPTION_BOUND_CLASS),
+    })),
+    {
+      id: "consumption-bound",
+      applies_to: [CONSUMPTION_BOUND_CLASS],
+      approval_surface: "browser",
+      accepted_acr: ["stronger-mfa"],
+      max_authentication_age_seconds: 300,
+    },
+  ],
+};
+
+describe("the consent a standing-payment dispatch relies on meets the consumption bound's floor (@spec mission#approval-authentication, #2032)", () => {
+  it("refuses a dispatch whose retained consent records the payment action's floor but not the bound's, committing no Mission, and dispatches one that records both", () => {
+    const below = consentTo();
+    const before = missionCount();
+    const r = refusal(() => dispatch(below.id, {}, mappingOf(), SEPARATE_BOUND_FLOOR));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(/max_budget, a consumption bound, invokes: consumption-bound not recorded/);
+    expect(missionCount()).toBe(before);
+    const both = consentTo(
+      {},
+      {
+        consent: humanConsent("human-approver", {
+          acr: "stronger-mfa",
+          floors: ["high-risk-authority", "consumption-bound"],
+        }),
+      },
+    );
+    const { mission } = dispatch(both.id, {}, mappingOf(), SEPARATE_BOUND_FLOOR);
+    expect(mission.state).toBe("active");
+  });
+
+  it("refuses a dispatch when no published floor names the consumption-bound class, failing closed", () => {
+    const t = consentTo();
+    const unnamed: ApprovalFloorPolicy = {
+      ...APPROVAL_FLOOR,
+      floors: APPROVAL_FLOOR.floors.map((f) => ({
+        ...f,
+        applies_to: f.applies_to.filter((c) => c !== CONSUMPTION_BOUND_CLASS),
+      })),
+    };
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id, {}, mappingOf(), unnamed));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(/no published floor names that class/);
+    expect(missionCount()).toBe(before);
+  });
+});
+
+/**
+ * @spec mission#approval-authentication (#2032, owner review of #2061): the
+ * shipped bound floor republished under the same id with a stricter
+ * definition. Dispatch judges the retained consent's acr and authentication
+ * age at its decision instant against the floor's current definition, so a
+ * consent that recorded the id under the weaker definition is not relied on.
+ */
+const tightenedBoundFloor = (over: { accepted_acr?: string[]; max_authentication_age_seconds?: number }): ApprovalFloorPolicy => ({
+  ...APPROVAL_FLOOR,
+  floors: APPROVAL_FLOOR.floors.map((f) => (f.applies_to.includes(CONSUMPTION_BOUND_CLASS) ? { ...f, ...over } : f)),
+});
+
+describe("a same-id floor tightened after consent is not met by the retained consent (@spec mission#approval-authentication, #2032)", () => {
+  it("refuses dispatch_prohibited_class when the bound floor keeps its id but no longer accepts the retained acr, committing no Mission, and dispatches a consent recorded at the stricter acr", () => {
+    const shipped = APPROVAL_FLOOR.floors.find((f) => f.applies_to.includes(CONSUMPTION_BOUND_CLASS));
+    expect(shipped?.id).toBe("high-risk-authority");
+    expect(shipped?.accepted_acr).toEqual(["mfa"]);
+    const stricter = tightenedBoundFloor({ accepted_acr: ["stronger-mfa"] });
+    const old = consentTo();
+    expect(store.get(old.id)?.consent_provenance?.floors).toEqual(["high-risk-authority"]);
+    const before = missionCount();
+    const r = refusal(() => dispatch(old.id, {}, mappingOf(), stricter));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(
+      /weaker definition of the high-risk-authority floor .* the Approver's achieved acr does not satisfy the high-risk-authority floor at the consent decision/,
+    );
+    expect(missionCount()).toBe(before);
+    expect(kernel.standingPayments.dispatchedInstances(old.id)).toEqual([]);
+    const fresh = consentTo({}, { consent: humanConsent("human-approver", { acr: "stronger-mfa" }) });
+    expect(dispatch(fresh.id, {}, mappingOf(), stricter).mission.state).toBe("active");
+  });
+
+  it("refuses dispatch_prohibited_class when the bound floor keeps its id but lowers its maximum authentication age below the retained consent's age at the decision, committing no Mission", () => {
+    // Authenticated 200s before the consent decision at T0: within the
+    // shipped 300s, outside a republished 100s.
+    const aged = humanConsent("human-approver", { auth_time: Math.floor(clockMs / 1000) - 200 });
+    const t = consentTo({}, { consent: aged });
+    const stricter = tightenedBoundFloor({ max_authentication_age_seconds: 100 });
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id, {}, mappingOf(), stricter));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toMatch(
+      /weaker definition of the high-risk-authority floor .* the Approver's authentication is older than the high-risk-authority floor allows at the consent decision/,
+    );
+    expect(missionCount()).toBe(before);
+    expect(kernel.standingPayments.dispatchedInstances(t.id)).toEqual([]);
+  });
+
+  it("dispatches the same retained consent under the unchanged floor, judging its authentication age at the decision and not at dispatch", () => {
+    const aged = humanConsent("human-approver", { auth_time: Math.floor(clockMs / 1000) - 200 });
+    const t = consentTo({}, { consent: aged });
+    // 1000s after the decision the authentication is 1200s old, past the
+    // floor's 300s, yet the consent met the floor when it was decided.
+    clockMs = T0 + 1000 * 1000;
+    const { mission } = dispatch(t.id, {}, mappingOf(), APPROVAL_FLOOR);
+    expect(mission.state).toBe("active");
   });
 });
