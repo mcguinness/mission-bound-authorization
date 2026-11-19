@@ -218,17 +218,19 @@ A request that carries `mission_expires_in` MUST also carry
 refuse a request that carries `mission_expires_in` without
 `authorization_details`, or with a value that is not a positive
 integer, with the `invalid_request` error code. A client SHOULD send
-the request as a Pushed Authorization Request {{RFC9126}}.
+the request as a Pushed Authorization Request {{RFC9126}}. The request
+can also carry `scope`, as {{Section 3.1 of RFC9396}} allows; this
+document does not govern it.
 
-A client that requests a Mission checks first that the authorization
-server advertises `mission_grants_supported` ({{metadata}}). An
-authorization server that does not implement this document ignores
-`mission_expires_in` as an unrecognized parameter
-({{Section 3.1 of RFC6749}}), and its token response then carries no
-`mission_id`. A client that requested a Mission and receives a token
-response without `mission_id` MUST NOT use the issued tokens for the
-work it requested the Mission for, and SHOULD revoke them
-{{RFC7009}}.
+A client learns that it will not get a Mission from the absence of
+`mission_grants_supported` ({{metadata}}) before it sends the request,
+and from the absence of `mission_id` in the token response after it.
+An authorization server that does not implement this document can
+ignore `mission_expires_in` as an unrecognized parameter
+({{Section 3.1 of RFC6749}}), or refuse a pushed request that carries
+it. A client that requested a Mission and receives a token response
+without `mission_id` MUST NOT use the issued tokens for the work it
+requested the Mission for, and SHOULD revoke them {{RFC7009}}.
 
 # Approval and Creation {#approval}
 
@@ -268,9 +270,9 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
   for, as the authorization server identifies them.
 
 `approver`:
-: REQUIRED. A string: the party that approved, as the authorization
-  server identifies them. It equals `sub` when the resource owner
-  approved.
+: REQUIRED. A string: the party that approved, in the same identifier
+  space the authorization server uses for `sub`. It equals `sub` when
+  the resource owner approved.
 
 `approved_at`:
 : REQUIRED. A string: an RFC 3339 {{RFC3339}} date-time, the instant
@@ -367,7 +369,9 @@ authorization server MUST refuse the request with the
 `invalid_authorization_details` error code ({{Section 6 of RFC9396}}).
 The Mission Resource Access Profile
 {{I-D.draft-mcguinness-oauth-mission-resource-access}} is an example of
-a type specification that defines such a comparison.
+a type specification that defines such a comparison. This document
+defines no way to discover which narrowings an authorization server
+accepts; a client that needs one learns from the refusal.
 
 A token issued by Token Exchange from a Mission-bound subject token
 carries the same `mission` claim, is subject to this rule, and is
@@ -385,9 +389,9 @@ error response:
 : A string: the Mission's termination reason, `revoked` or `expired`,
   or another registered reason ({{iana-reasons}}).
 
-A client that receives `mission_error` stops the work and does not
-seek another credential for it: no retry under the same Mission
-succeeds.
+A client that receives `mission_error`, with any value, stops the
+work and does not seek another credential for it: no retry under the
+same Mission succeeds.
 
 # Lifecycle {#lifecycle}
 
@@ -412,8 +416,10 @@ example on detecting refresh token replay. So a client ends its own
 Mission by revoking its refresh token. Rotation, which replaces a
 refresh token with another of the same lineage, is not revocation.
 
-A specification can register further states ({{iana-states}}). A
-party treats a state it does not recognize as not active.
+A specification can register further states ({{iana-states}}) and
+termination reasons ({{iana-reasons}}). A party treats a state it does
+not recognize as not active, and a termination reason it does not
+recognize as an ending.
 
 Ending a Mission stops issuance at once. An access token already
 issued remains acceptable to a resource server that relies on the
@@ -434,9 +440,10 @@ as a path segment.
 
 Every request to the endpoint carries an access token issued for the
 endpoint, presented as {{RFC6750}} or, for a DPoP-bound token,
-{{RFC9449}} describes. A request authorized only by a Mission-bound
-token is refused. The authorization server authorizes a request for a
-Mission when:
+{{RFC9449}} describes. A missing or invalid access token, or one not
+issued for the endpoint, such as a Mission-bound token, is refused
+with `invalid_token` ({{Section 3.1 of RFC6750}}). The authorization
+server authorizes a request for a Mission when:
 
 - the access token was issued to the Mission's client, for example
   through the client credentials grant ({{Section 4.4 of RFC6749}});
@@ -444,9 +451,9 @@ Mission when:
 - its policy authorizes the access token's holder for that Mission,
   for example the resource owner, the approver, or an administrator.
 
-A request for a Mission the caller is not authorized for receives the
-same response as one for an unknown Mission Identifier, so the
-endpoint does not reveal which identifiers exist.
+Under an accepted access token, an unknown Mission Identifier and one
+the caller is not authorized for both return HTTP 404, so the endpoint
+does not reveal which identifiers exist.
 
 `GET` returns HTTP 200 and a JSON object with the Mission's `id`,
 `issuer`, `state`, `expires_at`, and `termination` when present. It
@@ -456,9 +463,6 @@ server authorizes to read the Approved Authority.
 `DELETE` ends an active Mission with termination reason `revoked` and
 returns HTTP 204. A `DELETE` for a Mission that has already ended
 changes nothing and returns HTTP 204.
-
-An unknown or unauthorized Mission Identifier returns HTTP 404. An
-invalid or missing access token is refused as {{RFC6750}} describes.
 
 # Resource Server Enforcement {#rs-enforcement}
 
@@ -546,11 +550,12 @@ cannot raise its authority by refreshing or exchanging. A narrowing
 the type cannot compare is refused rather than guessed.
 
 **Refresh token theft.** A Mission's authority lasts as long as its
-refresh token can be used. A confidential client's refresh token is
-bound to the client by client authentication
-({{Section 6 of RFC6749}}). Where several users' devices can obtain the client's
-credentials, that binding does not separate them, and binding the
-refresh token to a proof-of-possession key {{RFC9449}} does. The
+refresh token can be used. For a confidential client, the
+authorization server authenticates the client on refresh and verifies
+that the refresh token was issued to it ({{Section 6 of RFC6749}}).
+Where several users' devices can obtain the client's credentials, that
+check does not separate them, and binding the refresh token to a
+proof-of-possession key {{RFC9449}} does. The
 security best current practice {{RFC9700}} applies.
 
 **Acceptance after ending.** Tokens already issued outlive the ending
@@ -561,8 +566,7 @@ or introspection on each use, bound that interval.
 authorization independent of the Mission's own tokens, so a party
 holding a stolen Mission-bound token cannot end or inspect the
 Mission, and a party that must stop the work does not need the
-client's cooperation. The uniform 404 keeps identifiers from being
-probed.
+client's cooperation.
 
 **Downgrade.** Without a Mission, a client's tokens are unaffected
 when the work is withdrawn. A client that requested a Mission and got
@@ -654,7 +658,7 @@ framework for approved bounded work
 | Requirement | Met by |
 |---|---|
 | R1: an identifier distinct from the client, any token, and any refresh token family | The Mission Identifier ({{record}}) |
-| R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). This document records the bounds and the approver, not a description of the work; a specification that adds one does so through {{extension-points}}. |
+| R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the approver, not the request: it does not distinguish the authorization server's narrowing from the approver's. It records no description of the work; a specification that adds one does so through {{extension-points}}. |
 | R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule ({{subset}}) |
 | R4: every issuance path refuses once the authorization has ended | Issuance gating ({{gating}}) |
 | R5: a party holding no token ends one authorization without affecting the client's other work | `DELETE` at the management endpoint, and a lineage per Mission ({{management}}, {{lineage}}) |
