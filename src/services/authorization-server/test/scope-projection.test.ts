@@ -13,6 +13,7 @@
  */
 import type { Server } from "node:http";
 import { ResourceContractDeclarations, type ResourceContractRef, resourceContractDigest } from "@mission/core";
+import { type MixedRsHandler, startMixedResourceServer } from "@mission/mixed-rs";
 import { startPlainResourceServer } from "@mission/plain-rs";
 import {
   DERIVATION_POLICY,
@@ -48,6 +49,7 @@ import { FAR_EXPIRES_AT, FIXTURE_EXPIRES_AT } from "./relative-expiry.helper.js"
 const PORT = 14620;
 const RS_PORT = 14621;
 const RS_INTROSPECT_PORT = 14622;
+const MIXED_RS_PORT = 14623;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const PLAIN = TOPOLOGY.resources.plainRs;
@@ -107,6 +109,9 @@ let as: BuiltAs;
 let asServer: Server;
 let rs: Server;
 let rsIntrospecting: Server;
+/** The mixed Resource Server at the plain RS audience (#2072). */
+let mixedRs: Server;
+let mixedHandler: MixedRsHandler;
 let agentKey: CryptoKey;
 let governedKey: CryptoKey;
 /** The TEST's own copy of the AT signing key it injected, to craft adversarial subject tokens. */
@@ -336,6 +341,23 @@ async function callRs(port: number, method: "GET" | "POST", accessToken: string,
   });
 }
 
+/** Call the mixed Resource Server with a DPoP-bound access token; a write carries `cost`. */
+async function callMixed(method: "GET" | "POST", accessToken: string, keys: Keys, cost?: string): Promise<Response> {
+  const url = `http://localhost:${MIXED_RS_PORT}/api/reports`;
+  const ath = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken))).toString(
+    "base64url",
+  );
+  return fetch(url, {
+    method,
+    headers: {
+      authorization: `DPoP ${accessToken}`,
+      dpop: await dpopProof(keys, method, url, { ath }),
+      ...(method === "POST" ? { "content-type": "application/json" } : {}),
+    },
+    ...(method === "POST" ? { body: JSON.stringify({ title: "Q3 audit", cost: { amount: cost, currency: "USD" } }) } : {}),
+  });
+}
+
 beforeAll(async () => {
   const signing = await generateKeyPair("RS256", { extractable: true });
   signingKey = signing.privateKey;
@@ -368,12 +390,17 @@ beforeAll(async () => {
     },
     RS_INTROSPECT_PORT,
   );
+  ({ server: mixedRs, handler: mixedHandler } = await startMixedResourceServer(
+    { ...base, baseUrl: `http://localhost:${MIXED_RS_PORT}` },
+    MIXED_RS_PORT,
+  ));
 });
 
 afterAll(() => {
   asServer?.close();
   rs?.close();
   rsIntrospecting?.close();
+  mixedRs?.close();
 });
 
 describe("scope projection at the token endpoint (@spec mission#scope-projection)", () => {
@@ -1884,6 +1911,80 @@ describe("the per-entry projection conditions at the token endpoint (@spec resou
       const requested = await issue([entry([READ, WRITE])], URI_VALUE);
       expect(requested.status, JSON.stringify(requested.body)).toBe(200);
       expect(requested.body.scope).toBe(URI_VALUE);
+    });
+  });
+});
+
+/**
+ * @spec mission#scope-projection-per-audience, mission#scope-projection-requested
+ * (#2072, D1321): the plain RS audience run as a mixed audience. It enforces
+ * a read entry through the projected `reports.read` and consumes a
+ * `max_amount`-constrained write entry as `authorization_details`.
+ */
+describe("a mixed audience (@spec mission#scope-projection-per-audience, mission#scope-projection-requested, #2072)", () => {
+  const MIXED = {
+    version: "mixed-1",
+    mission_aware: false,
+    mode: "mixed",
+    scopes: {
+      "reports.read": { rights: rights([READ]), mandatory_controls: {} },
+      "reports.write": { rights: rights([WRITE]), mandatory_controls: {} },
+    },
+    mission_constraints_supported: ["max_amount"],
+  };
+  const CAPPED_WRITE = entry([WRITE], { constraints: { max_amount: { amount: "100.00", currency: "USD" } } });
+  const claims = (jwt: string): Json => JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
+
+  it("grants a requested read scope although the audience consumes the write entry as authorization_details, carries the capped write entry unprojected, and the plain RS honors the read and refuses the write", async () => {
+    await withPlain(MIXED, async () => {
+      const keys = await newKeys();
+      const r = await authorize([entry([READ]), CAPPED_WRITE], { scope: "reports.read" });
+      expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+      expect(r.code, JSON.stringify(r)).toBeTruthy();
+      const res = await redeem(r.code as string, keys);
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      const payload = claims(res.body.access_token as string);
+      expect(payload.scope).toBe("reports.read");
+      expect(payload.authorization_details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ actions: [WRITE], constraints: CAPPED_WRITE.constraints })]),
+      );
+      // The scope-only plain RS at this audience enforces the projected read,
+      // and the read scope authorizes no write there.
+      expect((await callRs(RS_PORT, "GET", res.body.access_token as string, keys)).status).toBe(200);
+      expect((await callRs(RS_PORT, "POST", res.body.access_token as string, keys)).status).toBe(403);
+    });
+  });
+
+  it("at the mixed Resource Server under the AS-issued token, the projected read succeeds, a write the capped entry covers is performed, and an over-limit write is refused despite the read scope, with no effect", async () => {
+    await withPlain(MIXED, async () => {
+      const keys = await newKeys();
+      const r = await authorize([entry([READ]), CAPPED_WRITE], { scope: "reports.read" });
+      expect(r.code, JSON.stringify(r)).toBeTruthy();
+      const res = await redeem(r.code as string, keys);
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      const at = res.body.access_token as string;
+      expect((await callMixed("GET", at, keys)).status).toBe(200);
+      const before = mixedHandler.reports.length;
+      const covered = await callMixed("POST", at, keys, "60.00");
+      expect(covered.status, await covered.clone().text()).toBe(201);
+      expect(mixedHandler.reports.length).toBe(before + 1);
+      expect(mixedHandler.reports.at(-1)?.cost).toEqual({ amount: "60.00", currency: "USD" });
+      const over = await callMixed("POST", at, keys, "150.00");
+      expect(over.status).toBe(403);
+      expect(over.headers.get("www-authenticate")).toMatch(/mission_denial="insufficient_authority"/);
+      expect(mixedHandler.reports.length).toBe(before + 1);
+    });
+  });
+
+  it("refuses invalid_scope a requested write scope no entry the audience enforces through scope makes safe, creating no Mission", async () => {
+    await withPlain(MIXED, async () => {
+      const before = as.kernel.allMissions().length;
+      const r = await authorize([entry([READ]), CAPPED_WRITE], { scope: "reports.write" });
+      expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+      expect(r.code).toBeUndefined();
+      expect(r.error).toBe("invalid_scope");
+      expect(r.description).toMatch(/reports\.write cannot be granted: no carried entry the audience enforces through scope makes it safe/);
+      expect(as.kernel.allMissions().length).toBe(before);
     });
   });
 });

@@ -2211,7 +2211,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     expect(fgaBootstrap).not.toHaveBeenCalled();
   });
 
-  it("refuses startup with MISSION_REQUEST_INTAKE=1 beside MISSION_KERNEL_STORE with the AS's own refusal, never skipping the type, and keeps no listener it opened, the request intake's and the upstream provider's included (D1119 Q5, #1963, D1221)", async () => {
+  it("starts with MISSION_REQUEST_INTAKE=1 beside MISSION_KERNEL_STORE, the type's replay store in the kernel's file, and on close releases every listener it opened, the request intake's and the upstream provider's included, and the kernel's file (D1119 Q5, #1963, D1221)", async () => {
     const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
     const dir = mkdtempSync(join(tmpdir(), "as-native-intake-kernel-"));
     const ring = join(dir, "keys", "ring.json");
@@ -2223,6 +2223,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       MISSION_KERNEL_STORE: kernelFile,
       MISSION_KERNEL_WITNESS: initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness")),
       MISSION_RAS_REDEMPTIONS: rasStore(),
+      MISSION_REQUEST_INTAKE: "1",
     };
     const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
     // Every listener this composition opens, whatever its port.
@@ -2232,19 +2233,58 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       opened.add(this);
       return listen.apply(this, args as never);
     } as never);
+    let intakeIssuer: string | undefined;
     try {
-      // A target that launches anyway is closed at once, so it holds no port or file for the tests after this one.
-      let refusal: unknown;
+      const launched = await launchAsNative({ ...launchOptions(env, files), approverIdpPort: LAUNCH_IDP_PORT });
       try {
-        const wrongly = await launchAsNative({ ...launchOptions({ ...env, MISSION_REQUEST_INTAKE: "1" }, files), approverIdpPort: LAUNCH_IDP_PORT });
-        await wrongly.close();
-      } catch (err) {
-        refusal = err;
+        const intake = launched.stack.authServer?.requestIntake;
+        expect(intake).toBeDefined();
+        intakeIssuer = intake?.service.issuer as string;
+        expect(launched.summary).toContain(`  kernel store       ${kernelFile} (kept across restarts; recovery witness ${env.MISSION_KERNEL_WITNESS})`);
+        expect(launched.summary.some((line) => line.startsWith(`  request intake     ${intakeIssuer}/login`))).toBe(true);
+        // The replay pairs and acceptance records are kept on the kernel's database, in its file.
+        expect(launched.stack.kernel.db.name).toBe(kernelFile);
+        expect(
+          launched.stack.kernel.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'request_provenance_pairs'").get(),
+        ).toEqual({ name: "request_provenance_pairs" });
+        expect(await accepts(intakeIssuer)).toBe(true);
+      } finally {
+        await launched.close();
       }
-      expect((refusal as Error | undefined)?.message).toBe(
-        "mission-request-provenance cannot be enabled on a file-backed kernel store: its replay history and acceptance records are in memory only and do not survive a restart (D1119 Q5, #1963)",
+      // The discovery listener, the request intake, the provider and the AS's own were open.
+      expect(opened.size).toBeGreaterThanOrEqual(4);
+      for (const server of opened) expect(server.listening).toBe(false);
+      expect(await accepts(intakeIssuer as string)).toBe(false);
+      expect(await accepts(`http://127.0.0.1:${LAUNCH_IDP_PORT}`)).toBe(false);
+    } finally {
+      listening.mockRestore();
+      await Promise.all(
+        [...opened].filter((server) => server.listening).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
       );
-      // The discovery listener, the request intake and the provider were open when the AS refused.
+    }
+    // Close released the kernel's file and its witness: the same configuration starts again.
+    const again = await launchAsNative(launchOptions(env, files));
+    try {
+      expect(again.stack.authServer?.requestIntake).toBeDefined();
+    } finally {
+      await again.close();
+    }
+  });
+
+  it("refuses startup with MISSION_REQUEST_INTAKE=1 when the AS cannot be built, its kernel file a directory, and keeps no listener it opened, the request intake's and the upstream provider's included (#939 slice 2b-2, D1221)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "as-native-intake-build-"));
+    // Every listener this composition opens, whatever its port.
+    const opened = new Set<NetServer>();
+    const listen = NetServer.prototype.listen;
+    const listening = vi.spyOn(NetServer.prototype, "listen").mockImplementation(function (this: NetServer, ...args: unknown[]) {
+      opened.add(this);
+      return listen.apply(this, args as never);
+    } as never);
+    try {
+      await expect(
+        launchAsNative({ ...launchOptions({ MISSION_REQUEST_INTAKE: "1" }), kernelStore: { file: dir }, approverIdpPort: LAUNCH_IDP_PORT }),
+      ).rejects.toThrow(/unable to open database/);
+      // The discovery listener, the request intake and the provider were open when the build failed.
       expect(opened.size).toBeGreaterThanOrEqual(3);
       for (const server of opened) expect(server.listening).toBe(false);
       expect(await accepts(`http://127.0.0.1:${LAUNCH_IDP_PORT}`)).toBe(false);
@@ -2253,14 +2293,6 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       await Promise.all(
         [...opened].filter((server) => server.listening).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
       );
-    }
-    // The refusal is the pairing's alone: the same kernel store starts without the intake.
-    const launched = await launchAsNative(launchOptions(env, files));
-    try {
-      expect(launched.stack.authServer?.requestIntake).toBeUndefined();
-      expect(launched.summary).toContain("  request intake     off");
-    } finally {
-      await launched.close();
     }
   });
 

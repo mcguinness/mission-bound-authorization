@@ -169,8 +169,8 @@ This document defines one `authorization_details` type a deployment of
 the issuance profile {{I-D.draft-mcguinness-oauth-mission}} MAY support;
 the issuance profile is complete, and type-agnostic, without it. The
 type is general-purpose: an authorization server with no need for a
-narrower, audience-specific type can use it directly, as the issuance
-profile's worked examples do.
+narrower, audience-specific type can use it directly, as the family's
+shared Q3 reconciliation example does.
 
 # Conventions and Terminology {#conventions}
 

@@ -13,7 +13,7 @@ import { type Server } from "node:http";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, parseRequestProvenanceConfig } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -315,6 +315,30 @@ describe("the AS on a witnessed kernel store: review fixes (@spec control-plane#
       capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "deferred-approval"]),
       deferredApproval: { pendingLifetimeS: 600, maxPendingPerClient: 3 },
       kernelStore: { file: paths.store, witness: paths.witness },
+      // #1963: with the type enabled, its replay store's table joins the kernel database.
+      requestProvenance: {
+        config: parseRequestProvenanceConfig({
+          enabled: true,
+          clock_skew_seconds: 5,
+          max_assertion_lifetime_seconds: 60,
+          max_capture_age_seconds: 60,
+          signers: [
+            {
+              iss: "https://intake.example.org",
+              keys: [
+                {
+                  kid: "intake-1",
+                  public_jwk: (await exportJWK((await generateKeyPair("ES256")).publicKey)) as never,
+                  evidence_types: ["mission-request-provenance"],
+                  algs: ["ES256"],
+                },
+              ],
+              originators: [{ iss: "https://idp.example.org" }],
+              channel_types: ["https://intake.example.org/ch/app"],
+            },
+          ],
+        }),
+      },
     });
     try {
       const tables = (
@@ -410,6 +434,7 @@ const KERNEL_TABLE_INVENTORY = [
   "missions",
   "progressive_refusals",
   "recovery_marker",
+  "request_provenance_pairs",
   "standing_payment_admissions",
   "standing_payment_budget_bindings",
   "standing_payment_dispatches",

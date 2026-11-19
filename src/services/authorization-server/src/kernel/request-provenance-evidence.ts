@@ -89,6 +89,9 @@ export function createRequestProvenanceEvidenceType(
 ): IntentSubmissionEvidenceType {
   const now = opts.now ?? (() => new Date());
   const retentionMs = opts.acceptanceRetentionSeconds * 1000;
+  // One runner per store, so every hold of a submission names the same one
+  // and the scope settles them in one transaction (#2060 review).
+  const atomically = (steps: () => void): void => opts.store.transaction(steps);
   return {
     validate(entry) {
       const refused = checkRequestProvenanceEntry(entry);
@@ -141,6 +144,7 @@ export function createRequestProvenanceEvidenceType(
         release() {
           opts.store.release(token);
         },
+        atomically,
       });
       return result.facts;
     },

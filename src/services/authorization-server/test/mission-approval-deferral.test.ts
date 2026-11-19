@@ -13,6 +13,7 @@ import {
   type MissionApprovalDeferralOptions,
   MissionKernel,
   type ModelAdvisorRequest,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
   validateMissionIntent,
@@ -118,6 +119,8 @@ const setup = (
       root: { id, version: "1" },
       approver: { iss: ISS, sub: "dana" },
       consentEventId: `gpce-${seq++}`,
+      // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+      disclosure: governedPolicyConsentDisclosure(kernel, { id, version: "1" }).commitment,
     }),
   );
   return { kernel, consents, store: new MissionApprovalDeferralStore(kernel, { now, ...opts }) };

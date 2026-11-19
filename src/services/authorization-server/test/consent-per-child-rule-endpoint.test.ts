@@ -70,6 +70,8 @@ const RULE_3 =
   "Each child Mission created under this consent establishes its own derivation limit from its own request, never above 3.";
 const SCOPE =
   "This maximum is local to each child Mission: it is not a budget across the Missions this consent admits, their descendants, or their lifetimes.";
+/** This deployment holds a delegation family store, so it supports the async delegation transport. */
+const ASYNC = "The refreshes of an async delegation family are not counted against this limit.";
 
 let as: BuiltAs;
 let server: Server;
@@ -185,6 +187,7 @@ describe("the Mission approval page renders the per-child rule a Progressive cei
     for (const lines of blocks) {
       expect(lines).toContain(RULE_3);
       expect(lines).toContain(SCOPE);
+      expect(lines).toContain(ASYNC);
     }
     const decided = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
@@ -252,6 +255,7 @@ describe("the Expansion approval page renders and binds the per-child rule its d
     for (const lines of blocks) {
       expect(lines).toContain(RULE_3);
       expect(lines).toContain(SCOPE);
+      expect(lines).toContain(ASYNC);
     }
     const approved = await decide(code, headers, { render_revision: revision });
     expect(approved.status, await approved.text()).toBe(200);
@@ -297,7 +301,10 @@ describe("the Expansion approval page renders and binds the per-child rule its d
     const { html, revision } = await render(code, headers);
     const blocks = items(html, "reconsent-child-subtree");
     expect(blocks).toHaveLength(FULL_CEILING.length);
-    for (const lines of blocks) expect(lines).toContain(RULE_3);
+    for (const lines of blocks) {
+      expect(lines).toContain(RULE_3);
+      expect(lines).toContain(ASYNC);
+    }
     const approved = await decide(code, headers, { render_revision: revision, reconsent: true });
     expect(approved.status, await approved.text()).toBe(200);
     const successor = await withFigure(10, () => complete(code));
@@ -336,6 +343,7 @@ describe("the Mission Template consent page renders the per-child rule the templ
     const [lines] = items(await page(id), "template-child-subtree");
     expect(lines).toContain(RULE_3);
     expect(lines).toContain(SCOPE);
+    expect(lines).toContain(ASYNC);
     const approved = await decide(id);
     const { template_id } = (await approved.json()) as { template_id: string };
     expect(approved.status).toBe(201);

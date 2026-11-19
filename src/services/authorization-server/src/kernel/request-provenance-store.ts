@@ -1,5 +1,5 @@
 /**
- * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1, Q2 and Q5)
+ * @spec request-provenance#replay (#939 slice 2a-2, D1119 Q1, Q2 and Q5, #1963)
  *
  * The replay store of the `mission-request-provenance` evidence type: the
  * (`iss`, `jti`) pairs verification step 10 reserves, each with the
@@ -15,20 +15,33 @@
  *   committed pair: the store releases only a reservation, and the
  *   admission scope that owns it releases nothing once committed
  *   (`SubmissionAdmission`).
+ * - **Transaction** runs a settlement's commits as one unit: a write that
+ *   fails rolls every commit of the settlement back, and the scope then
+ *   releases the reservations, so a push refused at acceptance leaves each
+ *   assertion retryable (#2060 review). A commit whose outcome a crash or a
+ *   lost response leaves unknown stays committed and refuses its assertion
+ *   as replay; its client recovers with a fresh assertion (D1119 Q1).
  *
  * A reservation never outlives `exp` plus the clock-skew allowance. A
  * committed pair is retained until the later of that instant and the end of
  * the accepted submission's pending operation, since the steps that rely on
  * its acceptance record run after `exp` (D1119 Q2).
  *
- * Only an in-memory implementation exists. It suits explicitly ephemeral
- * demonstrations: a restart forgets every pair, so an unexpired assertion
- * is accepted again and an accepted submission loses its acceptance record
- * (D1119 Q5, #1963). The authorization server therefore refuses to enable
- * the type on a file-backed kernel store.
+ * Two implementations. {@link SqliteRequestProvenanceStore} keeps the pairs
+ * and their records on the kernel's database, so they are as durable as the
+ * kernel: in memory without a kernel file, and kept across a restart with
+ * one (D1119 Q5, #1963). It is the authorization server's store.
+ * {@link InMemoryRequestProvenanceStore} suits explicitly ephemeral
+ * demonstrations and unit tests only: a restart forgets every pair, so an
+ * unexpired assertion is accepted again and an accepted submission loses its
+ * acceptance record. The authorization server refuses a supplied store
+ * beside a file-backed kernel store, since only the kernel's own database
+ * survives a restart with the kernel.
  */
 
+import { randomBytes } from "node:crypto";
 import type { JsonValue } from "@mission/core";
+import { type Database, withTransaction } from "@mission/store";
 import type { IntentSubmissionPresenter } from "./intent.js";
 
 /** What step 10 reserves: the pair and the acceptance record a later step relies on. */
@@ -84,6 +97,11 @@ export interface RequestProvenanceStore {
   commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean;
   /** Release the reservation `token`. Idempotent; no effect on another token, nor on a committed pair. */
   release(token: string): void;
+  /**
+   * Run `fn` as one transaction: every write it makes takes effect, or, when
+   * it throws, none does, and the error is rethrown.
+   */
+  transaction(fn: () => void): void;
   /** The committed acceptance of (`iss`, `jti`) while it is retained, else undefined. */
   accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined;
 }
@@ -163,10 +181,142 @@ export class InMemoryRequestProvenanceStore implements RequestProvenanceStore {
     if (found !== undefined && found[1].state === "reserved") this.#rows.delete(found[0]);
   }
 
+  transaction(fn: () => void): void {
+    const snapshot = new Map([...this.#rows].map(([key, row]) => [key, { ...row }]));
+    try {
+      fn();
+    } catch (e) {
+      this.#rows.clear();
+      for (const [key, row] of snapshot) this.#rows.set(key, row);
+      throw e;
+    }
+  }
+
   accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined {
     const row = this.#rows.get(pairKey(iss, jti));
     if (row === undefined || row.state !== "committed" || row.submissionRef === undefined) return undefined;
     if (InMemoryRequestProvenanceStore.#lapsesAt(row) <= nowMs) return undefined;
     return { ...structuredClone(row.record), submissionRef: row.submissionRef };
+  }
+}
+
+/**
+ * One row per held pair. `UNIQUE (iss, jti)` is what makes a reservation
+ * atomic: the reserving `INSERT` is one statement, and a pair another
+ * submission holds conflicts in the database itself. `record_json` is the
+ * acceptance record exactly as reserved; a committed row adds the accepted
+ * submission's reference and the end of its retention.
+ */
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS request_provenance_pairs (
+  iss TEXT NOT NULL,
+  jti TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  state TEXT NOT NULL CHECK (state IN ('reserved', 'committed')),
+  record_json TEXT NOT NULL,
+  submission_ref TEXT,
+  expires_at_ms INTEGER NOT NULL,
+  retain_until_ms INTEGER,
+  UNIQUE (iss, jti),
+  CHECK ((state = 'committed') = (submission_ref IS NOT NULL AND retain_until_ms IS NOT NULL))
+) STRICT;
+`;
+
+/** When a row stops holding its pair: a reservation at `exp` plus skew, a committed pair at the later of that and its retention. */
+const LAPSES_AT = "(CASE WHEN state = 'committed' THEN MAX(expires_at_ms, retain_until_ms) ELSE expires_at_ms END)";
+
+interface SqliteRow {
+  state: "reserved" | "committed";
+  record_json: string;
+  submission_ref: string | null;
+  expires_at_ms: number;
+  retain_until_ms: number | null;
+}
+
+/**
+ * The replay store on a SQLite database: the authorization server's own, on
+ * its kernel's database (`kernel.db`), so it is as durable as the kernel. A
+ * file-backed kernel runs WAL with `synchronous=FULL`, and under a recovery
+ * witness every write here commits through the kernel's guarded
+ * transactions, so a reservation, a commit and a release each survive a
+ * restart once they return. Every method is synchronous inside; `reserve`
+ * sweeps and inserts with no await between.
+ *
+ * A reservation whose process ended before it committed or released holds
+ * its pair until `exp` plus the clock-skew allowance, as any uncommitted
+ * reservation does, and then lapses: nothing at open releases it.
+ */
+export class SqliteRequestProvenanceStore implements RequestProvenanceStore {
+  readonly db: Database;
+  readonly #sweep;
+  readonly #insert;
+  readonly #byToken;
+  readonly #commit;
+  readonly #release;
+  readonly #byPair;
+
+  constructor(db: Database) {
+    this.db = db;
+    db.exec(SCHEMA);
+    this.#sweep = db.prepare(`DELETE FROM request_provenance_pairs WHERE ${LAPSES_AT} <= ?`);
+    this.#insert = db.prepare(
+      `INSERT INTO request_provenance_pairs (iss, jti, token, state, record_json, expires_at_ms)
+       VALUES (?, ?, ?, 'reserved', ?, ?)
+       ON CONFLICT (iss, jti) DO NOTHING`,
+    );
+    this.#byToken = db.prepare(
+      "SELECT state, record_json, submission_ref, expires_at_ms, retain_until_ms FROM request_provenance_pairs WHERE token = ?",
+    );
+    this.#commit = db.prepare(
+      `UPDATE request_provenance_pairs SET state = 'committed', submission_ref = ?, retain_until_ms = ?
+       WHERE token = ? AND state = 'reserved' AND expires_at_ms > ?`,
+    );
+    this.#release = db.prepare("DELETE FROM request_provenance_pairs WHERE token = ? AND state = 'reserved'");
+    this.#byPair = db.prepare(
+      "SELECT state, record_json, submission_ref, expires_at_ms, retain_until_ms FROM request_provenance_pairs WHERE iss = ? AND jti = ?",
+    );
+  }
+
+  static #lapsesAt(row: SqliteRow): number {
+    return row.state === "committed" ? Math.max(row.expires_at_ms, row.retain_until_ms ?? 0) : row.expires_at_ms;
+  }
+
+  async reserve(record: RequestProvenanceRecord, nowMs: number): Promise<string | undefined> {
+    const token = `rpr_${randomBytes(18).toString("base64url")}`;
+    const json = JSON.stringify(record);
+    const inserted = withTransaction(this.db, () => {
+      this.#sweep.run(nowMs);
+      // One statement: a pair another submission holds conflicts here.
+      return this.#insert.run(record.iss, record.jti, token, json, record.expiresAtMs).changes === 1;
+    });
+    return inserted ? token : undefined;
+  }
+
+  committable(token: string, nowMs: number): boolean {
+    const row = this.#byToken.get(token) as SqliteRow | undefined;
+    return row !== undefined && row.state === "reserved" && row.expires_at_ms > nowMs;
+  }
+
+  commit(token: string, ref: string, nowMs: number, retainUntilMs: number): boolean {
+    if (this.#commit.run(ref, retainUntilMs, token, nowMs).changes === 1) return true;
+    const row = this.#byToken.get(token) as SqliteRow | undefined;
+    // Committed already: true only for the same accepted submission.
+    return row !== undefined && row.state === "committed" && row.submission_ref === ref;
+  }
+
+  release(token: string): void {
+    // Only a reservation: a committed pair keeps its acceptance record until its retention ends.
+    this.#release.run(token);
+  }
+
+  transaction(fn: () => void): void {
+    withTransaction(this.db, fn);
+  }
+
+  accepted(iss: string, jti: string, nowMs: number): RequestProvenanceAcceptance | undefined {
+    const row = this.#byPair.get(iss, jti) as SqliteRow | undefined;
+    if (row === undefined || row.state !== "committed" || row.submission_ref === null) return undefined;
+    if (SqliteRequestProvenanceStore.#lapsesAt(row) <= nowMs) return undefined;
+    return { ...(JSON.parse(row.record_json) as RequestProvenanceRecord), submissionRef: row.submission_ref };
   }
 }

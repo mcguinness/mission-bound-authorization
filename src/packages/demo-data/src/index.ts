@@ -2974,7 +2974,7 @@ export function loadScopeProjection(
     if (audiences[key])
       throw new ConfigError(file, `ambiguous mapping: two entries for audience ${key}`);
     audiences[key] =
-      m.mode === "scope_only"
+      m.mode === "scope_only" || m.mode === "mixed"
         ? {
             ...m,
             scopes: Object.fromEntries(

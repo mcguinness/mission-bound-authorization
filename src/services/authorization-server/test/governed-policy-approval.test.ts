@@ -37,6 +37,7 @@ import {
   recheckApprovalGovernanceRecord,
   recheckGovernedActivation,
   type RecordedModelOutput,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
   signApprovalGovernanceRecord,
@@ -188,6 +189,8 @@ const consent = (kernel: MissionKernel, approver = "dana") =>
     root: { id: ROOT_ID, version: "1" },
     approver: { iss: ISS, sub: approver },
     consentEventId: `gpce-${seq++}`,
+    // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+    disclosure: governedPolicyConsentDisclosure(kernel, { id: ROOT_ID, version: "1" }).commitment,
   });
 
 const activate = (

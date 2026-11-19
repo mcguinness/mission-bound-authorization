@@ -1044,8 +1044,8 @@ A Consent Evidence object has these members:
 
 Example, over the worked disclosure of {{disclosure-vector}}. The
 Mission's record carries the same `consent_rendering_hash`, which this
-profile adds to the record the issuance profile's Worked Example
-shows:
+profile adds to the record of the family's shared Q3 reconciliation
+example:
 
 ~~~ json
 {
@@ -1592,8 +1592,7 @@ This non-normative vector lets an implementation verify its
 `consent_rendering_hash` computation ({{consent-rendering-hash}}) byte
 for byte. The disclosure is the one the evidence example of
 {{consent-evidence}} records. It renders the Authority Set of the
-issuance profile's Worked Example Mission
-({{I-D.draft-mcguinness-oauth-mission}}): `invoices.read` on invoices
+family's shared Q3 reconciliation Mission: `invoices.read` on invoices
 issued in 2026-Q3, delegable to AI agents, and
 `journal-entries.write` bounded by a `max_amount` of 500.00 USD, on
 `https://erp.example.com`, approved by `alice`

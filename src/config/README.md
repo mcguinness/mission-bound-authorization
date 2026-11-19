@@ -416,10 +416,12 @@ intake's one signer, and the intake signs with an assertion lifetime of
 `max_assertion_lifetime_seconds` and a maximum capture age of
 `max_capture_age_seconds`, so the two halves share one bound. The file
 itself stays disabled. The type is accepted, not required of any client.
-Any other value of the variable refuses startup by name. With
-`MISSION_KERNEL_STORE` also set, the AS refuses to start, since the type's
-replay history and acceptance records are in memory only and would not
-survive a restart (D1119 Q5, #1963). `server.ts` never enables the type.
+Any other value of the variable refuses startup by name. The type's replay
+history and acceptance records are kept on the kernel's database (D1119 Q5,
+#1963): in memory without `MISSION_KERNEL_STORE`, and in the kernel's file,
+kept across restarts, with it. An AS built with a replay store of its own
+beside a kernel file refuses to start, since only the kernel's database
+survives a restart with the kernel. `server.ts` never enables the type.
 
 **Loopback cookies.** The launcher runs the intake and the reference IdP on
 `127.0.0.1`, each on a port of its own. Cookies are scoped by host, not by

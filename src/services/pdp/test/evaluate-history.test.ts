@@ -878,13 +878,16 @@ describe("the History Context evaluates policy-selected predicates against verif
 
   it("refuses an unrecognized policy-selected predicate as not establishable, even where every recognized one is satisfied", async () => {
     const records = [await decisionRecord({ evaluation_id: "w1", action_class: "consequential_write" }), await executionRecord({ evaluation_id: "w1", outcome: "completed" })];
-    const decision = await evaluate(request(), options(historyBinding(records, [WRITE_COMPLETED, { predicate: "backup_was_recent" }])));
+    // The unrecognized type names an operation; the PDP cannot know that it selects one, so its entry carries no action (#2048).
+    const unrecognized: HistoryPredicate = { predicate: "backup_was_recent", action: "db:database.backup" };
+    const decision = await evaluate(request(), options(historyBinding(records, [WRITE_COMPLETED, unrecognized])));
     expect(decision.decision).toBe(false);
     expect(decision.context.denial_reason).toBe("history_not_satisfied");
     expect(historyOf(decision)).toEqual([
       { predicate: "action_class_completed", action_class: "consequential_write", outcome: "satisfied" },
       { predicate: "backup_was_recent", outcome: "unavailable" },
     ]);
+    expect(historyOf(decision)?.[1]).not.toHaveProperty("action");
   });
 
   it("counts a permit by membership in action_classes, so a pending execution of a further class keeps the predicate unsatisfied", async () => {

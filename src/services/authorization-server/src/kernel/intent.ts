@@ -214,6 +214,13 @@ export interface SubmissionAdmissionHold {
    */
   prepare(ref: string): (() => void) | undefined;
   release(): void;
+  /**
+   * OPTIONAL. Run a settlement's commit steps as one transaction of the
+   * hold's store: every step takes effect, or, when one throws, none does.
+   * The scope runs all its steps inside it when every hold names the same
+   * one.
+   */
+  atomically?: (steps: () => void) => void;
 }
 
 /**
@@ -225,6 +232,14 @@ export interface SubmissionAdmissionHold {
  * refuses, another entry's failure and the verification-work bound included.
  * Release is idempotent, a committed scope releases nothing, and a released
  * scope commits nothing.
+ *
+ * The commit boundary (#2060 review): the scope is committed only once every
+ * hold's commit has taken effect. A settlement that fails, a write refused
+ * included, releases every hold. Where the holds share a store transaction
+ * the failure rolls every commit back, so each assertion is retryable. A
+ * pair whose commit did take effect before a failure the store cannot undo
+ * (an indeterminate outcome) stays committed, since a store releases only
+ * reservations, and its client recovers with a fresh assertion.
  */
 export class SubmissionAdmission {
   #state: "open" | "committed" | "released" = "open";
@@ -248,7 +263,11 @@ export class SubmissionAdmission {
    * The carrier accepted the submission: commit every hold under `ref`, all
    * or nothing. Every hold is prepared before any commits; when one can no
    * longer commit, the scope releases every hold and throws, committing
-   * none, so each still-valid assertion stays retryable.
+   * none, so each still-valid assertion stays retryable. The commit steps
+   * then run inside the holds' one shared transaction, where they name one,
+   * and the scope is committed only once they all return: a step that
+   * throws rolls every commit back, and the scope releases every hold and
+   * rethrows.
    */
   commit(ref: string): void {
     if (this.#state === "committed") return;
@@ -268,8 +287,22 @@ export class SubmissionAdmission {
       }
       steps.push(step);
     }
+    const runners = new Set(this.#holds.map((hold) => hold.atomically));
+    const atomically = runners.size === 1 ? [...runners][0] : undefined;
+    const settle = (): void => {
+      for (const step of steps) step();
+    };
+    try {
+      if (atomically) atomically(settle);
+      else settle();
+    } catch (e) {
+      // Still open: release every hold. A commit the transaction rolled back
+      // leaves a reservation, which is released; a store never releases a
+      // committed pair, so an indeterminate commit stays protected.
+      this.release();
+      throw e;
+    }
     this.#state = "committed";
-    for (const step of steps) step();
   }
 
   /** Any outcome but acceptance: release every hold, once. A committed scope releases nothing. */

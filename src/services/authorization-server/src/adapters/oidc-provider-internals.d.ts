@@ -31,4 +31,6 @@ declare module "oidc-provider/lib/adapters/memory_adapter.js" {
     destroy: Adapter["destroy"];
     revokeByGrantId: Adapter["revokeByGrantId"];
   }
+  /** Replace the process-global storage every instance shares (a test models a new process with an empty one). */
+  export function setStorage(store: unknown): void;
 }

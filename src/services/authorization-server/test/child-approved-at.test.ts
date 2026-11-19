@@ -12,6 +12,7 @@ import {
   type GovernedPolicyRoot,
   MissionKernel,
   type MissionRecord,
+  governedPolicyConsentDisclosure,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
   TemplateStore,
@@ -226,6 +227,8 @@ describe("a child's approved_at follows the root its authority traces to (@spec 
       root: { id: "urn:policy:root", version: "1" },
       approver: { iss: ISS, sub: "dana" },
       consentEventId: `gpce-${seq++}`,
+      // The commitment of the disclosure the governance surface rendered (#2040, D1278 ruling 1).
+      disclosure: governedPolicyConsentDisclosure(kernel, { id: "urn:policy:root", version: "1" }).commitment,
     });
     at(1);
     const { mission } = activateGovernedPolicy(kernel, {

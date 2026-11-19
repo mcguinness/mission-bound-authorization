@@ -272,7 +272,7 @@ Not exercised by this composition:
   `runtime.semantic-evaluator`, `runtime.taint-enforcement` and
   `runtime.break-glass` (1 each). The loader refuses any break-glass value
   other than `absent` (`loadRuntimePosture`).
-- `runtime.history-input` (8 rows: 7 tested, 1 todo): the PDP implements
+- `runtime.history-input` (16 rows: 10 tested, 6 todo): the PDP implements
   the History Context (#2015). Tested against a bound history policy and
   retained evidence (`src/services/pdp/test/evaluate-history.test.ts`):
   `authzen.context-history.no-caller-asserted-outcome`,
@@ -281,14 +281,26 @@ Not exercised by this composition:
   `authzen.context-history.record-predicates-and-outcomes`,
   `authzen.context-history.action-class-completed-applied-class`,
   `authzen.evidence.mission-history-computed` and
-  `runtime.decision-inputs.history-fail-closed`. Todo:
-  `runtime.decision-inputs.history-no-expand-authority`. This composition
+  `runtime.decision-inputs.history-fail-closed`; the recorded entry's
+  `action` (#2048, `src/services/pdp/test/evaluate-history-prerequisite.test.ts`):
+  `authzen.context-history.entry-records-operation`,
+  `evidence.extensions.mission-history-entry-action` and
+  `authzen.context-history.unrecognized-type-records-no-action` (its
+  witness in `evaluate-history.test.ts`). Todo:
+  `runtime.decision-inputs.history-no-expand-authority` and the five
+  completion-witness rows (#2029):
+  `authzen.context-history.action-class-completed-completion-witness`,
+  `authzen.context-history.action-class-completed-per-permit`,
+  `authzen.context-history.single-use-witness`,
+  `authzen.context-history.unauthorized-execution-not-a-witness` and
+  `authzen.context-history.missing-effective-digest-not-establishable`.
+  This composition
   binds no history policy, so it selects no predicate and does not claim
   the capability. #815's destructive-operation witness binds one only in a
   test-only composition (`src/services/mcp-payments/test/work-item-prerequisite.test.ts`),
   where `work_item_prerequisite_completed` gates a test-only database
-  delete; its ten rows are gated on `harness.work-item-prerequisite`, also
-  unclaimed.
+  delete; its eleven rows are gated on `harness.work-item-prerequisite`,
+  also unclaimed.
 - `mas.join-assertion` (13 rows, all `todo`): the composition has no Join
   Assertion endpoint or consumer, so the capability is unclaimed (#972).
 - `runtime.compromise-resistant` (1 tested, 3 partial, 7 todo) and
