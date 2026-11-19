@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-11-19T21:46:54Z
-Source repository commit: 7c650df1a9807e05f003b921e2cccaf8dcdcf598
+Generated: 2026-11-19T22:10:04Z
+Source repository commit: 2c789bf1fee4491fba621be483cc9da9c32bdc3e
 Member count: 9
 
 Reading order:
@@ -6118,13 +6118,6 @@ Appendix I.  Mission Document Map
     |                               | anchors, the mission claim, the |
     |                               | subset rule, and state-gated    |
     |                               | issuance.                       |
-    +-------------------------------+---------------------------------+
-    | oauth-mission-grants          | Experimental sketch.  A Mission |
-    |                               | without a description of the    |
-    |                               | work: a non-widening approval   |
-    |                               | of authorization details, the   |
-    |                               | mission claim, gated issuance,  |
-    |                               | and a management endpoint.      |
     +-------------------------------+---------------------------------+
     | oauth-mission-resource-access | The mission_resource_access     |
     |                               | type: matching, Common          |

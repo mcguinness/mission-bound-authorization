@@ -6093,13 +6093,6 @@ Appendix I.  Mission Document Map
     |                               | subset rule, and state-gated    |
     |                               | issuance.                       |
     +-------------------------------+---------------------------------+
-    | oauth-mission-grants          | Experimental sketch.  A Mission |
-    |                               | without a description of the    |
-    |                               | work: a non-widening approval   |
-    |                               | of authorization details, the   |
-    |                               | mission claim, gated issuance,  |
-    |                               | and a management endpoint.      |
-    +-------------------------------+---------------------------------+
     | oauth-mission-resource-access | The mission_resource_access     |
     |                               | type: matching, Common          |
     |                               | Constraints, delegation policy, |
