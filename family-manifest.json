@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 52,
+ "count": 53,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -2488,6 +2488,29 @@
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-submission-evidence"
+   ]
+  },
+  {
+   "file": "draft-mcguinness-oauth-mission-tokens.md",
+   "slug": "draft-mcguinness-oauth-mission-tokens",
+   "title": "OAuth 2.0 Mission Tokens",
+   "category": "std",
+   "role": "companion",
+   "spec_maturity": "sketch",
+   "maintenance": "lab-best-effort",
+   "group": "bindings-substrate",
+   "verbs": [
+    "approve",
+    "govern"
+   ],
+   "summary": "A Mission represented as one mission token, an access token for the authorization server: requested with `resource` naming the authorization server, exchanged for resource tokens through Token Exchange under the subset rule and proof of the mission token's key, inspected through introspection, and ended through revocation; adds the `mission` claim and `mission_error`.",
+   "pull_when": "A deployment wants a Mission its clients and resource servers use through standard Token Exchange, introspection, and revocation, without a management endpoint or a refresh token.",
+   "normative_references": [],
+   "adoption_requires": [],
+   "requires_when": [],
+   "references": [
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access"
    ]
   },
   {
