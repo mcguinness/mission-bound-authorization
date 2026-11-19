@@ -5039,7 +5039,6 @@ with no `suspended` state and its own termination reasons, served by
 | Document | Role |
 |---|---|
 | `oauth-mission` | The OAuth binding: approval, anchors, the `mission` claim, the subset rule, and state-gated issuance. |
-| `oauth-mission-tokens` | Experimental sketch. A Mission as one mission token for the authorization server, used through Token Exchange, introspection, and revocation. |
 | `oauth-mission-resource-access` | The `mission_resource_access` type: matching, Common Constraints, delegation policy, and subset algebra. |
 | `mission-authority-server` | The standalone Mission Issuer and the PDP join of ordinary credentials to Missions. |
 | `oauth-mission-issuance-grant` | The issuance join: MAS-minted grants an authorization server redeems for Mission-bound, state-gated tokens. |
