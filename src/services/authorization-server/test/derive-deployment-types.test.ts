@@ -10,6 +10,7 @@
  * Pure, in-memory, no network.
  */
 
+import { generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import { assertWithinSourceCeiling } from "../src/kernel/authority-source.js";
 import {
@@ -18,7 +19,9 @@ import {
   deriveAuthoritySetWithProvenance,
   IntentError,
   type MissionIntent,
+  MissionKernel,
 } from "../src/index.js";
+import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { FAR_EXPIRES_AT } from "./relative-expiry.helper.js";
 
 const R = "https://r.example/mcp";
@@ -85,6 +88,29 @@ describe("derivation holds each ceiling and proposal entry to its own type's rul
     // A proposed entry of either type failing its own rules is refused the same way.
     expect(refusal(() => derive([READ, TENANT], [builtInWithTenant]))).toBe("invalid_authorization_details");
     expect(refusal(() => derive([READ, TENANT], [emptyTenant]))).toBe("invalid_authorization_details");
+  });
+});
+
+describe("an approval adds no built-in member to a deployment-defined entry (#2019 review; @spec mission#transformation-capabilities, resource-access#resource-contract)", () => {
+  it("where configuration requires a resource_contract for the built-in type's entry at a resource, the deployment-defined entry there is derived without one, as approved", async () => {
+    const { privateKey: statusKey } = await generateKeyPair("ES256", { extractable: true });
+    // The shipped payments contract requires a reference for this action at this resource.
+    const payments = "http://localhost:4403/mcp";
+    const execute: AuthorityEntry = { type: "mission_resource_access", resource: payments, actions: ["payments:payment.execute"] };
+    const records = { type: TYPE, resource: payments, actions: ["payments:payment.execute"] } as unknown as AuthorityEntry;
+    const ceiling = [execute, records];
+    const kernel = new MissionKernel({
+      issuer: "https://as.test",
+      policy: { policy_version: "p", ceiling } as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(ceiling, ["agent"], ["bob"]),
+      statusKey,
+      statusKid: "as-status",
+      deploymentTypes: TYPES,
+    });
+    const paymentsIntent: MissionIntent = { goal: "g", target_resources: [payments], expires_at: FAR_EXPIRES_AT };
+    const [built] = kernel.derive(paymentsIntent, [execute]);
+    expect(built?.resource_contract).toBeDefined();
+    expect(kernel.derive(paymentsIntent, [structuredClone(records)])).toEqual([records]);
   });
 });
 
