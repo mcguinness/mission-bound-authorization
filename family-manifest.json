@@ -84,7 +84,7 @@
    "architecture_name": "High-assurance architecture"
   }
  },
- "count": 53,
+ "count": 52,
  "drafts": [
   {
    "file": "draft-mcguinness-mission-control-plane.md",
@@ -2488,29 +2488,6 @@
     "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-submission-evidence"
-   ]
-  },
-  {
-   "file": "draft-mcguinness-oauth-mission-grants.md",
-   "slug": "draft-mcguinness-oauth-mission-grants",
-   "title": "OAuth 2.0 Mission Grants",
-   "category": "std",
-   "role": "companion",
-   "spec_maturity": "sketch",
-   "maintenance": "lab-best-effort",
-   "group": "bindings-substrate",
-   "verbs": [
-    "approve",
-    "govern"
-   ],
-   "summary": "A Mission without a description of the work: one approval of Rich Authorization Requests authorization details, requested with one parameter, held as an identified record that never widens; the `mission` token claim, the subset rule, issuance gated on state, a lifecycle, and a management endpoint to end a Mission and read its state by identifier.",
-   "pull_when": "A deployment needs an identifiable, non-widening, revocable approval of structured authority without a task description, such as a realization of bounded work.",
-   "normative_references": [],
-   "adoption_requires": [],
-   "requires_when": [],
-   "references": [
-    "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-resource-access"
    ]
   },
   {
