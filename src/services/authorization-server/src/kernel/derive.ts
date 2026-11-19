@@ -37,6 +37,7 @@ import {
 } from "@mission/core";
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
 import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
+import type { DeploymentDefinedTypes } from "./authorization-details-metadata.js";
 import { unionConditions } from "./discharge.js";
 import { childActorCeilingOrigin } from "./child-actor-eligibility.js";
 import { ceilingOrigin, combineOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
@@ -219,6 +220,50 @@ function assertWellFormedMatchers(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry ${violation}; refusing rather than silently dropping it`,
+      );
+    }
+  }
+}
+
+/**
+ * @spec mission#other-types (#2019 review): whether `entry` is of a
+ * deployment-defined type `types` configures. Such an entry is held to its own
+ * type's documented definition; every other entry to the built-in
+ * `mission_resource_access` rules.
+ */
+export function ofDeploymentType(entry: AuthorityEntry, types: DeploymentDefinedTypes | undefined): boolean {
+  const type = (entry as { type?: unknown }).type;
+  return types !== undefined && typeof type === "string" && Object.hasOwn(types, type);
+}
+
+/**
+ * `entries` split by the rules each is held to: the built-in ones, then those
+ * of a deployment-defined type. With no deployment-defined type configured,
+ * every entry is held to the built-in rules.
+ */
+function byOwnType(
+  entries: readonly AuthorityEntry[],
+  types: DeploymentDefinedTypes | undefined,
+): [AuthorityEntry[], AuthorityEntry[]] {
+  const builtIn: AuthorityEntry[] = [];
+  const own: AuthorityEntry[] = [];
+  for (const entry of entries) (ofDeploymentType(entry, types) ? own : builtIn).push(entry);
+  return [builtIn, own];
+}
+
+/**
+ * @spec mission#proposal-validation, mission#other-types (#2019 review): each
+ * entry of a deployment-defined type, ceiling or proposal, meets that type's
+ * documented definition, over the full arrays as the built-in checks are.
+ */
+function assertOwnDefinitions(entries: readonly AuthorityEntry[], types: DeploymentDefinedTypes | undefined): void {
+  for (const entry of entries) {
+    const definition = types?.[(entry as { type: string }).type];
+    const violation = definition?.validate(entry as unknown as Record<string, unknown>);
+    if (violation !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry fails the definition of its type: ${violation}`,
       );
     }
   }
@@ -451,7 +496,17 @@ export function deriveAuthoritySetWithProvenance(
   proposalChildActorProvenance?: readonly RetainedOrigin[],
   requestedScope?: readonly AuthorityEntry[],
   narrowing: NarrowingDeclaration = NARROWING_IN_FULL,
+  deploymentTypes?: DeploymentDefinedTypes,
 ): DerivedAuthority {
+  // @spec mission#other-types (#2019 review): each entry is held to its own
+  // type's rules, so a valid entry of one type never refuses a derivation for
+  // another type's request: an entry of a deployment-defined type to that
+  // type's documented definition, every other entry to the built-in
+  // mission_resource_access checks below.
+  const [ceilingBuiltIn, ceilingOwn] = byOwnType(policy.ceiling, deploymentTypes);
+  const [proposalBuiltIn, proposalOwn] = proposal ? byOwnType(proposal, deploymentTypes) : [undefined, []];
+  const [scopeBuiltIn, scopeOwn] = requestedScope ? byOwnType(requestedScope, deploymentTypes) : [undefined, []];
+  assertOwnDefinitions([...ceilingOwn, ...proposalOwn, ...scopeOwn], deploymentTypes);
   // @spec mission#common-constraints (issue #784, review on PR #803) — every
   // ceiling entry and every submitted proposal entry is checked for an
   // unsupported `constraints` key BEFORE the resource/action filtering below
@@ -460,21 +515,21 @@ export function deriveAuthoritySetWithProvenance(
   // validated in full regardless of mode; `proposal`, when submitted, is the
   // client's full unfiltered array (a ceiling entry never sharing a resource
   // with any proposal element would otherwise never reach `intersect` below).
-  assertSupportedConstraints(policy.ceiling);
-  if (proposal) assertSupportedConstraints(proposal);
-  assertSupportedResourceMatch(policy.ceiling);
-  if (proposal) assertSupportedResourceMatch(proposal);
-  assertNoRefusedMembers(policy.ceiling);
-  if (proposal) assertNoRefusedMembers(proposal);
-  assertWellFormedResources(policy.ceiling);
-  if (proposal) assertWellFormedResources(proposal);
-  assertWellFormedMatchers(policy.ceiling);
-  if (proposal) assertWellFormedMatchers(proposal);
-  if (requestedScope) {
-    assertSupportedConstraints(requestedScope);
-    assertSupportedResourceMatch(requestedScope);
-    assertNoRefusedMembers(requestedScope);
-    assertWellFormedResources(requestedScope);
+  assertSupportedConstraints(ceilingBuiltIn);
+  if (proposalBuiltIn) assertSupportedConstraints(proposalBuiltIn);
+  assertSupportedResourceMatch(ceilingBuiltIn);
+  if (proposalBuiltIn) assertSupportedResourceMatch(proposalBuiltIn);
+  assertNoRefusedMembers(ceilingBuiltIn);
+  if (proposalBuiltIn) assertNoRefusedMembers(proposalBuiltIn);
+  assertWellFormedResources(ceilingBuiltIn);
+  if (proposalBuiltIn) assertWellFormedResources(proposalBuiltIn);
+  assertWellFormedMatchers(ceilingBuiltIn);
+  if (proposalBuiltIn) assertWellFormedMatchers(proposalBuiltIn);
+  if (scopeBuiltIn) {
+    assertSupportedConstraints(scopeBuiltIn);
+    assertSupportedResourceMatch(scopeBuiltIn);
+    assertNoRefusedMembers(scopeBuiltIn);
+    assertWellFormedResources(scopeBuiltIn);
   }
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
@@ -534,8 +589,19 @@ export function deriveAuthoritySetWithProvenance(
     // ({@link derivedResource}): the same `exact` string, a `prefix` ceiling
     // admitting the proposal, or an `exact` ceiling naming a `prefix`
     // proposal's base.
+    //
+    // @spec mission#proposal-derivation (#2019 review): only a ceiling entry
+    // of the proposal's own type governs it, and for a deployment-defined
+    // type, which the built-in resource rules do not describe, every such
+    // entry does: equality alone decides below.
     const matchingCeilings =
-      hasProposal || scopeKeyed ? policy.ceiling.filter((c) => derivedResource(proposal, c) !== null) : [proposal];
+      hasProposal || scopeKeyed
+        ? policy.ceiling.filter(
+            (c) =>
+              c.type === proposal.type &&
+              (ofDeploymentType(proposal, deploymentTypes) || derivedResource(proposal, c) !== null),
+          )
+        : [proposal];
     // An already-derived proposal entry contributes the origin it carries; a
     // client proposal contributes none of its own.
     const inherited: RetainedOrigin =
@@ -1351,7 +1417,12 @@ export function projectThroughEffectiveUnder(
   for (const entry of candidate) {
     const fragments = projectThroughEffective([entry], effective);
     const permitted = fragments.filter((f) => narrowingPermits(declaration, f, entry));
-    if (permitted.length < fragments.length && effective.some((e) => entriesEqual(e, entry))) {
+    // @spec mission#transformation-capabilities (#2019 review): an entry the
+    // AS may not narrow is carried as it stands wherever the effective set
+    // still holds it, even where the built-in rebuild yields no fragment of
+    // it (an entry of a deployment-defined type with a member of its own).
+    const unnarrowable = !narrowingPermits(declaration, entry, entry);
+    if ((permitted.length < fragments.length || unnarrowable) && effective.some((e) => entriesEqual(e, entry))) {
       add(entry);
       continue;
     }

@@ -76,6 +76,7 @@ import type { DerivationPolicy, DerivedAuthority, ExpiryCeilings } from "./deriv
 import {
   deriveAuthoritySetWithProvenance,
   isSubsetSet,
+  ofDeploymentType,
   type OriginProjection,
   projectThroughEffectiveWithOrigin,
   resolveDerivationLimit,
@@ -1611,10 +1612,25 @@ export class MissionKernel {
     proposal?: readonly AuthorityEntry[],
     requestedScope?: readonly AuthorityEntry[],
   ): AuthorityEntry[] {
-    return assembleResourceContracts(
-      this.deriveWithProvenance(intent, proposal, requestedScope).entries,
-      this.resourceContracts(),
+    return this.builtInOnly(this.deriveWithProvenance(intent, proposal, requestedScope).entries, (entries) =>
+      assembleResourceContracts(entries, this.resourceContracts()),
     );
+  }
+
+  /**
+   * @spec mission#other-types (#2019 review): `transform` applied to the
+   * entries held to the built-in `mission_resource_access` rules alone, an
+   * entry of a deployment-defined type kept as it stands, in place. The
+   * members those transforms add or check (`resource_contract`,
+   * `capability_sources`, a `terminal_when` authority) are that type's, never
+   * another's. `transform` returns one entry per entry, in order.
+   */
+  private builtInOnly(entries: AuthorityEntry[], transform: (builtIn: AuthorityEntry[]) => AuthorityEntry[]): AuthorityEntry[] {
+    const types = this.opts.deploymentTypes;
+    if (!types) return transform(entries);
+    const transformed = transform(entries.filter((e) => !ofDeploymentType(e, types)));
+    let next = 0;
+    return entries.map((e) => (ofDeploymentType(e, types) ? e : (transformed[next++] as AuthorityEntry)));
   }
 
   /** @spec resource-access#resource-contract (#249): the configured contract declarations. */
@@ -1666,19 +1682,23 @@ export class MissionKernel {
       undefined,
       requestedScope,
       this.narrowingDeclaration(),
+      this.opts.deploymentTypes,
     );
+    // @spec mission#other-types (#2019 review): the two checks below read
+    // built-in members, so an entry of a deployment-defined type is left out.
+    const builtIn = derived.entries.filter((e) => !ofDeploymentType(e, this.opts.deploymentTypes));
     // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
     // already map); `insertRecord` re-checks as the single record funnel, which
     // also covers child creation (a requested subset, never a fresh derivation).
-    assertDischargeAuthoritiesResolvable(derived.entries, this.opts.dischargeAuthority);
+    assertDischargeAuthoritiesResolvable(builtIn, this.opts.dischargeAuthority);
     // @spec resource-access#resource-contract (#249): a reference a derived
     // entry carries is preserved, never re-assembled here, and must still
     // resolve against configuration: every Mission-creating surface (a child,
     // an expansion, a template or governed instance, a carryover successor)
     // reaches it through this one derivation.
-    assertCarriedContractsResolvable(derived.entries, this.resourceContracts(), this.now());
+    assertCarriedContractsResolvable(builtIn, this.resourceContracts(), this.now());
     return derived;
   }
 
@@ -1979,7 +1999,7 @@ export class MissionKernel {
   }
 
   resolveFreshCapabilities(entries: AuthorityEntry[]): AuthorityEntry[] {
-    return resolveFreshCapabilitySources(entries, this.opts.capabilityResolver);
+    return this.builtInOnly(entries, (builtIn) => resolveFreshCapabilitySources(builtIn, this.opts.capabilityResolver));
   }
 
   /**
@@ -2054,7 +2074,7 @@ export class MissionKernel {
     resolved: AuthoritySourceResolution,
     authoritySet: readonly AuthorityEntry[],
   ): void {
-    assertWithinSourceCeiling(resolved.entry, authoritySet);
+    assertWithinSourceCeiling(resolved.entry, authoritySet, this.opts.deploymentTypes);
   }
 
   /**
@@ -2094,7 +2114,7 @@ export class MissionKernel {
     authoritySet: readonly AuthorityEntry[],
   ): AuthoritySourceResolution {
     const resolved = this.resolveCommittedSource(binding);
-    assertWithinSourceCeiling(resolved.entry, authoritySet);
+    assertWithinSourceCeiling(resolved.entry, authoritySet, this.opts.deploymentTypes);
     return resolved;
   }
 
@@ -2161,10 +2181,14 @@ export class MissionKernel {
     // assembled from configuration before `authorityHash` below, so
     // `authority_hash` commits it; the transform is one entry per entry, so
     // the origins stay index-aligned.
-    const authoritySet = this.resolveFreshCapabilities(attachCapabilitySources(
-      assembleResourceContracts(derived.entries, this.resourceContracts()),
-      this.opts.capabilityResolver ? undefined : input.capabilityResolution,
-    ));
+    const authoritySet = this.resolveFreshCapabilities(
+      this.builtInOnly(derived.entries, (builtIn) =>
+        attachCapabilitySources(
+          assembleResourceContracts(builtIn, this.resourceContracts()),
+          this.opts.capabilityResolver ? undefined : input.capabilityResolution,
+        ),
+      ),
+    );
     // @spec mission#approval-event (step 3) — establish the authority source
     // BEFORE any anchor is computed and before the record exists: gates 1, 2,
     // 4 and 5 here, then gate 3 (the source ceiling) as its own assertion.
@@ -2690,8 +2714,10 @@ export class MissionKernel {
     // the set (derivation, a child's requested subset, a template's double
     // intersection), and refuses the creation when one maps to nothing. A
     // carried condition is the one exception: it enters nothing new.
+    // `terminal_when` is a built-in member: an entry of a deployment-defined
+    // type carries none (#2019 review), here or at the pins below.
     assertDischargeAuthoritiesResolvable(
-      record.authority_set,
+      record.authority_set.filter((e) => !ofDeploymentType(e, this.opts.deploymentTypes)),
       this.opts.dischargeAuthority,
       (entry, condition) => inheritedPin(entry, condition) !== undefined,
     );
@@ -2875,6 +2901,7 @@ export class MissionKernel {
       // later policy edit cannot retroactively change who may discharge an
       // already-approved entry.
       for (const entry of record.authority_set) {
+        if (ofDeploymentType(entry, this.opts.deploymentTypes)) continue;
         const conditions = terminalWhenOf(entry);
         if (!conditions) continue;
         const eDigest = entryDigest(record.issuer, entry);
@@ -3338,7 +3365,7 @@ export class MissionKernel {
     assertRecordedSourceResolved(input.source, resolved);
     assertApproverMayActivate(this.sourceCatalog, resolved.entry, input.approver);
     assertSubjectDiscipline(this.sourceCatalog, resolved.entry, input.subject);
-    assertWithinSourceCeiling(resolved.entry, input.authoritySet);
+    assertWithinSourceCeiling(resolved.entry, input.authoritySet, this.opts.deploymentTypes);
     return resolved;
   }
 

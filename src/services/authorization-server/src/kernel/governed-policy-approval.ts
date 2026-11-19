@@ -1335,6 +1335,7 @@ function prepareGovernedActivation(
       first.childActorProvenance,
       undefined,
       kernel.narrowingDeclaration(),
+      kernel.deploymentTypes(),
     ));
   } catch (e) {
     if (e instanceof IntentError) {

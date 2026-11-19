@@ -35,7 +35,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize, entryWithinCeiling, type JsonValue } from "@mission/core";
+import { canonicalize, entriesEqual, entryWithinCeiling, type JsonValue } from "@mission/core";
+import type { DeploymentDefinedTypes } from "./authorization-details-metadata.js";
 import { IntentError } from "./intent.js";
 import type {
   AuthorityEntry,
@@ -778,12 +779,27 @@ export class ActivationRefusedError extends IntentError {
  * resolves). An assertion that REFUSES; it is never an input to derivation.
  * @spec mission#approval-event (step 3) — the shared primitive compares
  * authority, not approval-time provenance, against binding-free configuration.
+ *
+ * @spec mission#other-types, mission#subset (#2019 review): each entry under
+ * its own type. An entry of a deployment-defined type (`deploymentTypes`),
+ * whose relation this server does not know, lies within the ceiling only by
+ * equality to a ceiling entry; every other entry is compared under the
+ * built-in relation with the ceiling's entries of no deployment-defined type.
  */
 export function assertWithinSourceCeiling(
   entry: AuthoritySourceCatalogEntry,
   authoritySet: readonly AuthorityEntry[],
+  deploymentTypes?: DeploymentDefinedTypes,
 ): void {
-  if (!authoritySet.every(candidate => entryWithinCeiling(candidate, entry.ceiling as AuthorityEntry[]))) {
+  const ofDeploymentType = (e: AuthorityEntry) =>
+    deploymentTypes !== undefined && Object.hasOwn(deploymentTypes, (e as { type: string }).type);
+  const ceiling = entry.ceiling as AuthorityEntry[];
+  const builtInCeiling = deploymentTypes ? ceiling.filter((e) => !ofDeploymentType(e)) : ceiling;
+  const within = (candidate: AuthorityEntry) =>
+    ofDeploymentType(candidate)
+      ? ceiling.some((c) => entriesEqual(c, candidate))
+      : entryWithinCeiling(candidate, builtInCeiling);
+  if (!authoritySet.every(within)) {
     throw new IntentError(
       "access_denied",
       `the derived Authority Set exceeds the authority of the ${entry.type} source '${entry.id}'`,

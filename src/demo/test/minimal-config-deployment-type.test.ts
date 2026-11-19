@@ -11,17 +11,20 @@
  * definition, `additionalAuthorizationDetailsTypes`), the agent's client
  * registration listing it in `authorization_details_types` (a copy of the
  * shipped `config/`), and a derivation ceiling, user-delegated source ceiling
- * and approval-floor classification that name one entry of it; nothing
+ * and approval-floor classification that name two entries of it; nothing
  * else. The type's metadata entry carries no
  * `mission_transformation_capabilities`, and no deployment documentation
  * names the type, so `narrowing`, `delegation` and `projection` are each
  * undeclared for it: the binding carries its entries as approved.
  *
- * The type's members are a subset of `mission_resource_access`'s (`type`,
- * `resource`, `resource_match`, `actions`), so the members the reference
- * rebuilds for its own type are where a transformation would show: the
- * approved entry states `resource_match: "exact"`, which that rebuild drops,
- * and names `ledger:vendor.read`, the action the SaaS resource maps a tool to.
+ * The first entry's members are a subset of `mission_resource_access`'s
+ * (`type`, `resource`, `resource_match`, `actions`), so the members the
+ * reference rebuilds for its own type are where a transformation would show:
+ * it states `resource_match: "exact"`, which that rebuild drops, and names
+ * `ledger:vendor.read`, the action the SaaS resource maps a tool to. The
+ * second also carries `tenant_id`, a member of the type's own that
+ * `mission_resource_access` does not define, so the ceiling is mixed: each
+ * entry in it is held to its own type's rules (#2019 review).
  *
  * The file runs on a controlled clock (D1091).
  */
@@ -73,9 +76,13 @@ const MINIMAL_CAPABILITIES: ReadonlySet<ProviderCapability> = new Set<ProviderCa
 
 /** The deployment-defined type: an identifier this deployment chose, no relation to `mission_resource_access`. */
 const TYPE = "urn:example:mission-reference:vendor-records";
-const MEMBERS = ["type", "resource", "resource_match", "actions"];
+const MEMBERS = ["type", "resource", "resource_match", "actions", "tenant_id"];
 
-/** The type's documented definition: exactly these members, an absolute resource, `exact` matching, non-empty actions. */
+/**
+ * The type's documented definition: exactly these members, an absolute
+ * resource, `exact` matching, non-empty actions, and an optional non-empty
+ * `tenant_id`.
+ */
 const VENDOR_RECORDS: DeploymentDefinedType = {
   metadata: {
     version: "1",
@@ -88,6 +95,7 @@ const VENDOR_RECORDS: DeploymentDefinedType = {
         resource: { type: "string", format: "uri" },
         resource_match: { const: "exact" },
         actions: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
+        tenant_id: { type: "string", minLength: 1 },
       },
       required: ["type", "resource", "actions"],
       additionalProperties: false,
@@ -102,6 +110,9 @@ const VENDOR_RECORDS: DeploymentDefinedType = {
     if (!Array.isArray(actions) || actions.length === 0 || !actions.every((a) => typeof a === "string" && a.length > 0)) {
       return "actions must be a non-empty array of non-empty strings";
     }
+    if (entry.tenant_id !== undefined && (typeof entry.tenant_id !== "string" || entry.tenant_id.length === 0)) {
+      return "tenant_id must be a non-empty string";
+    }
     return undefined;
   },
 };
@@ -110,7 +121,16 @@ const VENDOR_RECORDS: DeploymentDefinedType = {
 const ENTRY = { type: TYPE, resource: SAAS_RESOURCE, resource_match: "exact", actions: ["ledger:vendor.read", "ledger:vendor.export"] };
 /** The same entry with an action removed: a narrowing under `mission_resource_access`'s relation. */
 const NARROWED = { ...ENTRY, actions: ["ledger:vendor.read"] };
-const CEILING = [...DERIVATION_POLICY.ceiling, ENTRY as unknown as AuthorityEntry];
+/** A second entry of the type the policy admits, carrying `tenant_id`, a member of the type's own. */
+const TENANT_ENTRY = { type: TYPE, resource: SAAS_RESOURCE, resource_match: "exact", actions: ["ledger:vendor.read"], tenant_id: "acme" };
+const CEILING = [...DERIVATION_POLICY.ceiling, ENTRY as unknown as AuthorityEntry, TENANT_ENTRY as unknown as AuthorityEntry];
+/** An ordinary `mission_resource_access` read at the same resource, inside the shipped ceiling. */
+const VENDOR_READ = {
+  type: "mission_resource_access",
+  resource: SAAS_RESOURCE,
+  actions: ["ledger:vendor.read"],
+  constraints: { vendors: ["acme"] },
+};
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const VERIFIER = "minimal-config-deployment-type-verifier-0123456789-01";
@@ -367,5 +387,55 @@ describe("a deployment-defined authorization_details type that declares no trans
       await dpopProofFor(dpopKeys, SAAS_RESOURCE, "POST", accessToken),
     );
     expect(result).toEqual({ ok: false, error: "out_of_authority" });
+  });
+});
+
+describe("a mixed ceiling: each entry is held to its own type's rules, so a valid entry of one type never breaks another type's request (#2019 review; @spec mission#other-types, mission#proposal-derivation)", () => {
+  /** PAR and Bob's approval of `entries`: the Mission created, or the refusal the console met. */
+  async function approveProposal(entries: unknown[]): Promise<{ record?: Json; code?: string; refusal?: string }> {
+    const pushed = await par(entries);
+    expect(pushed.status, JSON.stringify(pushed.body)).toBe(201);
+    const before = as.kernel.allMissions().length;
+    const approved = await approveReadingPage(await startInteraction(String(pushed.body.request_uri)));
+    const created = as.kernel.allMissions().slice(before);
+    expect(created.length).toBeLessThanOrEqual(1);
+    return {
+      ...(created[0] ? { record: created[0] as unknown as Json } : {}),
+      ...(approved.code !== undefined ? { code: approved.code } : {}),
+      ...(approved.refusal !== undefined ? { refusal: approved.refusal } : {}),
+    };
+  }
+
+  it("an ordinary mission_resource_access read is approved and committed as proposed, beside the type's ceiling entry carrying tenant_id (@spec mission#proposal-derivation, mission#other-types)", async () => {
+    const approved = await approveProposal([VENDOR_READ]);
+    expect(approved.refusal).toBeUndefined();
+    expect(approved.record?.state).toBe("active");
+    expect(approved.record?.authority_set).toEqual([VENDOR_READ]);
+  });
+
+  it("a request for the type's entry carrying tenant_id is approved, committed and issued at the code exchange exactly as approved (@spec mission#proposal-derivation, mission#transformation-capabilities)", async () => {
+    const approved = await approveProposal([TENANT_ENTRY]);
+    expect(approved.refusal).toBeUndefined();
+    expect(approved.record?.authority_set).toEqual([TENANT_ENTRY]);
+    const keys = await generateKeyPair("ES256", { extractable: true });
+    const redeemed = await tokenGrantRequest(asUrl, as.agentClientJwk, keys, {
+      grant_type: "authorization_code",
+      code: String(approved.code),
+      redirect_uri: REDIRECT_URI,
+      code_verifier: VERIFIER,
+      resource: SAAS_RESOURCE,
+    });
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+    expect(redeemed.body.authorization_details).toEqual([TENANT_ENTRY]);
+    expect(decodeJwt(String(redeemed.body.access_token)).authorization_details).toEqual([TENANT_ENTRY]);
+  });
+
+  it("an entry failing its own type's rules is refused invalid_authorization_details at PAR: a mission_resource_access entry carrying tenant_id, and the type's entry with an empty tenant_id (@spec mission#proposal-validation)", async () => {
+    for (const entry of [{ ...VENDOR_READ, tenant_id: "acme" }, { ...TENANT_ENTRY, tenant_id: "" }]) {
+      const pushed = await par([entry]);
+      expect(pushed.status, JSON.stringify(pushed.body)).toBe(400);
+      expect(pushed.body.error).toBe("invalid_authorization_details");
+      expect(pushed.body).not.toHaveProperty("request_uri");
+    }
   });
 });
