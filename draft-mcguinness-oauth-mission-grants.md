@@ -192,8 +192,8 @@ Client                 Authorization Server       Resource Server
 
 1. The client sends an authorization request with
    `authorization_details` and `mission_expires_in` ({{requesting}}).
-2. The resource owner, or an approver acting for the resource owner,
-   approves; the authorization server creates the Mission ({{approval}}).
+2. The resource owner approves; the authorization server creates the
+   Mission ({{approval}}).
 3. and 4. The client redeems the authorization code.
 5. The token response carries the Mission Identifier and expiry
    ({{token-response}}).
@@ -236,17 +236,18 @@ requested the Mission for, and SHOULD revoke them {{RFC7009}}.
 
 The authorization server establishes the Approved Authority from the
 requested `authorization_details`. It MAY narrow the request under its
-policy, and the approver MAY narrow it further. Each entry of the
+policy, and the resource owner MAY narrow it further. Each entry of the
 Approved Authority MUST be of the same type as a requested entry and
 MUST grant no more than that entry; an entry is never widened and
 entries are never combined. Before approval, the authorization server
 presents the authority it will approve, as it will be granted, in
-terms the approver can understand.
+terms the resource owner can understand.
 
-The approver is the resource owner, or a party the authorization
-server's policy authorizes to approve for the resource owner; the
-authorization server authenticates the approver and verifies that
-authorization. An approval decision creates the Mission and the
+The resource owner approves, and the authorization server
+authenticates them. A specification can define approval by another
+party, such as an administrator approving for the resource owner,
+together with the record member that names that party
+({{extension-points}}). An approval decision creates the Mission and the
 authorization code together: the authorization server issues the code
 only when the Mission is recorded, and a declined or abandoned request
 creates neither.
@@ -266,13 +267,8 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
 : REQUIRED. A string: the client the Mission was approved for.
 
 `sub`:
-: REQUIRED. A string: the resource owner the authority is exercised
-  for, as the authorization server identifies them.
-
-`approver`:
-: REQUIRED. A string: the party that approved, in the same identifier
-  space the authorization server uses for `sub`. It equals `sub` when
-  the resource owner approved.
+: REQUIRED. A string: the resource owner who approved, as the
+  authorization server identifies them.
 
 `approved_at`:
 : REQUIRED. A string: an RFC 3339 {{RFC3339}} date-time, the instant
@@ -449,7 +445,7 @@ server authorizes a request for a Mission when:
   through the client credentials grant ({{Section 4.4 of RFC6749}});
   or
 - its policy authorizes the access token's holder for that Mission,
-  for example the resource owner, the approver, or an administrator.
+  for example the resource owner or an administrator.
 
 Under an accepted access token, an unknown Mission Identifier and one
 the caller is not authorized for both return HTTP 404, so the endpoint
@@ -528,6 +524,8 @@ accepts in a Mission request in `authorization_details_types_supported`
 
 A specification that extends Missions can:
 
+- define approval by a party other than the resource owner, with the
+  record member that names that party;
 - define an authorization request parameter that the authorization
   server records with the Mission at approval, such as a description
   of the work, as an additional record member that, like the others,
@@ -658,7 +656,7 @@ framework for approved bounded work
 | Requirement | Met by |
 |---|---|
 | R1: an identifier distinct from the client, any token, and any refresh token family | The Mission Identifier ({{record}}) |
-| R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the approver, not the request: it does not distinguish the authorization server's narrowing from the approver's. It records no description of the work; a specification that adds one does so through {{extension-points}}. |
+| R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the resource owner who approved (`sub`), not the request: it does not distinguish the authorization server's narrowing from the resource owner's. An accountable approver other than the resource owner, and a description of the work, are left to specifications that add them through {{extension-points}}. |
 | R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule ({{subset}}) |
 | R4: every issuance path refuses once the authorization has ended | Issuance gating ({{gating}}) |
 | R5: a party holding no token ends one authorization without affecting the client's other work | `DELETE` at the management endpoint, and a lineage per Mission ({{management}}, {{lineage}}) |
