@@ -283,15 +283,12 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
 : REQUIRED. The Approved Authority.
 
 `state`:
-: REQUIRED. A string: the Mission's lifecycle state ({{lifecycle}}).
+: REQUIRED. A string: the Mission's lifecycle state, `active`,
+  `revoked`, or `expired` ({{lifecycle}}).
 
-`termination`:
-: Present exactly when `state` is `terminated`. An object with
-  `reason`, a string from the Mission Termination Reasons registry
-  ({{iana-reasons}}), and `terminated_at`, an RFC 3339 date-time.
-
-Every member except `state` and `termination` is fixed when the
-Mission is created and never changes. `termination` is written once.
+Every member except `state` is fixed when the Mission is created and
+never changes; `state` changes once, from `active` to a terminal
+state.
 More authority than the Approved Authority requires a new Mission
 through a new approval; the existing Mission continues under its own
 Approved Authority until it ends.
@@ -382,8 +379,8 @@ active with the `invalid_grant` error code and this member of the
 error response:
 
 `mission_error`:
-: A string: the Mission's termination reason, `revoked` or `expired`,
-  or another registered reason ({{iana-reasons}}).
+: A string: the Mission's state, `revoked` or `expired`, or another
+  registered terminal state ({{iana-states}}).
 
 A client that receives `mission_error`, with any value, stops the
 work and does not seek another credential for it: no retry under the
@@ -391,17 +388,23 @@ same Mission succeeds.
 
 # Lifecycle {#lifecycle}
 
-A Mission is in one of two states:
+A Mission is in one of three states:
 
 - `active`: the only state in which the authorization server issues
   tokens under it and a resource server relies on it.
-- `terminated`: a terminal state.
+- `revoked`: a terminal state; the Mission was ended before its
+  `expires_at`.
+- `expired`: a terminal state; the Mission's `expires_at` passed.
 
-| From | Event | To | Termination reason |
-|---|---|---|---|
-| (none) | approval | `active` | |
-| `active` | revocation | `terminated` | `revoked` |
-| `active` | `expires_at` reached | `terminated` | `expired` |
+The terminal state also says why the Mission ended, which tells a
+client what to do next: after `expired` the work's time ran out, and
+after `revoked` someone withdrew it.
+
+| From | Event | To |
+|---|---|---|
+| (none) | approval | `active` |
+| `active` | revocation | `revoked` |
+| `active` | `expires_at` reached | `expired` |
 {: title="Mission lifecycle"}
 
 A Mission is revoked when an authorized party ends it at the
@@ -412,10 +415,8 @@ example on detecting refresh token replay. So a client ends its own
 Mission by revoking its refresh token. Rotation, which replaces a
 refresh token with another of the same lineage, is not revocation.
 
-A specification can register further states ({{iana-states}}) and
-termination reasons ({{iana-reasons}}). A party treats a state it does
-not recognize as not active, and a termination reason it does not
-recognize as an ending.
+A specification can register further states ({{iana-states}}). A
+party treats a state it does not recognize as an ended Mission.
 
 Ending a Mission stops issuance at once. An access token already
 issued remains acceptable to a resource server that relies on the
@@ -452,12 +453,12 @@ the caller is not authorized for both return HTTP 404, so the endpoint
 does not reveal which identifiers exist.
 
 `GET` returns HTTP 200 and a JSON object with the Mission's `id`,
-`issuer`, `state`, `expires_at`, and `termination` when present. It
+`issuer`, `state`, and `expires_at`. It
 also returns `authorization_details` to a caller the authorization
 server authorizes to read the Approved Authority.
 
-`DELETE` ends an active Mission with termination reason `revoked` and
-returns HTTP 204. A `DELETE` for a Mission that has already ended
+`DELETE` moves an active Mission to `revoked` and returns HTTP
+204. A `DELETE` for a Mission that has already ended
 changes nothing and returns HTTP 204.
 
 # Resource Server Enforcement {#rs-enforcement}
@@ -493,7 +494,7 @@ Denials distinguish three causes, because each calls for a different
 response from the client:
 
 - the Mission has ended: `invalid_token`, with a `mission_error`
-  parameter carrying the termination reason where the resource server
+  parameter carrying the Mission's state where the resource server
   knows it; the client stops the work;
 - the operation is outside the carried authority:
   `insufficient_scope` ({{RFC6750}}); more authority needs a new
@@ -531,13 +532,12 @@ A specification that extends Missions can:
   of the work, as an additional record member that, like the others,
   never changes;
 - define further members of the management endpoint's response;
-- register lifecycle states ({{iana-states}}) and termination reasons
-  ({{iana-reasons}}); and
+- register lifecycle states ({{iana-states}}); and
 - define, for a type of authorization details, the comparison the
   subset rule uses ({{subset}}).
 
 No extension widens the Approved Authority, permits issuance or
-reliance in any state other than `active`, or reactivates a terminated
+reliance in any state other than `active`, or reactivates an ended
 Mission.
 
 # Security Considerations {#security}
@@ -632,17 +632,13 @@ This document requests registration of `mission_grants_required` in
 the "OAuth Protected Resource Metadata" registry, with Reference
 {{rs-enforcement}}.
 
-## Mission Lifecycle States {#iana-states}
+## Mission Grant States {#iana-states}
 
-This document requests a new "Mission Lifecycle States" registry,
-under Specification Required, with initial values `active` and
-`terminated` ({{lifecycle}}).
-
-## Mission Termination Reasons {#iana-reasons}
-
-This document requests a new "Mission Termination Reasons" registry,
-under Specification Required, with initial values `revoked` and
-`expired` ({{lifecycle}}).
+This document requests a new "Mission Grant States" registry, under
+Specification Required, with initial values `active`, `revoked`, and
+`expired` ({{lifecycle}}). Each registration states whether the state
+is terminal; every state other than `active` permits no issuance or
+reliance.
 
 --- back
 
@@ -666,9 +662,10 @@ framework for approved bounded work
 {: title="Bounded work requirements"}
 
 The framework distinguishes four ending reasons: completed, withdrawn,
-terminated, and expired. This document registers `revoked`, which
-covers withdrawal and administrative ending, and `expired`; a
-specification can register the others ({{iana-reasons}}). The
+terminated, and expired. This document defines the terminal states
+`revoked`, which covers withdrawal and administrative ending, and
+`expired`; a specification can register states for the others
+({{iana-states}}). The
 framework's case of work that reaches a second authorization server is
 outside this document.
 
