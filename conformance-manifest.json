@@ -11179,8 +11179,15 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > recovers the parent's committed root for a child, never the first root of that provenance, with the root's own context",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/derive-deployment-types.test.ts",
+     "name": "the source-ceiling gate compares each entry under its own type (#2019 review; @spec mission#authority-sources, mission#subset) > a deployment-defined entry lies within the source ceiling only by equality, while a mission_resource_access entry beside it is compared under the built-in relation",
+     "level": "unit",
+     "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "undefined #2019 review: the gate compares each entry under its own type. An entry of a deployment-defined type, whose relation this server does not know, lies within the source's authority only by equality to a source-ceiling entry (the one case the subset rule decides without the type's relation), so one narrower under the built-in relation is refused access_denied; a mission_resource_access entry beside it is still compared under the built-in relation. Proved by mutation: comparing the deployment-defined entry under the built-in relation admits the narrower one and fails it."
   },
   {
    "id": "core.approval-event.authority-source-organizational-policy",
@@ -18856,9 +18863,15 @@
      "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry whose actions carry a non-string or empty element beside the requested action, with no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > the SaaS resource, which implements mission_resource_access alone, gives the entry no authority though its resource and action cover the request (@spec mission#rs-enforcement)",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298), an unrecognized `resource_match` (#1276) and `actions` carrying an element that is not a non-empty string each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, ignoring `resource_match`, and dropping the `actions` element check (or only its non-empty test) each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
+   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298), an unrecognized `resource_match` (#1276) and `actions` carrying an element that is not a non-empty string each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, ignoring `resource_match`, and dropping the `actions` element check (or only its non-empty test) each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule. #2019 (G5): a token the minimal configuration issued, whose only entry is of a deployment-defined type naming the SaaS resource and the read's action, gives no authority there. Proved by mutation: dropping the SaaS type check fails it."
   },
   {
    "id": "core.rs-enforcement.whole-request-single-entry",
@@ -19153,9 +19166,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/minimal-baseline-config.test.ts",
+     "name": "a resource server enforcing authorization_details from the checked token, on the minimal configuration (#2019 G6; @spec mission#rs-enforcement) > the SaaS resource allows the operation the approved entry covers and refuses an action and a vendor outside it, with no effect (@spec mission#rs-enforcement)",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#2033 (D1266). Proven by disabling the code it covers, one behavior at a time, each making a request the entry's type does not admit succeed: the vendors gate made always true fails the vendors test; dropping the actions check fails the out-of-scope-tool test; dropping the resource match fails the operation-target test. Item 3 (scope never broader than the entry) is a separate rule with no row; no test here presents a competing `scope`."
+   "notes": "#2033 (D1266). Proven by disabling the code it covers, one behavior at a time, each making a request the entry's type does not admit succeed: the vendors gate made always true fails the vendors test; dropping the actions check fails the out-of-scope-tool test; dropping the resource match fails the operation-target test. Item 3 (scope never broader than the entry) is a separate rule with no row; no test here presents a competing `scope`. #2019 (G6): on the minimal configuration, the SaaS resource enforces the entry of a token that AS issued, trusting it as issuer and Mission Issuer: the covered read is allowed, and a write and another vendor are refused with no effect. Proved by mutation: dropping the actions check, and the vendors gate made always true, each fail it."
   },
   {
    "id": "core.rs-enforcement.entries-alternative-grants",
@@ -19774,9 +19793,21 @@
      "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare",
      "level": "endpoint",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > a refresh requesting the entry narrowed is refused invalid_authorization_details before consumption, issuing nothing, and the same refresh token then refreshes the entry unchanged (@spec mission#refresh-tokens, mission#subset, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > derivation does not narrow a proposal of the type: one narrower than the entry the policy admits is refused invalid_authorization_details, rendering and creating no Mission (@spec mission#proposal-derivation, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "D1025 declared narrowing and applied it at every narrowing site; this row stayed todo while delegation and projection were applied with no declaration. #1377 (D1037). Both declared and gated per entry type. Proved by mutation: removing the delegation gate from delegableEntries fails the three delegation witnesses, and so does resolving an omitted delegation as declared; removing the projection gate from projectScope fails the five projection witnesses and the per-type unit witness, and resolving an omitted projection as declared fails the endpoint ones; bypassing the declaration at one projectScope call site alone (the token endpoint's scope decision, the authorization decision, the async-delegation exchange, the cross-org chain exchange) fails that site's witness. The narrowing witnesses carry their D1025 proofs (row core.other-types.no-narrowing-original-audience). One configuration feeds both carriers, so the carrier-order rows stay todo (D845)."
+   "notes": "D1025 declared narrowing and applied it at every narrowing site; this row stayed todo while delegation and projection were applied with no declaration. #1377 (D1037). Both declared and gated per entry type. Proved by mutation: removing the delegation gate from delegableEntries fails the three delegation witnesses, and so does resolving an omitted delegation as declared; removing the projection gate from projectScope fails the five projection witnesses and the per-type unit witness, and resolving an omitted projection as declared fails the endpoint ones; bypassing the declaration at one projectScope call site alone (the token endpoint's scope decision, the authorization decision, the async-delegation exchange, the cross-org chain exchange) fails that site's witness. The narrowing witnesses carry their D1025 proofs (row core.other-types.no-narrowing-original-audience). One configuration feeds both carriers, so the carrier-order rows stay todo (D845). #2019 (G5): a second type, deployment-defined and declaring no capability in any carrier, on the minimal configuration with that type added: a refresh requesting its entry narrowed is refused invalid_authorization_details before consumption, and a proposal narrower than the entry policy admits derives nothing. narrowingPermits (mission-core) permits no pair of a type other than mission_resource_access. Proved by mutation: the derivation site ignoring that type gate fails the derivation witness (the entry is rebuilt as mission_resource_access, which the approval floor's classification then refuses), and the token endpoint's subset check ignoring the declaration fails the refresh witness (the narrowed entry is issued). Delegation and projection are not exercised for the type there: Token Exchange is off, and its audience is authorization_details mode."
   },
   {
    "id": "core.other-types.narrowing-governs-derivation",
@@ -19829,9 +19860,27 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a model output that removes an action where the narrowing declaration does not permit narrowing the entry, committing nothing, while an unchanged output activates (@spec resource-access#qualified-narrowing, #1377, D1025)",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > PAR accepts a proposal of the type, and an authenticated Approver approves it as rendered: the record commits the entry exactly as proposed (@spec mission#proposal-derivation, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > derivation does not narrow a proposal of the type: one narrower than the entry the policy admits is refused invalid_authorization_details, rendering and creating no Mission (@spec mission#proposal-derivation, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/derive-deployment-types.test.ts",
+     "name": "an approval adds no built-in member to a deployment-defined entry (#2019 review; @spec mission#transformation-capabilities, resource-access#resource-contract) > where configuration requires a resource_contract for the built-in type's entry at a resource, the deployment-defined entry there is derived without one, as approved",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1720 item 7 (D845, D859), #1377 (D1025). The reference declares narrowing for mission_resource_access as a qualified domain covering every entry it admits, so in its shipped configuration derivation narrows within the domain. deriveAuthoritySetWithProvenance (kernel/derive.ts) applies narrowingPermits to each proposal and ceiling pair and otherwise retains the candidate only when it is equal. Witnessed with narrowing undeclared (a test configuration): a proposal equal to a ceiling entry is retained unchanged, one the shipped declaration narrows is refused with no Mission, and configured-mapping derivation yields each mapped entry unchanged; and with an exact-only domain, a prefix proposal outside it is carried only when equal. Proved by mutation: a derivation that narrows whatever is declared fails the refusal witnesses. The configured-mapping witness holds by construction (the mapping intersects each candidate with itself), so no mutation of the gate fails it. #1377 review of #1891, second round: governed-policy activation applies the declaration to the model-evaluated set before commit; with narrowing undeclared and identical policy, source and root ceilings, a model output removing an action is refused (narrowing_not_permitted, a local refusal) with no Mission, and a no-objection output activates the entry unchanged. Proved by mutation (2026-10-29): skipping the check activates the narrowed set."
+   "notes": "#1720 item 7 (D845, D859), #1377 (D1025). The reference declares narrowing for mission_resource_access as a qualified domain covering every entry it admits, so in its shipped configuration derivation narrows within the domain. deriveAuthoritySetWithProvenance (kernel/derive.ts) applies narrowingPermits to each proposal and ceiling pair and otherwise retains the candidate only when it is equal. Witnessed with narrowing undeclared (a test configuration): a proposal equal to a ceiling entry is retained unchanged, one the shipped declaration narrows is refused with no Mission, and configured-mapping derivation yields each mapped entry unchanged; and with an exact-only domain, a prefix proposal outside it is carried only when equal. Proved by mutation: a derivation that narrows whatever is declared fails the refusal witnesses. The configured-mapping witness holds by construction (the mapping intersects each candidate with itself), so no mutation of the gate fails it. #1377 review of #1891, second round: governed-policy activation applies the declaration to the model-evaluated set before commit; with narrowing undeclared and identical policy, source and root ceilings, a model output removing an action is refused (narrowing_not_permitted, a local refusal) with no Mission, and a no-objection output activates the entry unchanged. Proved by mutation (2026-10-29): skipping the check activates the narrowed set. #2019 (G5): for a deployment-defined type that declares no capability, an equal proposal is retained unchanged (its resource_match: exact kept) and rendered so, and a narrower one is refused with no Mission, beside a mission_resource_access ceiling entry for the same resource, which governs only entries of its own type. Proved by mutation: the derivation site ignoring narrowingPermits' type gate fails both, the entry rebuilt as mission_resource_access. #2019 review: the approval-time members the built-in type assembles from configuration are added to its entries alone, so where configuration requires a resource_contract at a resource, a deployment-defined entry there is derived equal to the proposed one. Proved by mutation: applying those transforms to every entry adds the reference and fails it."
   },
   {
    "id": "core.authority-proposal.same-type-subset-under-narrowing",
@@ -19878,9 +19927,21 @@
      "name": "a narrowing domain is read: an entry outside it is carried only as approved (@spec resource-access#qualified-narrowing) > an exact proposal narrower than an exact ceiling entry derives narrowed: the domain covers exact",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > PAR accepts a proposal of the type, and an authenticated Approver approves it as rendered: the record commits the entry exactly as proposed (@spec mission#proposal-derivation, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > derivation does not narrow a proposal of the type: one narrower than the entry the policy admits is refused invalid_authorization_details, rendering and creating no Mission (@spec mission#proposal-derivation, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1720 item 7 (D845, D859), #1377 (D1025): the proposal-mode statement of row core.other-types.narrowing-governs-derivation. Narrowed under the subset rule where narrowing is declared for the pair (the shipped declaration, and an exact pair under an exact-only domain), and equal to a proposed entry otherwise (narrowing undeclared, and a prefix pair under the exact-only domain)."
+   "notes": "#1720 item 7 (D845, D859), #1377 (D1025): the proposal-mode statement of row core.other-types.narrowing-governs-derivation. Narrowed under the subset rule where narrowing is declared for the pair (the shipped declaration, and an exact pair under an exact-only domain), and equal to a proposed entry otherwise (narrowing undeclared, and a prefix pair under the exact-only domain). #2019 (G5): a deployment-defined type with no declared narrowing derives its entry equal to the proposed one, never rebuilt as another type, and a narrower proposal derives nothing. Proved by mutation: the derivation site ignoring narrowingPermits' type gate fails both, the entry rebuilt as mission_resource_access."
   },
   {
    "id": "core.other-types.delegation-only-unchanged",
@@ -20130,9 +20191,21 @@
      "name": "without narrowing, scope is the one transformed form, and only under a declared projection (@spec mission#transformation-capabilities, #1377, D1037) > with narrowing undeclared, a scope-only target is issued the projected scope while projection is declared, and refused invalid_target while it is omitted or false",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > the code exchange issues the entry exactly as approved in the response and the token, with no scope projected from it (@spec mission#token-response, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > a refresh requesting the entry narrowed is refused invalid_authorization_details before consumption, issuing nothing, and the same refresh token then refreshes the entry unchanged (@spec mission#refresh-tokens, mission#subset, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7 (D620). The reference declares narrowing for mission_resource_access only as a qualified domain (#1377, D1025), so the rule applies to every entry outside it. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter. #1377 review of #1891 (D1025), second round: the effective set is reported accurately and issuance gates what it carries. Proved by mutation (2026-10-29): an ungated projection of the credential's rar fails the remote-source witness (200 with the modified entry) and the explicit-exact witness (the member dropped); not carrying an unchanged entry as it stands fails the explicit-exact witness; a refresh pre-check that swallows the projection's refusal fails the rotating remote-source witness (one refresh token saved); counting every effective entry as issuable fails the kernel issuable witnesses; a derivation gate that reads the reported set fails the authority_contained witness; and conveying an entry without narrowing permitted fails the cross-domain witnesses. #1377 (D1037): the gap that kept this row partial, delegation and projection applied with no declaration, closed when both were declared and gated; the witness with narrowing undeclared issues a scope-only target its projected scope only while projection is declared, and fails when the projection gate is removed."
+   "notes": "#1503 finding 7 (D620). The reference declares narrowing for mission_resource_access only as a qualified domain (#1377, D1025), so the rule applies to every entry outside it. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter. #1377 review of #1891 (D1025), second round: the effective set is reported accurately and issuance gates what it carries. Proved by mutation (2026-10-29): an ungated projection of the credential's rar fails the remote-source witness (200 with the modified entry) and the explicit-exact witness (the member dropped); not carrying an unchanged entry as it stands fails the explicit-exact witness; a refresh pre-check that swallows the projection's refusal fails the rotating remote-source witness (one refresh token saved); counting every effective entry as issuable fails the kernel issuable witnesses; a derivation gate that reads the reported set fails the authority_contained witness; and conveying an entry without narrowing permitted fails the cross-domain witnesses. #1377 (D1037): the gap that kept this row partial, delegation and projection applied with no declaration, closed when both were declared and gated; the witness with narrowing undeclared issues a scope-only target its projected scope only while projection is declared, and fails when the projection gate is removed. #2019 (G5): a deployment-defined type's entry, with narrowing undeclared for the type, is issued at the code exchange and on a refresh naming no authorization_details to its original approved audience exactly as approved, resource_match: exact kept. Proved by mutation: the issuance projection (projectThroughEffectiveUnder) ignoring the type gate issues it rebuilt without resource_match, failing both. A refresh naming the entry unchanged in authorization_details is still issued it rebuilt, resource_match dropped (narrowToRequestedRar's final projection is not gated by the declaration; the same path serves mission_resource_access with narrowing undeclared): a gap reported to the owner, not witnessed here."
   },
   {
    "id": "core.other-types.projection-only-transformed-form",
@@ -20333,9 +20406,28 @@
     "normative": "with the type's metadata entry carrying mission_transformation_capabilities without a narrowing member and deployment documentation declaring narrowing, the documentation governs; with narrowing absent from every carrier, it is undeclared and the AS issues the type's entries only as approved"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1720 item 2 (D845), absent-member fall-through (#645, D138). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are declared true in both (D1037). Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > the AS supports the type beside mission_resource_access, and its metadata entry declares no transformation capability (@spec mission#other-types, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > the code exchange issues the entry exactly as approved in the response and the token, with no scope projected from it (@spec mission#token-response, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/minimal-config-deployment-type.test.ts",
+     "name": "a deployment-defined authorization_details type that declares no transformation, on the minimal configuration (#2019 G5; @spec mission#other-types, mission#transformation-capabilities) > a refresh requesting the entry narrowed is refused invalid_authorization_details before consumption, issuing nothing, and the same refresh token then refreshes the entry unchanged (@spec mission#refresh-tokens, mission#subset, mission#transformation-capabilities)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1720 item 2 (D845), absent-member fall-through (#645, D138). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are declared true in both (D1037). Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable. #2019 (G5): the second clause is witnessed for a deployment-defined type whose metadata entry carries no mission_transformation_capabilities and which no deployment documentation names, so narrowing is absent from every carrier: its entry is issued only as approved at the code exchange and on a refresh naming no authorization_details, and a narrowed refresh is refused. Proved by mutation: the type's metadata entry carrying the mission_resource_access declaration fails the carrier witness; the issuance projection ignoring the type gate, and the token endpoint's subset check ignoring the declaration, fail the issuance witnesses. The row stays partial: the first clause (a metadata entry without the member, documentation declaring it) is unexercised. A refresh naming the entry unchanged in authorization_details is still issued it rebuilt, resource_match dropped (narrowToRequestedRar's final projection is not gated by the declaration; the same path serves mission_resource_access with narrowing undeclared): a gap reported to the owner, not witnessed here."
   },
   {
    "id": "core.other-types.capability-declaration-waives-no-check",
@@ -93842,9 +93934,15 @@
      "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a signed grant whose entry carries an unsupported member is refused, minting no local token",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derive-deployment-types.test.ts",
+     "name": "derivation holds each ceiling and proposal entry to its own type's rules (#2019 review; @spec mission#other-types, mission#proposal-derivation) > a ceiling entry failing its own type's rules refuses the derivation invalid_authorization_details: a mission_resource_access entry carrying tenant_id under the built-in rules, and a deployment-defined entry under its own definition",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants), projection and isSubsetEntry. The ceiling side of an exchange that issues requested entries unprojected (the ICA continuation, the deferral initiation) rests on isSubsetEntry: a comparison involving an unsupported member is refused unless the two entries are byte-identical under the canonical form, which keeps the Subset Rule's equal-entry clause, since an identical candidate carries the member unchanged. The approved set is rebuilt member by member, so no intake produces that state; the ceiling witnesses write it into the stored record. The ICA witnesses and the stored-record helper are ported from a parallel build of #1399 (68d7d7b7). Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff, async and ICA candidate tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema, the capability_sources type check, and the isSubsetEntry guard (the ICA ceiling witness, the deferral initiation's ceiling witness and the helper test). The deferral initiation answers that ceiling case invalid_authorization_details (#1720 item 3, D859), so its witness is cited; re-proved after the remap: ignoring the reference side's unsupported member in isSubsetEntry fails it alone in dtr-endpoint.test.ts. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case."
+   "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants), projection and isSubsetEntry. The ceiling side of an exchange that issues requested entries unprojected (the ICA continuation, the deferral initiation) rests on isSubsetEntry: a comparison involving an unsupported member is refused unless the two entries are byte-identical under the canonical form, which keeps the Subset Rule's equal-entry clause, since an identical candidate carries the member unchanged. The approved set is rebuilt member by member, so no intake produces that state; the ceiling witnesses write it into the stored record. The ICA witnesses and the stored-record helper are ported from a parallel build of #1399 (68d7d7b7). Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff, async and ICA candidate tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema, the capability_sources type check, and the isSubsetEntry guard (the ICA ceiling witness, the deferral initiation's ceiling witness and the helper test). The deferral initiation answers that ceiling case invalid_authorization_details (#1720 item 3, D859), so its witness is cited; re-proved after the remap: ignoring the reference side's unsupported member in isSubsetEntry fails it alone in dtr-endpoint.test.ts. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case. #2019 review: with a deployment-defined type configured, derivation holds each ceiling and proposal entry to its own type's rules, so a mission_resource_access entry carrying tenant_id, in the ceiling or proposed, is still refused invalid_authorization_details beside a valid deployment-defined entry carrying that member. Proved by mutation: skipping the built-in member check for the ceiling's mission_resource_access entries fails it."
   },
   {
    "id": "core.subset.action-family-refused",

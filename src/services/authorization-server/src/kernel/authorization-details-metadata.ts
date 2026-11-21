@@ -293,22 +293,73 @@ export const SUPPORTED_AUTHORIZATION_DETAILS_TYPES: ReadonlySet<string> = new Se
 );
 
 /**
+ * @spec mission#other-types, mission#transformation-capabilities (#2019): a
+ * deployment-defined `authorization_details` type this server supports beside
+ * `mission_resource_access`. The server declares no transformation capability
+ * for it in any carrier: its metadata entry carries no
+ * `mission_transformation_capabilities`, and the transformation-capabilities
+ * configuration names only `mission_resource_access`. Every entry of the type
+ * is therefore carried as approved: never narrowed (`narrowingPermits` permits
+ * no pair of another type), delegated or projected to `scope` (the kernel
+ * declares neither for another type). Absent by default: the shipped server
+ * supports `mission_resource_access` alone.
+ */
+export interface DeploymentDefinedType {
+  /** The type's published metadata entry (draft-zehavi §5). */
+  metadata: AuthorizationDetailsTypeMetadata;
+  /**
+   * The type's documented definition: why `entry` fails it, or undefined.
+   * Applied at every intake of a proposed or requested entry of the type,
+   * which refuses a failure `invalid_authorization_details`.
+   */
+  validate(entry: Record<string, unknown>): string | undefined;
+}
+
+/** The deployment-defined types a server supports, keyed by type identifier. */
+export type DeploymentDefinedTypes = Readonly<Record<string, DeploymentDefinedType>>;
+
+/**
+ * Why `types` cannot be configured, or undefined: a deployment-defined type
+ * neither redefines `mission_resource_access` nor declares a transformation
+ * capability, which this server implements for no type but that one.
+ */
+export function deploymentTypesViolation(types: DeploymentDefinedTypes): string | undefined {
+  for (const [type, definition] of Object.entries(types)) {
+    if (type === MISSION_RESOURCE_ACCESS_TYPE || type.length === 0) {
+      return `${JSON.stringify(type)} cannot be configured as a deployment-defined authorization_details type`;
+    }
+    if (Object.hasOwn(definition.metadata, "mission_transformation_capabilities")) {
+      return `the deployment-defined type ${type} declares transformation capabilities, which this server implements for ${MISSION_RESOURCE_ACCESS_TYPE} alone`;
+    }
+  }
+  return undefined;
+}
+
+/**
  * The full endpoint response body (draft-zehavi §5), each type's entry
  * carrying the transformation capabilities `declared` names for it
  * (@spec mission#transformation-capabilities, the first carrier). A type
  * `declared` does not name carries no member, so each capability falls
- * through to the next carrier.
+ * through to the next carrier. `additional`, the deployment-defined types
+ * (#2019), follow with their own metadata entries, which declare nothing.
  */
 export function authorizationDetailsTypesMetadata(
   declared?: Readonly<Record<string, Readonly<Record<string, JsonValue>>>>,
+  additional?: DeploymentDefinedTypes,
 ): Record<string, AuthorizationDetailsTypeMetadata> {
-  if (!declared) return AUTHORIZATION_DETAILS_TYPES_METADATA;
-  return Object.fromEntries(
-    Object.entries(AUTHORIZATION_DETAILS_TYPES_METADATA).map(([type, entry]) => {
-      const capabilities = declared[type];
-      return [type, capabilities ? { ...entry, mission_transformation_capabilities: structuredClone(capabilities) } : entry];
-    }),
-  );
+  const own = declared
+    ? Object.fromEntries(
+        Object.entries(AUTHORIZATION_DETAILS_TYPES_METADATA).map(([type, entry]) => {
+          const capabilities = declared[type];
+          return [type, capabilities ? { ...entry, mission_transformation_capabilities: structuredClone(capabilities) } : entry];
+        }),
+      )
+    : AUTHORIZATION_DETAILS_TYPES_METADATA;
+  if (!additional) return own;
+  return {
+    ...own,
+    ...Object.fromEntries(Object.entries(additional).map(([type, definition]) => [type, definition.metadata])),
+  };
 }
 
 /**

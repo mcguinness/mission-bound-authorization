@@ -58,6 +58,9 @@ const REQUIRED_COVERED_MEMBERS: readonly string[] = Object.freeze(["type", "reso
 /** The integrity-anchor encoded form: `sha-256:` and an unpadded base64url SHA-256. */
 const DIGEST_FORM = /^sha-256:[A-Za-z0-9_-]{43}$/;
 
+/** The one type a {@link NarrowingDeclaration} is made for. */
+const MISSION_RESOURCE_ACCESS = "mission_resource_access";
+
 /** @spec resource-access#qualified-narrowing: a validated narrowing domain document. */
 export interface NarrowingDomain {
   id: string;
@@ -255,12 +258,24 @@ export function entryWithinDomain(entry: AuthorityEntry, domain: NarrowingDomain
  * Whether `declaration` lets the authorization server narrow `candidate`
  * against `reference`: in full, always; undeclared, never; for a domain, when
  * both entries are within it.
+ *
+ * @spec mission#transformation-capabilities (#2019): the declaration is the
+ * one this server makes for `mission_resource_access`, so it permits nothing
+ * for a pair either of whose entries is of another type. No other type has a
+ * declared `narrowing` here: such an entry is carried as approved, and a
+ * subset is established only by equality.
  */
 export function narrowingPermits(
   declaration: NarrowingDeclaration,
   candidate: AuthorityEntry,
   reference: AuthorityEntry,
 ): boolean {
+  if (
+    (candidate.type as string) !== MISSION_RESOURCE_ACCESS ||
+    (reference.type as string) !== MISSION_RESOURCE_ACCESS
+  ) {
+    return false;
+  }
   if (declaration.kind === "full") return true;
   if (declaration.kind === "undeclared") return false;
   return (

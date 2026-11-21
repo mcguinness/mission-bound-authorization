@@ -2246,6 +2246,46 @@ export function buildProvider(opts: AdapterOptions): Provider {
     checkRequestedRar(ctx, params.authorization_details, client);
   }
 
+  /**
+   * @spec mission#authority-proposal, mission#downgrade-by-omission: the
+   * AS-side anti-downgrade rule every supported type's `validate` applies
+   * first (stated at the `mission_resource_access` entry below): a client
+   * registered Mission-governed is refused invalid_request when its
+   * authorization request carries authorization_details without
+   * mission_intent.
+   */
+  function refuseGovernedWithoutIntent(ctx: unknown, client: unknown): void {
+    const oidc = (ctx as unknown as { oidc: { params: Record<string, unknown>; route?: string } }).oidc;
+    const governed = (client as unknown as { mission_governed?: unknown }).mission_governed === true;
+    const authorizationRoute =
+      oidc.route === "pushed_authorization_request" || oidc.route === "authorization" || oidc.route === "resume";
+    if (governed && authorizationRoute && oidc.params.mission_intent === undefined) {
+      throw new errors.InvalidRequest(
+        "client is Mission-governed: authorization_details is accepted only as a proposal alongside mission_intent",
+      );
+    }
+  }
+
+  /**
+   * @spec mission#other-types, mission#proposal-validation (#2019): each
+   * deployment-defined type the kernel supports, checked against its own
+   * documented definition, so checkRar admits it, it is listed in
+   * `authorization_details_types_supported`, and a failing entry is refused
+   * invalid_authorization_details.
+   */
+  const deploymentRarTypes = Object.fromEntries(
+    Object.entries(kernel.deploymentTypes() ?? {}).map(([type, definition]) => [
+      type,
+      {
+        validate: (ctx: unknown, detail: unknown, client: unknown) => {
+          refuseGovernedWithoutIntent(ctx, client);
+          const violation = definition.validate(detail as Record<string, unknown>);
+          if (violation) throw new InvalidAuthorizationDetails(violation);
+        },
+      },
+    ]),
+  );
+
   const configuration: Configuration = {
     // @spec mission#approval-event (step 7) (#1863, D1001): oidc-provider's
     // in-memory storage for every model, its authorization codes fenced so a
@@ -2389,9 +2429,6 @@ export function buildProvider(opts: AdapterOptions): Provider {
             // types; parameters typed to the runtime 9.10 contract
             // (checkRar: validate(ctx, detail, client)).
             validate: (ctx: unknown, detail: unknown, client: unknown) => {
-              const oidc = (ctx as unknown as {
-                oidc: { params: Record<string, unknown>; route?: string };
-              }).oidc;
               // @spec mission#authority-proposal, mission#downgrade-by-omission —
               // the AS-side anti-downgrade hook: a client registered
               // Mission-governed (mission_governed on its registration) MUST NOT
@@ -2410,17 +2447,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
               // where authorization_details is an RFC 9396 subset request under
               // an existing Mission-bound grant and needs no mission_intent; the
               // Token Exchange grant does not call it.
-              const governed = (client as unknown as { mission_governed?: unknown })
-                .mission_governed === true;
-              const authorizationRoute =
-                oidc.route === "pushed_authorization_request" ||
-                oidc.route === "authorization" ||
-                oidc.route === "resume";
-              if (governed && authorizationRoute && oidc.params.mission_intent === undefined) {
-                throw new errors.InvalidRequest(
-                  "client is Mission-governed: authorization_details is accepted only as a proposal alongside mission_intent",
-                );
-              }
+              refuseGovernedWithoutIntent(ctx, client);
               // @spec mission#authority-proposal (the D60 intake rule, re-pointed
               // at the standard parameter): each submitted entry MUST validate
               // against the type's published JSON Schema; a failing entry is
@@ -2434,6 +2461,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
               }
             },
           },
+          ...deploymentRarTypes,
         },
       },
       dPoP: { enabled: true },
@@ -5340,7 +5368,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (ctx.path === "/authorization-details-types" && ctx.method === "GET") {
       ctx.status = 200;
       ctx.set("content-type", "application/json");
-      ctx.body = authorizationDetailsTypesMetadata(opts.transformationCapabilities?.declared);
+      ctx.body = authorizationDetailsTypesMetadata(opts.transformationCapabilities?.declared, kernel.deploymentTypes());
       return;
     }
 

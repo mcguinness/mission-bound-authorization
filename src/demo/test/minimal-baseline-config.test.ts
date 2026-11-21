@@ -22,6 +22,8 @@
  * ID Token it validates. No headless adjudication or service-token approval
  * input is configured. The resource server is `plain-rs` (no Mission code,
  * JWT validation only), which authorizes on the `scope` the AS projects.
+ * A second resource server, the SaaS resource, enforces the token's
+ * `authorization_details` itself, from the checked token alone (#2019 G6).
  *
  * The file runs on a controlled clock (D1091).
  */
@@ -41,6 +43,7 @@ import {
 } from "@mission/authorization-server";
 import { IssuerKeys } from "@mission/core";
 import { INTROSPECTION_PRINCIPALS, type IntrospectionPrincipal, TOPOLOGY, trustedKids } from "@mission/demo-data";
+import { SAAS_RESOURCE, SaasMcpServer } from "@mission/mcp-saas";
 import { plainResourceServer } from "@mission/plain-rs";
 import { decodeJwt, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -475,5 +478,54 @@ describe("what this configuration does not implement is refused as the binding s
     }
     // The one enabled surface: the token-independent revocation means.
     expect(meta.mission_lifecycle_endpoint).toBe(`${asUrl}/mission/lifecycle`);
+  });
+});
+
+describe("a resource server enforcing authorization_details from the checked token, on the minimal configuration (#2019 G6; @spec mission#rs-enforcement)", () => {
+  /** The approved entry: one action at the SaaS resource, bound to one vendor. */
+  const VENDOR_READ = [
+    { type: "mission_resource_access", resource: SAAS_RESOURCE, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } },
+  ];
+
+  it("the SaaS resource allows the operation the approved entry covers and refuses an action and a vendor outside it, with no effect (@spec mission#rs-enforcement)", async () => {
+    const pushed = await par({
+      mission_intent: envelope({ intent: { goal: "Look up the Acme vendor record", target_resources: [SAAS_RESOURCE] } }),
+      authorization_details: JSON.stringify(VENDOR_READ),
+      resource: SAAS_RESOURCE,
+    });
+    expect(pushed.status, JSON.stringify(pushed.body)).toBe(201);
+    const pending = await startInteraction(String(pushed.body.request_uri));
+    const issuedCode = (await resolveMissionApproval(asUrl, bob, pending, "approve", "alice")) as string;
+    const keys = await generateKeyPair("ES256", { extractable: true });
+    const redeemed = await tokenGrantRequest(asUrl, as.agentClientJwk, keys, {
+      grant_type: "authorization_code",
+      code: issuedCode,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: VERIFIER,
+      resource: SAAS_RESOURCE,
+    });
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+    const token = String(redeemed.body.access_token);
+    // The checked token carries the approved entry for this audience, and no scope.
+    const claims = decodeJwt(token);
+    expect(claims.aud).toBe(SAAS_RESOURCE);
+    expect(claims.authorization_details).toEqual(VENDOR_READ);
+    expect(claims.scope).toBeUndefined();
+
+    // The resource trusts this AS as the token's issuer and as the Mission Issuer.
+    const jwks = (await (await fetch(`${asUrl}/jwks`)).json()) as ConstructorParameters<typeof SaasMcpServer>[0]["rasJwks"];
+    const saas = new SaasMcpServer({ rasIssuer: asUrl, rasJwks: jwks, trustedMissionIssuers: [asUrl], resource: SAAS_RESOURCE });
+    const call = async (tool: string, args: Record<string, unknown>) =>
+      saas.callTool(tool, args, token, await dpopProofFor(keys, SAAS_RESOURCE, "POST", token));
+
+    const within = await call("get_vendor_bank_details", { vendor_id: "acme" });
+    expect(within, JSON.stringify(within)).toMatchObject({ ok: true, result: { vendor_id: "acme" } });
+    // An action the entry does not grant.
+    const write = await call("post_journal_entry", { vendor_id: "acme", amount: "10.00" });
+    expect(write).toEqual({ ok: false, error: "out_of_authority" });
+    expect(saas.journalEntries()).toEqual([]);
+    // The granted action, for a vendor outside the entry's constraint.
+    const otherVendor = await call("get_vendor_bank_details", { vendor_id: "globex" });
+    expect(otherVendor).toEqual({ ok: false, error: "out_of_authority" });
   });
 });

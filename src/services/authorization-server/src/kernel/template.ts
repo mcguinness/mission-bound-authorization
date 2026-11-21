@@ -1126,6 +1126,7 @@ export function dispatchFromTemplate(
       first.childActorProvenance,
       undefined,
       kernel.narrowingDeclaration(),
+      kernel.deploymentTypes(),
     ));
   } catch (e) {
     if (e instanceof IntentError) {

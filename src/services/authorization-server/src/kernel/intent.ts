@@ -31,6 +31,7 @@ import {
 } from "@mission/core";
 import { type AmountBindingCandidate, amountBearingBindingError } from "@mission/demo-data";
 import {
+  type DeploymentDefinedTypes,
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
 } from "./authorization-details-metadata.js";
@@ -984,7 +985,11 @@ function validateMissionIntentObject(
  * deployment catalog marks not amount-bearing is refused
  * `invalid_authorization_details` (#743).
  */
-export function validateAuthorityProposal(raw: string, targetResources: string[]): AuthorityEntry[] {
+export function validateAuthorityProposal(
+  raw: string,
+  targetResources: string[],
+  deploymentTypes?: DeploymentDefinedTypes,
+): AuthorityEntry[] {
   if (Buffer.byteLength(raw, "utf8") > MAX_INTENT_BYTES) {
     throw new IntentError("invalid_request", "authorization_details exceeds size bound");
   }
@@ -1001,12 +1006,12 @@ export function validateAuthorityProposal(raw: string, targetResources: string[]
     throw new IntentError("invalid_request", "authorization_details must be a JSON array");
   }
   for (const entry of parsed) {
-    validateProposedEntry(entry, targetResources);
+    validateProposedEntry(entry, targetResources, deploymentTypes);
   }
   return parsed as unknown as AuthorityEntry[];
 }
 
-function validateProposedEntry(entry: JsonValue, targetResources: string[]): void {
+function validateProposedEntry(entry: JsonValue, targetResources: string[], deploymentTypes?: DeploymentDefinedTypes): void {
   if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
     throw new IntentError("invalid_request", "authorization_details entries must be objects");
   }
@@ -1017,6 +1022,27 @@ function validateProposedEntry(entry: JsonValue, targetResources: string[]): voi
   // SUPPORTED_AUTHORIZATION_DETAILS_TYPES is that SAME key set (single source of
   // truth), so this can never drift from what the metadata endpoint publishes. An
   // unadvertised type is refused here, never silently carried into derivation.
+  // @spec mission#other-types, mission#proposal-validation (#2019): a
+  // deployment-defined type the server is configured with is supported too,
+  // and an entry of it is validated against that type's own documented
+  // definition alone; the rules below are mission_resource_access's.
+  const deploymentType =
+    typeof e.type === "string" && deploymentTypes && Object.hasOwn(deploymentTypes, e.type)
+      ? deploymentTypes[e.type]
+      : undefined;
+  if (deploymentType) {
+    const violation = deploymentType.validate(e);
+    if (violation) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry fails the definition of its type: ${violation}`,
+      );
+    }
+    if (typeof e.resource === "string" && !targetResources.includes(e.resource)) {
+      throw new IntentError("invalid_request", `authorization_details resource not among Intent target_resources: ${e.resource}`);
+    }
+    return;
+  }
   if (typeof e.type !== "string" || !SUPPORTED_AUTHORIZATION_DETAILS_TYPES.has(e.type)) {
     throw new IntentError("invalid_authorization_details", `unsupported authorization details type: ${String(e.type)}`);
   }
