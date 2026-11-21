@@ -101,7 +101,7 @@ import {
   presentedTokenChildRefusal,
   presentedTokenFanoutRefusal,
 } from "../kernel/child-delegation.js";
-import { IntentError } from "../kernel/intent.js";
+import { creationAcceptanceRef, IntentError, SubmissionAdmission } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
 import {
   assertSuccessorMaxBudget,
@@ -2401,8 +2401,10 @@ export async function handleChildCreationExchange(
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
     // @spec mission#intent-submission-evidence — presented evidence is part of
     // the creation fingerprint: same creation_request_id + different evidence
-    // is a mismatch, never a silent replay. (Unreachable today — no registered
-    // evidence types, so any presented entry was already refused above.)
+    // is a mismatch, never a silent replay. @spec request-provenance#replay
+    // (#939 slice 3a): the entries exactly as presented, a
+    // mission-request-provenance assertion's string included, so only an
+    // exact retry recovers the recorded outcome without verifying again.
     ...(submission.evidence ? { evidence: submission.evidence } : {}),
     child_actor: childActor,
     requested_token_type: JWT_TOKEN_TYPE,
@@ -2431,115 +2433,134 @@ export async function handleChildCreationExchange(
     return;
   }
 
-  // @spec mission#intent-submission-evidence — STAGE-2 evidence verification
-  // runs AFTER the completed-operation recovery lookup above (an artifact
-  // that expired after the first attempt completed MUST NOT break recovery)
-  // and BEFORE creation/derivation. Presenter conjunction: the AUTHENTICATED
-  // client + the possession key of THIS exchange; required types are resolved
-  // from policy (global + client registration) before derivation.
-  let submissionEvidence: Awaited<ReturnType<typeof opts.kernel.verifySubmissionEvidence>>;
+  // @spec request-provenance#replay (#939 slice 3a, D1119 Q1, D1315 ruling 4):
+  // the admission scope of this exchange. A type that reserves while
+  // verifying (a mission-request-provenance (iss, jti) pair) holds it here.
+  // The submission is accepted when the child is created: the scope commits
+  // inside the creation's transaction, as its last step, under this
+  // operation's reference. Every other outcome, a refusal or an exception,
+  // releases it in the `finally`; a committed scope releases nothing.
+  const acceptanceRef = creationAcceptanceRef("child-creation", client.clientId, creationRequestId);
+  const admission = new SubmissionAdmission();
   try {
-    submissionEvidence = await opts.kernel.verifySubmissionEvidence({
-      intent,
-      ...(submission.evidence ? { evidence: submission.evidence } : {}),
-      presenter: { clientId: client.clientId, cnf: { jkt: resolved.jkt } },
-      required: requiredEvidenceTypesFor(opts, client),
-      requestContext: { carrier: "token-exchange:child-creation" },
-    });
-  } catch (e) {
-    if (e instanceof IntentError) throw intentErrorToOidc(e);
-    throw e;
-  }
-
-  // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation, ATOMIC with the
-  // idempotency reservation (one kernel-db transaction: reserved -> insertRecord
-  // -> completed; the datastore uniqueness constraint — never read-before-insert
-  // — serializes concurrent duplicates). Denials map through the shared
-  // childErrorCode + mission_denial_reason (set on ctx directly so err_out
-  // does not strip the reason) and are recorded as a `failed` operation so a
-  // retry replays the refusal.
-  let child: MissionRecord;
-  try {
-    child = idem.createCompleted(reservation, () => {
-      const created = createChildMission(opts.kernel, {
-        parentId: parent.id,
+    // @spec mission#intent-submission-evidence — STAGE-2 evidence verification
+    // runs AFTER the completed-operation recovery lookup above (an artifact
+    // that expired after the first attempt completed MUST NOT break recovery)
+    // and BEFORE creation/derivation. Presenter conjunction: the AUTHENTICATED
+    // client + the possession key of THIS exchange; required types are resolved
+    // from policy (global + client registration) before derivation.
+    let submissionEvidence: Awaited<ReturnType<typeof opts.kernel.verifySubmissionEvidence>>;
+    try {
+      submissionEvidence = await opts.kernel.verifySubmissionEvidence({
         intent,
-        ...(proposedAuthority ? { proposedAuthority } : {}),
-        ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-        childActor,
-        presentedAuthority,
+        ...(submission.evidence ? { evidence: submission.evidence } : {}),
+        presenter: { clientId: client.clientId, cnf: { jkt: resolved.jkt } },
+        required: requiredEvidenceTypesFor(opts, client),
+        requestContext: { carrier: "token-exchange:child-creation" },
+        admission,
       });
-      return { missionId: created.child.id, value: created.child };
-    });
-  } catch (e) {
-    if (e instanceof IntentError) {
-      // createCompleted rolled the reservation and record back together. Keep
-      // one serialized, definitive failure for BOTH this response and replay.
-      const mapped = intentErrorToOidc(e) as Error & { statusCode?: number; error?: string; error_description?: string };
-      const status = mapped.statusCode ?? 400;
-      const body = { error: mapped.error ?? e.code, error_description: mapped.error_description ?? e.message };
-      idem.recordFailure(reservation, { status, body });
-      ctx.status = status;
-      ctx.body = body;
-      ctx.set("cache-control", "no-store");
-      return;
+    } catch (e) {
+      if (e instanceof IntentError) throw intentErrorToOidc(e);
+      throw e;
     }
-    if (e instanceof UniqueViolationError) {
-      // A concurrent duplicate won the reservation: recover its outcome.
-      const winner = idem.find(client.clientId, creationRequestId);
-      if (winner) {
-        await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt, presentedAuthority);
+
+    // Steps 5-6: SYNCHRONOUS, NON-derivation subset creation, ATOMIC with the
+    // idempotency reservation (one kernel-db transaction: reserved -> insertRecord
+    // -> completed; the datastore uniqueness constraint — never read-before-insert
+    // — serializes concurrent duplicates). Denials map through the shared
+    // childErrorCode + mission_denial_reason (set on ctx directly so err_out
+    // does not strip the reason) and are recorded as a `failed` operation so a
+    // retry replays the refusal.
+    let child: MissionRecord;
+    try {
+      child = idem.createCompleted(reservation, () => {
+        const created = createChildMission(opts.kernel, {
+          parentId: parent.id,
+          intent,
+          ...(proposedAuthority ? { proposedAuthority } : {}),
+          ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+          childActor,
+          presentedAuthority,
+        });
+        // @spec request-provenance#replay (#939 slice 3a): the exchange
+        // succeeds, so the submission is accepted: commit, last, inside the
+        // creation's transaction. A commit that fails rolls the creation
+        // back, and the `finally` releases every reservation.
+        admission.commit(acceptanceRef);
+        return { missionId: created.child.id, value: created.child };
+      });
+    } catch (e) {
+      if (e instanceof IntentError) {
+        // createCompleted rolled the reservation and record back together. Keep
+        // one serialized, definitive failure for BOTH this response and replay.
+        const mapped = intentErrorToOidc(e) as Error & { statusCode?: number; error?: string; error_description?: string };
+        const status = mapped.statusCode ?? 400;
+        const body = { error: mapped.error ?? e.code, error_description: mapped.error_description ?? e.message };
+        idem.recordFailure(reservation, { status, body });
+        ctx.status = status;
+        ctx.body = body;
+        ctx.set("cache-control", "no-store");
+        return;
+      }
+      if (e instanceof UniqueViolationError) {
+        // A concurrent duplicate won the reservation: recover its outcome.
+        const winner = idem.find(client.clientId, creationRequestId);
+        if (winner) {
+          await recoverChildCreation(opts, ctx, winner, fingerprint, resolved.jkt, presentedAuthority);
+          return;
+        }
+        throw e;
+      }
+      if (e instanceof ChildDelegationError) {
+        const code = childErrorCode(e.reason);
+        const status = code === "access_denied" ? 403 : 400;
+        const body = { error: code, mission_denial_reason: e.reason };
+        idem.recordFailure(reservation, { status, body });
+        ctx.status = status;
+        ctx.body = body;
+        ctx.set("cache-control", "no-store");
         return;
       }
       throw e;
     }
-    if (e instanceof ChildDelegationError) {
-      const code = childErrorCode(e.reason);
-      const status = code === "access_denied" ? 403 : 400;
-      const body = { error: code, mission_denial_reason: e.reason };
-      idem.recordFailure(reservation, { status, body });
-      ctx.status = status;
-      ctx.body = body;
-      ctx.set("cache-control", "no-store");
+
+    if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
+      ctx.status = 501;
+      ctx.body = { error: "child_delegation_unsupported" };
       return;
     }
-    throw e;
+    // Credential generation AFTER the atomic creation commit: a crash between the
+    // commit and the response is recovered by the retry finding the completed
+    // operation and resuming DELIVERY (recovery = delivery, never re-creation).
+    const { assertion } = await mintChildGrant(
+      opts.kernel,
+      { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
+      { child, tokenEndpoint: `${opts.issuer}/token` },
+    );
+    idem.recordDelivery(client.clientId, creationRequestId, {
+      mode: "synchronous",
+      assertion,
+      exp: decodeJwt(assertion).exp as number,
+    });
+    // @spec RFC 8693 §2.2.1 — the (unchanged) child response: a grant reference, not
+    // a token; token_type N_A because bearer semantics do not apply to an unredeemed grant.
+    ctx.status = 200;
+    ctx.set("cache-control", "no-store");
+    ctx.body = {
+      access_token: assertion,
+      issued_token_type: JWT_TOKEN_TYPE,
+      token_type: "N_A",
+      mission_id: child.id,
+      // @spec child-delegation#grant-type, mission#grant-binding — REQUIRED on
+      // this response shape: the child's COMMITTED effective expiry, verbatim
+      // from the record (the recovery body returns the same stored value, since
+      // recovery is delivery and never re-creation).
+      mission_expires_at: child.expires_at,
+      parent: child.parent,
+    };
+  } finally {
+    admission.release();
   }
-
-  if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
-    ctx.status = 501;
-    ctx.body = { error: "child_delegation_unsupported" };
-    return;
-  }
-  // Credential generation AFTER the atomic creation commit: a crash between the
-  // commit and the response is recovered by the retry finding the completed
-  // operation and resuming DELIVERY (recovery = delivery, never re-creation).
-  const { assertion } = await mintChildGrant(
-    opts.kernel,
-    { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
-    { child, tokenEndpoint: `${opts.issuer}/token` },
-  );
-  idem.recordDelivery(client.clientId, creationRequestId, {
-    mode: "synchronous",
-    assertion,
-    exp: decodeJwt(assertion).exp as number,
-  });
-  // @spec RFC 8693 §2.2.1 — the (unchanged) child response: a grant reference, not
-  // a token; token_type N_A because bearer semantics do not apply to an unredeemed grant.
-  ctx.status = 200;
-  ctx.set("cache-control", "no-store");
-  ctx.body = {
-    access_token: assertion,
-    issued_token_type: JWT_TOKEN_TYPE,
-    token_type: "N_A",
-    mission_id: child.id,
-    // @spec child-delegation#grant-type, mission#grant-binding — REQUIRED on
-    // this response shape: the child's COMMITTED effective expiry, verbatim
-    // from the record (the recovery body returns the same stored value, since
-    // recovery is delivery and never re-creation).
-    mission_expires_at: child.expires_at,
-    parent: child.parent,
-  };
 }
 
 /**
@@ -2848,8 +2869,9 @@ export async function handleExpansionExchange(
     ...(acting.actorTokenSubject ? { actor: acting.actorTokenSubject } : {}),
     intent,
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
-    // @spec mission#intent-submission-evidence — presented evidence is part of
-    // the creation fingerprint (see the child-creation exchange above).
+    // @spec mission#intent-submission-evidence, request-provenance#replay —
+    // presented evidence, exactly as presented, is part of the creation
+    // fingerprint (see the child-creation exchange above).
     ...(submission.evidence ? { evidence: submission.evidence } : {}),
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     ...(typeof predecessorParam === "string" && predecessorParam
@@ -2872,250 +2894,280 @@ export async function handleExpansionExchange(
     return;
   }
 
-  // @spec mission#intent-submission-evidence — STAGE-2 evidence verification
-  // runs AFTER the recovery lookup above (recovery of a completed or pending
-  // operation never re-verifies evidence freshness) and BEFORE the lifecycle
-  // gate and derivation. The verified facts persist across a deferred window
-  // (store.open below) and land on the successor at redemption.
-  let submissionEvidence: Awaited<ReturnType<typeof opts.kernel.verifySubmissionEvidence>>;
+  // @spec request-provenance#replay (#939 slice 3a, D1119 Q1, D1315 ruling 4):
+  // the admission scope of this exchange. A type that reserves while
+  // verifying holds it here. The submission is accepted when the exchange
+  // succeeds (a ceiling drawdown's successor is created: the scope commits
+  // inside its creation's transaction) or returns a pending continuation (the
+  // deferral is opened and its operation reserved: the scope commits before
+  // the continuation is answered). The deferral keeps the reference, so its
+  // activation relies on the acceptance records. Every other outcome, a
+  // refusal or an exception, releases the scope in the `finally`.
+  const acceptanceRef = creationAcceptanceRef("expansion", client.clientId, creationRequestId);
+  const admission = new SubmissionAdmission();
   try {
-    submissionEvidence = await opts.kernel.verifySubmissionEvidence({
-      intent,
-      ...(submission.evidence ? { evidence: submission.evidence } : {}),
-      presenter: { clientId: client.clientId, cnf: { jkt: resolved.jkt } },
-      required: requiredEvidenceTypesFor(opts, client),
-      requestContext: { carrier: "token-exchange:expansion" },
-    });
-  } catch (e) {
-    if (e instanceof IntentError) throw intentErrorToOidc(e);
-    throw e;
-  }
-
-  // The predecessor MUST be active at request time.
-  const active = opts.kernel.applyExpiry(resolved.record);
-  if (active.state !== "active") {
-    // @spec expansion#predecessor-active (#1154, #1179): invalid_request on the
-    // expansion exchange. Possession alone does not authorize the presenter
-    // (step 4), so the predecessor's state and mission_error go only to its
-    // own client.
-    if (isMissionClient(ctx, active)) {
-      refuseInactiveMission(ctx, active, `predecessor mission is ${active.state}`);
-      // @spec expansion#predecessor-active (#1177): with the reconciliation
-      // status the attribution rule selects.
-      (ctx.body as Record<string, unknown>).mission_expansion_status = reconciliationStatusFor(active);
-    } else {
-      txError(ctx, 400, "invalid_request", "predecessor mission is not active");
+    // @spec mission#intent-submission-evidence — STAGE-2 evidence verification
+    // runs AFTER the recovery lookup above (recovery of a completed or pending
+    // operation never re-verifies evidence freshness) and BEFORE the lifecycle
+    // gate and derivation. The verified facts persist across a deferred window
+    // (store.open below) and land on the successor at redemption.
+    let submissionEvidence: Awaited<ReturnType<typeof opts.kernel.verifySubmissionEvidence>>;
+    try {
+      submissionEvidence = await opts.kernel.verifySubmissionEvidence({
+        intent,
+        ...(submission.evidence ? { evidence: submission.evidence } : {}),
+        presenter: { clientId: client.clientId, cnf: { jkt: resolved.jkt } },
+        required: requiredEvidenceTypesFor(opts, client),
+        requestContext: { carrier: "token-exchange:expansion" },
+        admission,
+      });
+    } catch (e) {
+      if (e instanceof IntentError) throw intentErrorToOidc(e);
+      throw e;
     }
-    return;
-  }
 
-  // Step 7: widening check. @spec expansion#verification-order — a NON-WIDENING
-  // request (the derived requested authority is a subset of the predecessor's
-  // own effective Authority Set) is REFUSED: there is nothing to expand, and
-  // ordinary token derivation already serves it (an expansion response must
-  // never ambiguously be a non-successor; #486). Nothing is created or
-  // reserved and the predecessor is untouched. Set on ctx directly (err_out
-  // would strip mission_denial_reason).
-  // @spec resource-access#resource-contract (#249, D875): where a consented
-  // ceiling adjudicates first, every drawdown check below decides on the
-  // drawdown's preserved set, carrying the ceiling's reference, never one
-  // assembled afresh. Only a predecessor without one decides on the assembled
-  // derivation; the fresh-approval fallback assembles at its own decision.
-  // @spec expansion#denial-reasons, resource-access#resource-contract (#1827,
-  // D949): an Intent the AS can parse but cannot derive a valid Authority Set
-  // from is refused `invalid_authorization_details` where a proposal
-  // accompanies it, otherwise `invalid_request`, before anything is opened or
-  // reserved. A required reference with no current version is one such case:
-  // no new approval references a version that is not current.
-  const refuseUnderivable = (e: IntentError): void =>
-    txError(ctx, 400, proposedAuthority?.length ? "invalid_authorization_details" : "invalid_request", e.message);
-  let requested: AuthorityEntry[];
-  try {
-    requested =
-      opts.progressive && active.authority_ceiling
-        ? drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling)
-        : opts.kernel.derive(intent, proposedAuthority);
-  } catch (e) {
-    if (e instanceof IntentError) {
-      refuseUnderivable(e);
+    // The predecessor MUST be active at request time.
+    const active = opts.kernel.applyExpiry(resolved.record);
+    if (active.state !== "active") {
+      // @spec expansion#predecessor-active (#1154, #1179): invalid_request on the
+      // expansion exchange. Possession alone does not authorize the presenter
+      // (step 4), so the predecessor's state and mission_error go only to its
+      // own client.
+      if (isMissionClient(ctx, active)) {
+        refuseInactiveMission(ctx, active, `predecessor mission is ${active.state}`);
+        // @spec expansion#predecessor-active (#1177): with the reconciliation
+        // status the attribution rule selects.
+        (ctx.body as Record<string, unknown>).mission_expansion_status = reconciliationStatusFor(active);
+      } else {
+        txError(ctx, 400, "invalid_request", "predecessor mission is not active");
+      }
       return;
     }
-    throw e;
-  }
-  const effective = opts.kernel.issuableAuthoritySet(active);
-  if (isSubsetSetIgnoringCapabilitySources(requested, effective)) {
+
+    // Step 7: widening check. @spec expansion#verification-order — a NON-WIDENING
+    // request (the derived requested authority is a subset of the predecessor's
+    // own effective Authority Set) is REFUSED: there is nothing to expand, and
+    // ordinary token derivation already serves it (an expansion response must
+    // never ambiguously be a non-successor; #486). Nothing is created or
+    // reserved and the predecessor is untouched. Set on ctx directly (err_out
+    // would strip mission_denial_reason).
+    // @spec resource-access#resource-contract (#249, D875): where a consented
+    // ceiling adjudicates first, every drawdown check below decides on the
+    // drawdown's preserved set, carrying the ceiling's reference, never one
+    // assembled afresh. Only a predecessor without one decides on the assembled
+    // derivation; the fresh-approval fallback assembles at its own decision.
+    // @spec expansion#denial-reasons, resource-access#resource-contract (#1827,
+    // D949): an Intent the AS can parse but cannot derive a valid Authority Set
+    // from is refused `invalid_authorization_details` where a proposal
+    // accompanies it, otherwise `invalid_request`, before anything is opened or
+    // reserved. A required reference with no current version is one such case:
+    // no new approval references a version that is not current.
+    const refuseUnderivable = (e: IntentError): void =>
+      txError(ctx, 400, proposedAuthority?.length ? "invalid_authorization_details" : "invalid_request", e.message);
+    let requested: AuthorityEntry[];
+    try {
+      requested =
+        opts.progressive && active.authority_ceiling
+          ? drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling)
+          : opts.kernel.derive(intent, proposedAuthority);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        refuseUnderivable(e);
+        return;
+      }
+      throw e;
+    }
+    const effective = opts.kernel.issuableAuthoritySet(active);
+    if (isSubsetSetIgnoringCapabilitySources(requested, effective)) {
+      ctx.status = 400;
+      ctx.body = { error: "invalid_request", mission_denial_reason: "nothing_to_expand" };
+      ctx.set("cache-control", "no-store");
+      return;
+    }
+
+    // @spec progressive#in-ceiling-expansion: where the deployment selects
+    // Progressive authorization and the predecessor carries a consented ceiling,
+    // the ceiling adjudicates first. A drawdown its policy authorizes completes
+    // here; any other request, out-of-ceiling ones included, falls back to the
+    // fresh approval below, unless the deployment refuses beyond-ceiling ones.
+    // @spec progressive#ceiling-review (#1017): why a drawdown request fell
+    // back, recorded on the deferral for the chain's review disclosure.
+    let drawdownFallback: string | undefined;
+    // @spec discovery#adjudication (#1469 stage 1): the encounter a fallback decides.
+    let encounter: EncounterFacts | undefined;
+    if (opts.progressive && active.authority_ceiling) {
+      // @spec discovery#resource-identity: the agent's encounter hints, validated
+      // for shape and kept as its claim, never identity.
+      const hint = encounterHint(
+        (ctx.oidc.params as Record<string, unknown>).encountered_resource,
+        (ctx.oidc.params as Record<string, unknown>).resource_declaration_digest,
+        requested,
+      );
+      if (typeof hint === "string") {
+        txError(ctx, 400, "invalid_request", hint);
+        return;
+      }
+      const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
+        predecessorId: active.id,
+        requested,
+        intent,
+        ...(proposedAuthority ? { proposedAuthority } : {}),
+        ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+        creationRequestId,
+        fingerprint,
+        jkt: resolved.jkt,
+        admission,
+        acceptanceRef,
+      });
+      if (outcome === true) return;
+      if (outcome && typeof outcome === "object") {
+        drawdownFallback = outcome.reason;
+        if (outcome.encountered) {
+          // @spec discovery#adjudication (#1469 stage 3): the session the harness
+          // reports on is named by the subject token's Mission and the
+          // authenticated client, never by a request member.
+          const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint, {
+            missionId: active.id,
+            clientId: (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
+            now: () => opts.kernel.nowDate(),
+          });
+          if (typeof facts === "string") {
+            txError(ctx, 400, "invalid_request", facts);
+            return;
+          }
+          // @spec discovery#adjudication, discovery#resource-identity (#1469 stage
+          // 2): an encounter whose identity cannot be established, where the
+          // deployment does not escalate it, is refused before any deferral or
+          // reservation exists. The refusal is uniform: the draft defines no
+          // diagnostic for it, and the response names no pinning step.
+          if (refusesEncounter(opts.progressive, facts)) {
+            txError(ctx, 400, "invalid_request", "the encounter is refused");
+            return;
+          }
+          encounter = facts;
+        }
+      }
+    }
+
+    // @spec expansion#completion-modes (#1177): the deferred response goes only
+    // to an exchange whose completion_mode includes `deferred`. This AS offers
+    // no interactive completion, so any other exchange is refused before a
+    // deferral is opened or an operation is reserved.
+    if (!requestsDeferral(params.completion_mode)) {
+      txError(ctx, 400, "invalid_request", "this expansion needs asynchronous approval: include deferred in completion_mode");
+      return;
+    }
+
+    // Widening: a FRESH approval is required. Complete via the DTR deferred path.
+    const store = opts.expansionDeferrals;
+    if (!store) {
+      throw new errors.InvalidRequest("deferred expansion approval is not configured");
+    }
+    // @spec resource-access#resource-contract (#1827, D949): the fresh approval
+    // assembles the successor's references from configuration
+    // (successorAuthority), so a request it cannot assemble opens no deferral
+    // that could never be approved. The decision assembles again, so a
+    // configuration change during the deferred window is still refused there.
+    try {
+      successorAuthority(opts.kernel, intent, proposedAuthority?.length ? proposedAuthority : undefined, active);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        refuseUnderivable(e);
+        return;
+      }
+      throw e;
+    }
+    let pending: ReturnType<typeof store.open>;
+    try {
+      pending = store.open({
+        predecessorId: active.id,
+        intent,
+        ...(proposedAuthority ? { proposedAuthority } : {}),
+        // Facts verified at INITIATION persist across the deferred window and
+        // land on the successor at redemption.
+        ...(submissionEvidence?.length ? { submissionEvidence } : {}),
+        // @spec request-provenance#replay (#939 slice 3a): the entries as
+        // presented and the reference this exchange accepts them under, so
+        // the activation relies on their acceptance records.
+        ...(submission.evidence ? { evidence: submission.evidence } : {}),
+        acceptanceRef,
+        clientId: acting.sub,
+        jkt: resolved.jkt,
+        creationRequestId,
+        ...(drawdownFallback ? { drawdownFallback } : {}),
+        ...(encounter ? { encounter } : {}),
+      });
+    } catch (e) {
+      if (e instanceof ExpansionDeferralError) {
+        // @spec child-delegation#carryover — the plan-cap refusal is PRE-DECISION
+        // and happens BEFORE approval, so the approval event never names a plan
+        // the kernel cannot commit in one transaction. It carries its own
+        // machine-readable reason, distinct from a predecessor-state refusal.
+        if (e.code === "carryover_plan_too_large") {
+          ctx.status = 400;
+          ctx.body = { error: "invalid_request", mission_denial_reason: e.code };
+          ctx.set("cache-control", "no-store");
+          return;
+        }
+        // @spec mission#approval-idempotency (#1915, D1056): a live deferral
+        // already holds this creation_request_id for a different request.
+        if (e.code === "creation_request_mismatch") {
+          txError(ctx, 400, "invalid_request", e.message);
+          return;
+        }
+        txError(ctx, 400, "invalid_grant", e.message);
+        return;
+      }
+      throw e;
+    }
+    // @spec expansion#creation-idempotency — reserve the operation at deferred
+    // INITIATION (state `reserved`; the deferral handle is the recorded delivery
+    // continuation). A repetition of the same (client, creation_request_id)
+    // returns the SAME deferral, never a second ceremony. A concurrent duplicate
+    // serializes on the uniqueness constraint and recovers the winner.
+    try {
+      idem.reserve({
+        clientId: client.clientId,
+        creationRequestId,
+        op: "expansion",
+        fingerprint,
+        cnfJkt: resolved.jkt,
+        sourceMissionId: active.id,
+        delivery: { mode: "deferred", deferral_code: pending.deferral_code },
+        // @spec mission#approval-idempotency (#1915, D1056): the key stays bound
+        // to the deferral while it is pending, whatever the horizon.
+        pendingUntil: pending.pendingUntil,
+      });
+    } catch (e) {
+      if (e instanceof UniqueViolationError) {
+        const winner = idem.find(client.clientId, creationRequestId);
+        if (winner) {
+          await recoverExpansion(opts, provider, ctx, winner, fingerprint, resolved.jkt);
+          return;
+        }
+      }
+      throw e;
+    }
+    // @spec request-provenance#replay (#939 slice 3a, D1315 ruling 4): the
+    // exchange returns a pending continuation, so the submission is accepted:
+    // commit once the deferral is opened and this operation reserved, so a
+    // retry recovers through the reserved operation. A commit that fails
+    // releases every reservation and answers 500; the deferral then finds no
+    // acceptance record at activation and is refused.
+    admission.commit(acceptanceRef);
+    // Step 6 (deferred): the DTR initiation body (HTTP 400 authorization_pending). Set
+    // on ctx directly (err_out would strip deferral_code/expires_in/interval).
     ctx.status = 400;
-    ctx.body = { error: "invalid_request", mission_denial_reason: "nothing_to_expand" };
+    ctx.body = {
+      error: pending.error,
+      deferral_code: pending.deferral_code,
+      expires_in: pending.expires_in,
+      interval: pending.interval,
+    };
     ctx.set("cache-control", "no-store");
-    return;
+  } finally {
+    admission.release();
   }
-
-  // @spec progressive#in-ceiling-expansion: where the deployment selects
-  // Progressive authorization and the predecessor carries a consented ceiling,
-  // the ceiling adjudicates first. A drawdown its policy authorizes completes
-  // here; any other request, out-of-ceiling ones included, falls back to the
-  // fresh approval below, unless the deployment refuses beyond-ceiling ones.
-  // @spec progressive#ceiling-review (#1017): why a drawdown request fell
-  // back, recorded on the deferral for the chain's review disclosure.
-  let drawdownFallback: string | undefined;
-  // @spec discovery#adjudication (#1469 stage 1): the encounter a fallback decides.
-  let encounter: EncounterFacts | undefined;
-  if (opts.progressive && active.authority_ceiling) {
-    // @spec discovery#resource-identity: the agent's encounter hints, validated
-    // for shape and kept as its claim, never identity.
-    const hint = encounterHint(
-      (ctx.oidc.params as Record<string, unknown>).encountered_resource,
-      (ctx.oidc.params as Record<string, unknown>).resource_declaration_digest,
-      requested,
-    );
-    if (typeof hint === "string") {
-      txError(ctx, 400, "invalid_request", hint);
-      return;
-    }
-    const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
-      predecessorId: active.id,
-      requested,
-      intent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-      creationRequestId,
-      fingerprint,
-      jkt: resolved.jkt,
-    });
-    if (outcome === true) return;
-    if (outcome && typeof outcome === "object") {
-      drawdownFallback = outcome.reason;
-      if (outcome.encountered) {
-        // @spec discovery#adjudication (#1469 stage 3): the session the harness
-        // reports on is named by the subject token's Mission and the
-        // authenticated client, never by a request member.
-        const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint, {
-          missionId: active.id,
-          clientId: (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
-          now: () => opts.kernel.nowDate(),
-        });
-        if (typeof facts === "string") {
-          txError(ctx, 400, "invalid_request", facts);
-          return;
-        }
-        // @spec discovery#adjudication, discovery#resource-identity (#1469 stage
-        // 2): an encounter whose identity cannot be established, where the
-        // deployment does not escalate it, is refused before any deferral or
-        // reservation exists. The refusal is uniform: the draft defines no
-        // diagnostic for it, and the response names no pinning step.
-        if (refusesEncounter(opts.progressive, facts)) {
-          txError(ctx, 400, "invalid_request", "the encounter is refused");
-          return;
-        }
-        encounter = facts;
-      }
-    }
-  }
-
-  // @spec expansion#completion-modes (#1177): the deferred response goes only
-  // to an exchange whose completion_mode includes `deferred`. This AS offers
-  // no interactive completion, so any other exchange is refused before a
-  // deferral is opened or an operation is reserved.
-  if (!requestsDeferral(params.completion_mode)) {
-    txError(ctx, 400, "invalid_request", "this expansion needs asynchronous approval: include deferred in completion_mode");
-    return;
-  }
-
-  // Widening: a FRESH approval is required. Complete via the DTR deferred path.
-  const store = opts.expansionDeferrals;
-  if (!store) {
-    throw new errors.InvalidRequest("deferred expansion approval is not configured");
-  }
-  // @spec resource-access#resource-contract (#1827, D949): the fresh approval
-  // assembles the successor's references from configuration
-  // (successorAuthority), so a request it cannot assemble opens no deferral
-  // that could never be approved. The decision assembles again, so a
-  // configuration change during the deferred window is still refused there.
-  try {
-    successorAuthority(opts.kernel, intent, proposedAuthority?.length ? proposedAuthority : undefined, active);
-  } catch (e) {
-    if (e instanceof IntentError) {
-      refuseUnderivable(e);
-      return;
-    }
-    throw e;
-  }
-  let pending: ReturnType<typeof store.open>;
-  try {
-    pending = store.open({
-      predecessorId: active.id,
-      intent,
-      ...(proposedAuthority ? { proposedAuthority } : {}),
-      // Facts verified at INITIATION persist across the deferred window and
-      // land on the successor at redemption.
-      ...(submissionEvidence?.length ? { submissionEvidence } : {}),
-      clientId: acting.sub,
-      jkt: resolved.jkt,
-      creationRequestId,
-      ...(drawdownFallback ? { drawdownFallback } : {}),
-      ...(encounter ? { encounter } : {}),
-    });
-  } catch (e) {
-    if (e instanceof ExpansionDeferralError) {
-      // @spec child-delegation#carryover — the plan-cap refusal is PRE-DECISION
-      // and happens BEFORE approval, so the approval event never names a plan
-      // the kernel cannot commit in one transaction. It carries its own
-      // machine-readable reason, distinct from a predecessor-state refusal.
-      if (e.code === "carryover_plan_too_large") {
-        ctx.status = 400;
-        ctx.body = { error: "invalid_request", mission_denial_reason: e.code };
-        ctx.set("cache-control", "no-store");
-        return;
-      }
-      // @spec mission#approval-idempotency (#1915, D1056): a live deferral
-      // already holds this creation_request_id for a different request.
-      if (e.code === "creation_request_mismatch") {
-        txError(ctx, 400, "invalid_request", e.message);
-        return;
-      }
-      txError(ctx, 400, "invalid_grant", e.message);
-      return;
-    }
-    throw e;
-  }
-  // @spec expansion#creation-idempotency — reserve the operation at deferred
-  // INITIATION (state `reserved`; the deferral handle is the recorded delivery
-  // continuation). A repetition of the same (client, creation_request_id)
-  // returns the SAME deferral, never a second ceremony. A concurrent duplicate
-  // serializes on the uniqueness constraint and recovers the winner.
-  try {
-    idem.reserve({
-      clientId: client.clientId,
-      creationRequestId,
-      op: "expansion",
-      fingerprint,
-      cnfJkt: resolved.jkt,
-      sourceMissionId: active.id,
-      delivery: { mode: "deferred", deferral_code: pending.deferral_code },
-      // @spec mission#approval-idempotency (#1915, D1056): the key stays bound
-      // to the deferral while it is pending, whatever the horizon.
-      pendingUntil: pending.pendingUntil,
-    });
-  } catch (e) {
-    if (e instanceof UniqueViolationError) {
-      const winner = idem.find(client.clientId, creationRequestId);
-      if (winner) {
-        await recoverExpansion(opts, provider, ctx, winner, fingerprint, resolved.jkt);
-        return;
-      }
-    }
-    throw e;
-  }
-  // Step 6 (deferred): the DTR initiation body (HTTP 400 authorization_pending). Set
-  // on ctx directly (err_out would strip deferral_code/expires_in/interval).
-  ctx.status = 400;
-  ctx.body = {
-    error: pending.error,
-    deferral_code: pending.deferral_code,
-    expires_in: pending.expires_in,
-    interval: pending.interval,
-  };
-  ctx.set("cache-control", "no-store");
 }
 
 /**
@@ -3186,9 +3238,38 @@ export async function pollDeferredExpansion(
     return;
   }
 
+  // @spec request-provenance#replay (#939 slice 3a, D1119 Q1, D1315): the
+  // activation is a later step of the accepted widening submission. Where
+  // this redemption would create the successor, an evidence entry of a type
+  // that relies on its acceptance record (mission-request-provenance) is
+  // resumed from it, under the reference the exchange accepted it under and
+  // the presenter this poll established (the recorded client and key,
+  // checked above), verifying nothing again; every other entry keeps the
+  // fact verified at initiation. No matching record refuses the deferral
+  // `access_denied`, with no successor, as every later poll repeats.
+  let activation: { submissionEvidence?: IntentSubmissionEvidenceFact[] } | undefined;
+  const pendingActivation = store.pendingActivation(deferralCode);
+  if (pendingActivation) {
+    try {
+      const resumed = await opts.kernel.resumeSubmissionEvidence({
+        intent: pendingActivation.intent,
+        ...(pendingActivation.evidence ? { evidence: pendingActivation.evidence } : {}),
+        ...(pendingActivation.recorded ? { recorded: pendingActivation.recorded } : {}),
+        presenter: { clientId: client.clientId, cnf: { jkt } },
+        ...(pendingActivation.acceptanceRef ? { accepted: { ref: pendingActivation.acceptanceRef } } : {}),
+      });
+      activation = resumed?.length ? { submissionEvidence: resumed } : undefined;
+    } catch (e) {
+      if (!(e instanceof IntentError)) throw e;
+      store.refuseActivation(deferralCode);
+      txError(ctx, 400, "access_denied", `the deferred expansion was refused at completion: ${e.message}`);
+      return;
+    }
+  }
+
   let r: ReturnType<typeof store.redeem>;
   try {
-    r = store.redeem(deferralCode);
+    r = store.redeem(deferralCode, activation);
   } catch (e) {
     // @spec child-delegation#carryover-commit — the approval authenticated a
     // Carryover Manifest this deployment can no longer execute. That is a
@@ -3299,6 +3380,9 @@ async function completeCeilingDrawdown(
     creationRequestId: string;
     fingerprint: string;
     jkt: string;
+    /** @spec request-provenance#replay (#939 slice 3a): the exchange's admission scope, committed when the successor is created. */
+    admission: SubmissionAdmission;
+    acceptanceRef: string;
   },
 ): Promise<boolean | { reason: string; encountered?: string[] }> {
   const progressive = opts.progressive;
@@ -3367,6 +3451,10 @@ async function completeCeilingDrawdown(
         },
         governance: { options: progressive, isCrossDomain },
       });
+      // @spec request-provenance#replay (#939 slice 3a): the exchange
+      // succeeds, so the submission is accepted: commit, last, inside the
+      // successor's creation transaction.
+      d.admission.commit(d.acceptanceRef);
       return { missionId: created.id, value: created };
     });
   } catch (e) {

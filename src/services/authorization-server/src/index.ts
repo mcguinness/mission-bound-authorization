@@ -322,6 +322,7 @@ export {
   type ServiceTokenPrincipal,
 } from "./adapters/provider.js";
 export {
+  creationAcceptanceRef,
   DEFAULT_MAX_EVIDENCE_ENTRIES,
   DEFAULT_MAX_EVIDENCE_ENTRY_BYTES,
   DEFAULT_MAX_EVIDENCE_VERIFICATION_WORK,
@@ -337,6 +338,7 @@ export {
   type IntentSubmissionPresenter,
   provisionalIntentHash,
   registerIntentSubmissionEvidenceType,
+  resumeRecordedIntentSubmissionEvidence,
   SubmissionAdmission,
   type SubmissionAdmissionHold,
   type SubmissionEvidenceBounds,
@@ -1190,6 +1192,12 @@ const PUSHED_REQUEST_TTL_S = 60;
  * the interaction it opens (with the provider's clock tolerance), a deferred
  * code and the pending approval that code opens, and the skew allowance.
  * Each of those operations still ends at its own lifetime.
+ *
+ * It also covers the token exchanges (#939 slice 3a): a child creation has no
+ * pending step, and an expansion's deferral activates at most
+ * `DEFERRAL_EXPIRES_IN` (600 s) after it was opened, before its acceptance
+ * committed, which the interaction's lifetime term alone exceeds. Recovering
+ * a committed successor after that relies on no record.
  */
 export function requestProvenanceAcceptanceRetention(clockSkewSeconds: number, pendingLifetimeS?: number): number {
   return (

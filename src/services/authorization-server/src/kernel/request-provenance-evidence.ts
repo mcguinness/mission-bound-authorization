@@ -9,24 +9,35 @@
  * an accepted submission rely on.
  *
  * - **Carriers.** Only a carrier that owns an admission scope verifies the
- *   type: PAR, whose wrapper commits the scope on its `201` and releases it
- *   on anything else. Every other carrier (device authorization, template
- *   dispatch, child creation, expansion) calls verification with no scope
- *   and is refused before any signature work: an unwired carrier fails
- *   closed.
+ *   type. PAR's wrapper commits the scope on its `201` under `par:<jti>`.
+ *   The child-creation and expansion exchanges (#939 slice 3a, D1315), whose
+ *   presenter carries the exchange's DPoP key, commit it when the exchange
+ *   succeeds or returns a pending continuation, under the operation's
+ *   reference (`creationAcceptanceRef`). Each releases it on anything else.
+ *   Every other carrier (device authorization, template dispatch) calls
+ *   verification with no scope and is refused before any signature work: an
+ *   unwired carrier fails closed.
  * - **Verification work** (#1962, D1151). The dispatch charges one unit
  *   before calling `verify`. Verification performs exactly one signature
  *   verification (step 4), fetches no key and walks no chain, and the
  *   configured key's import is cached, so it charges nothing further.
  * - **Later steps** (D1119 Q1). The authorization endpoint's re-validation
- *   of the stored pushed request, the approval rendering, the decision and a
- *   deferred activation call `resume` with the carrier's reference for the
- *   accepted submission. It verifies no signature and is charged nothing. It
- *   returns the original verification's facts and time only when the
- *   committed acceptance record matches that submission, this AS, the exact
- *   Intent, the step's presenter (no `cnf`: PAR establishes none) and the
- *   byte-equal assertion; a missing record or any mismatch refuses. `exp`
- *   and the capture age passing after acceptance refuse nothing (Q2).
+ *   of the stored pushed request, the approval rendering, the decision, a
+ *   deferred activation, and a deferred expansion's activation call `resume`
+ *   with the carrier's reference for the accepted submission. It verifies no
+ *   signature and is charged nothing. It returns the original verification's
+ *   facts and time only when the committed acceptance record matches that
+ *   submission, this AS, the exact Intent, the step's presenter (its client,
+ *   and its confirmation key exactly: none after PAR, the exchange's DPoP key
+ *   after a token exchange) and the byte-equal assertion; a missing record
+ *   or any mismatch refuses. `exp` and the capture age passing after
+ *   acceptance refuse nothing (Q2).
+ * - **Exact retry** (D1119 Q4, D1315). A child-creation or expansion retry
+ *   with the same `creation_request_id` and the evidence unchanged is
+ *   resolved by the exchange's creation fingerprint before verification, so
+ *   it recovers the recorded outcome or continuation and the committed pair
+ *   does not refuse it; a changed assertion changes the fingerprint and is
+ *   refused as a different operation.
  */
 
 import { computeAnchor, type JsonValue, MISSION_INTENT_EVIDENCE_TYP, parseStrictJson } from "@mission/core";
