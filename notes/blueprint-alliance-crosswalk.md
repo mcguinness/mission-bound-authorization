@@ -248,9 +248,8 @@ version identifier.
 | [`events/base_event.json`](https://raw.githubusercontent.com/ocsf/ocsf-schema/856d462bd20dc46cc1ffed2dfffe3b91ef0fbeba/events/base_event.json) (`unmapped`) | `53782cf02a503d7c5559fa9bedb7d60d742b0fa68c46aa958ab9481cd8a53095` |
 
 **This family**, at `origin/main` `85a5ed2d`. The README section
-"Work, identity, and authority" exists only on branch
-`readme-work-identity-authority` (`386cf24e`), one commit ahead of
-main.
+"Work, identity, and authority", which the thesis's three-fact framing
+follows, is on `main`.
 
 ### Implementation Evidence
 
