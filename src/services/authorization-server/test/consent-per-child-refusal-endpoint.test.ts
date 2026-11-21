@@ -573,12 +573,16 @@ async function propose(d: Deployment, body: Record<string, unknown>) {
 const loggedIn = (d: Deployment, id: string) => browserApprovalHeaders(d.sessions, id, { sub: "bob" }, "");
 const templatePage = async (d: Deployment, id: string) =>
   (await fetch(`${d.issuer}/templates/proposals/${id}`, { headers: { cookie: loggedIn(d, id).cookie as string } })).text();
-const decideTemplate = (d: Deployment, id: string) =>
-  fetch(`${d.issuer}/templates/proposals/${id}/decide`, {
+/** The Approver reviews the page in one login, then approves on that rendering (#2057). */
+const decideTemplate = async (d: Deployment, id: string) => {
+  const headers = loggedIn(d, id);
+  const shown = await fetch(`${d.issuer}/templates/proposals/${id}`, { headers: { cookie: headers.cookie as string } });
+  return fetch(`${d.issuer}/templates/proposals/${id}/decide`, {
     method: "POST",
-    headers: { "content-type": "application/json", ...loggedIn(d, id) },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: { "content-type": "application/json", ...headers },
+    body: JSON.stringify({ decision: "approve", render_revision: shown.headers.get(RENDER_REVISION_HEADER) }),
   });
+};
 
 describe("the per-child disclosure of a delegable Template Ceiling entry gates the template consent (#2040 review, ruling 4; @spec derivation-limits#approval-rendering, mission-template#template-consent)", () => {
   const READ = ["payments:invoice.read"];
