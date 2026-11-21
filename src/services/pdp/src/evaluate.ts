@@ -107,6 +107,7 @@ import {
 import { COVERED_PHASES, committedDestinationHolds, isMissionBudgetBinding } from "./budget-metering.js";
 import { type DurationLeaseDomain, durationLeaseStep, renewalClaimIdentity } from "./duration-lease.js";
 import { permitDeadline } from "./permit-deadline.js";
+import { type ApprovalVerification, verifyApprovalBinding } from "./approval-binding.js";
 import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
 import {
   checkResourcePolicy,
@@ -180,6 +181,13 @@ export interface ActionApproval {
   /** ARAP: the approval's validity bound; the PDP refuses once now > this. */
   approved_until?: string;
   parameter_digest: string;
+  /**
+   * @spec authzen#context-approval (#2067, D1313): the integrity-protected
+   * approval material: the Access Request Service's signed `state`, or the
+   * transaction token a transaction-profile approval is carried in. The PDP
+   * verifies it under its own trust anchors and reads the approval, the
+   * qualified Mission identity it is bound to included, from it.
+   */
   state?: string;
   /**
    * @spec authzen#context-approval (#249, D553): the approved Resource the
@@ -597,6 +605,20 @@ export type DenialReason =
    */
   | "out_of_scope"
   /**
+   * @spec authzen#context-approval (#2067, D1313): ARAP's
+   * `approval_unverifiable`, for a presented approval whose Mission binding
+   * or grant time the PDP cannot establish from integrity-protected
+   * approval material: no material, material no trusted issuer verifies, or
+   * material that states no Mission identity.
+   */
+  | "approval_unverifiable"
+  /**
+   * @spec authzen#context-approval: ARAP's `approval_expired`, for a presented
+   * approval past the deployment's maximum approval age or its own validity
+   * bound.
+   */
+  | "approval_expired"
+  /**
    * @spec authzen#runtime-denial-classification `quota_exceeded`,
    * metering#authzen-binding, metering#aggregate-bounds (#816): metering the
    * request's amount would exceed a counter, the instance's `max_budget` or
@@ -620,6 +642,20 @@ export interface Decision {
   decision: boolean;
   context: Record<string, unknown>;
 }
+
+/**
+ * @spec authzen#context-approval: the ARAP re-evaluation reasons a presented
+ * approval that fails a Mission or ARAP check is denied with, never
+ * `action_approval_required`.
+ */
+type ApprovalFailure = "approval_unverifiable" | "approval_expired" | "out_of_scope";
+
+/** @spec authzen#context-approval: ARAP's default `next_action` for each reason. */
+const ARAP_NEXT_ACTION: Readonly<Record<ApprovalFailure, "request" | "none">> = {
+  approval_expired: "request",
+  out_of_scope: "request",
+  approval_unverifiable: "none",
+};
 
 /**
  * @spec authzen#pdp-request consistency check 11, authzen#context-operation-target
@@ -773,6 +809,14 @@ export interface EvaluateOptions {
   maxApprovalAgeSeconds?: number;
   /** For requestable denials: sign the PDP denial binding + the ARS endpoint. */
   requestable?: { sign: CryptoKey; kid: string; endpoint: string };
+  /**
+   * @spec authzen#context-approval (#2067, D1313): the trust anchors for
+   * integrity-protected approval material, from which the PDP establishes
+   * a presented approval's Mission binding. Bound PDP-side, like `history`:
+   * an enforcement component that could supply it could vouch for any
+   * approval. Absent, no presented approval verifies.
+   */
+  approvalVerification?: ApprovalVerification;
   /**
    * @spec runtime-evidence#decision-evidence-object,
    * runtime#agent-isolated-evidence-emission (#741) — the PDP's own Decision
@@ -1073,6 +1117,9 @@ export type DecisionOptions = Omit<
   // @spec authzen#context-history (#2015): so is the history binding, for
   // the reason the operation declarations are.
   | "history"
+  // @spec authzen#context-approval (#2067): so are the approval-material
+  // trust anchors, for the reason the history binding is.
+  | "approvalVerification"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -2737,23 +2784,63 @@ async function evaluateInner(
   };
   if (!narrow(commonSatisfied)) return deny("parameter_violation", "mission");
 
-  /** The presented approval passes every check step 8 applies: contract, digest, age and validity bound. */
-  const approvalSatisfies = (): boolean => {
-    const appr = req.context.action_approval;
-    if (appr === undefined) return false;
-    if (!sameResourceContract(appr.resource?.properties?.resource_contract, permitContract)) return false;
+  // 8. Action-bound approval (@spec authzen#context-approval). A presented
+  //    approval is read from its integrity-protected material, verified
+  //    under this PDP's own trust anchors, once; every check below reads
+  //    that one outcome.
+  const presentedApproval = req.context.action_approval;
+  const approvalBinding =
+    presentedApproval === undefined
+      ? undefined
+      : await verifyApprovalBinding(presentedApproval, opts.approvalVerification, now());
+  /**
+   * The presented approval against every check step 8 applies, as its
+   * verified material states it: the Mission binding, the contract, the
+   * parameter digest, the grant age and the validity bound. `undefined` when
+   * none is presented; otherwise satisfied, or the ARAP re-evaluation reason
+   * it fails with.
+   */
+  const approvalCheck = (): { satisfied: true } | { satisfied: false; reason: ApprovalFailure } | undefined => {
+    if (approvalBinding === undefined) return undefined;
+    const fail = (reason: ApprovalFailure) => ({ satisfied: false as const, reason });
+    // @spec authzen#context-approval (#2067, D1313): the Mission binding is
+    // established from the material, never from `context.mission`; material
+    // that does not verify or states no Mission is unverifiable.
+    if (approvalBinding.kind === "unverifiable") return fail("approval_unverifiable");
+    if (approvalBinding.kind === "expired") return fail("approval_expired");
+    const a = approvalBinding.approval;
+    // The qualified Mission identity, `issuer` and `id` both: an approval
+    // bound to another Mission, the predecessor of an expanded one included,
+    // does not cover an action under this one.
+    if (a.mission.issuer !== view.issuer || a.mission.id !== view.id) return fail("out_of_scope");
+    // @spec authzen#context-approval, runtime#resource-contract rule 4 (#249,
+    // D553): "An approval given under one reference MUST NOT satisfy the
+    // approval requirement for an action under another"; the approved
+    // Resource's `properties.resource_contract` must equal the request's,
+    // member for member, absent only against absent, even when both
+    // references resolve and the parameters are unchanged.
+    if (!sameResourceContract(a.resource_contract, permitContract)) return fail("out_of_scope");
+    // The approval covers these parameters only.
+    if (a.parameter_digest !== req.context.parameter_digest) return fail("out_of_scope");
+    // A grant time or validity bound that cannot be read is not established.
+    const grantedAt = a.approved_at === undefined ? Number.NaN : Date.parse(a.approved_at);
+    const until = a.approved_until === undefined ? undefined : Date.parse(a.approved_until);
+    if (!Number.isFinite(grantedAt) || (until !== undefined && !Number.isFinite(until))) {
+      return fail("approval_unverifiable");
+    }
     const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
-    return (
-      appr.parameter_digest === req.context.parameter_digest &&
-      now().getTime() - Date.parse(appr.approved_at) <= maxAge &&
-      (appr.approved_until === undefined || now().getTime() <= Date.parse(appr.approved_until))
-    );
+    if (now().getTime() - grantedAt > maxAge) return fail("approval_expired");
+    // ARAP: honor the approval's validity bound when present.
+    if (until !== undefined && now().getTime() > until) return fail("approval_expired");
+    return { satisfied: true };
   };
+  const approvalSatisfies = (): boolean => approvalCheck()?.satisfied === true;
 
-  // 8. Action-bound approval (@spec authzen#context-approval): when policy
-  //    requires one, the presented approval MUST match the request's
-  //    parameter_digest and be within the max approval age; else deny
-  //    action_approval_required, marked requestable (@spec requestable-denials).
+  // When policy requires an action-bound approval, a presented one that fails
+  // a check is denied with the ARAP re-evaluation reason and ARAP's default
+  // `next_action`, never `action_approval_required`; with none presented, the
+  // denial is `action_approval_required`. Each is marked requestable
+  // (@spec requestable-denials, #2067, D1328) except `approval_unverifiable`.
   // @spec txn-authorization#applicability — the requirement is the DEPLOYMENT
   // predicate OR the matched entry's effective Common Constraint, so a
   // delegated leaf carrying `requires_action_approval: true` is gated even
@@ -2769,6 +2856,51 @@ async function evaluateInner(
     (actionClasses.length === 0
       ? opts.requiresActionApproval?.(req.action.name, actionClass) === true
       : anyClass((c) => opts.requiresActionApproval?.(req.action.name, c) === true)) || credentialRequiresApproval;
+  /**
+   * @spec authzen#requestable-denials, authzen#context-approval (#2067,
+   * D1313, D1328): a fresh `access_request` for this denied evaluation, or
+   * nothing where the deployment does not mark denials requestable. Its
+   * PDP-signed binding names THIS evaluation and the values it established:
+   * the decision id, the evaluated Mission's qualified identity (after an
+   * expansion, the successor's), the action, the request's
+   * `parameter_digest` and contract reference, never a presented approval's.
+   * The denial reason and the applicable action classes ride with it, so the
+   * Access Request Service bounds auto-approval for a renewal or replacement
+   * request exactly as for a first one.
+   */
+  const requestableAccessRequest = async (
+    reason: "action_approval_required" | "out_of_scope" | "approval_expired",
+  ): Promise<Record<string, unknown> | undefined> => {
+    if (!opts.requestable || !req.context.parameter_digest) return undefined;
+    // ARAP: the access request is valid only while the denial binding is.
+    const requestableExp = Math.floor(now().getTime() / 1000) + 300;
+    const binding = await new SignJWT({
+      decision_id: decisionId,
+      // @spec authzen#context-approval (#2067, D1313): the qualified
+      // Mission identity the approval will be bound to, from the view
+      // this PDP evaluated, never from the request.
+      mission_id: view.id,
+      mission_issuer: view.issuer,
+      action: req.action.name,
+      parameter_digest: req.context.parameter_digest,
+      // @spec authzen#context-approval (#249): the approved Resource's
+      // contract reference rides the PDP-signed binding material the
+      // Access Request Service binds its approval to (ARAP 12.3.1).
+      ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
+      reason,
+      action_classes: actionClasses.length > 0 ? [...actionClasses] : actionClass !== undefined ? [actionClass] : [],
+    })
+      .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
+      .setIssuedAt()
+      .setExpirationTime(requestableExp)
+      .sign(opts.requestable.sign);
+    return {
+      endpoint: opts.requestable.endpoint,
+      denial_binding: decisionId,
+      binding_token: binding,
+      expires_at: new Date(requestableExp * 1000).toISOString(),
+    };
+  };
   // @spec resource-access#initial-common-constraints (#1375): an entry carrying
   // `requires_action_approval: true` is satisfied only by an approval that
   // passes every check below; without one, an applicable entry that requires
@@ -2776,54 +2908,31 @@ async function evaluateInner(
   // the credential requires an approval for the action.
   if (!policyRequiresApproval && !approvalSatisfies()) narrow((e) => !entryRequiresApproval(e));
   if (policyRequiresApproval || candidates.every(entryRequiresApproval)) {
-    const appr = req.context.action_approval;
-    // @spec authzen#context-approval, runtime#resource-contract rule 4 (#249,
-    // D553): "An approval given under one reference MUST NOT satisfy the
-    // approval requirement for an action under another"; the approved
-    // Resource's `properties.resource_contract` must equal the request's,
-    // member for member, absent only against absent. A presented approval that
-    // does not is denied ARAP's `out_of_scope`, even when both references
-    // resolve and the parameters are unchanged.
-    if (appr !== undefined && !sameResourceContract(appr.resource?.properties?.resource_contract, permitContract)) {
-      return deny("out_of_scope");
+    const check = approvalCheck();
+    if (check !== undefined && !check.satisfied) {
+      const ctx: Record<string, unknown> = base({
+        denial_reason: check.reason,
+        reason: check.reason,
+        next_action: ARAP_NEXT_ACTION[check.reason],
+      });
+      // @spec authzen#requestable-denials (#2067, D1328): an `out_of_scope` or
+      // `approval_expired` re-evaluation denial is requestable, for a
+      // replacement approval bound to this evaluation; the approval presented
+      // stays insufficient. `approval_unverifiable` never is.
+      if (check.reason !== "approval_unverifiable") {
+        const accessRequest = await requestableAccessRequest(check.reason);
+        if (accessRequest) ctx.access_request = accessRequest;
+      }
+      return { decision: false, context: ctx };
     }
-    const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
-    const valid =
-      appr !== undefined &&
-      appr.parameter_digest === req.context.parameter_digest &&
-      now().getTime() - Date.parse(appr.approved_at) <= maxAge &&
-      // ARAP: honor the approval's validity bound when present.
-      (appr.approved_until === undefined || now().getTime() <= Date.parse(appr.approved_until));
-    if (!valid) {
+    if (check === undefined) {
       const ctx: Record<string, unknown> = base({
         denial_reason: "action_approval_required",
         reason: "action_approval_required",
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
       });
-      if (opts.requestable && req.context.parameter_digest) {
-        // ARAP: the access request is valid only while the denial binding is.
-        const requestableExp = Math.floor(now().getTime() / 1000) + 300;
-        const binding = await new SignJWT({
-          decision_id: decisionId,
-          mission_id: view.id,
-          action: req.action.name,
-          parameter_digest: req.context.parameter_digest,
-          // @spec authzen#context-approval (#249): the approved Resource's
-          // contract reference rides the PDP-signed binding material the
-          // Access Request Service binds its approval to (ARAP 12.3.1).
-          ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
-        })
-          .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
-          .setIssuedAt()
-          .setExpirationTime(requestableExp)
-          .sign(opts.requestable.sign);
-        ctx.access_request = {
-          endpoint: opts.requestable.endpoint,
-          denial_binding: decisionId,
-          binding_token: binding,
-          expires_at: new Date(requestableExp * 1000).toISOString(),
-        };
-      }
+      const accessRequest = await requestableAccessRequest("action_approval_required");
+      if (accessRequest) ctx.access_request = accessRequest;
       return { decision: false, context: ctx };
     }
   }

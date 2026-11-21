@@ -10,9 +10,9 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify } from "jose";
+import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
-import { Fga, type MissionView } from "@mission/pdp";
+import { ARAP_APPROVAL_TYP, Fga, type MissionView } from "@mission/pdp";
 import {
   CANONICAL_RESOURCE,
   createEphemeralEvidenceKeys,
@@ -29,10 +29,23 @@ import { pinnedToCurrentContract } from "@mission/demo-data";
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
 
+// ARAP: the ARS's identity as approval-state issuer, audienced to the PDP.
+const ARS_ISS = "https://ars.test";
+const APPROVAL_AUD = "https://pdp.test";
+const arsApprovalKeys = await generateKeyPair("ES256", { extractable: true });
+const arsApprovalPubJwk = { ...(await exportJWK(arsApprovalKeys.publicKey)), kid: "ars-approval", alg: "ES256" };
+
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
 // decision point's entry point, which closes over the PDP's emission path.
-const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
+// @spec authzen#context-approval (#2067): the decision point holds the ARS's
+// approval-state trust anchor, from which it establishes the Mission binding.
+const EVIDENCE_KEYS = createEphemeralEvidenceKeys({
+  resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  approvalVerification: {
+    issuers: [{ typ: ARAP_APPROVAL_TYP, issuer: ARS_ISS, audience: APPROVAL_AUD, keys: { keys: [arsApprovalPubJwk] } }],
+  },
+});
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -79,14 +92,9 @@ const TOKEN: TokenFacts = {
 let fga: Fga;
 let modelId: string;
 
-// ARAP: the ARS's identity as approval-state issuer, audienced to the PDP.
-const ARS_ISS = "https://ars.test";
-const APPROVAL_AUD = "https://pdp.test";
-
 d("M6 ARAP reevaluate (scenario 5)", () => {
   let pep: Pep;
   let ars: AccessRequestService;
-  let arsApprovalPubJwk: Record<string, unknown>;
 
   beforeAll(async () => {
     const conn = await Fga.bootstrap({ apiUrl: API_URL, presharedKey: KEY, caCertPath: CA });
@@ -121,8 +129,6 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       maxApprovalAgeSeconds: 300,
       requestable: { sign: pdpKeys.privateKey, kid: "pdp-evidence", endpoint: "https://ars.test/access-requests" },
     });
-    const arsApprovalKeys = await generateKeyPair("ES256", { extractable: true });
-    arsApprovalPubJwk = { ...(await exportJWK(arsApprovalKeys.publicKey)), kid: "ars-approval", alg: "ES256" };
     ars = new AccessRequestService({
       pdpJwks: { keys: [pdpPubJwk as never] },
       approvalKey: arsApprovalKeys.privateKey,
@@ -163,16 +169,21 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
     expect(stateClaims.iss).toBe(ARS_ISS);
     expect(stateClaims.aud).toBe(APPROVAL_AUD);
 
-    // 4. PEP re-evaluates with context.action_approval (approved_until carried) -> permit.
-    const permitted = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, {
-      id: approval?.id as string,
-      approved_at: approval?.approved_at as string,
-      approved_until: approval?.approved_until as string,
-      parameter_digest: approval?.parameter_digest as string,
-      // The approved Resource the ARS bound, with the denied request's contract
-      // reference (#249, D865).
-      ...(approval?.resource ? { resource: approval.resource } : {}),
-    });
+    // @spec authzen#context-approval (#2067): the state binds the qualified
+    // Mission identity the PDP-signed denial binding named.
+    expect(stateClaims.mission).toEqual({ issuer: VIEW.issuer, id: VIEW.id });
+
+    // 4. PEP re-evaluates with context.action_approval: the approval object
+    // the ARS issued, unchanged (approved_until, the approved Resource with
+    // the denied request's contract reference, #249, D865, and the signed
+    // state carried) -> permit.
+    expect(approval?.state).toBe(stateJws);
+    const permitted = await pep.enforce(
+      "execute_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: idem() },
+      TOKEN,
+      approval ?? undefined,
+    );
     expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);
     expect(permitted.decision?.decision).toBe(true);
     // Reevaluate mode: the result is a fresh PDP decision, not a new token.
@@ -181,17 +192,30 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
 
   it("rejects an approval bound to a different parameter_digest", async () => {
     const denied = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
-    const badApproval = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, {
-      id: "apr_forged",
+    // A genuine ARS approval for this Mission and the right Resource, contract
+    // reference included (#249, D865), so only the digest is wrong.
+    const members = {
+      id: "apr_other_parameters",
       approved_at: new Date().toISOString(),
+      approved_until: new Date(Date.now() + 300_000).toISOString(),
       parameter_digest: "sha-256:WRONG",
-      // Bound to the right Resource, contract reference included (#249, D865),
-      // so only the digest is wrong.
       resource: { properties: { resource_contract: VIEW.authority_set[0]?.resource_contract } },
+    };
+    const state = await new SignJWT({ ...members, mission: { issuer: VIEW.issuer, id: VIEW.id }, approver: "bob" })
+      .setProtectedHeader({ alg: "ES256", kid: "ars-approval", typ: ARAP_APPROVAL_TYP })
+      .setIssuer(ARS_ISS)
+      .setAudience(APPROVAL_AUD)
+      .setIssuedAt()
+      .sign(arsApprovalKeys.privateKey);
+    const badApproval = await pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, {
+      ...members,
+      state,
     });
     expect(denied.denial_reason).toBe("action_approval_required");
     expect(badApproval.permitted).toBe(false);
-    expect(badApproval.denial_reason).toBe("action_approval_required");
+    // @spec authzen#context-approval: a presented approval that does not cover
+    // these parameters is ARAP's `out_of_scope`, never `action_approval_required`.
+    expect(badApproval.denial_reason).toBe("out_of_scope");
   });
 
   it("ARS rejects a submission that does not match its signed binding", async () => {

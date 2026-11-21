@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate as evaluateRequest, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { approvalSignerFixture, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -36,6 +36,9 @@ const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
 
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
+
+/** @spec authzen#context-approval (#2067): the approval's signed material, bound to the Mission below. */
+const ARS = await approvalSignerFixture();
 
 const view: MissionView = {
   id: "msn_test_1",
@@ -83,6 +86,7 @@ const optsFor = (actionClass: string) => ({
   resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
   claims: CLAIMS,
+  approvalVerification: ARS.verification,
 });
 
 describe("action-bound approval gate, one high-consequence class at a time (@spec runtime#compromise-resistant)", () => {
@@ -96,7 +100,10 @@ describe("action-bound approval gate, one high-consequence class at a time (@spe
 
   it("each of the three high-consequence classes permits once a valid fresh action-bound approval matching the parameters is presented", async () => {
     for (const actionClass of HIGH_CONSEQUENCE_CLASSES) {
-      const approval: ActionApproval = { id: `apr_${actionClass}`, approved_at: NOW.toISOString(), parameter_digest: "sha-256:pd" };
+      const approval: ActionApproval = await ARS.approve(
+        { id: `apr_${actionClass}`, approved_at: NOW.toISOString(), parameter_digest: "sha-256:pd" },
+        { issuer: view.issuer, id: view.id },
+      );
       const dec = await evaluate(reqFor(actionClass, approval), optsFor(actionClass));
       expect(dec.decision, JSON.stringify({ actionClass, ctx: dec.context })).toBe(true);
     }

@@ -21,6 +21,7 @@
  * author of a record.
  */
 
+import type { ApprovalVerification } from "./approval-binding.js";
 import type { ExecutionCapabilityDeclaration } from "./enforcement-scope.js";
 import { assertHistoryBinding, type HistoryBinding } from "./history.js";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
@@ -234,6 +235,15 @@ export interface DecisionPointConfig {
    * reason the operation declarations are. Absent, no predicate is selected.
    */
   history?: HistoryBinding;
+  /**
+   * @spec authzen#context-approval (#2067, D1313): this decision point's
+   * trust anchors for integrity-protected approval material, from which it
+   * establishes a presented approval's Mission binding, bound here for the
+   * reason the history binding is: an enforcement component that could
+   * supply them could vouch for any approval. Absent, no presented approval
+   * verifies.
+   */
+  approvalVerification?: ApprovalVerification;
 }
 
 export interface DecisionPoint {
@@ -279,6 +289,7 @@ interface PointBindings {
   evaluationContextBinding?: EvaluationContextBindingDeclarations | undefined;
   operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration> | undefined;
   history?: HistoryBinding | undefined;
+  approvalVerification?: ApprovalVerification | undefined;
 }
 
 /**
@@ -316,7 +327,8 @@ function attachBudgetBinding(view: MissionView, source: MissionBudgetSource | un
  * rather than merely overwritten. None of them can be supplied, replaced, or
  * suppressed from the enforcement side. A decision point bound to no Resource
  * policy forwards none, and `evaluate` refuses to decide. The view's budget
- * binding is this point's own ({@link attachBudgetBinding}).
+ * binding is this point's own ({@link attachBudgetBinding}), and so are its
+ * approval-material trust anchors (#2067).
  */
 function bindDecide(
   bindings: PointBindings,
@@ -335,6 +347,7 @@ function bindDecide(
     evaluationContextBinding,
     operationDeclarations,
     history,
+    approvalVerification,
   } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
@@ -355,6 +368,7 @@ function bindDecide(
     delete forwarded.evaluationContextBinding;
     delete forwarded.operationDeclarations;
     delete forwarded.history;
+    delete forwarded.approvalVerification;
     if (emitter) forwarded.evidence = emitter;
     if (durationLeases) forwarded.durationLeases = durationLeases;
     if (claims) forwarded.claims = claims;
@@ -366,6 +380,7 @@ function bindDecide(
     if (evaluationContextBinding) forwarded.evaluationContextBinding = evaluationContextBinding;
     if (operationDeclarations) forwarded.operationDeclarations = operationDeclarations;
     if (history) forwarded.history = history;
+    if (approvalVerification) forwarded.approvalVerification = approvalVerification;
     if (forwarded.view !== undefined) forwarded.view = attachBudgetBinding(forwarded.view, bindings.budgetBindings);
     forwarded.requester = requester;
     if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
@@ -440,6 +455,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     evaluationContextBinding: config.evaluationContextBinding,
     operationDeclarations: config.operationDeclarations,
     history: config.history,
+    approvalVerification: config.approvalVerification,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),
@@ -508,6 +524,8 @@ export function createEphemeralDecisionPoint(options: {
   operationDeclarations?: ReadonlyArray<ExecutionCapabilityDeclaration>;
   /** @spec authzen#context-history (#2015): bound exactly as in {@link createDecisionPoint}. */
   history?: HistoryBinding;
+  /** @spec authzen#context-approval (#2067): bound exactly as in {@link createDecisionPoint}. */
+  approvalVerification?: ApprovalVerification;
   /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
   authorizesAudience?: (audience: string) => boolean;
 }): EphemeralDecisionPoint {
@@ -526,6 +544,7 @@ export function createEphemeralDecisionPoint(options: {
     evaluationContextBinding,
     operationDeclarations,
     history,
+    approvalVerification,
   } = options;
   // @spec authzen#context-history (#2017): refused where it is bound.
   if (history !== undefined) assertHistoryBinding(history);
@@ -548,6 +567,7 @@ export function createEphemeralDecisionPoint(options: {
     evaluationContextBinding,
     operationDeclarations,
     history,
+    approvalVerification,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),

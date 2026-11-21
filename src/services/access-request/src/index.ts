@@ -7,10 +7,17 @@
  * binding_token, runs the task lifecycle, and on approval issues an
  * action-bound approval object the PEP carries back as context.action_approval.
  * Approval is input context, never a bearer grant (reevaluate mode).
+ *
+ * @spec authzen#context-approval (#2067, D1313): the approval binds to the
+ * qualified Mission identity, `issuer` and `id`, taken from the PDP-signed
+ * denial binding (or, for a transaction challenge, the AS-vouched binding)
+ * and signed into the approval `state`, the integrity-protected material the
+ * PDP establishes the binding from.
  */
 
 import { openStore, type Database } from "@mission/store";
 import type { TxnApprovalBinding } from "@mission/core";
+import { ARAP_APPROVAL_TYP } from "@mission/pdp";
 import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK } from "jose";
 
 export type TaskState = "pending" | "approved" | "denied";
@@ -42,6 +49,12 @@ export interface ApprovalObject {
   approved_until: string;
   parameter_digest: string;
   /**
+   * ARAP's signed approval `state` (`arap-approval+jwt`): every member above,
+   * the approved Resource and the qualified Mission identity the approval is
+   * bound to (#2067), signed by this service for the re-evaluating PDP.
+   */
+  state?: string;
+  /**
    * @spec authzen#context-approval (#249, D553): the approved Resource,
    * present where a resource contract applied to the denied request: "the
    * approval binds its reference through the approved Resource, which ARAP
@@ -54,10 +67,62 @@ export interface ApprovalObject {
 export interface DenialBinding {
   decision_id: string;
   mission_id: string;
+  /** @spec authzen#context-approval (#2067): the denied Mission's issuer, so the binding is the qualified identity. */
+  mission_issuer: string;
   action: string;
   parameter_digest: string;
   /** @spec authzen#context-approval (#249): the denied request's contract reference, where one applied. */
   resource_contract?: unknown;
+  /**
+   * @spec authzen#requestable-denials (#2067, D1328): the denial reason the
+   * request answers (`action_approval_required`, this implementation's
+   * spelling of `approval_required`, or a re-evaluation's `out_of_scope` or
+   * `approval_expired`) and the action classes that applied, from the
+   * PDP-signed binding. Absent or malformed, auto-approval treats the request
+   * as one that needs an independent approver.
+   */
+  reason?: string;
+  action_classes?: readonly string[];
+}
+
+/**
+ * @spec authzen#requestable-denials: the high-consequence classes in which an
+ * approval request needs an independent approver.
+ */
+const HIGH_CONSEQUENCE_CLASSES: ReadonlySet<string> = new Set([
+  "irreversible_action",
+  "external_commitment",
+  "privileged_administration",
+]);
+
+/** The approver identity a synchronous auto-approval is recorded under. */
+export const AUTO_APPROVER = "policy:auto-approval";
+
+/** What a deployment's synchronous auto-approval policy sees of a submitted request. */
+export interface AutoApprovalRequest {
+  action: string;
+  mission_id: string;
+  mission_issuer: string;
+  parameter_digest: string;
+  subject: string;
+  reason?: string;
+  action_classes?: readonly string[];
+}
+
+/**
+ * @spec authzen#requestable-denials (#2067, D1328): a deployment "MUST NOT
+ * auto-approve a request for an `approval_required` denial", or a request
+ * renewing or replacing an approval an `out_of_scope` or `approval_expired`
+ * denial found insufficient, "in the irreversible, external-commitment, or
+ * privileged-administration classes without an independent approver". Only
+ * an `out_of_authority` request is outside the rule, and an unnamed class
+ * set counts as high-consequence, so neither a changed denial reason nor a
+ * missing member lets a request through unattended.
+ */
+export function requiresIndependentApprover(binding: Pick<DenialBinding, "reason" | "action_classes">): boolean {
+  if (binding.reason === "out_of_authority") return false;
+  const classes = binding.action_classes;
+  return classes === undefined || classes.length === 0 || classes.some((c) => HIGH_CONSEQUENCE_CLASSES.has(c));
 }
 
 const SCHEMA = `
@@ -65,6 +130,7 @@ CREATE TABLE tasks (
   id TEXT PRIMARY KEY,
   state TEXT NOT NULL,
   mission_id TEXT NOT NULL,
+  mission_issuer TEXT NOT NULL,
   action TEXT NOT NULL,
   parameter_digest TEXT NOT NULL,
   subject TEXT NOT NULL,
@@ -99,6 +165,14 @@ export class AccessRequestService {
       approvalAudience: string;
       approvalTtlSeconds?: number;
       now?: () => Date;
+      /**
+       * @spec authzen#requestable-denials: the deployment's synchronous
+       * auto-approval policy, consulted at submission. It is never applied to
+       * a request that needs an independent approver
+       * ({@link requiresIndependentApprover}); such a request stays pending
+       * for one. Absent, every request waits for an approver.
+       */
+      autoApprove?: (request: AutoApprovalRequest) => boolean;
     },
   ) {
     this.db = openStore(SCHEMA);
@@ -132,9 +206,34 @@ export class AccessRequestService {
         : null;
     this.db
       .prepare(
-        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, binding_digest, resource_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, NULL, ?, ?)",
+        "INSERT INTO tasks (id, state, mission_id, mission_issuer, action, parameter_digest, subject, approval_json, binding_digest, resource_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, ?, NULL, NULL, ?, ?)",
       )
-      .run(taskId, binding.mission_id, binding.action, binding.parameter_digest, sub.requested.subject, resourceJson, this.now().getTime());
+      .run(
+        taskId,
+        binding.mission_id,
+        binding.mission_issuer,
+        binding.action,
+        binding.parameter_digest,
+        sub.requested.subject,
+        resourceJson,
+        this.now().getTime(),
+      );
+    // @spec authzen#requestable-denials (#2067, D1328): synchronous
+    // auto-approval, bounded by the independent-approver rule whatever the
+    // denial reason.
+    const request: AutoApprovalRequest = {
+      action: binding.action,
+      mission_id: binding.mission_id,
+      mission_issuer: binding.mission_issuer,
+      parameter_digest: binding.parameter_digest,
+      subject: sub.requested.subject,
+      ...(binding.reason !== undefined ? { reason: binding.reason } : {}),
+      ...(binding.action_classes !== undefined ? { action_classes: binding.action_classes } : {}),
+    };
+    if (!requiresIndependentApprover(binding) && this.opts.autoApprove?.(request) === true) {
+      await this.adjudicate(taskId, "approve", AUTO_APPROVER);
+      return { taskId, state: "approved" };
+    }
     return { taskId, state: "pending" };
   }
 
@@ -169,11 +268,13 @@ export class AccessRequestService {
     const taskId = txnTaskId(input.resource, input.txn);
     this.db
       .prepare(
-        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, binding_digest, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(id) DO NOTHING",
+        "INSERT INTO tasks (id, state, mission_id, mission_issuer, action, parameter_digest, subject, approval_json, binding_digest, created_at) VALUES (?, 'pending', ?, ?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(id) DO NOTHING",
       )
       .run(
         taskId,
         input.missionId,
+        // @spec authzen#context-approval (#2067): the vouched transaction's Mission issuer.
+        input.binding.mission.issuer,
         input.action,
         input.parameter_digest,
         input.subject,
@@ -225,8 +326,11 @@ export class AccessRequestService {
     };
     // Signed approval state (ARAP approval.state), carried by value if needed.
     // ARAP: the state JWS MUST carry iss (this ARS) and aud (the re-evaluator).
-    const signed = await new SignJWT({ ...approval, approver })
-      .setProtectedHeader({ alg: "ES256", kid: this.opts.approvalKid, typ: "arap-approval+jwt" })
+    // @spec authzen#context-approval (#2067, D1313): and the qualified Mission
+    // identity the task was opened for, the binding the PDP establishes.
+    const mission = { issuer: task.mission_issuer as string, id: task.mission_id as string };
+    const signed = await new SignJWT({ ...approval, mission, approver })
+      .setProtectedHeader({ alg: "ES256", kid: this.opts.approvalKid, typ: ARAP_APPROVAL_TYP })
       .setIssuer(this.opts.issuer)
       .setAudience(this.opts.approvalAudience)
       .setIssuedAt()
@@ -234,7 +338,8 @@ export class AccessRequestService {
     this.db
       .prepare("UPDATE tasks SET state = 'approved', approval_json = ? WHERE id = ?")
       .run(JSON.stringify({ ...approval, state: signed }), taskId);
-    return approval;
+    // ARAP's approval object carries `state`: the PEP presents it unchanged.
+    return { ...approval, state: signed };
   }
 
   /**
@@ -265,12 +370,23 @@ export class AccessRequestService {
   private async verifyBinding(bindingToken: string): Promise<DenialBinding> {
     const jwks = createLocalJWKSet({ keys: this.opts.pdpJwks.keys } as never);
     const { payload } = await jwtVerify(bindingToken, jwks, { typ: "pdp-denial-binding+jwt" });
+    // @spec authzen#context-approval (#2067): a binding that does not name the
+    // qualified Mission identity cannot bind an approval to it.
+    if (typeof payload.mission_issuer !== "string" || payload.mission_issuer === "") {
+      throw new Error("denial binding names no Mission issuer");
+    }
+    const classes = payload.action_classes;
     return {
       decision_id: payload.decision_id as string,
       mission_id: payload.mission_id as string,
+      mission_issuer: payload.mission_issuer,
       action: payload.action as string,
       parameter_digest: payload.parameter_digest as string,
       ...(payload.resource_contract !== undefined ? { resource_contract: payload.resource_contract } : {}),
+      ...(typeof payload.reason === "string" ? { reason: payload.reason } : {}),
+      ...(Array.isArray(classes) && classes.every((c) => typeof c === "string")
+        ? { action_classes: classes as string[] }
+        : {}),
     };
   }
 }

@@ -29,7 +29,14 @@ async function setup() {
     approvalAudience: "https://pdp.test",
   });
   const binding = (claims: Record<string, unknown>) =>
-    new SignJWT({ decision_id: "dec_1", mission_id: "msn_1", action: "payments:payment.execute", parameter_digest: "sha-256:p", ...claims })
+    new SignJWT({
+      decision_id: "dec_1",
+      mission_id: "msn_1",
+      mission_issuer: "https://as.test",
+      action: "payments:payment.execute",
+      parameter_digest: "sha-256:p",
+      ...claims,
+    })
       .setProtectedHeader({ alg: "ES256", kid: "pdp-denial", typ: "pdp-denial-binding+jwt" })
       .setIssuedAt()
       .setExpirationTime("5m")

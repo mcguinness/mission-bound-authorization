@@ -17,7 +17,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
-import { EvaluationContextBindingDeclarations } from "@mission/core";
+import { EvaluationContextBindingDeclarations, MISSION_TXN_TOKEN_TYP } from "@mission/core";
 import { currentContractRef, RUNTIME_SCOPE_CONFIG, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
@@ -28,7 +28,7 @@ import {
   openEphemeralClaimDomain,
   RUNTIME_POSTURE,
 } from "@mission/pdp";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { approvalSignerFixture, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import {
   type ActionApprovalInput,
   buildEffectiveParams,
@@ -62,6 +62,8 @@ const HOLDER_JKT = await calculateJwkThumbprint(await exportJWK(holderKeys.publi
 const rsTxn = await generateKeyPair("ES256", { extractable: true });
 const asTxn = await generateKeyPair("ES256", { extractable: true });
 const asTxnPub = { ...(await exportJWK(asTxn.publicKey)), kid: "as-txn", alg: "ES256" };
+/** @spec authzen#context-approval (#2067): the Access Request Service stand-in whose signed state binds an approval to its Mission. */
+const ARS = await approvalSignerFixture();
 
 const MISSION_CLAIM = {
   id: "msn_773t",
@@ -131,6 +133,14 @@ function harness() {
     audience: CANONICAL_RESOURCE,
     claims,
     evaluationContextBinding: CLAIMED,
+    // @spec authzen#context-approval (#2067): the decision point's own trust
+    // anchors: the ARS's approval state and the transaction token.
+    approvalVerification: {
+      issuers: [
+        ...ARS.verification.issuers,
+        { typ: MISSION_TXN_TOKEN_TYP, issuer: AS_ISSUER, audience: CANONICAL_RESOURCE, keys: { keys: [asTxnPub] } },
+      ],
+    },
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   pepKeys = keys.resolver;
@@ -235,12 +245,15 @@ async function challengeFor(h: ReturnType<typeof harness>): Promise<string> {
 describe("adoption keeps the approval and transaction-token bindings (@spec runtime#evaluation-context-binding, #773)", () => {
   it("an action-bound approval bound to parameter_digest satisfies the gate under the claim, and stops satisfying it once the record moves before the decision", async () => {
     const h = harness();
-    const approval: ActionApprovalInput = {
-      id: "apr_773",
-      approved_at: new Date().toISOString(),
-      parameter_digest: digestOf(h.payments, "payments:payment.execute"),
-      resource: APPROVED_RESOURCE,
-    };
+    const approval: ActionApprovalInput = await ARS.approve(
+      {
+        id: "apr_773",
+        approved_at: new Date().toISOString(),
+        parameter_digest: digestOf(h.payments, "payments:payment.execute"),
+        resource: APPROVED_RESOURCE,
+      },
+      { issuer: ISSUER, id: MISSION_CLAIM.id },
+    );
     // The gate is live: no approval, no permit.
     const ungated = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
     expect(ungated.denial_reason).toBe("action_approval_required");
@@ -255,7 +268,9 @@ describe("adoption keeps the approval and transaction-token bindings (@spec runt
     h.payments.bumpInvoiceAmount("inv-1", "130.00");
     const stale = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, approval);
     expect(stale.permitted).toBe(false);
-    expect(stale.denial_reason).toBe("action_approval_required");
+    // @spec authzen#context-approval: the presented approval does not cover
+    // the changed parameters, ARAP's `out_of_scope`.
+    expect(stale.denial_reason).toBe("out_of_scope");
   });
 
   it("a transaction token bound to the challenged operation's parameter_digest verifies and executes once under the claim", async () => {
@@ -294,18 +309,22 @@ describe("adoption keeps the approval and transaction-token bindings (@spec runt
 describe("authoritative facts still reach policy beside the echoed context digest (@spec runtime#evaluation-context-binding, #773)", () => {
   it("a covered crossing's request carries the amount and target facts policy evaluates, and an over-cap invoice is denied parameter_violation", async () => {
     const h = harness();
-    const approval = (invoiceId: string): ActionApprovalInput => ({
-      id: `apr_${invoiceId}`,
-      approved_at: new Date().toISOString(),
-      parameter_digest: digestOf(h.payments, "payments:payment.execute", invoiceId),
-      resource: APPROVED_RESOURCE,
-    });
-    const within = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, approval("inv-1"));
+    const approval = (invoiceId: string): Promise<ActionApprovalInput> =>
+      ARS.approve(
+        {
+          id: `apr_${invoiceId}`,
+          approved_at: new Date().toISOString(),
+          parameter_digest: digestOf(h.payments, "payments:payment.execute", invoiceId),
+          resource: APPROVED_RESOURCE,
+        },
+        { issuer: ISSUER, id: MISSION_CLAIM.id },
+      );
+    const within = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, await approval("inv-1"));
     expect(within.permitted, JSON.stringify(within)).toBe(true);
     expect(h.lastContext()?.amount).toEqual({ amount: "125.00", currency: "USD" });
     expect(h.lastResource()?.properties.vendor_id).toBe("acme");
     expect(h.lastContext()?.evaluation_context_digest).toMatch(/^sha-256:/);
-    const over = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-big", idempotency_key: idem() }, TOKEN, approval("inv-big"));
+    const over = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-big", idempotency_key: idem() }, TOKEN, await approval("inv-big"));
     expect(over.permitted).toBe(false);
     expect(over.denial_reason).toBe("parameter_violation");
     expect(h.lastContext()?.amount).toEqual({ amount: "900.00", currency: "USD" });

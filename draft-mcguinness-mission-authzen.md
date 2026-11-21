@@ -1217,6 +1217,20 @@ deployment's maximum approval age
 ({{I-D.draft-mcguinness-mission-runtime}}), and that `approved_until`
 has not passed.
 
+The Mission checks also bind the approval to the qualified Mission
+identity: the bound Mission's `issuer` and `id` both equal those of
+the Mission the PDP evaluates. The PDP MUST establish that binding
+from integrity-protected approval material, such as verified signed
+`state`, or from the approval record it resolves by `id`, and MUST
+NOT take it from the request's `context.mission`. An approval bound
+to another Mission, including the predecessor of an expanded Mission
+({{requestable-denials}}), does not cover the action: the PDP MUST
+deny that re-evaluation with ARAP's `out_of_scope`. An approval whose
+Mission binding cannot be established is unverifiable. The binding
+is to the Mission's identity alone, not to a status observation: a
+change of the Mission's version does not break it, and the Mission's
+state is established at each re-evaluation as for any decision.
+
 This profile requires a verifiable completion time for an action-bound
 approval: `approved_at` when present, otherwise the PDP MUST establish
 the grant time from the approval record it resolves by `id` or from
@@ -1253,7 +1267,7 @@ instead returns one of ARAP's five registered re-evaluation reasons in
 - `grant_pending` (`retry`);
 - `policy_denied` (`none`);
 - `approval_unverifiable` (`none`), which also covers an approval
-  whose completion time cannot be established.
+  whose completion time or Mission binding cannot be established.
 
 These are ARAP-owned values carried under its extensibility rule
 {{ARAP}}, not values this profile defines.
@@ -2005,16 +2019,19 @@ This profile defines the following AuthZEN response `context` members:
 : OPTIONAL. An object: ARAP's requestable-denial context object,
   imported as ARAP defines it; this profile adds no members and no
   additional required members. Present on an `out_of_authority` or
-  `approval_required` denial when the deployment exposes it as
-  requestable ({{requestable-denials}}). The access request the PEP
+  `approval_required` denial, or an `out_of_scope` or `approval_expired`
+  re-evaluation denial, when the deployment exposes it as requestable
+  ({{requestable-denials}}). The access request the PEP
   submits references the denied evaluation by the top-level
   `context.evaluation_id`, as {{ARAP}} specifies. Its presence does not
   change the `decision: false` result and does not grant access.
 
 `next_action`:
 : OPTIONAL on a denial. A string: `request`, `retry`, or `none`
-  ({{ARAP}}). `request` MUST be accompanied by a fresh
-  `context.access_request`. `retry` marks the denial transient: the
+  ({{ARAP}}). `request` names the access-request path: a denial the
+  PDP marks requestable carries a fresh `context.access_request`
+  beside it, and without one `request` authorizes no submission.
+  `retry` marks the denial transient: the
   same request is expected to succeed on re-evaluation after a delay.
   `none` marks it terminal for policy and local action alike. ARAP
   defines `next_action` for the denial of a re-evaluation that
@@ -2390,7 +2407,8 @@ Decision Evidence's `denial_reason`:
   decision.
 - `parameter_violation`: parameters violate a constraint the PDP
   evaluated, the recomputed digest does not match, or a required
-  `parameter_digest` is absent for a parameter-bound action.
+  `parameter_digest` is absent for a parameter-bound action. This
+  condition is never marked requestable ({{requestable-denials}}).
 - `duplicate_suppressed`: the request's `idempotency_key` and
   operation identity ({{projections}}) match a prior claim whose
   outcome is unresolved (transient) or completed (terminal), so the
@@ -2475,13 +2493,34 @@ the OAuth binding's open lifecycle state space
 
 A deny is terminal for the attempted action: the agent does not proceed
 on a denial. A deny need not end the task, however. For an
-`out_of_authority` or `approval_required` denial, the PDP MAY mark the
-denial **requestable** by including a `context.access_request` object,
+`out_of_authority` or `approval_required` denial, or an `out_of_scope`
+or `approval_expired` denial of a re-evaluation that presented an
+approval ({{context-approval}}), the PDP MAY mark the denial
+**requestable** by including a `context.access_request` object,
 composing this profile with ARAP {{ARAP}}. The PEP then submits an ARAP
 access request bound to the denied evaluation; an independent approver
 or policy adjudicates it, synchronously when policy auto-approves and
 otherwise asynchronously through ARAP's task handle; and on approval
 the PEP re-evaluates.
+
+A requestable `out_of_scope` or `approval_expired` denial asks for a
+replacement approval. The `context.access_request` the PDP includes
+in it MUST be bound to the denied evaluation: its `evaluation_id`, and
+the qualified Mission identity, action, `parameter_digest` and
+resource contract reference that evaluation established, never those
+of the presented approval; after a Mission expansion, they are the
+successor's. The presented approval stays insufficient: an approval
+granted on the new request satisfies only a fresh evaluation against
+current authority and state. The PDP MUST NOT mark an
+`approval_unverifiable` denial requestable, and that denial carries
+`next_action: none`.
+
+The PDP MUST NOT mark a `parameter_violation` denial requestable or
+include `context.access_request` in it, and the denial carries
+nothing, such as `next_action: request`, that implies an approval
+would override the violated constraint. A client that needs a wider
+constraint pursues a separate, explicit Mission expansion
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 This is the demand-driven counterpart to the
 pre-consented drawdown of the experimental progressive authorization
@@ -2492,10 +2531,12 @@ instead of holding it up front.
 Auto-approval is bounded the same way in-ceiling drawdown is
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}): a deployment SHOULD
 rate-limit and anomaly-check synchronous auto-approval, and MUST NOT
-auto-approve a request for an `approval_required` denial in the
-irreversible, external-commitment, or privileged-administration classes
-without an independent approver, so a compromised agent cannot drive the
-request loop to escalate itself unattended.
+auto-approve a request for an `approval_required` denial, or a request
+renewing or replacing an approval on an `out_of_scope` or
+`approval_expired` denial, in the irreversible, external-commitment, or
+privileged-administration classes without an independent approver, so a
+compromised agent cannot drive the request loop to escalate itself
+unattended, whatever the denial reason.
 
 An ARAP approval is input context, not a bearer grant: the PDP remains
 authoritative at enforcement, so the PEP MUST obtain a fresh decision,
@@ -2518,6 +2559,16 @@ An ARAP completion realizes one of two outcomes:
   relationship grant, or another authority-state change. The fresh
   evaluation observes that new state. Expansion is one realization,
   not ARAP's completion model.
+
+Where the realization is a Mission expansion, the fresh evaluation
+runs under the successor Mission, with the successor's
+`context.mission` and a credential bound to the successor, and a
+permit rests on the successor's authority, not on the ARAP approval.
+The expansion's approval is not an action-bound approval. Where
+policy gates the action on one, an approval bound to the predecessor
+does not satisfy that gate under the successor ({{context-approval}}):
+the PDP denies the re-evaluation `out_of_scope` when one is presented
+and `approval_required` when none is.
 
 The following example shows a requestable denial: deployment policy
 requires an action-bound approval for the journal-entry write, no valid
@@ -3271,6 +3322,22 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Changes a requirement (#2067): Approval Context binds an action
+  approval to the qualified Mission identity, `issuer` and `id`, which
+  the PDP establishes from integrity-protected approval material or the
+  approval record, never from `context.mission`. An approval bound to
+  another Mission, a predecessor included, is denied `out_of_scope`,
+  and one whose binding cannot be established `approval_unverifiable`.
+  Requestable Denials: a `parameter_violation` denial is never
+  requestable, and after a Mission expansion the fresh evaluation runs
+  under the successor, whose action-bound approval the expansion's
+  approval does not supply. An `out_of_scope` or `approval_expired`
+  re-evaluation denial may be marked requestable for a replacement
+  approval, its `access_request` bound to the denied evaluation and its
+  auto-approval bounded as for `approval_required`; an
+  `approval_unverifiable` denial never is, and `next_action: request`
+  without an `access_request` authorizes no submission.
 
 - History Context: the specification defining a predicate type states
   whether it selects an operation and which of its members names it.

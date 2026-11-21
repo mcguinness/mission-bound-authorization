@@ -123,7 +123,14 @@ describe("M11 approver console: queue + adjudication", () => {
       kernel, ars: localArs, transparency,
       retrieveEvidence: () => undefined, producerJwks, serviceJwks, receiptFor: () => undefined,
     });
-    const binding = await new SignJWT({ decision_id: "dec_1", mission_id: "msn_x", action: "payments:payment.execute", parameter_digest: "sha-256:pd" })
+    // @spec authzen#context-approval (#2067): the binding names the qualified Mission identity.
+    const binding = await new SignJWT({
+      decision_id: "dec_1",
+      mission_id: "msn_x",
+      mission_issuer: "https://as.test",
+      action: "payments:payment.execute",
+      parameter_digest: "sha-256:pd",
+    })
       .setProtectedHeader({ alg: "ES256", kid: "pdp", typ: "pdp-denial-binding+jwt" })
       .setIssuedAt()
       .sign(pdpDenialKeys.privateKey);

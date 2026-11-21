@@ -35,7 +35,7 @@ import {
   stalenessBound,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { approvalSignerFixture, EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, OPERATION_DECLARATIONS_NONE_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 import { pinnedToCurrentContract } from "@mission/demo-data";
 
@@ -48,6 +48,9 @@ const RESOURCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-07-22T12:00:00Z");
 
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
+/** @spec authzen#context-approval (#2067): signs each approval's material, bound to the Mission below. */
+const ARS = await approvalSignerFixture();
+const BOUND_MISSION = { issuer: "https://as.test", id: "msn_test_1" };
 
 const view = (over: Partial<MissionView> = {}): MissionView => ({
   id: "msn_test_1",
@@ -95,13 +98,17 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       // a fresh, correctly-bound approval, must not rescue a missing entry.
       requiresActionApproval: () => true,
       maxApprovalAgeSeconds: 300,
+      approvalVerification: ARS.verification,
       // #1994: no operation declarations: a payments operation is decided
       // under its assigned class alone, with no phase required.
       operationDeclarations: OPERATION_DECLARATIONS_NONE_FIXTURE,
     };
     const withoutApproval = await evaluate(outOfAuthorityReq, opts);
 
-    const approval: ActionApproval = { id: "apr_1", approved_at: NOW.toISOString(), parameter_digest: "sha-256:pd" };
+    const approval: ActionApproval = await ARS.approve(
+      { id: "apr_1", approved_at: NOW.toISOString(), parameter_digest: "sha-256:pd" },
+      BOUND_MISSION,
+    );
     const withApproval = await evaluate(
       req({
         action: { name: "payments:payment.execute" },
@@ -148,14 +155,18 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       relationForAction,
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       maxApprovalAgeSeconds: 300,
+      approvalVerification: ARS.verification,
     };
     // Approved under the request's own contract reference (@spec authzen#context-approval, #249).
-    const approval: ActionApproval = {
-      id: "apr_1",
-      approved_at: NOW.toISOString(),
-      parameter_digest: "sha-256:pd",
-      resource: { properties: { resource_contract: req().resource.properties.resource_contract } },
-    };
+    const approval: ActionApproval = await ARS.approve(
+      {
+        id: "apr_1",
+        approved_at: NOW.toISOString(),
+        parameter_digest: "sha-256:pd",
+        resource: { properties: { resource_contract: req().resource.properties.resource_contract } },
+      },
+      BOUND_MISSION,
+    );
     const withApproval = await evaluate(
       req({
         context: {

@@ -25,6 +25,7 @@
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import type { AuthorityDependencyEnforcement } from "@mission/core";
 import {
+  type ApprovalVerification,
   type ClaimChannel,
   type ClaimRequester,
   claimChannelFor,
@@ -107,6 +108,12 @@ export interface CreateEphemeralEvidenceKeysOptions {
   resourcePolicy?: ResourcePolicy;
   /** @spec runtime#input-authority-dependency (#830): the declared dependency bound to the decision point constructed here (ignored with `decisionPoint`). */
   authorityDependency?: AuthorityDependencyEnforcement;
+  /**
+   * @spec authzen#context-approval (#2067): the approval-material trust
+   * anchors bound to the decision point constructed here (ignored with
+   * `decisionPoint`). Absent, no presented approval verifies.
+   */
+  approvalVerification?: ApprovalVerification;
 }
 
 /**
@@ -145,6 +152,7 @@ export function createEphemeralEvidenceKeys(
       audience,
       ...(options.resourcePolicy ? { resourcePolicy: options.resourcePolicy } : {}),
       ...(options.authorityDependency ? { authorityDependency: options.authorityDependency } : {}),
+      ...(options.approvalVerification ? { approvalVerification: options.approvalVerification } : {}),
       claims: openEphemeralClaimDomain({
         owner: RUNTIME_POSTURE.pdps[0] as string,
         statement: RUNTIME_POSTURE,

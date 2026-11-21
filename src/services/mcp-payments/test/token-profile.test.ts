@@ -494,7 +494,7 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
       await mint({ authorization_details: [entry(["payments:invoice.read"], { requires_action_approval: true })] }),
     );
     const now = Math.floor(Date.now() / 1000);
-    const txn = { txn: "txn_825", jti: "jti_825", iatS: now, expS: now + 60, parameterDigest: "sha-256:op" };
+    const txn = { txn: "txn_825", jti: "jti_825", iatS: now, expS: now + 60, parameterDigest: "sha-256:op", token: "txn-token" };
     const approval = { id: "apr_825", approved_at: new Date().toISOString(), parameter_digest: "sha-256:op" };
     for (const [presented, approvalInput] of [
       [facts, undefined],

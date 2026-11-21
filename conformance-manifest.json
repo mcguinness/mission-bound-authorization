@@ -11,8 +11,8 @@
     "content_sha256": "656ecc7ff36f208aa94ac06c72bbed0a12739bd449d2101b7bf757592e5d46b4"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "7592690aade7b91530e84d00abfe5a02d9f6f348",
-    "content_sha256": "82045791dc4f6dd5e4e603ef07969c66d30c49612558ab0fafdea33f0f04e53f"
+    "revision": "2aee5525ed1bca8a5f5bf41335eff7830c5f42d0",
+    "content_sha256": "bc1632b4c8ab450eaede6ca2b34fdd449c3a5f0a08363154b3e6aa546c526aed"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
@@ -35671,7 +35671,7 @@
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > an approval past approved_until -> deny action_approval_required (ARAP)",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > an approval past approved_until -> deny approval_expired, never action_approval_required (ARAP)",
      "level": "endpoint",
      "surface": "decision-request"
     }
@@ -45967,6 +45967,144 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). An approval given under v1 (superseded, within retention) presented for the same action under v2 (current), parameters identical, is denied out_of_scope with no permit; each approval under the request's own reference permits. Proved by skipping the comparison."
   },
   {
+   "id": "authzen.context-approval.mission-binding-from-material",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "The PDP MUST establish that binding from integrity-protected approval material, such as verified signed `state`, or from the approval record it resolves by `id`, and MUST NOT take it from the request's `context.mission`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented approval satisfies the approval gate only when its Mission binding is established from integrity-protected material the PDP verifies under its own trust anchors; state that fails signature verification, names another issuer or audience, or states no Mission (even where context.mission names the evaluated Mission), or no state at all, is denied approval_unverifiable (next_action none), never action_approval_required; trust anchors a caller supplies are never applied; a correctly bound approval satisfies the gate"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > a correctly bound approval satisfies the approval gate (positive control)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > an approval whose state fails signature verification does not satisfy the gate: approval_unverifiable",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > an approval whose state names the wrong issuer or audience does not satisfy the gate: approval_unverifiable",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > an approval whose state carries no Mission claim does not satisfy the gate, although the request's context.mission names the Mission: approval_unverifiable",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > an approval presented with no state at all does not satisfy the gate: approval_unverifiable",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > the trust anchors are the decision point's own: a caller-supplied approvalVerification is never applied",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "the remote PDP server binds its own approval trust anchors (@spec authzen#context-approval, #2067) > a caller-supplied approvalVerification never reaches the decision over POST /evaluate: an approval only the caller's anchors trust is denied approval_unverifiable, with or without anchors of the server's own, and one the server's anchors trust permits",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The reference PDP verifies the Access Request Service's signed `state` (`arap-approval+jwt`) or the transaction token a transaction-profile approval is carried in (`mission-txn-token+jwt`), under trust anchors bound to its decision point and stripped from caller options; the approval-record resolution alternative is not implemented. Proved by mutation, each failing the cited test on its denial assertion: accepting an unverified decode (the signature, issuer and audience cases, each alone), taking the binding from context.mission when the material states none, trusting a presented approval object that carries no material, and forwarding caller-supplied anchors through the decision point. At the remote PDP server (POST /evaluate), deleting the strip in handleEvaluate fails the server test on the anchorless server's permit assertion; the anchored server's assertion is proved alone by merging the caller's anchors with the server's."
+  },
+  {
+   "id": "authzen.context-approval.mission-identity-mismatch-out-of-scope",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "An approval bound to another Mission, including the predecessor of an expanded Mission ({{requestable-denials}}), does not cover the action: the PDP MUST deny that re-evaluation with ARAP's `out_of_scope`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval whose established Mission binding names the same Mission id under another issuer, or names the predecessor of the Mission evaluated, is denied out_of_scope (next_action request) with no permit, never action_approval_required"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > an approval for the same Mission id under a different issuer does not satisfy the gate: out_of_scope",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "re-evaluation after a Mission expansion runs under the successor (@spec authzen#requestable-denials, #2067) > a predecessor-bound action approval does not satisfy the approval gate under the successor: out_of_scope",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/expansion-successor-approval.test.ts",
+     "name": "re-evaluation after a Mission expansion runs under the successor (@spec authzen#requestable-denials, authzen#context-approval, #2067) > the action out of the predecessor's authority is decided under the successor's context.mission and credential, and permitted on the successor's authority only with an approval bound to the successor",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Proved by mutation: comparing the Mission id only fails the different-issuer test alone; comparing the issuer only fails the predecessor test and the PEP-level test alone; skipping the comparison fails all three, each on its denial assertion."
+  },
+  {
+   "id": "authzen.context-approval.mission-binding-identity-only",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "The binding is to the Mission's identity alone, not to a status observation: a change of the Mission's version does not break it, and the Mission's state is established at each re-evaluation as for any decision.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval bound to a Mission's issuer and id still satisfies the gate after the Mission's version and authority_hash change, and does not stand in for current state: under a Mission no longer active the decision is mission_inactive"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > the binding is to the Mission's identity alone: it holds across a change of the Mission's version, and never stands in for the Mission's current state",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The approval material in the test records the Mission's version at approval. Proved by mutation: freezing that version into the approval's scope (denying when it differs from the evaluated view's) fails the test on the permit assertion."
+  },
+  {
    "id": "authzen.context-history.no-caller-asserted-outcome",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
@@ -47130,7 +47268,7 @@
    "id": "authzen.requestable-denials.auto-approval-bounded",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "requestable-denials",
-   "text": "a deployment SHOULD rate-limit and anomaly-check synchronous auto-approval, and MUST NOT auto-approve a request for an `approval_required` denial in the irreversible, external-commitment, or privileged-administration classes without an independent approver",
+   "text": "a deployment SHOULD rate-limit and anomaly-check synchronous auto-approval, and MUST NOT auto-approve a request for an `approval_required` denial, or a request renewing or replacing an approval on an `out_of_scope` or `approval_expired` denial, in the irreversible, external-commitment, or privileged-administration classes without an independent approver",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -47142,11 +47280,25 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "synchronous auto-approval of a requestable denial is rate-limited and anomaly-checked, and a high-consequence approval_required denial is never auto-approved without an independent approver"
+    "normative": "synchronous auto-approval is rate-limited and anomaly-checked, and never approves, without an independent approver, a request in the irreversible, external-commitment or privileged-administration classes for an approval_required denial or one renewing or replacing an approval on an out_of_scope or approval_expired denial"
    },
-   "level": "cross-component",
-   "coverage": "todo",
-   "tests": []
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/renewal.test.ts",
+     "name": "synchronous auto-approval is bounded by the independent-approver rule, renewal requests included (@spec authzen#requestable-denials, #2067, D1328) > in a high-consequence class, an out_of_scope or approval_expired renewal request, like an approval_required one, is never auto-approved and waits for an independent approver; outside those classes the same requests auto-approve",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/access-request/test/renewal.test.ts",
+     "name": "synchronous auto-approval is bounded by the independent-approver rule, renewal requests included (@spec authzen#requestable-denials, #2067, D1328) > a request whose binding names no action classes, or no reason, is never auto-approved",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1328). The reference Access Request Service takes an optional synchronous auto-approval policy and never applies it to a request in the three classes (or one naming no classes) unless it answers an out_of_authority denial, whatever the reason. Exercised: the MUST NOT clause for approval_required (spelled action_approval_required here), out_of_scope and approval_expired requests. Proved by mutation: exempting out_of_scope and approval_expired, approval_expired alone, or action_approval_required alone each fails the first test on that reason's pending assertion; treating an unnamed class set as low-consequence fails the second. Not witnessed: the SHOULD to rate-limit and anomaly-check auto-approval, which the reference does not implement, so the row stays partial."
   },
   {
    "id": "authzen.requestable-denials.fresh-decision-required-not-bearer",
@@ -47176,6 +47328,228 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "authzen.requestable-denials.parameter-violation-not-requestable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "The PDP MUST NOT mark a `parameter_violation` denial requestable or include `context.access_request` in it, and the denial carries nothing, such as `next_action: request`, that implies an approval would override the violated constraint.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where deployment policy gates the action on an approval and the PDP marks approval denials requestable, a parameter_violation denial carries no context.access_request and no next_action request; the same action within the constraint is denied action_approval_required with an access_request"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "parameter_violation is never requestable (@spec authzen#requestable-denials, #2067) > a parameter_violation denial carries no access_request, even where approval policy is requestable",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Also restated in the `parameter_violation` entry of Runtime Denial Classification. Proved by mutation, each alone: attaching an access_request to the parameter_violation denial fails the access_request assertion, and marking it next_action request fails the next_action assertion."
+  },
+  {
+   "id": "authzen.requestable-denials.expansion-predecessor-approval",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "The expansion's approval is not an action-bound approval. Where policy gates the action on one, an approval bound to the predecessor does not satisfy that gate under the successor ({{context-approval}}): the PDP denies the re-evaluation `out_of_scope` when one is presented and `approval_required` when none is.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under the successor of a Mission expansion, an action policy gates on an action-bound approval is denied out_of_scope with a predecessor-bound approval and approval_required with none, the denial binding naming the successor; only an approval bound to the successor permits"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "re-evaluation after a Mission expansion runs under the successor (@spec authzen#requestable-denials, #2067) > a predecessor-bound action approval does not satisfy the approval gate under the successor: out_of_scope",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "re-evaluation after a Mission expansion runs under the successor (@spec authzen#requestable-denials, #2067) > the expansion supplies no action approval: under the successor the gated action is denied action_approval_required, requestable for the successor, until a successor-bound approval is presented",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/expansion-successor-approval.test.ts",
+     "name": "re-evaluation after a Mission expansion runs under the successor (@spec authzen#requestable-denials, authzen#context-approval, #2067) > the action out of the predecessor's authority is decided under the successor's context.mission and credential, and permitted on the successor's authority only with an approval bound to the successor",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). The reference implementation spells the reason `action_approval_required` (and the member `context.action_approval`), the drift from the profile's `approval_required` the other approval rows carry. Proved by mutation: comparing the Mission issuer only fails the predecessor assertions; opening the gate when no approval is presented fails the action_approval_required assertions, in the PDP test and the PEP-level test; and signing the denial binding without the Mission issuer fails the PDP test's binding assertion."
+  },
+  {
+   "id": "authzen.requestable-denials.expansion-runs-under-successor",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "Where the realization is a Mission expansion, the fresh evaluation runs under the successor Mission, with the successor's `context.mission` and a credential bound to the successor, and a permit rests on the successor's authority, not on the ARAP approval.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after an expansion, the fresh evaluation a successor-bound credential yields carries the successor's context.mission, and the action outside the predecessor's authority is permitted only on the successor's authority"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/expansion-successor-approval.test.ts",
+     "name": "re-evaluation after a Mission expansion runs under the successor (@spec authzen#requestable-denials, authzen#context-approval, #2067) > the action out of the predecessor's authority is decided under the successor's context.mission and credential, and permitted on the successor's authority only with an approval bound to the successor",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1313). Exercised: with a credential bound to the successor, the PEP's decision request carries the successor's context.mission, and the action the predecessor's authority denies out_of_authority is permitted under the successor with a successor-bound action approval. Not proved by mutation: the reference PEP takes context.mission only from the presented credential, so the clause that the client presents the successor's credential is not witnessed."
+  },
+  {
+   "id": "authzen.requestable-denials.renewal-access-request-bound",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "The `context.access_request` the PDP includes in it MUST be bound to the denied evaluation: its `evaluation_id`, and the qualified Mission identity, action, `parameter_digest` and resource contract reference that evaluation established, never those of the presented approval; after a Mission expansion, they are the successor's.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where approval policy is requestable, an out_of_scope or approval_expired re-evaluation denial carries next_action request and an access_request whose PDP-signed binding names this evaluation's decision id, the evaluated Mission's issuer and id (the successor's under an expansion), the action, the request's parameter_digest and contract reference, never the presented approval's"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "a replacement approval request on an out_of_scope or approval_expired denial (@spec authzen#requestable-denials, #2067, D1328) > an out_of_scope denial for a parameter change after approval carries next_action request and an access_request bound to this evaluation: its decision id, Mission issuer and id, action, current parameter digest and contract",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "a replacement approval request on an out_of_scope or approval_expired denial (@spec authzen#requestable-denials, #2067, D1328) > an approval_expired denial carries next_action request and an access_request bound to this evaluation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "a replacement approval request on an out_of_scope or approval_expired denial (@spec authzen#requestable-denials, #2067, D1328) > after an expansion, a predecessor-bound approval presented under the successor is denied out_of_scope with an access_request bound to the successor and this evaluation",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1328). Proved by mutation, each failing the cited assertion: dropping the access_request on the out_of_scope path (the out_of_scope and successor tests) and on the approval_expired path (the approval_expired test); binding the presented approval's Mission and parameter_digest (the out_of_scope and successor binding assertions); binding the presented approval's Mission alone (the successor binding assertion alone); binding the presented approval's id as the decision id (all three binding assertions)."
+  },
+  {
+   "id": "authzen.requestable-denials.replacement-old-approval-insufficient",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "The presented approval stays insufficient: an approval granted on the new request satisfies only a fresh evaluation against current authority and state.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after an out_of_scope (parameter change) or approval_expired denial, the access request it carries yields, through the Access Request Service, an approval that satisfies a fresh evaluation, while the approval it replaces is still denied with the same reason on a fresh evaluation"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/renewal.test.ts",
+     "name": "a replacement approval through the Access Request Service (@spec authzen#requestable-denials, #2067, D1328) > out_of_scope after a parameter change: the access request it carries yields a replacement approval that satisfies a fresh evaluation, and the approval it replaced stays insufficient",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/access-request/test/renewal.test.ts",
+     "name": "a replacement approval through the Access Request Service (@spec authzen#requestable-denials, #2067, D1328) > approval_expired: the access request it carries yields a renewed approval that satisfies a fresh evaluation, and the expired one stays insufficient",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1328). The PDP runs in process with a stub OpenFGA. Proved by mutation in a variant that obtains the new approval from a first evaluation, so only the replaced approval's assertion depends on the check: disabling the digest check fails the out_of_scope test, and disabling the age and approved_until checks fails the approval_expired test, each on the stale approval's denial assertion."
+  },
+  {
+   "id": "authzen.requestable-denials.unverifiable-not-requestable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "requestable-denials",
+   "text": "The PDP MUST NOT mark an `approval_unverifiable` denial requestable, and that denial carries `next_action: none`.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where approval policy is requestable, an approval_unverifiable denial carries no context.access_request and next_action none"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "a replacement approval request on an out_of_scope or approval_expired denial (@spec authzen#requestable-denials, #2067, D1328) > an approval_unverifiable denial is never requestable: no access_request and next_action none, where approval policy is requestable",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > an approval whose state fails signature verification does not satisfy the gate: approval_unverifiable",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "an action approval binds the qualified Mission identity (@spec authzen#context-approval, #2067) > an approval whose state carries no Mission claim does not satisfy the gate, although the request's context.mission names the Mission: approval_unverifiable",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1328). Proved by mutation, each alone: marking the approval_unverifiable denial requestable fails the access_request assertion, and giving it next_action request fails the next_action assertions."
   },
   {
    "id": "authzen.lanes.no-residual-policy",
@@ -47459,9 +47833,9 @@
    "id": "authzen.response-context.next-action-request-needs-fresh-access-request",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "response-context",
-   "text": "`request` MUST be accompanied by a fresh `context.access_request`.",
+   "text": "a denial the PDP marks requestable carries a fresh `context.access_request` beside it",
    "role": "PDP",
-   "strength": "MUST",
+   "strength": "stated",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47471,11 +47845,61 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a denial carrying next_action: request always carries a fresh context.access_request alongside it"
+    "normative": "a denial the PDP marks requestable (next_action request) carries a fresh context.access_request bound to that denied evaluation"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "a replacement approval request on an out_of_scope or approval_expired denial (@spec authzen#requestable-denials, #2067, D1328) > an out_of_scope denial for a parameter change after approval carries next_action request and an access_request bound to this evaluation: its decision id, Mission issuer and id, action, current parameter digest and contract",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "a replacement approval request on an out_of_scope or approval_expired denial (@spec authzen#requestable-denials, #2067, D1328) > an approval_expired denial carries next_action request and an access_request bound to this evaluation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-approval-mission-binding.test.ts",
+     "name": "parameter_violation is never requestable (@spec authzen#requestable-denials, #2067) > a parameter_violation denial carries no access_request, even where approval policy is requestable",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1328). The out_of_scope and approval_expired tests assert next_action request with a fresh access_request bound to the denied evaluation; the parameter_violation test's control asserts the requestable action_approval_required denial carries one. Proved by mutation: dropping the access_request on the out_of_scope or approval_expired path fails that test's access_request assertion. The reference's requestable action_approval_required denial carries no next_action member, a drift from Runtime Denial Classification's `next_action: request` that this row does not cover."
+  },
+  {
+   "id": "authzen.response-context.request-without-access-request-no-submission",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "without one `request` authorizes no submission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Access Request Service accepts a submission only with a denial binding token that verifies under the PDP's key; a submission with none, or with one that does not verify, is refused and opens no task"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/access-request/test/renewal.test.ts",
+     "name": "next_action request without an access_request authorizes no submission (@spec authzen#response-context, #2067, D1328) > refuses a submission whose binding token is absent or does not verify under the PDP's key",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#2067 (D1328). The role is the Access Request Service's. Proved by mutation: accepting an unverified binding token fails the test on the refusal assertion for the token signed under another key."
   },
   {
    "id": "authzen.response-context.members-required-and-types",
@@ -72494,7 +72918,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1375. The PDP checks the approval's digest binding, age and approved_until itself; it accepts the approval object over the authenticated PEP channel and does not verify an approval signature, so the row stays partial."
+   "notes": "#1375. The PDP checks the approval's digest binding, age and approved_until itself. It also verifies the approval's signed material under its own trust anchors (#2067, authzen.context-approval.mission-binding-from-material); the cited tests do not witness that verification for this row, so the row stays partial."
   },
   {
    "id": "resource-access.common-constraints.approval-fresh",
@@ -72526,7 +72950,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate.test.ts",
-     "name": "PDP decisions against OpenFGA (@spec authzen) > an approval past approved_until -> deny action_approval_required (ARAP)",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > an approval past approved_until -> deny approval_expired, never action_approval_required (ARAP)",
      "level": "endpoint",
      "surface": "decision-request"
     }
