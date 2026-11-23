@@ -319,8 +319,9 @@ record, or a part of it, is exchanged.
 ## Token Response {#token-response}
 
 The token response that redeems a Mission's authorization code MUST
-carry, besides the tokens and the granted `authorization_details`
-({{Section 7 of RFC9396}}):
+carry a refresh token, so that the client can always end its Mission
+({{lifecycle}}), and, besides the tokens and the granted
+`authorization_details` ({{Section 7 of RFC9396}}):
 
 `mission_id`:
 : A string: the Mission Identifier. It is a reference only; presenting
@@ -527,6 +528,12 @@ management endpoint, which it advertises as
 `mission_management_endpoint` ({{metadata}}). The resource for a
 Mission is the endpoint URL followed by `/` and the Mission Identifier
 as a path segment.
+
+A request for an access token for the endpoint is not a Mission
+request. The token's audience is the endpoint URL, which the request
+names with `resource` ({{RFC8707}}); it authorizes `GET` only when it
+carries the scope value `mission:read`, and `DELETE` only when it
+carries `mission:end`, in addition to the authorization below.
 
 Every request to the endpoint carries an access token issued for the
 endpoint, presented as {{RFC6750}} or, for a DPoP-bound token,
