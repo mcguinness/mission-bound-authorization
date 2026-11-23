@@ -232,8 +232,9 @@ refuse a request that carries `mission_expires_in` without
 `authorization_details`, or with a value that is not a positive
 integer, with the `invalid_request` error code. A client SHOULD send
 the request as a Pushed Authorization Request {{RFC9126}}. The request
-can also carry `scope`, as {{Section 3.1 of RFC9396}} allows; this
-document does not govern it.
+can also carry `scope`, as {{Section 3.1 of RFC9396}} allows, but a
+Mission-bound access token conveys no authority through it
+({{subset}}).
 
 A client learns that it will not get a Mission from the absence of
 `mission_grants_supported` ({{metadata}}) before it sends the request,
@@ -400,6 +401,13 @@ audience. The Mission Resource Access Profile
 a type specification that defines a comparison. This document defines
 no way to discover which narrowings an authorization server accepts; a
 client that needs one learns from the refusal.
+
+A Mission-bound access token carries no `scope`, in the token or in an
+introspection response, unless a specification that bounds `scope` by
+the Approved Authority applies ({{extension-points}}). A `scope` value
+requested with a Mission, such as `openid`, keeps its own meaning
+outside the Mission and conveys no authority through a Mission-bound
+token.
 
 ## Token Exchange {#exchange}
 
@@ -571,8 +579,8 @@ For an operation it protects under this document, a resource server:
    they are alternative grants, an entry it cannot fully enforce
    grants nothing, and it never combines parts of several entries to
    authorize one request;
-4. never grants, on the basis of a `scope` value the token also
-   carries, access broader than the corresponding entry permits; and
+4. grants nothing, for a Mission-governed operation, on the basis of
+   a `scope` value the token carries; and
 5. relies on the Mission's state in one of two ways ({{lifecycle}}):
    it introspects the token at use, and an active response shows that
    the Mission is active at that instant; or it accepts a JWT until its
@@ -635,6 +643,8 @@ A specification that extends Missions can:
   of the work, as an additional record member that, like the others,
   never changes;
 - define further members of the management endpoint's response;
+- define how `scope` is bounded by the Approved Authority, so that a
+  Mission-bound token can carry it;
 - register lifecycle states ({{iana-states}}); and
 - define, for a type of authorization details, the comparison the
   subset rule uses ({{subset}}).
@@ -688,9 +698,10 @@ none does not use the tokens for the work ({{requesting}}), and a
 resource server refuses tokens without a Mission for Mission-governed
 operations ({{rs-enforcement}}).
 
-**Scope beside authorization details.** A token that carries both
-`scope` and `authorization_details` must not let the scope widen an
-entry; the resource server rule of {{rs-enforcement}} prevents it.
+**Scope.** A Mission-bound access token carries no `scope`, and a
+resource server grants nothing for a Mission-governed operation on the
+basis of one, so `scope` cannot carry authority the approval did not
+({{subset}}, {{rs-enforcement}}).
 
 # Privacy Considerations {#privacy}
 

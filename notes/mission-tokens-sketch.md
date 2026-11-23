@@ -200,7 +200,8 @@ A client requests a Mission with an authorization request that carries
 {{RFC8707}}, the authorization server's issuer identifier
 {{RFC8414}}. The token request that redeems the code names the same
 `resource`. The request can also carry `scope`, as
-{{Section 3.1 of RFC9396}} allows; this document does not govern it. A
+{{Section 3.1 of RFC9396}} allows, but a Mission-bound token conveys
+no authority through it ({{subset}}). A
 client SHOULD send the request as a Pushed Authorization Request
 {{RFC9126}}.
 
@@ -386,6 +387,13 @@ is an example of a type specification that defines a comparison. This
 document defines no way to discover which narrowings an authorization
 server accepts; a client that needs one learns from the refusal.
 
+A Mission-bound access token carries no `scope`, in the token or in an
+introspection response, unless a specification that bounds `scope` by
+the Approved Authority applies ({{extension-points}}). A `scope` value
+requested with a Mission, such as `openid`, keeps its own meaning
+outside the Mission and conveys no authority through a Mission-bound
+token.
+
 ## Issuance Gating {#gating}
 
 The authorization server MUST NOT issue a Mission-bound token unless
@@ -468,8 +476,8 @@ For an operation it protects under this document, a resource server:
    to it ({{subset}}): where several entries apply
    they are alternative grants, an entry it cannot fully enforce
    grants nothing, and it never combines parts of several entries;
-4. never grants, on the basis of a `scope` value the token also
-   carries, access broader than the corresponding entry permits; and
+4. grants nothing, for a Mission-governed operation, on the basis of
+   a `scope` value the token carries; and
 5. relies on the Mission's state in one of two ways ({{lifecycle}}):
    it introspects the token at use, and an active response shows that
    the Mission is active at that instant; or it accepts a JWT until its
@@ -517,6 +525,8 @@ A specification that extends Missions can:
   a description of the work, as further facts fixed with the Mission;
 - define a means for a party holding no token to end a Mission or read
   its state by its identifier;
+- define how `scope` is bounded by the Approved Authority, so that a
+  Mission-bound token can carry it;
 - define further Mission states and `mission_error` values; and
 - define, for a type of authorization details, the comparison the
   subset rule uses ({{subset}}).
