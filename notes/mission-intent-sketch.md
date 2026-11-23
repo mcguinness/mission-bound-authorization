@@ -26,15 +26,19 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC3339:
+  RFC5646:
   RFC6749:
   RFC7009:
   RFC7662:
   RFC8414:
+  RFC8259:
+  RFC9101:
   RFC9126:
   RFC9396:
-  I-D.draft-mcguinness-oauth-mission:
-    title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/
+  MISSION-COMMITMENTS:
+    title: "OAuth 2.0 Mission Commitments"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-commitments-sketch.md
     author:
       -
         ins: K. McGuinness
@@ -58,6 +62,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-liu-mcguinness-oauth-bounded-work:
     title: "OAuth 2.0 Bounded Work Authorization"
     target: https://datatracker.ietf.org/doc/draft-liu-mcguinness-oauth-bounded-work/
@@ -81,9 +93,9 @@ submits the Intent with the base's Mission request; the authorization
 server presents it to the resource owner beside the authority, bounds
 the approved authority's resources and lifetime by it, records it with
 the Mission under an integrity anchor, and confirms in the token
-response that it was bound. The Intent describes and narrows; it never
-supplies authority, and token issuance and resource server enforcement
-are the base's, unchanged.
+response that it was bound. The Intent describes and narrows and never
+supplies authority, and this document adds requirements to its base
+without relaxing any.
 
 --- middle
 
@@ -112,16 +124,18 @@ This document adds that description, a Mission Intent, to either base:
 
 The Intent describes and narrows; it never supplies authority. The
 approved authority still comes only from the `authorization_details`
-the client requested, and token issuance, the subset rule, issuance
-gating, and resource server enforcement are the base's, unchanged.
+the client requested. This document adds requirements to its base and
+relaxes none: token issuance, the subset rule, issuance gating, and
+resource server enforcement are the base's.
 What this document records reaches a resource server only through
 introspection, to a caller the authorization server authorizes
 ({{disclosure}}).
 
-The Mission Intent, the Submission envelope that carries it, and the
-integrity anchors are those of Mission-Bound Authorization for OAuth
-2.0 {{I-D.draft-mcguinness-oauth-mission}}, which this document cites
-for their definitions. A Mission created under this document is not a
+This document defines the Mission Intent and the Submission envelope
+with the members and meaning they have in Mission-Bound Authorization
+for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}, and computes its
+anchors as OAuth 2.0 Mission Commitments {{MISSION-COMMITMENTS}}
+defines. A Mission created under this document is not a
 Mission of that document: it has its base's record, lifecycle, and
 tokens. The names it shares with that document have the same meaning.
 
@@ -145,16 +159,11 @@ Mission request:
   authorization server implements one base ({{bases}}).
 
 Mission Intent:
-: The JSON object describing the task, with the members `goal`,
-  `goal_lang`, `target_resources`, `task_bounds`, `purpose`, and
-  `expires_at`, as the "Mission Intent" section of
-  {{I-D.draft-mcguinness-oauth-mission}} defines it.
+: The JSON object describing the task ({{envelope}}).
 
 Submission envelope:
-: The JSON object that carries a Mission Intent as its `intent`
-  member, with optional Intent Submission Evidence as its `evidence`
-  member, as the "Submitting a Mission Intent" section of
-  {{I-D.draft-mcguinness-oauth-mission}} defines it.
+: The JSON object that carries a Mission Intent, with optional
+  evidence ({{envelope}}).
 
 Intent-bound Mission:
 : A Mission created under this document.
@@ -173,26 +182,101 @@ Intent-bound Mission:
 # Requesting an Intent-Bound Mission {#request}
 
 A client requests an Intent-bound Mission by adding the `mission_intent`
-parameter to its base's Mission request. The parameter carries a
-Submission envelope, and the request also carries
-`authorization_details`. The client MUST send the request as a Pushed
-Authorization Request {{RFC9126}}, in either form the "Carriage Through
-PAR" section of {{I-D.draft-mcguinness-oauth-mission}} allows, and MUST
-NOT send `mission_intent` as a front-channel authorization request
-parameter.
+parameter to its base's Mission request, which also carries
+`authorization_details`. The parameter carries a Submission envelope
+({{envelope}}). The client MUST send it through a Pushed Authorization
+Request {{RFC9126}}, in one of two forms:
 
-The authorization server applies the rules of
-{{I-D.draft-mcguinness-oauth-mission}} for the Submission envelope and
-the Mission Intent: closed top levels, bounded sizes, member
-validation, and the processing of Intent Submission Evidence, under
-which an evidence entry that does not verify is refused. Where those
-rules refer to deriving authority through a configured mapping, they
-do not apply: under this document, authority comes only from the
-requested `authorization_details`.
+1. the form-encoded `mission_intent` parameter of the pushed request,
+   whose value is the UTF-8 JSON {{RFC8259}} serialization of the
+   Submission envelope; or
+2. a `mission_intent` claim, whose value is the Submission envelope
+   object itself, inside a signed Request Object {{RFC9101}} that is
+   pushed. When the pushed request carries a Request Object, the
+   authorization server MUST refuse a `mission_intent` outside it with
+   `invalid_request`.
 
 The authorization server MUST refuse, with `invalid_request`, a
-request that carries `mission_intent` but is not a Mission request of
-a base it implements, or that carries no `authorization_details`.
+`mission_intent` on a front-channel authorization request that does not
+use a pushed `request_uri`, and ignores one on the request that redeems
+a `request_uri`. It MUST refuse, with `invalid_request`, a request that
+carries `mission_intent` but is not a Mission request of its base, or
+that carries no `authorization_details`.
+
+## The Submission Envelope {#envelope}
+
+The Submission envelope is a JSON object with exactly these members:
+
+`intent`:
+: REQUIRED. The Mission Intent: a JSON object describing the task.
+
+`evidence`:
+: OPTIONAL. A non-empty array of evidence entries, each a JSON object
+  whose `type` member names its evidence type.
+
+The Mission Intent has these members, with the meaning
+{{I-D.draft-mcguinness-oauth-mission}} gives them:
+
+`goal`:
+: REQUIRED. A string of at most 4096 characters: the task, for
+  presentation to the resource owner. The authorization server never
+  interprets it.
+
+`goal_lang`:
+: OPTIONAL. A BCP 47 language tag {{RFC5646}} for `goal` and
+  `task_bounds`.
+
+`target_resources`:
+: REQUIRED. A non-empty array of absolute URIs: the resources the task
+  targets, which bound the approved authority ({{ceiling}}).
+
+`task_bounds`:
+: OPTIONAL. An array of strings: the client's description of limits on
+  the task. It is not an enforced bound.
+
+`purpose`:
+: OPTIONAL. A URI naming the task's purpose. It can contribute only to
+  a refusal or stricter treatment, and never supplies, widens, or
+  relaxes authority.
+
+`expires_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} date-time: the client's ceiling on
+  the Mission's lifetime ({{ceiling}}).
+
+Both objects are closed: the authorization server MUST refuse, with
+`invalid_request`, a member that neither this document nor a profile it
+implements defines. It bounds the sizes of the envelope, the Intent,
+and their arrays, and refuses a submission that exceeds them with
+`invalid_request`.
+
+This document defines no evidence type. The authorization server MUST
+refuse a presented evidence entry whose type it does not support, or
+that fails its type's verification, with the
+`invalid_mission_intent_evidence` error code, which
+{{I-D.draft-mcguinness-oauth-mission}} defines; an authorization
+server that supports no evidence type refuses every presented entry.
+
+## Processing Order {#processing}
+
+After the checks its base makes on the Mission request, the
+authorization server processes the Intent in this order, and MUST
+refuse a request that fails more than one check with the error of the
+earliest failing step:
+
+1. parse the Submission envelope, enforce the closed members and the
+   size bounds, and check that each evidence entry is an object with a
+   `type` member (`invalid_request`);
+2. validate the Intent's members, including a well-formed `goal_lang`
+   and an `expires_at` that is well-formed and not past
+   (`invalid_request`);
+3. apply the Intent ceiling to the requested `authorization_details`
+   ({{ceiling}}; `invalid_request`); and
+4. verify each presented evidence entry
+   (`invalid_mission_intent_evidence`).
+
+The rule of {{I-D.draft-mcguinness-oauth-mission}} that treats a pushed
+`resource` or `scope` as a requested subset of the authority the
+Intent yields does not apply: the base governs `resource`.
 
 ## The Intent Ceiling {#ceiling}
 
@@ -204,11 +288,13 @@ The Intent bounds the authority a Mission can approve:
   a resource through each value of its `locations` member
   ({{Section 2.2 of RFC9396}}) and through any member its type defines
   as naming a resource. The authorization server refuses a request
-  with an entry that names any other resource with `invalid_request`.
-  An entry that names no resource is not bounded by `target_resources`.
+  with an entry that names any other resource, or that names no
+  resource and so cannot be bounded, with `invalid_request`.
 - **Lifetime.** The Mission's expiry MUST NOT be later than the
   Intent's `expires_at`, in addition to any bound its base sets. An
-  approval decision made after `expires_at` creates no Mission.
+  approval decision made after `expires_at` creates no Mission, and the
+  authorization server refuses it with `access_denied`
+  ({{Section 4.1.2.1 of RFC6749}}).
 
 The ceiling applies at approval. Tokens issued later are bounded by
 the base's subset rule against the Approved Authority, which the
@@ -217,15 +303,17 @@ ceiling already bounds.
 # Approval {#approval}
 
 The authority remains what the resource owner approves. The base's
-requirement to present the authority as it will be granted applies
-unchanged, and an approval presentation that shows the Intent without
-that authority does not conform. In addition, the authorization
-server:
+requirement to present the authority as it will be granted applies,
+and an approval presentation that shows the Intent without that
+authority does not conform. In addition, the authorization server:
 
+- presents the Intent's `target_resources` with the authority, so the
+  resource owner sees the ceiling the Intent sets ({{ceiling}});
 - presents the Intent's `goal`, and its `task_bounds` when present,
   beside the authority, as text the client supplied: rendered as inert
   text, never interpreted as markup, visually distinct from the
-  authority, and attributed to the client;
+  authority, attributed to the client, and never presented as a bound
+  that a party enforces;
 - SHOULD mitigate Unicode direction-override and confusable-character
   presentation in that text; and
 - uses `goal_lang`, when present, to render it.
@@ -233,9 +321,8 @@ server:
 The Intent's prose bounds authority only through disclosure: the
 resource owner can decline authority the words do not support, and the
 authorization server can narrow it under policy. The authorization
-server does not interpret the prose. `purpose` follows its definition
-in {{I-D.draft-mcguinness-oauth-mission}}: it can contribute only to a
-refusal or stricter treatment.
+server does not interpret the prose, and `purpose` can contribute only
+to a refusal or stricter treatment ({{envelope}}).
 
 # The Recorded Intent {#record}
 
@@ -248,21 +335,22 @@ Mission is created:
   member, exactly as submitted.
 
 `intent_hash`:
-: The integrity anchor over `intent`, with `typ` `mission-intent`.
+: The anchor of {{MISSION-COMMITMENTS}} over `intent`, with `typ`
+  `mission-intent`. A Mission that does not record it has the implied
+  value computed over `intent`.
 
 `authority_hash`:
-: The integrity anchor over the Approved Authority, as a JSON array of
-  entries, with `typ` `mission-authority-set`.
+: The authority commitment over the Approved Authority, as
+  {{MISSION-COMMITMENTS}} defines it.
 
 `submission_evidence`:
 : Present only when the Submission envelope carried evidence: the
-  verified Intent Submission Evidence facts, as
-  {{I-D.draft-mcguinness-oauth-mission}} defines them.
+  verified evidence facts that the evidence type's specification
+  defines.
 
-Both anchors are computed as the "Integrity Anchors" section of
-{{I-D.draft-mcguinness-oauth-mission}} defines, with `iss` the
-Mission's issuer. For Mission Grants these are members of the Mission
-Record; for Mission Tokens they are facts of the Mission.
+Both anchors bind the Mission's issuer. For Mission Grants these facts
+are members of the Mission Record; for Mission Tokens they are facts of
+the Mission.
 
 # Confirming the Intent {#confirming}
 
@@ -335,9 +423,9 @@ member ({{confirming}}) lets the client detect this before any work.
 identifier, so a committed Intent or authority from one authorization
 server does not verify at another.
 
-**No new issuance path.** This document changes no token request,
-response rule, or enforcement rule of the base, so the base's
-security properties for issuance and enforcement hold unchanged.
+**No new issuance path.** This document adds requirements to its base
+and relaxes none, so the base's security properties for issuance and
+enforcement hold.
 
 # Privacy Considerations {#privacy}
 
@@ -365,6 +453,9 @@ This document requests registration of:
   location token response, Reference {{confirming}}; and
 - `mission_intent_supported` in the "OAuth Authorization Server
   Metadata" registry, Reference {{metadata}}.
+
+This document uses the `invalid_mission_intent_evidence` error code,
+which {{I-D.draft-mcguinness-oauth-mission}} registers.
 
 The `intent_hash` and `authority_hash` members of the introspection
 `mission` member need no registration.
@@ -485,5 +576,6 @@ token issued from the mission token and receives, among other members:
 -00
 
 - Initial version: a Mission Intent layered on a Mission base,
-  narrowing only, with the Intent's definitions cited from
-  Mission-Bound Authorization for OAuth 2.0.
+  narrowing only, with the Intent restated with the meaning
+  Mission-Bound Authorization for OAuth 2.0 gives it, and anchors from
+  OAuth 2.0 Mission Commitments.
