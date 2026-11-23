@@ -50,14 +50,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  MISSION-TOKENS:
-    title: "OAuth 2.0 Mission Tokens"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-tokens-sketch.md
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 informative:
   MISSION-COMMITMENTS:
@@ -90,12 +82,11 @@ informative:
 
 --- abstract
 
-A Mission base, such as OAuth 2.0 Mission Grants or OAuth 2.0 Mission
-Tokens, records one approval of authorization details and governs the
-tokens issued under it, but records nothing about the work the
-authority is for. This document adds a Mission Intent, a
-client-authored description of the task, to either base. The client
-submits the Intent with the base's Mission request; the authorization
+OAuth 2.0 Mission Grants records one approval of authorization details
+as a Mission and governs the tokens issued under it, but records
+nothing about the work the authority is for. This document adds a
+Mission Intent, a client-authored description of the task, to it. The
+client submits the Intent with the Mission request; the authorization
 server presents it to the resource owner beside the authority, bounds
 the approved authority's resources and lifetime by it, records it with
 the Mission under an integrity anchor, and confirms in the token
@@ -107,15 +98,13 @@ without relaxing any.
 
 # Introduction {#introduction}
 
-A Mission base records one approval of authorization details
-{{RFC9396}} as a Mission and governs every token issued under it:
-OAuth 2.0 Mission Grants {{MISSION-GRANTS}} through a refresh token
-lineage and a management endpoint, and OAuth 2.0 Mission Tokens
-{{MISSION-TOKENS}} through one mission token used with Token Exchange,
-introspection, and revocation. Either base records what was approved.
-Neither records what the work is.
+OAuth 2.0 Mission Grants {{MISSION-GRANTS}}, the Mission base this
+document extends, records one approval of authorization details
+{{RFC9396}} as a Mission and governs every token issued under it
+through a refresh token lineage and a management endpoint. It records
+what was approved, not what the work is.
 
-This document adds that description, a Mission Intent, to either base:
+This document adds that description, a Mission Intent, to the base:
 
 - the client submits the Intent with the base's Mission request
   ({{request}});
@@ -155,15 +144,16 @@ owner, and access token from {{RFC6749}}, and authorization details
 from {{RFC9396}}.
 
 Mission base:
-: OAuth 2.0 Mission Grants {{MISSION-GRANTS}} or OAuth 2.0 Mission
-  Tokens {{MISSION-TOKENS}}. This document uses its terms Mission,
-  Mission Identifier, Approved Authority, and Mission-bound token.
+: OAuth 2.0 Mission Grants {{MISSION-GRANTS}}. This document uses its
+  terms Mission, Mission Identifier, Mission Record, Approved Authority,
+  and Mission-bound token, and its extension points for a request
+  parameter recorded at approval, record members, token response
+  members, introspection `mission` members, and management endpoint
+  response members.
 
 Mission request:
-: The base's authorization request for a Mission: for Mission Grants,
-  one carrying `mission_expires_in`; for Mission Tokens, one whose only
-  `resource` is the authorization server's issuer identifier. An
-  authorization server implements one base ({{bases}}).
+: The base's authorization request for a Mission: one carrying
+  `mission_expires_in`.
 
 Mission Intent:
 : The JSON object describing the task ({{envelope}}).
@@ -174,17 +164,6 @@ Submission envelope:
 
 Intent-bound Mission:
 : A Mission created under this document.
-
-## Relationship to the Bases {#bases}
-
-| | Mission Grants | Mission Tokens |
-|---|---|---|
-| Mission request | `mission_expires_in` | `resource` naming the authorization server |
-| Lifetime bound | earlier of `mission_expires_in` and `expires_at` | `expires_at` |
-| Recorded facts | Mission Record members | Mission facts |
-| Read by identifier | management endpoint | none |
-| Ending on a mismatch | revoke the refresh token | revoke the mission token |
-{: title="This document on each base"}
 
 # Requesting an Intent-Bound Mission {#request}
 
@@ -310,9 +289,7 @@ The Intent bounds the authority a Mission can approve:
   a request with `invalid_target` ({{Section 2 of RFC8707}},
   {{Section 2.2.2 of RFC8693}}). An entry whose type makes it apply to
   another audience therefore does not carry the Mission past the
-  resources the resource owner was shown. The Mission Tokens mission
-  token, whose audience is the authorization server, is not a resource
-  token.
+  resources the resource owner was shown.
 
 The resource and lifetime bounds apply at approval. The audience bound
 applies at every issuance, alongside the base's subset rule against the
@@ -361,8 +338,7 @@ Mission is created:
   verified evidence facts that the evidence type's specification
   defines.
 
-For Mission Grants these facts are members of the Mission Record; for
-Mission Tokens they are facts of the Mission. Where the authorization
+These facts are members of the Mission Record. Where the authorization
 server also implements OAuth 2.0 Mission Commitments
 {{MISSION-COMMITMENTS}}, it records `authority_hash` as that document
 defines, so the task and the authority are committed separately.
@@ -407,14 +383,14 @@ with the authorization server's issuer identifier ({{intent-hash}}),
 and compares. A client that
 submitted an Intent and receives a token response without
 `mission_intent_hash`, or with a different value, MUST NOT use the
-issued tokens for the work, and SHOULD end the Mission as its base
-provides ({{bases}}), through revocation {{RFC7009}}.
+issued tokens for the work, and SHOULD end the Mission by revoking its
+refresh token {{RFC7009}}.
 
 # Disclosure {#disclosure}
 
 No fact this document records is carried in the `mission` claim of a
-JWT access token. A Mission Tokens exchange copies that claim into
-every token it issues, and no resource server enforces these facts.
+JWT access token, since every token issued under the Mission carries
+that claim and no resource server enforces these facts.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `intent_hash` as a member of its `mission` member. The
@@ -422,11 +398,9 @@ authorization server MUST disclose it only to a caller it authorizes
 for that member. It serves audit and correlation, not enforcement: a
 resource server never derives authority from it.
 
-On Mission Grants, the management endpoint's `GET` response MAY carry
-`intent_hash`, and carries `intent` only to a caller the authorization
-server authorizes to read it. Mission Tokens defines no read by Mission
-Identifier, so on that base a party reads these facts only by
-introspecting a Mission-bound token it holds.
+The management endpoint's `GET` response MAY carry `intent_hash`, and
+carries `intent` only to a caller the authorization server authorizes
+to read it.
 
 # Authorization Server Metadata {#metadata}
 
@@ -435,7 +409,7 @@ This document defines one authorization server metadata parameter
 
 `mission_intent_supported`:
 : A boolean. `true` declares that the authorization server implements
-  this document for its Mission base. Absent means
+  this document. Absent means
   `false`.
 
 A client sends `mission_intent` only to an authorization server that
@@ -507,19 +481,18 @@ The `intent_hash` member of the introspection
 
 This appendix is informative. The framework for approved bounded work
 {{I-D.draft-liu-mcguinness-oauth-bounded-work}} requires that what was
-approved is fixed (R2). Each base meets R2 for the approved authority
+approved is fixed (R2). The base meets R2 for the approved authority
 and the resource owner who approved, and leaves the work as described
 to an extension. With this document the record also fixes the work as
 described, and `intent_hash` commits it; with OAuth 2.0 Mission
-Commitments, `authority_hash` commits the authority separately. The other requirements are met as each base
+Commitments, `authority_hash` commits the authority separately. The other requirements are met as the base
 meets them.
 
 # Example {#example}
 {:numbered="false"}
 
-On Mission Tokens, the client pushes a Mission request that carries an
-Intent (line breaks for display; the two values are shown decoded
-below):
+The client pushes a Mission request that carries an Intent (line
+breaks for display; the two values are shown decoded below):
 
 ~~~ http-message
 POST /par HTTP/1.1
@@ -531,7 +504,8 @@ response_type=code
 &redirect_uri=https%3A%2F%2Fagent.example%2Fcb
 &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
 &code_challenge_method=S256
-&resource=https%3A%2F%2Fas.example.com
+&mission_expires_in=86400
+&resource=https%3A%2F%2Fpay.example.com
 &authorization_details=...
 &mission_intent=...
 &client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
@@ -567,14 +541,15 @@ The `mission_intent` value, a Submission envelope:
 
 The entry's only location is among `target_resources`, so the request
 is within the ceiling. The resource owner approves at
-2026-11-30T00:00:00Z, and the token response carries the mission token
-and the confirmation:
+2026-11-30T00:00:00Z, and the token response carries an access token
+for the payment service, a refresh token, and the confirmation:
 
 ~~~ json
 {
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "DPoP",
-  "expires_in": 86400,
+  "expires_in": 300,
+  "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
   "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lY",
   "mission_expires_at": "2026-12-01T00:00:00Z",
   "authorization_details": [
@@ -593,8 +568,7 @@ and the confirmation:
 The client recomputes `intent_hash` over the Intent it sent, with
 issuer `https://as.example.com`, and gets the same value. An auditor
 the authorization server authorizes for the intent anchor introspects
-a token issued from the mission token and receives, among other
-members:
+the access token and receives, among other members:
 
 ~~~ json
 {

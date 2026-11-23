@@ -48,14 +48,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  MISSION-TOKENS:
-    title: "OAuth 2.0 Mission Tokens"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-tokens-sketch.md
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 informative:
   RFC9470:
@@ -89,10 +81,10 @@ informative:
 
 --- abstract
 
-A Mission base, such as OAuth 2.0 Mission Grants or OAuth 2.0 Mission
-Tokens, has the resource owner approve a Mission and records the
-approved authority, but says little about the approval itself. This
-document defines the approval ceremony as a layer on either base: who
+OAuth 2.0 Mission Grants has the resource owner approve a Mission and
+records the approved authority, but says little about the approval
+itself. This document defines the approval ceremony as a layer on it:
+who
 approves and for whom, how strongly the approver authenticates, whose
 authority the approval draws on and how that is checked, what the
 approver is shown, and how the approval leg is protected. It records
@@ -104,12 +96,12 @@ parties, and adds requirements to its base without relaxing any.
 
 # Introduction {#introduction}
 
-A Mission base records one approval of authorization details
-{{RFC9396}} and governs every token issued under it: OAuth 2.0 Mission
-Grants {{MISSION-GRANTS}} and OAuth 2.0 Mission Tokens
-{{MISSION-TOKENS}}. In either base the resource owner approves, the
-authorization server authenticates them, and the Mission records the
-resource owner. Neither base says how strongly the approver
+OAuth 2.0 Mission Grants {{MISSION-GRANTS}}, the Mission base this
+document extends, records one approval of authorization details
+{{RFC9396}} and governs every token issued under it. In it the
+resource owner approves, the authorization server authenticates them,
+and the Mission records the resource owner. It does not say how
+strongly the approver
 authenticates, lets anyone other than the resource owner approve,
 records whose authority the approval draws on, or states what the
 approver must be shown beyond the authority itself.
@@ -154,9 +146,12 @@ owner, and access token from {{RFC6749}}, and authorization details
 from {{RFC9396}}.
 
 Mission base:
-: OAuth 2.0 Mission Grants {{MISSION-GRANTS}} or OAuth 2.0 Mission
-  Tokens {{MISSION-TOKENS}}. This document uses its terms Mission,
-  Approved Authority, and Mission-bound token.
+: OAuth 2.0 Mission Grants {{MISSION-GRANTS}}. This document uses its
+  terms Mission, Mission Record, Approved Authority, and Mission-bound
+  token, and its extension points for approval by a party other than
+  the resource owner, record members, token response members,
+  introspection `mission` members, and management endpoint response
+  members.
 
 Principal:
 : An (`iss`, `sub`) pair. Two principals are equal when both members
@@ -380,8 +375,7 @@ fixed like the base's other facts:
   `amr`:
   : OPTIONAL. An array of strings: the authentication methods used.
 
-For Mission Grants these are members of the Mission Record; for
-Mission Tokens they are facts of the Mission.
+These are members of the Mission Record.
 
 These facts are provenance. They never grant or widen authority, and a
 resource server does not consult them. A consumer preserves an
@@ -457,7 +451,7 @@ This document defines one authorization server metadata parameter
 
 `mission_approval_ceremony_supported`:
 : A boolean. `true` declares that the authorization server implements
-  this document for its Mission base. Absent means
+  this document. Absent means
   `false`.
 
 # Security Considerations {#security}
@@ -524,11 +518,11 @@ member need no registration.
 
 This appendix is informative. The framework for approved bounded work
 {{I-D.draft-liu-mcguinness-oauth-bounded-work}} requires that what was
-approved, including who approved it, is fixed (R2). Each base records
+approved, including who approved it, is fixed (R2). The base records
 the resource owner who approved and leaves an accountable approver
 other than the resource owner to an extension. With this document the
 record also fixes the accountable Approver, the Subject, and the
-authority source. The other requirements are met as each base meets
+authority source. The other requirements are met as the base meets
 them.
 
 # Example {#example}

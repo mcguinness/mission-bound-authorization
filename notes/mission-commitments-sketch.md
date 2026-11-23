@@ -43,14 +43,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  MISSION-TOKENS:
-    title: "OAuth 2.0 Mission Tokens"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-tokens-sketch.md
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 informative:
   RFC6749:
@@ -92,10 +84,9 @@ informative:
 
 --- abstract
 
-A Mission base, such as OAuth 2.0 Mission Grants or OAuth 2.0 Mission
-Tokens, fixes what was approved but gives no way to check it later or
-to cite it compactly. This document defines commitments as a layer on
-either base: one construction for a domain-separated, issuer-bound
+OAuth 2.0 Mission Grants fixes what was approved but gives no way to
+check it later or to cite it compactly. This document defines
+commitments as a layer on it: one construction for a domain-separated, issuer-bound
 digest of a JSON object; an authority commitment over a Mission's
 approved authority; an entry commitment that cites one approved entry;
 and an approval event identifier that keeps one approval from creating
@@ -108,15 +99,14 @@ any.
 
 # Introduction {#introduction}
 
-A Mission base records one approval of authorization details
-{{RFC9396}} and governs every token issued under it: OAuth 2.0 Mission
-Grants {{MISSION-GRANTS}} and OAuth 2.0 Mission Tokens
-{{MISSION-TOKENS}}. Either base fixes the Approved Authority when the
-Mission is created. Neither gives a party a compact value to check the
+OAuth 2.0 Mission Grants {{MISSION-GRANTS}}, the Mission base this
+document extends, records one approval of authorization details
+{{RFC9396}} and governs every token issued under it. It fixes the
+Approved Authority when the Mission is created, but gives no party a compact value to check the
 approved authority against, a way to cite one approved entry, or an
 identifier for the approval event itself.
 
-This document adds those as a layer on either base:
+This document adds those as a layer on the base:
 
 - a commitment construction: a digest over a JSON object, separated by
   object type and bound to the authorization server's issuer
@@ -147,9 +137,11 @@ This document uses the terms authorization server and client from
 {{RFC6749}}, and authorization details from {{RFC9396}}.
 
 Mission base:
-: OAuth 2.0 Mission Grants {{MISSION-GRANTS}} or OAuth 2.0 Mission
-  Tokens {{MISSION-TOKENS}}. This document uses its terms Mission,
-  Mission Identifier, Approved Authority, and Mission-bound token.
+: OAuth 2.0 Mission Grants {{MISSION-GRANTS}}. This document uses its
+  terms Mission, Mission Identifier, Mission Record, Approved
+  Authority, and Mission-bound token, and its extension points for
+  record members, introspection `mission` members, and management
+  endpoint response members.
 
 Commitment:
 : A prefixed string, such as `sha-256:` followed by an encoded digest,
@@ -271,7 +263,7 @@ double-submitted consent form, MUST NOT create a second Mission. The
 authorization server answers it with the outcome of the first
 decision, the same authorization response or the same refusal, and
 never with a second authorization code, which would yield a second
-refresh token lineage or a second mission token.
+refresh token lineage.
 
 The authorization server:
 
@@ -347,7 +339,7 @@ This document defines one authorization server metadata parameter
 
 `mission_commitments_supported`:
 : A boolean. `true` declares that the authorization server implements
-  this document for its Mission base. Absent means
+  this document. Absent means
   `false`.
 
 # Security Considerations {#security}
@@ -400,10 +392,10 @@ defines no registry of `typ` values ({{other-commitments}}).
 This appendix is informative. The framework for approved bounded work
 {{I-D.draft-liu-mcguinness-oauth-bounded-work}} requires that what was
 approved is fixed (R2) and that a second party can relate a credential
-to its authorization (R7). Each base meets both. With this document, an
+to its authorization (R7). The base meets both. With this document, an
 auditor can also verify the fixed authority against `authority_hash`,
 and a record can cite one approved entry by its entry commitment. The
-other requirements are met as each base meets them.
+other requirements are met as the base meets them.
 
 # Test Vectors {#test-vectors}
 {:numbered="false"}
