@@ -391,14 +391,19 @@ source's semantics.
 
 # Confirming the Subject {#confirming}
 
-The token response that redeems the authorization code carries:
+The token response that redeems the authorization code MUST carry:
 
 `mission_subject`:
 : An object with `iss` and `sub`: the Mission's `subject`.
 
-A client that serves several users uses it to attach the Mission to the
-user it is for, rather than inferring the Subject from the Approver's
-session or from a token it treats as opaque.
+A client that began the request for a known account compares the
+returned pair with that account's, as principals ({{terminology}}). On
+a mismatch, or when `mission_subject` is missing, it MUST NOT attach the
+Mission to the account or use its tokens for the work, and SHOULD end
+the Mission as its base provides. A client whose flow lets the Approver
+choose the Subject during approval attaches the Mission to the
+returned pair, never to a Subject it infers from the Approver's session
+or from a token it treats as opaque.
 
 # Disclosure {#disclosure}
 
