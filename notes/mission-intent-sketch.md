@@ -27,25 +27,21 @@ author:
 
 normative:
   RFC3339:
+  RFC4648:
   RFC5646:
+  RFC6234:
   RFC6749:
   RFC7009:
+  RFC7493:
   RFC7662:
   RFC8414:
   RFC8259:
   RFC8693:
   RFC8707:
+  RFC8785:
   RFC9101:
   RFC9126:
   RFC9396:
-  MISSION-COMMITMENTS:
-    title: "OAuth 2.0 Mission Commitments"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-commitments-sketch.md
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   MISSION-GRANTS:
     title: "OAuth 2.0 Mission Grants"
     target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-grants-sketch.md
@@ -64,6 +60,14 @@ normative:
     date: 2026
 
 informative:
+  MISSION-COMMITMENTS:
+    title: "OAuth 2.0 Mission Commitments"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-commitments-sketch.md
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-mission/
@@ -135,9 +139,10 @@ introspection, to a caller the authorization server authorizes
 
 This document defines the Mission Intent and the Submission envelope
 with the members and meaning they have in Mission-Bound Authorization
-for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}, and computes its
-anchors as OAuth 2.0 Mission Commitments {{MISSION-COMMITMENTS}}
-defines. A Mission created under this document is not a
+for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}, and computes
+`intent_hash` with the construction that document and OAuth 2.0
+Mission Commitments {{MISSION-COMMITMENTS}} use, restated here
+({{intent-hash}}) so that this document stands on its base alone. A Mission created under this document is not a
 Mission of that document: it has its base's record, lifecycle, and
 tokens. The names it shares with that document have the same meaning.
 
@@ -265,8 +270,9 @@ authorization server processes the Intent in this order, and MUST
 refuse a request that fails more than one check with the error of the
 earliest failing step:
 
-1. parse the Submission envelope, enforce the closed members and the
-   size bounds, and check that each evidence entry is an object with a
+1. parse the Submission envelope, rejecting input that is not I-JSON
+   or that has duplicate member names ({{intent-hash}}), and enforce
+   the closed members and the size bounds, and check that each evidence entry is an object with a
    `type` member (`invalid_request`);
 2. validate the Intent's members, including a well-formed `goal_lang`
    and an `expires_at` that is well-formed and not past
@@ -347,22 +353,43 @@ Mission is created:
   member, exactly as submitted.
 
 `intent_hash`:
-: The anchor of {{MISSION-COMMITMENTS}} over `intent`, with `typ`
-  `mission-intent`. A Mission that does not record it has the implied
-  value computed over `intent`.
-
-`authority_hash`:
-: The authority commitment over the Approved Authority, as
-  {{MISSION-COMMITMENTS}} defines it.
+: The intent anchor over `intent` ({{intent-hash}}). A Mission that
+  does not record it has the implied value computed over `intent`.
 
 `submission_evidence`:
 : Present only when the Submission envelope carried evidence: the
   verified evidence facts that the evidence type's specification
   defines.
 
-Both anchors bind the Mission's issuer. For Mission Grants these facts
-are members of the Mission Record; for Mission Tokens they are facts of
-the Mission.
+For Mission Grants these facts are members of the Mission Record; for
+Mission Tokens they are facts of the Mission. Where the authorization
+server also implements OAuth 2.0 Mission Commitments
+{{MISSION-COMMITMENTS}}, it records `authority_hash` as that document
+defines, so the task and the authority are committed separately.
+
+## The Intent Anchor {#intent-hash}
+
+`intent_hash` is computed as follows:
+
+1. Construct the envelope
+   `{ "typ": "mission-intent", "iss": <issuer>, "value": <intent> }`,
+   where `iss` is the Mission's issuer identifier and `value` is the
+   recorded `intent`.
+2. Canonicalize the envelope with JCS {{RFC8785}}.
+3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
+4. Encode the result as `sha-256:` followed by the base64url encoding
+   of the digest, without padding ({{RFC4648}}).
+
+The Intent and its envelope are I-JSON {{RFC7493}} data. The
+authorization server MUST reject a Submission envelope that is not
+I-JSON or that has duplicate member names, rather than adapt it, and
+commits the parsed data, keeping the order of every array. This
+document defines only `sha-256`, and a verifier MUST reject an anchor
+whose prefix it does not recognize. The construction is the one
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} uses for `intent_hash` and OAuth
+2.0 Mission Commitments uses for every anchor, so each produces the
+same bytes for the same Intent and issuer.
 
 # Confirming the Intent {#confirming}
 
@@ -375,8 +402,9 @@ Intent-bound Mission carries:
 `mission_intent_hash`:
 : A string: the Mission's `intent_hash`.
 
-The client computes the anchor over the Intent it submitted, with the
-authorization server's issuer identifier, and compares. A client that
+The client computes the intent anchor over the Intent it submitted,
+with the authorization server's issuer identifier ({{intent-hash}}),
+and compares. A client that
 submitted an Intent and receives a token response without
 `mission_intent_hash`, or with a different value, MUST NOT use the
 issued tokens for the work, and SHOULD end the Mission as its base
@@ -389,10 +417,10 @@ JWT access token. A Mission Tokens exchange copies that claim into
 every token it issues, and no resource server enforces these facts.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
-carry `intent_hash` and `authority_hash` as members of its `mission`
-member. The authorization server MUST disclose each only to a caller
-it authorizes for that member. They serve audit and correlation, not
-enforcement: a resource server never derives authority from them.
+carry `intent_hash` as a member of its `mission` member. The
+authorization server MUST disclose it only to a caller it authorizes
+for that member. It serves audit and correlation, not enforcement: a
+resource server never derives authority from it.
 
 On Mission Grants, the management endpoint's `GET` response MAY carry
 `intent_hash`, and carries `intent` only to a caller the authorization
@@ -431,9 +459,9 @@ approval and attributing the goal to the client ({{approval}}).
 creates a Mission whose record lacks the Intent. The confirmation
 member ({{confirming}}) lets the client detect this before any work.
 
-**Transplant.** Each anchor binds the authorization server's issuer
-identifier, so a committed Intent or authority from one authorization
-server does not verify at another.
+**Transplant.** The intent anchor binds the authorization server's
+issuer identifier, so a committed Intent from one authorization server
+does not verify at another.
 
 **No new issuance path.** This document adds requirements to its base
 and relaxes none, so the base's security properties for issuance and
@@ -469,8 +497,8 @@ This document requests registration of:
 This document uses the `invalid_mission_intent_evidence` error code,
 which {{I-D.draft-mcguinness-oauth-mission}} registers.
 
-The `intent_hash` and `authority_hash` members of the introspection
-`mission` member need no registration.
+The `intent_hash` member of the introspection
+`mission` member needs no registration.
 
 --- back
 
@@ -482,8 +510,8 @@ This appendix is informative. The framework for approved bounded work
 approved is fixed (R2). Each base meets R2 for the approved authority
 and the resource owner who approved, and leaves the work as described
 to an extension. With this document the record also fixes the work as
-described, and `intent_hash` and `authority_hash` commit the task and
-the authority separately. The other requirements are met as each base
+described, and `intent_hash` commits it; with OAuth 2.0 Mission
+Commitments, `authority_hash` commits the authority separately. The other requirements are met as each base
 meets them.
 
 # Example {#example}
@@ -564,8 +592,9 @@ and the confirmation:
 
 The client recomputes `intent_hash` over the Intent it sent, with
 issuer `https://as.example.com`, and gets the same value. An auditor
-the authorization server authorizes for both anchors introspects a
-token issued from the mission token and receives, among other members:
+the authorization server authorizes for the intent anchor introspects
+a token issued from the mission token and receives, among other
+members:
 
 ~~~ json
 {
@@ -575,9 +604,7 @@ token issued from the mission token and receives, among other members:
     "id": "msn_K9iLTMIDFUiBucaPegc_B4lY",
     "issuer": "https://as.example.com",
     "intent_hash":
-      "sha-256:aKKuYS1p_YcBt9C3xdj8KGjf_LwW4w1pGmFiF3vnER4",
-    "authority_hash":
-      "sha-256:JJ1iY5CccSnS6JnEXJcfnWk50MhdZGV1CD1FsoTIbDI"
+      "sha-256:aKKuYS1p_YcBt9C3xdj8KGjf_LwW4w1pGmFiF3vnER4"
   }
 }
 ~~~
@@ -591,5 +618,6 @@ token issued from the mission token and receives, among other members:
 
 - Initial version: a Mission Intent layered on a Mission base,
   narrowing only, with the Intent restated with the meaning
-  Mission-Bound Authorization for OAuth 2.0 gives it, and anchors from
-  OAuth 2.0 Mission Commitments.
+  Mission-Bound Authorization for OAuth 2.0 gives it, and an intent
+  anchor computed with the construction it and OAuth 2.0 Mission
+  Commitments use.

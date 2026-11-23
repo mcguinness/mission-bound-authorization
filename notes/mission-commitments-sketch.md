@@ -326,10 +326,11 @@ verifies `authority_hash` by recomputing it.
 
 # Composition with Other Layers {#composition}
 
-- **OAuth 2.0 Mission Intent** {{MISSION-INTENT}}: `intent_hash` is the
-  anchor of {{construction}} with `typ` `mission-intent` over the
-  approved Intent, and the Intent layer's `authority_hash` is the
-  authority commitment of {{authority-commitment}}.
+- **OAuth 2.0 Mission Intent** {{MISSION-INTENT}}: its `intent_hash`
+  is the anchor of {{construction}} with `typ` `mission-intent` over the
+  approved Intent, which that document restates for that one object.
+  Where both documents are implemented, `authority_hash`
+  ({{authority-commitment}}) commits the authority beside the Intent.
 - **OAuth 2.0 Mission Approval Ceremony** {{MISSION-APPROVAL-CEREMONY}}:
   the `digest` of an organizational `authority_source.policy` is a
   commitment in one of the forms of {{other-commitments}}. Its issuer
