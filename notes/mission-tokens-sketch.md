@@ -482,7 +482,16 @@ only tokens issued to it ({{Section 2.1 of RFC7009}}) and leaves
 revoking related tokens to the authorization server's policy; or by
 the authorization server, for example on detecting reuse of the
 authorization code ({{Section 4.1.2 of RFC6749}}). Revoking a token
-issued from the mission token revokes only that token.
+issued from the mission token revokes only that token. RFC 7009
+authenticates only a confidential client ({{Section 2.1 of RFC7009}}),
+so a public client that revokes its mission token MUST present with
+the revocation request a DPoP proof ({{Section 4 of RFC9449}}) for the
+revocation endpoint, signed with the mission token's key. The
+authorization server MUST NOT revoke a mission token for a public
+client without that proof, and refuses the request with
+`invalid_request`, so a copied mission token cannot end the Mission. A
+resource owner whose client has lost the key ends the Mission without a
+token, as below.
 
 **Ending without a token.** The authorization server MUST offer the
 resource owner a means to end the resource owner's Missions without
