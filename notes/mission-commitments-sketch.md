@@ -342,7 +342,7 @@ This document defines one authorization server metadata parameter
 
 `mission_commitments_supported`:
 : A boolean. `true` declares that the authorization server implements
-  this document for each Mission base it supports. Absent means
+  this document for its Mission base. Absent means
   `false`.
 
 # Security Considerations {#security}

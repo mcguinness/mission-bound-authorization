@@ -223,11 +223,11 @@ This document defines the following authorization request parameter:
   in seconds from approval. Its presence requests a Mission.
 
 A request that carries `mission_expires_in` MUST also carry
-`authorization_details` {{RFC9396}}. A request that also names the
-authorization server's issuer identifier as its only `resource`
-selects OAuth 2.0 Mission Tokens {{MISSION-TOKENS}} as well: a client
-MUST NOT send it, and an authorization server that implements both
-documents MUST refuse it with `invalid_request`. The authorization server MUST
+`authorization_details` {{RFC9396}}. An authorization server that
+implements this document MUST NOT also implement OAuth 2.0 Mission
+Tokens {{MISSION-TOKENS}} at the same issuer, so a client and a
+resource server can tell from the issuer's metadata which rules govern
+its Missions ({{metadata}}). The authorization server MUST
 refuse a request that carries `mission_expires_in` without
 `authorization_details`, or with a value that is not a positive
 integer, with the `invalid_request` error code. A client SHOULD send
@@ -627,6 +627,9 @@ This document defines these authorization server metadata parameters
 `mission_management_endpoint`:
 : A URL: the management endpoint ({{management}}). REQUIRED when
   `mission_grants_supported` is `true`.
+
+An authorization server that advertises `mission_grants_supported`
+MUST NOT advertise `mission_tokens_supported` ({{requesting}}).
 
 The authorization server lists the authorization details types it
 accepts in a Mission request in `authorization_details_types_supported`

@@ -208,10 +208,10 @@ client SHOULD send the request as a Pushed Authorization Request
 The authorization server MUST refuse, with `invalid_target`
 ({{Section 2 of RFC8707}}), a request that names its issuer identifier
 together with another `resource`, since a mission token has exactly
-one audience. A request that also carries `mission_expires_in` selects
-OAuth 2.0 Mission Grants {{MISSION-GRANTS}} as well: a client MUST NOT
-send it, and an authorization server that implements both documents
-MUST refuse it with `invalid_request`.
+one audience. An authorization server that implements this document MUST
+NOT also implement OAuth 2.0 Mission Grants {{MISSION-GRANTS}} at the
+same issuer, so a client and a resource server can tell from the
+issuer's metadata which rules govern its Missions ({{metadata}}).
 
 A client first establishes that the authorization server advertises
 `mission_tokens_supported` ({{metadata}}). An authorization server
@@ -510,6 +510,9 @@ This document defines one authorization server metadata parameter
 `mission_tokens_supported`:
 : A boolean. `true` declares that the authorization server implements
   this document. Absent means `false`.
+
+An authorization server that advertises `mission_tokens_supported`
+MUST NOT advertise `mission_grants_supported` ({{request}}).
 
 An authorization server that sets it lists
 `urn:ietf:params:oauth:grant-type:token-exchange` in

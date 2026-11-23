@@ -141,9 +141,8 @@ Mission base:
 Mission request:
 : The base's authorization request for a Mission: for Mission Grants,
   one carrying `mission_expires_in`; for Mission Tokens, one whose only
-  `resource` is the authorization server's issuer identifier. A request
-  that selects both is not a Mission request: each base forbids it, and
-  an authorization server that implements both refuses it.
+  `resource` is the authorization server's issuer identifier. An
+  authorization server implements one base ({{bases}}).
 
 Mission Intent:
 : The JSON object describing the task, with the members `goal`,
@@ -308,7 +307,7 @@ This document defines one authorization server metadata parameter
 
 `mission_intent_supported`:
 : A boolean. `true` declares that the authorization server implements
-  this document for each Mission base it supports. Absent means
+  this document for its Mission base. Absent means
   `false`.
 
 A client sends `mission_intent` only to an authorization server that
