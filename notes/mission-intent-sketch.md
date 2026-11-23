@@ -33,6 +33,8 @@ normative:
   RFC7662:
   RFC8414:
   RFC8259:
+  RFC8693:
+  RFC8707:
   RFC9101:
   RFC9126:
   RFC9396:
@@ -295,10 +297,20 @@ The Intent bounds the authority a Mission can approve:
   approval decision made after `expires_at` creates no Mission, and the
   authorization server refuses it with `access_denied`
   ({{Section 4.1.2.1 of RFC6749}}).
+- **Audiences.** The authorization server MUST NOT issue a resource
+  token for an Intent-bound Mission whose audience is not among the
+  recorded `target_resources`, at code redemption, refresh, or Token
+  Exchange, wherever its base issues a resource token, and refuses such
+  a request with `invalid_target` ({{Section 2 of RFC8707}},
+  {{Section 2.2.2 of RFC8693}}). An entry whose type makes it apply to
+  another audience therefore does not carry the Mission past the
+  resources the resource owner was shown. The Mission Tokens mission
+  token, whose audience is the authorization server, is not a resource
+  token.
 
-The ceiling applies at approval. Tokens issued later are bounded by
-the base's subset rule against the Approved Authority, which the
-ceiling already bounds.
+The resource and lifetime bounds apply at approval. The audience bound
+applies at every issuance, alongside the base's subset rule against the
+Approved Authority.
 
 # Approval {#approval}
 
