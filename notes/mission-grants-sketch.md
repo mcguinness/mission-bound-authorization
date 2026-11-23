@@ -447,23 +447,36 @@ MUST refuse, with `invalid_request`, an exchange whose
 permits one: the Mission's grant lineage ({{lineage}}) is its only
 refresh path.
 
-The authorization server MUST check an exchange in this order and MUST
-refuse it at the first failure, with `invalid_request`
+The authorization server first applies its token endpoint's own
+checks, with their own error codes: client authentication
+(`invalid_client`, {{Section 5.2 of RFC6749}}) and, where DPoP is used,
+the proof's validity, including any nonce it requires
+(`invalid_dpop_proof`, or `use_dpop_nonce` with a `DPoP-Nonce` header,
+{{Section 8 of RFC9449}}). It then MUST check the exchange in this
+order, and MUST refuse it at the first failure with `invalid_request`
 ({{Section 2.2.2 of RFC8693}}) unless a step names another code:
 
-1. the client's authentication, and that the client is the Mission's
-   client;
+1. that the client is the Mission's client: by its authentication, or,
+   for a public client, by the `client_id` it presents together with
+   the proof of the subject token's key, which only the Mission's client
+   received;
 2. that the subject token is a Mission-bound access token the
    authorization server issued, by its signature or its own record;
 3. that the client holds the subject token, as above;
 4. issuance gating ({{gating}}), which refuses with `mission_error`
    when the Mission is not `active`, including when it has expired;
-5. the subject token's own expiry; and
+5. that the subject token itself is still valid: not revoked on its
+   own, not expired, and meeting any other condition the authorization
+   server applies to it; and
 6. the subset rule ({{subset}}), with its own error codes.
 
-Only an exchange that passes steps 1 to 3 can receive `mission_error`,
-so a party that cannot show it holds the subject token learns nothing
-about the Mission.
+Only an exchange that passes the token endpoint's checks and steps 1
+to 3 can receive `mission_error`, so a party that cannot show it holds
+the subject token learns nothing about the Mission. Step 4 precedes
+step 5, so a Mission that has ended takes precedence over the token's
+own expiry or revocation, including when the token expires with its
+Mission. A token revoked on its own under an active Mission is refused
+at step 5, with `invalid_request` and no `mission_error`.
 
 ## Issuance Gating {#gating}
 
@@ -486,7 +499,9 @@ same Mission succeeds.
 At code redemption and refresh, the authorization server validates
 the grant as {{RFC6749}} requires before it applies this gate, and at
 Token Exchange it follows the order of {{exchange}}. It returns
-`mission_error` only for an otherwise valid grant or subject token.
+`mission_error` only to a request that passes the checks preceding this
+gate: the grant's validation at code redemption and refresh, and the
+token endpoint's checks and steps 1 to 3 at Token Exchange.
 
 # Lifecycle {#lifecycle}
 

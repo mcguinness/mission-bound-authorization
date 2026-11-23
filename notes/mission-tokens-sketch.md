@@ -339,22 +339,42 @@ a DPoP server nonce ({{Section 8 of RFC9449}}) at Token Exchange, so
 that proofs for a key that lasts the Mission's lifetime cannot be
 made ahead of use.
 
-The authorization server MUST check an exchange in this order and MUST
-refuse it at the first failure, with `invalid_request`
+**The Mission's client.** Only the Mission's client exchanges. The
+authorization server compares the requesting client with the client
+the Mission records. A confidential client is established by its
+authentication. A public client, which has no credentials, is
+established by the `client_id` it presents together with the proof of
+the subject token's key: that key was bound to the mission token when
+the client redeemed the code, which PKCE ties to the client that began
+the request, so only the Mission's client holds it.
+
+The authorization server first applies its token endpoint's own
+checks, with their own error codes: client authentication
+(`invalid_client`, {{Section 5.2 of RFC6749}}) and, where DPoP is used,
+the proof's validity, including any nonce it requires
+(`invalid_dpop_proof`, or `use_dpop_nonce` with a `DPoP-Nonce` header,
+{{Section 8 of RFC9449}}). It then MUST check the exchange in this
+order, and MUST refuse it at the first failure with `invalid_request`
 ({{Section 2.2.2 of RFC8693}}) unless a step names another code:
 
-1. the client's authentication, as at its token endpoint;
+1. that the client is the Mission's client, as above;
 2. that the subject token is a Mission-bound access token the
    authorization server issued, by its signature or its own record;
-3. the proof of possession above;
+3. that the client holds the subject token, as above;
 4. issuance gating ({{gating}}), which refuses with `mission_error`
    when the Mission is not `active`, including when it has expired;
-5. the subject token's own expiry; and
+5. that the subject token itself is still valid: not revoked on its
+   own, not expired, and meeting any other condition the authorization
+   server applies to it; and
 6. the subset rule ({{subset}}), with its own error codes.
 
-Only an exchange that passes steps 1 to 3 can receive `mission_error`,
-so a party that cannot prove possession of the subject token learns
-nothing about the Mission.
+Only an exchange that passes the token endpoint's checks and steps 1
+to 3 can receive `mission_error`, so a party that cannot show it holds
+the subject token learns nothing about the Mission. Step 4 precedes
+step 5, so a Mission that has ended takes precedence over the token's
+own expiry or revocation, including when the token expires with its
+Mission. A token revoked on its own under an active Mission is refused
+at step 5, with `invalid_request` and no `mission_error`.
 
 ## Issued Token {#issued-token}
 
@@ -441,8 +461,10 @@ work and does not seek another credential for it.
 At code redemption, the authorization server validates the code as
 {{RFC6749}} requires, and the DPoP proof, before it applies this gate;
 at Token Exchange it follows the order of {{exchange-request}}. It
-returns `mission_error` only for an otherwise valid code or subject
-token.
+returns `mission_error` only to a request that passes the checks
+preceding this gate: the code's validation and the DPoP proof at code
+redemption, and the token endpoint's checks and steps 1 to 3 at Token
+Exchange.
 
 # Lifecycle, Introspection, and Revocation {#lifecycle}
 
