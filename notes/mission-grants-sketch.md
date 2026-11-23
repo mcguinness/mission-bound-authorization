@@ -597,22 +597,30 @@ For an operation it protects under this document, a resource server:
 A resource server MUST refuse an access token without the `mission`
 member for a Mission-governed operation; otherwise a client holding an
 ordinary token for the same resource would be unaffected when the
-Mission ends. It declares Mission-governed operations in its protected
-resource metadata {{RFC9728}}:
+Mission ends. It refuses with `invalid_token` and the
+`resource_metadata` parameter ({{Section 5.1 of RFC9728}}), and
+declares Mission-governed operations in that protected resource
+metadata:
 
 `mission_grants_required`:
 : A boolean. `true` declares that the resource's protected operations
   are Mission-governed. Absent means `false`.
+
+A client that receives that refusal for a token without `mission`
+obtains a Mission-bound token, rather than another of the same kind.
 
 Denials distinguish three causes, because each calls for a different
 response from the client:
 
 - the Mission has ended: `invalid_token`, with a `mission_error`
   parameter carrying the Mission's state where the resource server
-  knows it; the client stops the work;
+  knows it; the client confirms the Mission's state at the
+  authorization server, for example by a refresh, and then stops the
+  work, since a resource server's `mission_error` alone is advisory;
 - the operation is outside the carried authority:
-  `insufficient_scope` ({{RFC6750}}); more authority needs a new
-  Mission; and
+  `insufficient_scope` ({{RFC6750}}); the client obtains a token for
+  the operation by refresh or exchange where the Approved Authority
+  covers it, and otherwise needs a new Mission; and
 - only the credential failed: `invalid_token`; the client can obtain
   a new token while the Mission is active.
 
