@@ -37,6 +37,7 @@ normative:
   RFC8259:
   RFC8414:
   RFC8693:
+  RFC8707:
   RFC9068:
   RFC9126:
   RFC9396:
@@ -359,59 +360,93 @@ its Mission is active.
 
 ## The Subset Rule {#subset}
 
-Every token the authorization server issues under a Mission conveys
-`authorization_details` each entry of which is within a bound: an
-entry of the bound carried unchanged, or a narrowing of one such entry
-under a comparison that the entry's type defines. An issued entry
-never combines rights from several entries. The bound depends on the
-issuance path:
+Every token the authorization server issues under a Mission has an
+audience: the resource the request names with `resource`
+({{RFC8707}}), or with `resource` or `audience` at Token Exchange
+({{RFC8693}}), or, where the request names none, one the authorization
+server assigns. Each entry of the token's `authorization_details` MUST
+meet three conditions:
 
-- **Code redemption and refresh.** The bound is the Approved
-  Authority. A refresh can ask for any authority the Mission's grant
-  lineage holds, as a refresh under {{Section 6 of RFC6749}} can ask
-  for any scope originally granted.
-- **Token Exchange {{RFC8693}}.** Each issued entry MUST meet three
-  conditions:
-  1. **Within the subject token's authority.** The bound is the
-     subject token's `authorization_details`, not the Approved
-     Authority, so an exchange never restores authority the subject
-     token does not carry.
-  2. **Within the request.** Where the exchange carries
-     `authorization_details`, the entry is a requested entry or a
-     narrowing of one; an entry broader than the requested one is never
-     issued in its place.
-  3. **For the audience.** The entry applies to every audience of the
-     issued token: its `locations` ({{Section 2.2 of RFC9396}}) include
-     the audience value, compared as strings, or its type defines how
-     it applies to that audience. An entry with neither applies
-     nowhere.
+1. **Within the bound.** It is an entry of the bound carried
+   unchanged, or a narrowing of one such entry under a comparison that
+   the entry's type defines, and it never combines rights from several
+   entries. At code redemption and refresh, the bound is the Approved
+   Authority: a refresh can ask for any authority the Mission's grant
+   lineage holds, as a refresh under {{Section 6 of RFC6749}} can ask
+   for any scope originally granted. At Token Exchange, the bound is
+   the subject token's `authorization_details`, so an exchange never
+   restores authority the subject token does not carry, and a chain of
+   exchanges only narrows.
+2. **Within the request.** Where the request carries
+   `authorization_details`, the entry is a requested entry or a
+   narrowing of one; an entry broader than the requested one is never
+   issued in its place.
+3. **For the audience.** The entry applies to every audience of the
+   token: its `locations` ({{Section 2.2 of RFC9396}}) include the
+   audience value, compared as strings, or its type defines how it
+   applies to that audience. An entry with neither applies nowhere.
 
-  Where the exchange carries no `authorization_details`, the
-  authorization server issues the entries of the subject token's
-  authority that apply to the audience, unchanged, and it refuses an
-  exchange for an audience that no entry applies to with
-  `invalid_target` ({{Section 2.2.2 of RFC8693}}). The rule applies at
-  every exchange, so a chain of exchanges only narrows.
-
-Where a request asks for an entry outside its bound, or a narrowing
-that the entry's type defines no comparison for or that the comparison
-cannot decide, the authorization server MUST refuse the request with
-the `invalid_authorization_details` error code
-({{Section 6 of RFC9396}}). The Mission Resource Access Profile
+Where the request carries no `authorization_details`, the
+authorization server issues the entries of the bound that apply to the
+audience, unchanged. The authorization server MUST refuse a request
+that carries `authorization_details` with the
+`invalid_authorization_details` error code ({{Section 6 of RFC9396}})
+when a requested entry fails a condition, or needs a comparison that
+the entry's type does not define or that cannot decide it; and MUST
+refuse a request that carries none with `invalid_target`
+({{Section 2 of RFC8707}}) when no entry of the bound applies to the
+audience. The Mission Resource Access Profile
 {{I-D.draft-mcguinness-oauth-mission-resource-access}} is an example of
-a type specification that defines such a comparison. This document
-defines no way to discover which narrowings an authorization server
-accepts; a client that needs one learns from the refusal.
+a type specification that defines a comparison. This document defines
+no way to discover which narrowings an authorization server accepts; a
+client that needs one learns from the refusal.
 
-A token issued by Token Exchange from a Mission-bound subject token
-is an access token (the response's `issued_token_type` is
-`urn:ietf:params:oauth:token-type:access_token`), carries the same
-`mission` claim, and is gated on the same Mission ({{gating}}). The
-authorization server MUST refuse, with `invalid_request`, such an
-exchange whose `requested_token_type` names another token type, and
-MUST NOT include a `refresh_token` in its response, although
-{{Section 2.2.1 of RFC8693}} permits one: the Mission's grant lineage
-({{lineage}}) is its only refresh path.
+## Token Exchange {#exchange}
+
+A client exchanges a Mission-bound access token for another with a
+Token Exchange request ({{Section 2.1 of RFC8693}}) whose
+`subject_token` is that access token, with `subject_token_type`
+`urn:ietf:params:oauth:token-type:access_token`. Only the Mission's
+client exchanges, and only a subject token it shows it holds:
+
+- a refresh token is never a subject token;
+- for a sender-constrained subject token, the request's proof of
+  possession MUST use the key the subject token is bound to; for DPoP,
+  the request's DPoP proof is signed with that key, which {{RFC9449}}
+  alone does not require; and
+- for a subject token that is not sender-constrained, the client MUST
+  authenticate as a confidential client, so a public client exchanges
+  only sender-constrained subject tokens.
+
+The issued token is an access token (the response's
+`issued_token_type` is `urn:ietf:params:oauth:token-type:access_token`).
+It carries the same `mission` claim, meets the subset rule
+({{subset}}), has an expiry no later than the subject token's, is bound
+to the key of the request's proof of possession where there is one,
+and is gated on the same Mission ({{gating}}). The authorization server
+MUST refuse, with `invalid_request`, an exchange whose
+`requested_token_type` names another token type, and MUST NOT include a
+`refresh_token` in its response, although {{Section 2.2.1 of RFC8693}}
+permits one: the Mission's grant lineage ({{lineage}}) is its only
+refresh path.
+
+The authorization server MUST check an exchange in this order and MUST
+refuse it at the first failure, with `invalid_request`
+({{Section 2.2.2 of RFC8693}}) unless a step names another code:
+
+1. the client's authentication, and that the client is the Mission's
+   client;
+2. that the subject token is a Mission-bound access token the
+   authorization server issued, by its signature or its own record;
+3. that the client holds the subject token, as above;
+4. issuance gating ({{gating}}), which refuses with `mission_error`
+   when the Mission is not `active`, including when it has expired;
+5. the subject token's own expiry; and
+6. the subset rule ({{subset}}), with its own error codes.
+
+Only an exchange that passes steps 1 to 3 can receive `mission_error`,
+so a party that cannot show it holds the subject token learns nothing
+about the Mission.
 
 ## Issuance Gating {#gating}
 
@@ -430,6 +465,11 @@ to either error response:
 A client that receives `mission_error`, with any value, stops the
 work and does not seek another credential for it: no retry under the
 same Mission succeeds.
+
+At code redemption and refresh, the authorization server validates
+the grant as {{RFC6749}} requires before it applies this gate, and at
+Token Exchange it follows the order of {{exchange}}. It returns
+`mission_error` only for an otherwise valid grant or subject token.
 
 # Lifecycle {#lifecycle}
 
@@ -526,7 +566,8 @@ For an operation it protects under this document, a resource server:
    equal the token's issuer, which it trusts to issue Mission-bound
    tokens;
 3. treats the carried `authorization_details` as the authoritative
-   statement of the token's authority: where several entries apply
+   statement of the token's authority, using only the entries that apply
+   to it ({{subset}}): where several entries apply
    they are alternative grants, an entry it cannot fully enforce
    grants nothing, and it never combines parts of several entries to
    authorize one request;
@@ -611,6 +652,13 @@ request, and the audience. A client cannot raise its authority by
 refreshing past the approval, or recover authority by exchanging a
 narrowed token. A narrowing
 the type cannot compare is refused rather than guessed.
+
+**Copied tokens.** Only the Mission's client exchanges, only for a
+token it shows it holds, and an exchange issues nothing that outlives
+its subject token ({{exchange}}). A resource server that receives a
+token therefore cannot turn it into others, and because every token
+carries only the entries that apply to its audience ({{subset}}), it
+cannot be replayed at another resource server.
 
 **Refresh token theft.** A Mission's authority lasts as long as its
 refresh token can be used. For a confidential client, the
@@ -721,8 +769,8 @@ framework for approved bounded work
 |---|---|
 | R1: an identifier distinct from the client, any token, and any refresh token family | The Mission Identifier ({{record}}) |
 | R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the resource owner who approved (`sub`), not the request: it does not distinguish the authorization server's narrowing from the resource owner's. An accountable approver other than the resource owner, and a description of the work, are left to specifications that add them through {{extension-points}}. |
-| R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule: against the Approved Authority at refresh, and against the subject token, the request, and the audience at exchange ({{subset}}) |
-| R4: every issuance path refuses once the authorization has ended | Issuance gating on every path; the grant lineage is the only refresh path, since an exchange issues no refresh token ({{gating}}, {{subset}}) |
+| R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule at every issuance path: the bound (the Approved Authority at code redemption and refresh, the subject token at exchange), the request, and the audience ({{subset}}) |
+| R4: every issuance path refuses once the authorization has ended | Issuance gating on every path; the grant lineage is the only refresh path, since an exchange issues no refresh token ({{gating}}, {{exchange}}) |
 | R5: a party holding no token ends one authorization without affecting the client's other work | `DELETE` at the management endpoint, and a lineage per Mission ({{management}}, {{lineage}}) |
 | R6: issued credentials stop being accepted within a stated time | Access token lifetime, bounded by `expires_at`, or introspection ({{lifecycle}}) |
 | R7: a second party relates each credential to its authorization without inference | The `mission` claim and introspection member ({{mission-claim}}) |
@@ -753,6 +801,7 @@ response_type=code
 &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
 &code_challenge_method=S256
 &mission_expires_in=86400
+&resource=https%3A%2F%2Fpay.example.com
 &authorization_details=%5B%7B%22type%22%3A%22payment_initiation%22%2C
 %22actions%22%3A%5B%22initiate%22%5D%2C%22locations%22%3A%5B
 %22https%3A%2F%2Fpay.example.com%22%5D%7D%5D

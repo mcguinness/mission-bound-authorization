@@ -305,7 +305,27 @@ whose subject token is Mission-bound, this document does: the
 authorization server MUST verify that the request's DPoP proof is
 signed with the key the subject token is bound to, and MUST refuse
 the request otherwise, with `invalid_request`
-({{Section 2.2.2 of RFC8693}}).
+({{Section 2.2.2 of RFC8693}}). The authorization server SHOULD require
+a DPoP server nonce ({{Section 8 of RFC9449}}) at Token Exchange, so
+that proofs for a key that lasts the Mission's lifetime cannot be
+made ahead of use.
+
+The authorization server MUST check an exchange in this order and MUST
+refuse it at the first failure, with `invalid_request`
+({{Section 2.2.2 of RFC8693}}) unless a step names another code:
+
+1. the client's authentication, as at its token endpoint;
+2. that the subject token is a Mission-bound access token the
+   authorization server issued, by its signature or its own record;
+3. the proof of possession above;
+4. issuance gating ({{gating}}), which refuses with `mission_error`
+   when the Mission is not `active`, including when it has expired;
+5. the subject token's own expiry; and
+6. the subset rule ({{subset}}), with its own error codes.
+
+Only an exchange that passes steps 1 to 3 can receive `mission_error`,
+so a party that cannot prove possession of the subject token learns
+nothing about the Mission.
 
 ## Issued Token {#issued-token}
 
@@ -349,13 +369,14 @@ exchange MUST meet three conditions:
 
 Where the exchange carries no `authorization_details`, the
 authorization server issues the entries of the subject token's
-authority that apply to the audience, unchanged. It MUST refuse, with
-`invalid_authorization_details` ({{Section 6 of RFC9396}}), an
-exchange that requests an entry outside the subject token's authority
-or one that does not apply to the audience, or that needs a
-comparison the entry's type does not define or cannot decide. It MUST
-refuse, with `invalid_target` ({{Section 2.2.2 of RFC8693}}), an
-exchange for an audience that no entry applies to.
+authority that apply to the audience, unchanged. It MUST refuse an
+exchange that carries `authorization_details` with
+`invalid_authorization_details` ({{Section 6 of RFC9396}}) when a
+requested entry fails a condition, or needs a comparison that the
+entry's type does not define or that cannot decide it; and MUST refuse
+an exchange that carries none with `invalid_target`
+({{Section 2.2.2 of RFC8693}}) when no entry of the subject token's
+authority applies to the audience.
 
 The rule applies at every exchange. When the subject token was itself
 issued by exchange, its authority, already narrowed and filtered to its
@@ -380,6 +401,12 @@ to either error response:
 
 A client that receives `mission_error`, with any value, stops the
 work and does not seek another credential for it.
+
+At code redemption, the authorization server validates the code as
+{{RFC6749}} requires, and the DPoP proof, before it applies this gate;
+at Token Exchange it follows the order of {{exchange-request}}. It
+returns `mission_error` only for an otherwise valid code or subject
+token.
 
 # Lifecycle, Introspection, and Revocation {#lifecycle}
 
@@ -437,7 +464,8 @@ For an operation it protects under this document, a resource server:
    equal the token's issuer, which it trusts to issue Mission-bound
    tokens;
 3. treats the carried `authorization_details` as the authoritative
-   statement of the token's authority: where several entries apply
+   statement of the token's authority, using only the entries that apply
+   to it ({{subset}}): where several entries apply
    they are alternative grants, an entry it cannot fully enforce
    grants nothing, and it never combines parts of several entries;
 4. never grants, on the basis of a `scope` value the token also
