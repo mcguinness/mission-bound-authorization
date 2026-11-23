@@ -569,7 +569,10 @@ approval reads the Mission:
     "sub": "user_5Tn8qW2xK7mR4vBc"
   },
   "authority_source": { "type": "user_delegated" },
-  "approver_authentication": { "acr": "phr", "auth_time": 1795996680 }
+  "approver_authentication": {
+    "acr": "phr",
+    "auth_time": 1795996680
+  }
 }
 ~~~
 
