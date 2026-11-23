@@ -70,6 +70,14 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC9700:
+  MISSION-GRANTS:
+    title: "OAuth 2.0 Mission Grants"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-grants-sketch.md
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -199,7 +207,10 @@ client SHOULD send the request as a Pushed Authorization Request
 The authorization server MUST refuse, with `invalid_target`
 ({{Section 2 of RFC8707}}), a request that names its issuer identifier
 together with another `resource`, since a mission token has exactly
-one audience.
+one audience. A request that also carries `mission_expires_in` selects
+OAuth 2.0 Mission Grants {{MISSION-GRANTS}} as well: a client MUST NOT
+send it, and an authorization server that implements both documents
+MUST refuse it with `invalid_request`.
 
 A client first establishes that the authorization server advertises
 `mission_tokens_supported` ({{metadata}}). An authorization server

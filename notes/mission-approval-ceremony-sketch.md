@@ -305,12 +305,14 @@ it.
 
 # Changes Before the Decision {#changes}
 
-If the requested authority, the Approved Authority, the authority
-source, the Mission's expiry, or a policy input establishing any of
-them changes between the presentation and the decision, the
-authorization server MUST recompute the affected values and MUST NOT
-create the Mission without the Approver's consent to the changed
-context.
+The decision binds what the presentation showed. If the Subject,
+compared as its (`iss`, `sub`) pair, the requested authority, the
+Approved Authority, the authority source, the Mission's expiry, or a
+policy input establishing any of them changes between the
+presentation and the decision, the authorization server MUST
+recompute the affected values and MUST NOT create the Mission without
+the Approver's consent to the changed context. The Mission records the
+Subject the Approver consented to.
 
 # Protecting the Approval Leg {#leg}
 
@@ -423,6 +425,11 @@ Approver authenticated.
 prevents an administrator's approval from becoming the user's
 authentication: no ID Token, UserInfo response, or session for the
 Subject follows from it ({{authentication}}).
+
+**Subject substitution.** The decision binds the Subject the
+presentation identified, so an Approver authorized for several
+Subjects cannot be shown one while the Mission records another
+({{changes}}).
 
 **Client-asserted standing.** The Subject and the authority source come
 from authenticated state, never from the client, so a client cannot

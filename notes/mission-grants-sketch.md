@@ -72,6 +72,14 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC9700:
+  MISSION-TOKENS:
+    title: "OAuth 2.0 Mission Tokens"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-tokens-sketch.md
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -214,7 +222,11 @@ This document defines the following authorization request parameter:
   in seconds from approval. Its presence requests a Mission.
 
 A request that carries `mission_expires_in` MUST also carry
-`authorization_details` {{RFC9396}}. The authorization server MUST
+`authorization_details` {{RFC9396}}. A request that also names the
+authorization server's issuer identifier as its only `resource`
+selects OAuth 2.0 Mission Tokens {{MISSION-TOKENS}} as well: a client
+MUST NOT send it, and an authorization server that implements both
+documents MUST refuse it with `invalid_request`. The authorization server MUST
 refuse a request that carries `mission_expires_in` without
 `authorization_details`, or with a value that is not a positive
 integer, with the `invalid_request` error code. A client SHOULD send
@@ -347,36 +359,69 @@ its Mission is active.
 
 ## The Subset Rule {#subset}
 
-Every token the authorization server issues under a Mission, by code
-redemption, refresh, or Token Exchange {{RFC8693}}, conveys
-`authorization_details` each entry of which is either:
+Every token the authorization server issues under a Mission conveys
+`authorization_details` each entry of which is within a bound: an
+entry of the bound carried unchanged, or a narrowing of one such entry
+under a comparison that the entry's type defines. An issued entry
+never combines rights from several entries. The bound depends on the
+issuance path:
 
-- an entry of the Approved Authority, carried unchanged; or
-- a narrowing of one entry of the Approved Authority under a
-  comparison that the entry's type defines.
+- **Code redemption and refresh.** The bound is the Approved
+  Authority. A refresh can ask for any authority the Mission's grant
+  lineage holds, as a refresh under {{Section 6 of RFC6749}} can ask
+  for any scope originally granted.
+- **Token Exchange {{RFC8693}}.** Each issued entry MUST meet three
+  conditions:
+  1. **Within the subject token's authority.** The bound is the
+     subject token's `authorization_details`, not the Approved
+     Authority, so an exchange never restores authority the subject
+     token does not carry.
+  2. **Within the request.** Where the exchange carries
+     `authorization_details`, the entry is a requested entry or a
+     narrowing of one; an entry broader than the requested one is never
+     issued in its place.
+  3. **For the audience.** The entry applies to every audience of the
+     issued token: its `locations` ({{Section 2.2 of RFC9396}}) include
+     the audience value, compared as strings, or its type defines how
+     it applies to that audience. An entry with neither applies
+     nowhere.
 
-An issued entry never combines rights from several entries. Where a
-request asks for a narrowing that the entry's type defines no
-comparison for, or that the comparison cannot decide, the
-authorization server MUST refuse the request with the
-`invalid_authorization_details` error code ({{Section 6 of RFC9396}}).
-The Mission Resource Access Profile
+  Where the exchange carries no `authorization_details`, the
+  authorization server issues the entries of the subject token's
+  authority that apply to the audience, unchanged, and it refuses an
+  exchange for an audience that no entry applies to with
+  `invalid_target` ({{Section 2.2.2 of RFC8693}}). The rule applies at
+  every exchange, so a chain of exchanges only narrows.
+
+Where a request asks for an entry outside its bound, or a narrowing
+that the entry's type defines no comparison for or that the comparison
+cannot decide, the authorization server MUST refuse the request with
+the `invalid_authorization_details` error code
+({{Section 6 of RFC9396}}). The Mission Resource Access Profile
 {{I-D.draft-mcguinness-oauth-mission-resource-access}} is an example of
 a type specification that defines such a comparison. This document
 defines no way to discover which narrowings an authorization server
 accepts; a client that needs one learns from the refusal.
 
 A token issued by Token Exchange from a Mission-bound subject token
-carries the same `mission` claim, is subject to this rule, and is
-gated on the same Mission ({{gating}}).
+is an access token (the response's `issued_token_type` is
+`urn:ietf:params:oauth:token-type:access_token`), carries the same
+`mission` claim, and is gated on the same Mission ({{gating}}). The
+authorization server MUST refuse, with `invalid_request`, such an
+exchange whose `requested_token_type` names another token type, and
+MUST NOT include a `refresh_token` in its response, although
+{{Section 2.2.1 of RFC8693}} permits one: the Mission's grant lineage
+({{lineage}}) is its only refresh path.
 
 ## Issuance Gating {#gating}
 
 The authorization server MUST NOT issue a token under a Mission, at
 any issuance path, unless the Mission is `active` at the instant of
-issuance. It refuses a token request under a Mission that is not
-active with the `invalid_grant` error code and this member of the
-error response:
+issuance. It refuses a code redemption or a refresh under a Mission
+that is not active with `invalid_grant` ({{Section 5.2 of RFC6749}}),
+and a Token Exchange whose subject token's Mission is not active with
+`invalid_request` ({{Section 2.2.2 of RFC8693}}), and adds this member
+to either error response:
 
 `mission_error`:
 : A string: the Mission's state, `revoked` or `expired`, or another
@@ -440,13 +485,23 @@ endpoint, presented as {{RFC6750}} or, for a DPoP-bound token,
 {{RFC9449}} describes. A missing or invalid access token, or one not
 issued for the endpoint, such as a Mission-bound token, is refused
 with `invalid_token` ({{Section 3.1 of RFC6750}}). The authorization
-server authorizes a request for a Mission when:
+server MUST authorize each operation separately, reading a Mission
+(`GET`) and ending it (`DELETE`); authorization to read never implies
+authorization to end. It MUST NOT authorize an operation on a Mission
+unless:
 
-- the access token was issued to the Mission's client, for example
-  through the client credentials grant ({{Section 4.4 of RFC6749}});
-  or
-- its policy authorizes the access token's holder for that Mission,
-  for example the resource owner or an administrator.
+- **Client-wide.** The access token was issued to the Mission's client
+  acting for itself, with no resource owner, for example through the
+  client credentials grant ({{Section 4.4 of RFC6749}}), and the
+  authorization server has explicitly granted that client the
+  operation on its own Missions, for example in its registration.
+  Being the Mission's client is not by itself such a grant.
+- **Delegated.** For any other access token, including one issued to
+  the Mission's client on behalf of a user, its policy authorizes the
+  token's subject, such as the Mission's resource owner or an
+  administrator, for that operation on that particular Mission. A
+  token issued to the client for one user authorizes nothing on
+  another user's Missions.
 
 Under an accepted access token, an unknown Mission Identifier and one
 the caller is not authorized for both return HTTP 404, so the endpoint
@@ -477,8 +532,11 @@ For an operation it protects under this document, a resource server:
    authorize one request;
 4. never grants, on the basis of a `scope` value the token also
    carries, access broader than the corresponding entry permits; and
-5. establishes that the Mission is active, by introspection or by the
-   token's lifetime ({{lifecycle}}).
+5. relies on the Mission's state in one of two ways ({{lifecycle}}):
+   it introspects the token at use, and an active response shows that
+   the Mission is active at that instant; or it accepts a JWT until its
+   `exp`, and so may accept it for up to that time after the Mission
+   ends.
 
 A resource server MUST refuse an access token without the `mission`
 member for a Mission-governed operation; otherwise a client holding an
@@ -502,7 +560,11 @@ response from the client:
 - only the credential failed: `invalid_token`; the client can obtain
   a new token while the Mission is active.
 
-Where more than one applies, an ended Mission takes precedence.
+Where more than one applies, an ended Mission takes precedence. An
+inactive introspection response does not tell a resource server
+whether the credential or the Mission ended
+({{Section 2.2 of RFC7662}}); it then responds `invalid_token` without
+`mission_error`.
 
 # Authorization Server Metadata {#metadata}
 
@@ -543,8 +605,11 @@ Mission.
 # Security Considerations {#security}
 
 **The approval sets the ceiling.** The Approved Authority is fixed at
-approval and the subset rule bounds every later token, so a client
-cannot raise its authority by refreshing or exchanging. A narrowing
+approval and the subset rule bounds every later token: a refresh by
+the Approved Authority, and an exchange by the subject token, the
+request, and the audience. A client cannot raise its authority by
+refreshing past the approval, or recover authority by exchanging a
+narrowed token. A narrowing
 the type cannot compare is refused rather than guessed.
 
 **Refresh token theft.** A Mission's authority lasts as long as its
@@ -564,7 +629,10 @@ or introspection on each use, bound that interval.
 authorization independent of the Mission's own tokens, so a party
 holding a stolen Mission-bound token cannot end or inspect the
 Mission, and a party that must stop the work does not need the
-client's cooperation.
+client's cooperation. Each operation is authorized on its own, and a
+client's identity alone authorizes neither: in a multi-user client,
+one user's management token reaches only the Missions its subject is
+authorized for ({{management}}).
 
 **Downgrade.** Without a Mission, a client's tokens are unaffected
 when the work is withdrawn. A client that requested a Mission and got
@@ -653,8 +721,8 @@ framework for approved bounded work
 |---|---|
 | R1: an identifier distinct from the client, any token, and any refresh token family | The Mission Identifier ({{record}}) |
 | R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the resource owner who approved (`sub`), not the request: it does not distinguish the authorization server's narrowing from the resource owner's. An accountable approver other than the resource owner, and a description of the work, are left to specifications that add them through {{extension-points}}. |
-| R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule ({{subset}}) |
-| R4: every issuance path refuses once the authorization has ended | Issuance gating ({{gating}}) |
+| R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule: against the Approved Authority at refresh, and against the subject token, the request, and the audience at exchange ({{subset}}) |
+| R4: every issuance path refuses once the authorization has ended | Issuance gating on every path; the grant lineage is the only refresh path, since an exchange issues no refresh token ({{gating}}, {{subset}}) |
 | R5: a party holding no token ends one authorization without affecting the client's other work | `DELETE` at the management endpoint, and a lineage per Mission ({{management}}, {{lineage}}) |
 | R6: issued credentials stop being accepted within a stated time | Access token lifetime, bounded by `expires_at`, or introspection ({{lifecycle}}) |
 | R7: a second party relates each credential to its authorization without inference | The `mission` claim and introspection member ({{mission-claim}}) |

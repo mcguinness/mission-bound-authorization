@@ -141,7 +141,9 @@ Mission base:
 Mission request:
 : The base's authorization request for a Mission: for Mission Grants,
   one carrying `mission_expires_in`; for Mission Tokens, one whose only
-  `resource` is the authorization server's issuer identifier.
+  `resource` is the authorization server's issuer identifier. A request
+  that selects both is not a Mission request: each base forbids it, and
+  an authorization server that implements both refuses it.
 
 Mission Intent:
 : The JSON object describing the task, with the members `goal`,
