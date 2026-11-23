@@ -101,8 +101,8 @@ approved authority; an entry commitment that cites one approved entry;
 and an approval event identifier that keeps one approval from creating
 two Missions. Other layers commit their own objects with the same
 construction. The commitments are provenance, disclosed only to
-authorized parties, and change no token, issuance, or enforcement rule
-of the base.
+authorized parties, and add requirements to the base without relaxing
+any.
 
 --- middle
 
@@ -131,9 +131,8 @@ This document adds those as a layer on either base:
 - the rules other specifications follow to define further commitments
   ({{other-commitments}}).
 
-The commitments are provenance. They grant no authority, and this
-document changes no token request, issuance rule, or resource server
-rule of the base. The construction, its `typ` values, and the members
+The commitments are provenance and grant no authority. This document
+adds requirements to its base and relaxes none. The construction, its `typ` values, and the members
 `authority_hash` and `approval_event_id` have the meaning they have in
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}}, and produce the same bytes for
@@ -206,7 +205,10 @@ a commitment MUST reject input that is not I-JSON rather than adapt
 it, and MUST parse received JSON with a parser that rejects duplicate
 member names. The commitment is over the parsed data, not the source
 text, so a value that needs exact decimal or large-integer semantics
-is carried as a string.
+is carried as a string. An authorization server MUST refuse
+`authorization_details` that is not I-JSON, or that has duplicate member
+names, with `invalid_authorization_details` ({{RFC9396}}), so that what
+it records can be committed.
 
 `sha-256` is mandatory to implement and the only algorithm this
 document defines. A new algorithm enters only through a new prefix
@@ -265,9 +267,11 @@ Mission. It is fixed with the Mission:
 
 It is the approval's idempotency key. A retried or duplicate delivery
 of the same approval decision, such as a replayed callback or a
-double-submitted consent form, MUST NOT create a second Mission; the
-authorization server answers it with the Mission the decision created,
-or with the refusal it made.
+double-submitted consent form, MUST NOT create a second Mission. The
+authorization server answers it with the outcome of the first
+decision, the same authorization response or the same refusal, and
+never with a second authorization code, which would yield a second
+refresh token lineage or a second mission token.
 
 The authorization server:
 
