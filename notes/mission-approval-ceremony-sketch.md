@@ -26,6 +26,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC9068:
   RFC6749:
   RFC7636:
   RFC7662:
@@ -57,7 +58,6 @@ normative:
     date: 2026
 
 informative:
-  RFC9068:
   RFC9470:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
@@ -96,9 +96,9 @@ document defines the approval ceremony as a layer on either base: who
 approves and for whom, how strongly the approver authenticates, whose
 authority the approval draws on and how that is checked, what the
 approver is shown, and how the approval leg is protected. It records
-the approver, the subject, and the authority source with the Mission,
-discloses them only to authorized parties, and changes no token,
-issuance, or enforcement rule of the base.
+the approver, the subject, the authority source, and the approver's
+authentication with the Mission, discloses them only to authorized
+parties, and adds requirements to its base without relaxing any.
 
 --- middle
 
@@ -130,12 +130,13 @@ base:
 - a change before the decision requires consent to the changed context
   ({{changes}}), and the approval leg is protected against code
   injection and mix-up ({{leg}}); and
-- the approver, the subject, and the authority source are recorded with
-  the Mission ({{record}}) and disclosed only to authorized parties
-  ({{disclosure}}).
+- the approver, the subject, the authority source, and the approver's
+  achieved authentication are recorded with the Mission ({{record}})
+  and disclosed only to authorized parties ({{disclosure}}), and the
+  token response names the Subject ({{confirming}}).
 
-This document grants no authority and changes no token request,
-issuance rule, or resource server rule of the base. Its terms
+This document grants no authority, and adds requirements to its base
+without relaxing any. Its terms
 Approver, Subject, and authority source, and the record members
 `subject` and `authority_source`, have the meaning they have in
 Mission-Bound Authorization for OAuth 2.0
@@ -185,7 +186,9 @@ owner as `sub`. Under this layer, the base's statements that the
 resource owner approves, is authenticated, narrows the authority, and
 is presented the authority apply to the Approver. The base's `sub`
 names the Subject. When the Approver is the Subject, as in every
-Mission of a base without this layer, the two readings coincide.
+Mission of a base without this layer, the two readings coincide. The
+base's means for the resource owner to end Missions without holding a
+token is also offered to the Approver.
 
 # Principals {#principals}
 
@@ -204,7 +207,9 @@ The authorization server establishes the Subject at the approval:
   authorization server, the authorization server MUST map the external
   principal to a `sub` of its own under an injective mapping, so that
   no two external Subjects share one `sub`. Adopting the external `sub`
-  unchanged is valid only where it collides with no other principal's.
+  unchanged is valid only where the authorization server reserves that
+  `sub` for that external principal, so that no other principal, now or
+  later, receives it.
 
 A Mission has exactly one accountable Approver. Approval that requires
 several principals is out of scope; a deployment that requires it
@@ -225,8 +230,11 @@ creates no Mission.
 
 **Requested strength.** A client MAY request an approval-authentication
 strength with the `acr_values` and `max_age` parameters of Section
-3.1.2.1 of {{OpenID.Core}}. In a Mission approval they describe the
-Approver's authentication, not the Subject's. The Approver's
+3.1.2.1 of {{OpenID.Core}}, which {{RFC9470}} also uses in OAuth
+requests. In a Mission approval they describe the Approver's
+authentication, not the Subject's, and they bind: where OpenID Connect
+treats a requested `acr` as voluntary, an approval under this document
+that does not meet a requested strength creates no Mission. The Approver's
 authentication satisfies `acr_values` when it matches one listed value
 under the deployment's policy; this document defines no ordering of
 `acr` values. An approval MUST meet both the floor and any requested
@@ -237,13 +245,16 @@ strength, and a weaker or absent request never relaxes the floor.
 not the Subject, the authorization server MUST refuse such a request
 with `invalid_scope`, and MUST NOT issue an ID Token, serve UserInfo,
 or establish a session for the Subject as a result of the Approver's
-authentication. When the Approver is the Subject, these parameters keep
-their {{OpenID.Core}} meaning. In every approval, `prompt`,
+authentication. When the Approver is the Subject, `openid` keeps its
+{{OpenID.Core}} meaning, and a requested strength binds as above. In every approval, `prompt`,
 `login_hint`, and `id_token_hint` concern the Approver.
 
-The achieved authentication (`acr`, `amr`, and `auth_time`, in the
-sense of {{RFC9470}}) is approval-time context; this document does not
-record it with the Mission.
+The achieved authentication (`acr`, `amr`, and `auth_time`, the claims
+of {{Section 2.2.1 of RFC9068}}) is recorded with the Mission as
+approval-time provenance ({{record}}). Authentication claims on a
+Mission-bound token describe the Subject: when the Approver is not the
+Subject, the authorization server MUST NOT put the Approver's
+authentication in them.
 
 # Authority Sources {#sources}
 
@@ -318,10 +329,12 @@ Subject the Approver consented to.
 
 The authorization code carries the approval through the front channel.
 The authorization server MUST bind it to the requesting client with
-PKCE {{RFC7636}} using the `S256` method, or issue a DPoP-bound
-authorization code ({{Section 10 of RFC9449}}), and SHOULD return the
-`iss` authorization response parameter {{RFC9207}} so the client can
-detect a mix-up on the approval's redirect.
+PKCE {{RFC7636}} using the `S256` method. A DPoP-bound authorization
+code ({{Section 10 of RFC9449}}) can be used in addition; alone it
+protects only when each authorization request uses a fresh key. The
+authorization server SHOULD return the `iss` authorization response
+parameter {{RFC9207}} so the client can detect a mix-up on the
+approval's redirect.
 
 # The Recorded Approval {#record}
 
@@ -353,6 +366,20 @@ fixed like the base's other facts:
     specifies. A consumer that holds the policy can reproduce
     `digest`; one that does not compares it as an opaque string.
 
+`approver_authentication`:
+: REQUIRED. An object: the Approver's achieved authentication at the
+  approval.
+
+  `acr`:
+  : REQUIRED. A string: the achieved authentication context class.
+
+  `auth_time`:
+  : REQUIRED. A number: the time of the Approver's authentication, in
+    seconds since 1970-01-01T00:00:00Z.
+
+  `amr`:
+  : OPTIONAL. An array of strings: the authentication methods used.
+
 For Mission Grants these are members of the Mission Record; for
 Mission Tokens they are facts of the Mission.
 
@@ -362,14 +389,25 @@ resource server does not consult them. A consumer preserves an
 provenance, and refuses only an operation that itself requires that
 source's semantics.
 
+# Confirming the Subject {#confirming}
+
+The token response that redeems the authorization code carries:
+
+`mission_subject`:
+: An object with `iss` and `sub`: the Mission's `subject`.
+
+A client that serves several users uses it to attach the Mission to the
+user it is for, rather than inferring the Subject from the Approver's
+session or from a token it treats as opaque.
+
 # Disclosure {#disclosure}
 
 No fact this document records is carried in the `mission` claim of a
 JWT access token.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
-carry `approver`, `subject`, and `authority_source` as members of its
-`mission` member, and the authorization server MUST disclose each only
+carry `approver`, `subject`, `authority_source`, and
+`approver_authentication` as members of its `mission` member, and the authorization server MUST disclose each only
 to a caller it authorizes for that member. On Mission Grants, the
 management endpoint's `GET` response carries them only to such a
 caller.
@@ -414,12 +452,10 @@ This document defines one authorization server metadata parameter
 # Security Considerations {#security}
 
 **Observability.** A client cannot observe whether the floor was
-enforced: an authorization server can ignore `acr_values` and
-`max_age`, and this document records no achieved authentication. The
-published floor states the deployment's commitment, and a party
-authorized to read the recorded approval ({{disclosure}}) can see who
-approved, for whom, and under which source, but not how strongly the
-Approver authenticated.
+enforced at the approval. A party authorized to read the recorded
+approval ({{disclosure}}) can: it sees who approved, for whom, under
+which source, and with what achieved authentication, and can compare
+that with the published floor.
 
 **Confused principals.** Separating the Approver from the Subject
 prevents an administrator's approval from becoming the user's
@@ -435,6 +471,11 @@ Subjects cannot be shown one while the Mission records another
 from authenticated state, never from the client, so a client cannot
 name a more powerful Subject or source than the Approver is authorized
 for ({{principals}}, {{sources}}).
+
+**Authority withdrawn after approval.** Withdrawing the Approver's
+authority over the Subject, or the governed policy, does not by itself
+end a Mission. A deployment that requires that ends the Mission through
+its base.
 
 **Spoofed presentation.** The client is identified from information the
 authorization server trusts, so a client cannot present itself as
@@ -454,12 +495,16 @@ Subject already permits.
 
 # IANA Considerations {#iana}
 
-This document requests registration of
-`mission_approval_ceremony_supported` in the "OAuth Authorization
-Server Metadata" registry, Reference {{metadata}}.
+This document requests registration of:
 
-The `approver`, `subject`, and `authority_source` members of the
-introspection `mission` member need no registration.
+- `mission_approval_ceremony_supported` in the "OAuth Authorization
+  Server Metadata" registry, Reference {{metadata}}; and
+- `mission_subject` in the "OAuth Parameters" registry, usage location
+  token response, Reference {{confirming}}.
+
+The `approver`, `subject`, `authority_source`, and
+`approver_authentication` members of the introspection `mission`
+member need no registration.
 
 --- back
 
@@ -523,7 +568,8 @@ approval reads the Mission:
     "iss": "https://as.example.com",
     "sub": "user_5Tn8qW2xK7mR4vBc"
   },
-  "authority_source": { "type": "user_delegated" }
+  "authority_source": { "type": "user_delegated" },
+  "approver_authentication": { "acr": "phr", "auth_time": 1795996680 }
 }
 ~~~
 
