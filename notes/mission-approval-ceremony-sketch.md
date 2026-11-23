@@ -394,10 +394,16 @@ source's semantics.
 The token response that redeems the authorization code MUST carry:
 
 `mission_subject`:
-: An object with `iss` and `sub`: the Mission's `subject`.
+: An object with `iss` and `sub`: the Subject as the authorization
+  server identifies it to clients. `iss` is the authorization server's
+  issuer identifier, and `sub` is the base's `sub`, which for an
+  external Subject is the mapped local identifier ({{principals}}). The
+  Subject's home issuer and identifier stay in the recorded `subject`
+  ({{record}}).
 
 A client that began the request for a known account compares the
-returned pair with that account's, as principals ({{terminology}}). On
+returned pair with the pair it holds for that account at this
+authorization server, as principals ({{terminology}}). On
 a mismatch, or when `mission_subject` is missing, it MUST NOT attach the
 Mission to the account or use its tokens for the work, and SHOULD end
 the Mission as its base provides. A client whose flow lets the Approver
@@ -577,6 +583,30 @@ approval reads the Mission:
   "approver_authentication": {
     "acr": "phr",
     "auth_time": 1795996680
+  }
+}
+~~~
+
+When the Subject is federated, the two pairs differ. For a user whose
+home issuer is `https://idp.partner.example`, the token response
+carries the local pair the client knows the account by:
+
+~~~ json
+{
+  "mission_subject": {
+    "iss": "https://as.example.com",
+    "sub": "fed_7Hq2Lm9Xc4Rt"
+  }
+}
+~~~
+
+The recorded approval keeps the home pair:
+
+~~~ json
+{
+  "subject": {
+    "iss": "https://idp.partner.example",
+    "sub": "8f3e2a71-c0d9"
   }
 }
 ~~~
