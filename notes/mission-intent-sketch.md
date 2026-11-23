@@ -535,6 +535,8 @@ and the confirmation:
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "DPoP",
   "expires_in": 86400,
+  "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lY",
+  "mission_expires_at": "2026-12-01T00:00:00Z",
   "authorization_details": [
     {
       "type": "payment_initiation",
