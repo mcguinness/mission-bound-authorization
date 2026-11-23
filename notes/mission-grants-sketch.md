@@ -264,7 +264,9 @@ together with the record member that names that party
 ({{extension-points}}). An approval decision creates the Mission and the
 authorization code together: the authorization server issues the code
 only when the Mission is recorded, and a declined or abandoned request
-creates neither.
+creates neither. A retried or duplicate delivery of one approval decision receives
+the outcome of the first, the same authorization response or the same
+refusal, and never a second authorization code.
 
 # The Mission Record {#record}
 
@@ -281,8 +283,10 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
 : REQUIRED. A string: the client the Mission was approved for.
 
 `sub`:
-: REQUIRED. A string: the resource owner who approved, as the
-  authorization server identifies them.
+: REQUIRED. A string: the resource owner the Mission is for, as the
+  authorization server identifies them. The resource owner approves
+  the Mission unless a specification defines approval by another party
+  ({{extension-points}}).
 
 `approved_at`:
 : REQUIRED. A string: an RFC 3339 {{RFC3339}} date-time, the instant
@@ -359,6 +363,10 @@ introspection response {{RFC7662}} for an opaque Mission-bound access
 token carries the same `mission` member and `authorization_details`
 when the token is active. A Mission-bound token is active only while
 its Mission is active.
+
+The `mission` claim and the introspection `mission` member are open
+objects: a consumer ignores a member it does not understand, and no
+member grants or widens authority.
 
 ## The Subset Rule {#subset}
 
@@ -660,7 +668,8 @@ A specification that extends Missions can:
   server records with the Mission at approval, such as a description
   of the work, as an additional record member that, like the others,
   never changes;
-- define further members of the management endpoint's response;
+- define further members of the management endpoint's response, of
+  the token response, and of the introspection `mission` member;
 - define how `scope` is bounded by the Approved Authority, so that a
   Mission-bound token can carry it;
 - register lifecycle states ({{iana-states}}); and
@@ -749,7 +758,7 @@ Parameters" registry:
 | `mission_expires_in` | authorization request | {{requesting}} |
 | `mission_id` | token response | {{token-response}} |
 | `mission_expires_at` | token response | {{token-response}} |
-| `mission_error` | token error response | {{gating}} |
+| `mission_error` | token response | {{gating}} |
 {: title="OAuth Parameters"}
 
 ## JSON Web Token Claims {#iana-jwt}

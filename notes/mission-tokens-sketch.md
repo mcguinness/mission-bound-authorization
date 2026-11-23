@@ -243,7 +243,9 @@ authenticates them. An approval decision creates the Mission and the
 authorization code together: the authorization server issues the code
 only when the Mission is recorded, and a declined or abandoned request
 creates neither. The Mission can end before the client redeems the
-code; the redemption is then refused ({{gating}}).
+code; the redemption is then refused ({{gating}}). A retried or duplicate delivery of one approval decision receives
+the outcome of the first, the same authorization response or the same
+refusal, and never a second authorization code.
 
 ## Token Response {#token-response}
 
@@ -277,8 +279,9 @@ token, which it treats as opaque ({{Section 6 of RFC9068}}).
 
 A Mission is a logical record at the authorization server with these
 facts: its identifier; the authorization server's issuer identifier;
-the client it was approved for; the resource owner who approved; the
-instant of approval; its expiry, set by the authorization server; the
+the client it was approved for; the resource owner it is for, who
+approves it unless a specification defines approval by another party;
+the instant of approval; its expiry, set by the authorization server; the
 Approved Authority; and its state ({{lifecycle}}). Everything except
 the state is fixed when the Mission is created. More authority than
 the Approved Authority requires a new Mission through a new approval.
@@ -305,6 +308,10 @@ The `mission` claim is a JSON object:
 
 `issuer`:
 : REQUIRED. A string: the authorization server's issuer identifier.
+
+The `mission` claim and the introspection `mission` member are open
+objects: a consumer ignores a member it does not understand, and no
+member grants or widens authority.
 
 # Exchanging for Resource Tokens {#exchange}
 
@@ -556,6 +563,9 @@ A specification that extends Missions can:
 
 - define approval by a party other than the resource owner, or record
   a description of the work, as further facts fixed with the Mission;
+- define an authorization request parameter that the authorization
+  server records with the Mission at approval, and members of the token
+  response and of the introspection `mission` member;
 - define a means for a party holding no token to end a Mission or read
   its state by its identifier;
 - define delegation to another party at exchange, such as through an
@@ -630,7 +640,7 @@ This document requests registration of:
   registry, usage location token response, Reference {{token-response}},
   which OAuth 2.0 Mission Grants requests with the same meaning;
 - `mission_error` in the "OAuth Parameters" registry, usage location
-  token error response, Reference {{gating}};
+  token response, Reference {{gating}};
 - `mission_tokens_supported` in the "OAuth Authorization Server
   Metadata" registry, Reference {{metadata}}; and
 - `mission_tokens_required` in the "OAuth Protected Resource Metadata"
