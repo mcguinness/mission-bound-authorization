@@ -97,7 +97,7 @@ without relaxing any.
 OAuth 2.0 Mission {{MISSION-BASE}}, the Mission base this
 document extends, records one approval of authorization details
 {{RFC9396}} as a Mission and governs every token issued under it
-through a refresh token lineage and a management endpoint. It records
+through a refresh token lineage and a Mission Record endpoint. It records
 what was approved, not what the work is.
 
 This document adds that description, a Mission Intent, to the base:
@@ -143,7 +143,7 @@ Mission base:
   terms Mission, Mission Identifier, Mission Record, Approved Authority,
   and Mission-bound token, and its extension points for a request
   parameter recorded at approval, record members, token response
-  members, introspection `mission` members, and management endpoint
+  members, introspection `mission` members, and Mission Record endpoint
   response members.
 
 Mission request:
@@ -376,7 +376,7 @@ that claim and no resource server enforces these facts.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `intent_hash` as a member of its `mission` member, and the
-management endpoint's `GET` response MAY carry `intent_hash` and
+Mission Record endpoint's `GET` response MAY carry `intent_hash` and
 `intent`, each under the base's rule for disclosing Mission facts
 ({{MISSION-BASE}}).
 

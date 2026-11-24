@@ -118,7 +118,7 @@ Mission base:
 : OAuth 2.0 Mission {{MISSION-BASE}}. This document uses its
   terms Mission, Mission Identifier, Mission Record, Approved
   Authority, and Mission-bound token, and its extension points for
-  record members, introspection `mission` members, and management
+  record members, introspection `mission` members, and Mission Record
   endpoint response members.
 
 Commitment:
@@ -238,7 +238,7 @@ details a token carries, not the Approved Authority as a whole.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `authority_hash` and `approval_event_id` as members of its
-`mission` member, and the management endpoint's `GET` response MAY
+`mission` member, and the Mission Record endpoint's `GET` response MAY
 carry them, each under the base's rule for disclosing Mission facts
 ({{MISSION-BASE}}). A party that holds the Mission's recorded Approved Authority
 verifies `authority_hash` by recomputing it.

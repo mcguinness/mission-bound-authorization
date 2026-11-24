@@ -151,7 +151,7 @@ Mission base:
   terms Mission, Mission Record, Approved Authority, and Mission-bound
   token, and its extension points for approval by a party other than
   the resource owner, record members, token response members,
-  introspection `mission` members, and management endpoint response
+  introspection `mission` members, and Mission Record endpoint response
   members.
 
 Principal:
@@ -184,7 +184,7 @@ is authenticated, narrows the authority, and is presented it; the
 base's `sub` names the Subject; and `approver` names the Approver
 ({{record}}). When the Approver is the Subject, the two coincide. The
 authorization server authorizes the Approver, as it does the resource
-owner, to end the Mission at the base's management endpoint.
+owner, to end the Mission at the base's Mission Record endpoint.
 
 # Principals {#principals}
 
@@ -417,7 +417,7 @@ JWT access token.
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `approver`, `subject`, `authority_source`, and
 `approver_authentication` as members of its `mission` member, and the
-management endpoint's `GET` response MAY carry them, each under the
+Mission Record endpoint's `GET` response MAY carry them, each under the
 base's rule for disclosing Mission facts ({{MISSION-BASE}}).
 
 # Error Responses {#errors}

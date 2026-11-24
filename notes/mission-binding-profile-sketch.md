@@ -145,7 +145,7 @@ A conforming authorization server implements all of these:
 
 | Document | Role |
 |---|---|
-| OAuth 2.0 Mission {{MISSION-BASE}} | Base: the Mission, its record, issuance by code, refresh and Token Exchange, the subset rule, gating, lifecycle, the management endpoint, and resource server enforcement |
+| OAuth 2.0 Mission {{MISSION-BASE}} | Base: the Mission, its record, issuance by code, refresh and Token Exchange, the subset rule, gating, lifecycle, the Mission Record endpoint, and resource server enforcement |
 | OAuth 2.0 Mission Intent {{MISSION-INTENT}} | Layer: the Mission Intent, its ceiling on resources, lifetime and audiences, and its confirmation |
 | OAuth 2.0 Mission Approval Ceremony {{MISSION-APPROVAL-CEREMONY}} | Layer: the Approver and Subject, approval authentication, authority sources, presentation, and the recorded approval |
 | OAuth 2.0 Mission Commitments {{MISSION-COMMITMENTS}} | Layer: the commitment construction, the authority commitment, the entry commitment, and the approval event identifier |
@@ -240,10 +240,10 @@ citations each received.
 | Issuance Gating (12) | Base, "Issuance Gating". The minimum checks for issuance paths a companion defines are not composed |
 | Mission Record (10) | Base, "The Mission Record", with the facts each layer records |
 | Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope" |
-| Revocation (8) | Base, "Lifecycle" and "Management Endpoint" |
+| Revocation (8) | Base, "Lifecycle" and "Mission Record Endpoint" |
 | Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, created only by the authorization code |
 | Caller Authorization and Minimization (8) | Each layer's "Disclosure", for its own members only; no general rule covers other members |
-| Mission State via Token Introspection (7) | Base, "Management Endpoint" (`GET`); introspection reports activity, not the Mission's state |
+| Mission State via Token Introspection (7) | Base, "Mission Record Endpoint" (`GET`); introspection reports activity, not the Mission's state |
 | Intent Submission Evidence (7) | Intent, "The Submission Envelope" |
 | Mission-Bound Token Issuance (6) | Base, "Mission-Bound Tokens" |
 | Mission Lifecycle (6) | Base, "Lifecycle" |

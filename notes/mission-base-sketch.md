@@ -89,7 +89,7 @@ conveys no more than was approved, and stops being issued once the
 Mission ends; a party holding none of its tokens can end the Mission,
 and ask whether it is active, by its identifier. This document defines
 the Mission and its identifier, the `mission` token claim, issuance
-gated on the Mission's state, a lifecycle, and a management endpoint.
+gated on the Mission's state, a lifecycle, and a Mission Record endpoint.
 It defines no description of the work; a separate specification can
 add one.
 
@@ -212,7 +212,7 @@ Client                 Authorization Server       Resource Server
    while the Mission is active ({{gating}}).
 
 At any time, an authorized party can end the Mission or read its state
-at the management endpoint ({{management}}).
+at the Mission Record endpoint ({{management}}).
 
 # Requesting a Mission {#requesting}
 
@@ -597,7 +597,7 @@ A Mission is `active` from approval until it ends, and then
 {: title="Mission lifecycle"}
 
 A Mission is revoked when an authorized party ends it at the
-management endpoint ({{management}}), or when its grant lineage is
+Mission Record endpoint ({{management}}), or when its grant lineage is
 revoked: the client revoking a refresh token of the lineage
 {{RFC7009}}, or the authorization server revoking the lineage, for
 example on detecting refresh token replay. So a client ends its own
@@ -633,11 +633,11 @@ therefore bounded by access token lifetime, which the authorization
 server SHOULD keep short. Ending a Mission does not undo effects
 already accepted.
 
-# Management Endpoint {#management}
+# Mission Record Endpoint {#management}
 
 An authorization server that implements this document offers a
-management endpoint, which it advertises as
-`mission_management_endpoint` ({{metadata}}). The resource for a
+Mission Record endpoint, which it advertises as
+`mission_record_endpoint` ({{metadata}}). The resource for a
 Mission is the endpoint URL followed by `/` and the Mission Identifier
 as a path segment.
 
@@ -777,8 +777,8 @@ This document defines these authorization server metadata parameters
 : A boolean. `true` declares that the authorization server implements
   this document. Absent means `false`.
 
-`mission_management_endpoint`:
-: A URL: the management endpoint ({{management}}). REQUIRED when
+`mission_record_endpoint`:
+: A URL: the Mission Record endpoint ({{management}}). REQUIRED when
   `mission_supported` is `true`.
 
 The authorization server lists the authorization details types it
@@ -874,8 +874,10 @@ A specification that extends Missions can:
   server establishes when it creates the Mission, or, for a member
   that records an ending, when it terminates it; like the others, they
   never change once written;
-- define further members of the management endpoint's response, of
-  the token response, and of the introspection `mission` member;
+- define further operations at the Mission Record endpoint, each with
+  the scope value that authorizes it, such as reporting completion or
+  suspending a Mission, and further members of its responses, of the
+  token response, and of the introspection `mission` member;
 - define how `scope` is bounded by the Approved Authority, so that a
   Mission-bound token can carry it;
 - register termination reasons for further ways a Mission ends, and
@@ -920,13 +922,13 @@ security best current practice {{RFC9700}} applies.
 by up to their lifetime ({{lifecycle}}). Short access token lifetimes,
 or introspection on each use, bound that interval.
 
-**Management authority.** Ending and reading a Mission require
+**Endpoint authority.** Ending and reading a Mission require
 authorization independent of the Mission's own tokens, so a party
 holding a stolen Mission-bound token cannot end or inspect the
 Mission, and a party that must stop the work does not need the
 client's cooperation. Each operation is authorized on its own, and a
 client's identity alone authorizes neither: in a multi-user client,
-one user's management token reaches only the Missions its subject is
+one user's endpoint token reaches only the Missions its subject is
 authorized for ({{management}}).
 
 **Downgrade.** Without a Mission, a client's tokens are unaffected
@@ -946,7 +948,7 @@ The Mission Identifier joins every token of a Mission, so any party
 that sees several of them can link them; the identifier is opaque and
 carries no information about the resource owner or the work. The
 `mission` claim carries only the identifier and issuer. The record
-and the Approved Authority are disclosed at the management endpoint
+and the Approved Authority are disclosed at the Mission Record endpoint
 only to authorized callers, and the endpoint's uniform 404 avoids
 revealing which Missions exist.
 
@@ -988,7 +990,7 @@ and Reference {{mission-claim}}.
 ## Authorization Server Metadata {#iana-as-metadata}
 
 This document requests registration of `mission_supported` and
-`mission_management_endpoint` in the "OAuth Authorization Server
+`mission_record_endpoint` in the "OAuth Authorization Server
 Metadata" registry, with Reference {{metadata}}.
 
 ## Protected Resource Metadata {#iana-prm}
@@ -1036,10 +1038,10 @@ framework for approved bounded work
 | R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the resource owner who approved (`sub`), not the request: it does not distinguish the authorization server's narrowing from the resource owner's. An accountable approver other than the resource owner, and a description of the work, are left to specifications that add them through {{extension-points}}. |
 | R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule at every issuance path: the bound (the Approved Authority at code redemption and refresh, the subject token at exchange), the request, and the audience ({{subset}}) |
 | R4: every issuance path refuses once the authorization has ended | Issuance gating on every path; the grant lineage is the only refresh path, since an exchange issues no refresh token ({{gating}}, {{exchange}}) |
-| R5: a party holding no token ends one authorization without affecting the client's other work | `DELETE` at the management endpoint, and a lineage per Mission ({{management}}, {{lineage}}) |
+| R5: a party holding no token ends one authorization without affecting the client's other work | `DELETE` at the Mission Record endpoint, and a lineage per Mission ({{management}}, {{lineage}}) |
 | R6: issued credentials stop being accepted within a stated time | Access token lifetime, bounded by `expires_at`, or introspection ({{lifecycle}}) |
 | R7: a second party relates each credential to its authorization without inference | The `mission` claim and introspection member ({{mission-claim}}) |
-| R8: an authorized second party asks whether an authorization is active | `GET` at the management endpoint ({{management}}) |
+| R8: an authorized second party asks whether an authorization is active | `GET` at the Mission Record endpoint ({{management}}) |
 {: title="Bounded work requirements"}
 
 The framework distinguishes four ending reasons: completed, withdrawn,
@@ -1147,4 +1149,4 @@ HTTP/1.1 204 No Content
 - Initial version: the Mission without a description of the work,
   built from Rich Authorization Requests and the refresh token
   lineage, with the `mission` claim, the subset rule, issuance gating,
-  a lifecycle, and a management endpoint.
+  a lifecycle, and a Mission Record endpoint.
