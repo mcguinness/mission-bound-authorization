@@ -333,8 +333,12 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
   : REQUIRED. A string: the RFC 3339 instant the termination took
     effect; for `expired`, the Mission's `expires_at`.
 
+  A specification that registers a termination reason can define
+  further members of `termination` for it.
+
 Every member except `state` and `termination` is fixed when the
-Mission is created and never changes. The authorization server writes
+Mission is created and never changes, including members another
+specification defines ({{extension-points}}). The authorization server writes
 `termination` once, together with the transition to `terminated`, and
 MUST NOT change it: a later event does not replace the reason of a
 Mission already terminated.
@@ -770,8 +774,11 @@ A specification that extends Missions can:
   issues tokens for it ({{rs-enforcement}});
 - define an authorization request parameter that the authorization
   server records with the Mission at approval, such as a description
-  of the work, as an additional record member that, like the others,
-  never changes;
+  of the work, as an additional record member;
+- define further members of the Mission Record that the authorization
+  server establishes when it creates the Mission, or, for a member
+  that records an ending, when it terminates it; like the others, they
+  never change once written;
 - define further members of the management endpoint's response, of
   the token response, and of the introspection `mission` member;
 - define how `scope` is bounded by the Approved Authority, so that a
