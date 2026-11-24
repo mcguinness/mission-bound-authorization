@@ -238,8 +238,8 @@ and their arrays, and refuses a submission that exceeds them with
 This document defines no evidence type. The authorization server MUST
 refuse a presented evidence entry whose type it does not support, or
 that fails its type's verification, with the
-`invalid_mission_intent_evidence` error code, which
-{{I-D.draft-mcguinness-oauth-mission}} defines; an authorization
+`invalid_mission_intent_evidence` error code ({{iana}}); an
+authorization
 server that supports no evidence type refuses every presented entry.
 
 ## Processing Order {#processing}
@@ -468,8 +468,13 @@ This document requests registration of:
 - `mission_intent_supported` in the "OAuth Authorization Server
   Metadata" registry, Reference {{metadata}}.
 
-This document uses the `invalid_mission_intent_evidence` error code,
-which {{I-D.draft-mcguinness-oauth-mission}} registers.
+This document also requests registration of
+`invalid_mission_intent_evidence` in the "OAuth Extensions Error"
+registry {{RFC6749}}, with usage locations authorization code grant
+error response and token error response, and Reference {{envelope}}.
+{{I-D.draft-mcguinness-oauth-mission}} requests the same registration
+with the same meaning, and the documents are expected to converge on
+one registration.
 
 The `intent_hash` member of the introspection
 `mission` member needs no registration.
