@@ -599,8 +599,8 @@ has not ended because of the Mission rather than the request, either
 because the Mission is in a state another specification registers or
 because of a condition of the Mission as a whole that another
 specification defines, such as an exhausted budget, it refuses with the
-error code above for that path, and MUST add this member in place of
-`mission_error`:
+error code above for that path, and, except at the first issuance,
+MUST add this member in place of `mission_error`:
 
 `mission_refusal`:
 : A string: why the issuance is refused while the Mission continues:
@@ -618,11 +618,13 @@ refresh, it does not rotate or revoke the presented refresh token.
 A client that does not implement this document reads the
 `invalid_grant` as {{RFC6749}} defines; `mission_refusal` tells one
 that does that the grant remains usable. An authorization code is used
-once ({{Section 4.1.2 of RFC6749}}), so at the first issuance, under a
-Mission that is not active and has not ended, the authorization server
-instead terminates the Mission with reason `revoked` and refuses with
-`mission_error`: a Mission whose code is spent has no grant through
-which its client could use or end it. A client that receives
+once ({{Section 4.1.2 of RFC6749}}), so the first issuance never
+carries `mission_refusal`: where the authorization server would refuse
+it under a Mission that has not ended, it instead revokes the Mission's
+grant lineage, which ends the Mission with reason `revoked`
+({{lifecycle}}), and refuses with `mission_error`, since a Mission
+whose code is spent has no grant through which its client could use or
+end it. A client that receives
 `mission_refusal`, with any value, including one it does not
 recognize, keeps its grant, does not treat the Mission as ended, and
 retries only as the value's specification allows.
