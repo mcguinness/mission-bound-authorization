@@ -175,16 +175,16 @@ High-risk authority:
   external-commitment, or privileged administration, and any further
   class that a profile the authorization server implements defines.
 
-## Reading the Base Under This Layer {#reading}
+## Approval by Another Party {#reading}
 
-Each base has the resource owner approve, and records the resource
-owner as `sub`. Under this layer, the base's statements that the
-resource owner approves, is authenticated, narrows the authority, and
-is presented the authority apply to the Approver. The base's `sub`
-names the Subject. When the Approver is the Subject, as in every
-Mission of a base without this layer, the two readings coincide. The
-base's means for the resource owner to end Missions without holding a
-token is also offered to the Approver.
+Mission Grants has the resource owner the Mission is for approve it,
+named by `sub`, unless a specification defines approval by another
+party. This document is such a specification: the Approver approves,
+is authenticated, narrows the authority, and is presented it; the
+base's `sub` names the Subject; and `approver` names the Approver
+({{record}}). When the Approver is the Subject, the two coincide. The
+authorization server authorizes the Approver, as it does the resource
+owner, to end the Mission at the base's management endpoint.
 
 # Principals {#principals}
 
