@@ -176,7 +176,7 @@ Where a composed document leaves a choice, this profile fixes it:
   this profile, high-risk authority, as the Approval Ceremony defines
   it, also includes a Mission Intent that carries high-risk authority,
   such as a cumulative consumption bound that an Intent member defined
-  by another specification expresses. The Approval Ceremony's
+  by a profile the authorization server implements expresses. The Approval Ceremony's
   approval-authentication floor therefore applies when either the
   Approved Authority or the Mission Intent carries high-risk authority.
 - **Every Mission lists the three layers.** Its `extensions` lists
@@ -245,7 +245,7 @@ citations each received.
 | Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope" |
 | Revocation (8) | Base, "Lifecycle" and "Mission Record Endpoint" |
 | Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, started only by the grant that creates it |
-| Caller Authorization and Minimization (8) | Each layer's "Disclosure", for its own members only; no general rule covers other members |
+| Caller Authorization and Minimization (8) | Base, "Disclosure of Mission Facts"; each layer's "Disclosure" for its own members |
 | Mission State via Token Introspection (7) | Base, "Mission Record Endpoint" (`GET`); introspection reports activity, not the Mission's state |
 | Intent Submission Evidence (7) | Intent, "The Submission Envelope" |
 | Mission-Bound Token Issuance (6) | Base, "Mission-Bound Tokens" |
@@ -293,8 +293,8 @@ compose it.
 
 This profile composes documents without relaxing any of them, so each
 document's security considerations apply. Requiring all four documents
-together means every Mission carries a verified description of the
-work, an authenticated and recorded approval, and verifiable
+together means every Mission carries a recorded description of the
+work, which its client confirms, an authenticated and recorded approval, and verifiable
 commitments; a deployment that implements only some of them does not
 conform and gets only the guarantees of the documents it implements.
 

@@ -147,8 +147,9 @@ Mission base:
   response members.
 
 Mission request:
-: The base's authorization request for a Mission: one carrying
-  `mission_expires_in`.
+: A request that asks the base to create a Mission ({{MISSION-BASE}}):
+  an authorization request carrying `mission_expires_in`, or the
+  request a creation path defines.
 
 Mission Intent:
 : The JSON object describing the task ({{envelope}}).
@@ -334,10 +335,9 @@ Mission is created:
   defines.
 
 These facts are members of the Mission Record, and the Mission's
-`extensions` lists `intent` ({{MISSION-BASE}}). Where the authorization
-server also implements OAuth 2.0 Mission Commitments
-{{MISSION-COMMITMENTS}}, it records `authority_hash` as that document
-defines, so the task and the authority are committed separately.
+`extensions` lists `intent` ({{MISSION-BASE}}). OAuth 2.0 Mission
+Commitments {{MISSION-COMMITMENTS}} can commit the authority
+separately from the task.
 
 ## The Intent Anchor {#intent-hash}
 
