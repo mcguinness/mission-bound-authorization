@@ -133,9 +133,10 @@ Approver, Subject, and authority source, and the record members
 `subject` and `authority_source`, have the meaning they have in
 Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}}. A Mission created under this
-document is not a Mission of that document. Where the authorization
-server also implements OAuth 2.0 Mission Intent {{MISSION-INTENT}}, the
-two layers compose as {{intent}} states.
+document is not a Mission of that document. Facts another layer adds
+to the approval, such as the description of the work that OAuth 2.0
+Mission Intent {{MISSION-INTENT}} adds, fall under the same
+presentation and change rules ({{presentation}}, {{changes}}).
 
 ## Conventions and Terminology {#terminology}
 
@@ -298,8 +299,8 @@ its base requires. The presentation also:
   governed policy;
 - MUST distinguish the entries the client requested from any narrowing
   the authorization server applied;
-- shows the Mission's expiry, and the client's requested ceiling when
-  the expiry is earlier; and
+- shows the Mission's expiry, and the client's requested ceiling,
+  however the client requested it, when the expiry is earlier; and
 - presents a statement of authority an entry carries beyond what it
   names, where the authorization server holds one (for example,
   account recovery at services that send codes to a mailbox the entry
@@ -307,14 +308,17 @@ its base requires. The presentation also:
   part of the Approved Authority.
 
 A presentation MUST NOT show a bound as enforced when no party enforces
-it.
+it. Presentation rules that another specification adds for facts it
+records apply alongside these.
 
 # Changes Before the Decision {#changes}
 
 The decision binds what the presentation showed. If the Subject,
 compared as its (`iss`, `sub`) pair, the requested authority, the
-Approved Authority, the authority source, the Mission's expiry, or a
-policy input establishing any of them changes between the
+Approved Authority, the authority source, the Mission's expiry, any
+other fact the presentation showed (such as a description of the work
+another specification adds), or a policy input establishing any of
+them changes between the
 presentation and the decision, the authorization server MUST
 recompute the affected values and MUST NOT create the Mission without
 the Approver's consent to the changed context. The Mission records the
@@ -416,17 +420,6 @@ carry `approver`, `subject`, `authority_source`, and
 to a caller it authorizes for that member. On Mission Grants, the
 management endpoint's `GET` response carries them only to such a
 caller.
-
-# Composition with Mission Intent {#intent}
-
-Where the authorization server also implements OAuth 2.0 Mission Intent
-{{MISSION-INTENT}}:
-
-- the Intent is part of the context whose change requires consent
-  ({{changes}});
-- the requested ceiling the presentation shows includes the Intent's
-  `expires_at` ({{presentation}}); and
-- the Intent's own presentation rules apply alongside these.
 
 # Error Responses {#errors}
 
