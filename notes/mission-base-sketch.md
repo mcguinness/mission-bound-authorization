@@ -566,9 +566,9 @@ can be of another token type; when an entry of the Approved Authority
 applies to that issuer for the subset rule; and how that issuer
 redeems the token, in place of this section's exchange rules. The
 Mission's issuer MUST report that token as active, at introspection,
-only while the Mission is active. The other issuer issues only access
-tokens, and the limits of {{extension-points}} bind it as they bind
-the Mission's issuer. A resource server accepts its tokens only under
+only while the Mission is active. The specification MUST restrict the
+other issuer to issuing access tokens, and the limits of
+{{extension-points}} bind it as they bind the Mission's issuer. A resource server accepts its tokens only under
 that relationship ({{rs-enforcement}}).
 
 ## Issuance Gating {#gating}
