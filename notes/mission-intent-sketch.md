@@ -27,18 +27,14 @@ author:
 
 normative:
   RFC3339:
-  RFC4648:
   RFC5646:
-  RFC6234:
   RFC6749:
   RFC7009:
-  RFC7493:
   RFC7662:
   RFC8414:
   RFC8259:
   RFC8693:
   RFC8707:
-  RFC8785:
   RFC9101:
   RFC9126:
   RFC9396:
@@ -129,9 +125,8 @@ introspection, to a caller the authorization server authorizes
 This document defines the Mission Intent and the Submission envelope
 with the members and meaning they have in Mission-Bound Authorization
 for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}, and computes
-`intent_hash` with the construction that document and OAuth 2.0
-Mission Commitments {{MISSION-COMMITMENTS}} use, restated here
-({{intent-hash}}) so that this document stands on its base alone. A Mission created under this document is not a
+`intent_hash` with the anchor construction its base defines
+({{intent-hash}}). A Mission created under this document is not a
 Mission of that document: it has its base's record, lifecycle, and
 tokens. The names it shares with that document have the same meaning.
 
@@ -345,27 +340,14 @@ defines, so the task and the authority are committed separately.
 
 ## The Intent Anchor {#intent-hash}
 
-`intent_hash` is computed as follows:
-
-1. Construct the envelope
-   `{ "typ": "mission-intent", "iss": <issuer>, "value": <intent> }`,
-   where `iss` is the Mission's issuer identifier and `value` is the
-   recorded `intent`.
-2. Canonicalize the envelope with JCS {{RFC8785}}.
-3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
-4. Encode the result as `sha-256:` followed by the base64url encoding
-   of the digest, without padding ({{RFC4648}}).
-
-The Intent and its envelope are I-JSON {{RFC7493}} data. The
-authorization server MUST reject a Submission envelope that is not
-I-JSON or that has duplicate member names, rather than adapt it, and
-commits the parsed data, keeping the order of every array. This
-document defines only `sha-256`, and a verifier MUST reject an anchor
-whose prefix it does not recognize. The construction is the one
-Mission-Bound Authorization for OAuth 2.0
-{{I-D.draft-mcguinness-oauth-mission}} uses for `intent_hash` and OAuth
-2.0 Mission Commitments uses for every anchor, so each produces the
-same bytes for the same Intent and issuer.
+`intent_hash` is the anchor that OAuth 2.0 Mission defines
+({{MISSION-BASE}}, Section "Anchors"), with `typ` `mission-intent`,
+`iss` the Mission's issuer identifier, and `value` the recorded
+`intent`. As that section requires, the authorization server rejects a
+Submission envelope that is not I-JSON or that has duplicate member
+names, rather than adapting it. The construction produces the same
+bytes as the `intent_hash` of Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} for the same Intent and issuer.
 
 # Confirming the Intent {#confirming}
 

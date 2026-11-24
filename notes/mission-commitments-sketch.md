@@ -26,14 +26,9 @@ author:
     email: public@karlmcguinness.com
 
 normative:
-  RFC4648:
-  RFC6234:
-  RFC6920:
   RFC7493:
-  RFC7519:
   RFC7662:
   RFC8414:
-  RFC8785:
   RFC9396:
   MISSION-BASE:
     title: "OAuth 2.0 Mission"
@@ -70,8 +65,8 @@ informative:
 
 OAuth 2.0 Mission fixes what was approved but gives no way to
 check it later or to cite it compactly. This document defines
-commitments as a layer on it: one construction for a domain-separated, issuer-bound
-digest of a JSON object; an authority commitment over a Mission's
+commitments as a layer on it, using the base's anchor construction: an
+authority commitment over a Mission's
 approved authority; an entry commitment that cites one approved entry;
 and an approval event identifier that keeps one approval from creating
 two Missions. Other layers commit their own objects with the same
@@ -92,8 +87,7 @@ identifier for the approval event itself.
 
 This document adds those as a layer on the base:
 
-- a commitment construction: a digest over a JSON object, separated by
-  object type and bound to the authorization server's issuer
+- the use of the base's anchor construction for the objects below
   ({{construction}});
 - `authority_hash`, the authority commitment over the Approved
   Authority ({{authority-commitment}});
@@ -137,61 +131,13 @@ Anchor:
 
 # The Commitment Construction {#construction}
 
-An anchor over a JSON value is computed as follows:
-
-1. Construct the envelope, where `typ` names the kind of object
-   committed, `iss` is the issuer identifier of the authorization
-   server that makes the commitment, and `value` is the object:
-
-   ~~~
-   { "typ": "<object type>", "iss": "<issuer>", "value": <object> }
-   ~~~
-
-2. Canonicalize the envelope with JCS {{RFC8785}}.
-3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
-4. Encode the result as `sha-256:` followed by the base64url encoding
-   of the digest, without padding ({{RFC4648}}).
-
-The `typ` value separates object types, so a digest of one kind of
-object cannot stand for another. The `iss` binding keeps a committed
-object from being transplanted from one authorization server to
-another. The prefix names the algorithm ({{algorithm}}).
-
-## Canonicalization {#canonicalization}
-
-JCS alone leaves gaps that two implementations could fill differently.
-These rules close them, for computing an anchor and for comparing
-committed values:
-
-- The committed `value` is exactly the object the authorization server
-  recorded, so an auditor reproduces the anchor from the record alone.
-- JCS does not reorder arrays, and this document defines no sorting, so
-  array order is significant. The authorization server presents each
-  committed array in its recorded order wherever it emits it.
-- URI values are committed and compared byte for byte, with no
-  normalization, unless a type defines a normalization for a
-  comparison of its own; anchor computation is always byte-exact over
-  the recorded values.
-
-## Input and Algorithm {#algorithm}
-
-Every committed value and its envelope are I-JSON {{RFC7493}} data, as
-{{Section 3.1 of RFC8785}} requires. The party computing or verifying
-a commitment MUST reject input that is not I-JSON rather than adapt
-it, and MUST parse received JSON with a parser that rejects duplicate
-member names. The commitment is over the parsed data, not the source
-text, so a value that needs exact decimal or large-integer semantics
-is carried as a string. An authorization server MUST refuse
-`authorization_details` that is not I-JSON, or that has duplicate member
-names, with `invalid_authorization_details` ({{RFC9396}}), so that what
-it records can be committed.
-
-`sha-256` is mandatory to implement and the only algorithm this
-document defines. A new algorithm enters only through a new prefix
-that a referencing specification defines, named from the Named
-Information Hash Algorithm Registry {{RFC6920}}; there is no
-negotiation. A verifier MUST reject a commitment whose prefix it does
-not recognize, so a later algorithm cannot be used to downgrade.
+This document computes its anchors with the construction OAuth 2.0
+Mission defines ({{MISSION-BASE}}, Section "Anchors"), under its
+canonicalization, input, and algorithm rules. An authorization server
+that implements this document MUST refuse `authorization_details` that
+is not I-JSON {{RFC7493}}, or that has duplicate member names, with
+`invalid_authorization_details` ({{RFC9396}}), so that what it records
+can be committed.
 
 # The Authority Commitment {#authority-commitment}
 
@@ -262,10 +208,8 @@ The authorization server:
 # Other Commitments {#other-commitments}
 
 A specification can commit other objects with the construction of
-{{construction}}. It defines a new `typ` value, which MUST be a
-Collision-Resistant Name ({{Section 2 of RFC7519}}); values with the
-`mission-` prefix are coordinated among the documents that use this
-construction. There is no registry of `typ` values.
+{{construction}}. It defines a new `typ` value under the base's naming
+rule for anchors.
 
 A commitment can take one of three forms, and a specification that
 defines one states which:
@@ -282,12 +226,9 @@ defines one states which:
   sequence the specification defines, such as an artifact as
   exchanged.
 
-{{algorithm}} binds all three forms, and its I-JSON rule binds the two
-JSON forms. A specification that introduces a new algorithm prefix
-defines where a parallel commitment is carried, how the old and new
-values are shown to commit to the same object, producer and verifier
-behavior while both are in use, and the transition. It never changes a
-commitment already made, including an implied value.
+The base's input and algorithm rules bind all three forms, including
+its rules for a new algorithm prefix, and its I-JSON rule binds the two
+JSON forms ({{construction}}).
 
 # Disclosure {#disclosure}
 
@@ -333,7 +274,7 @@ keeps a commitment from verifying at another authorization server.
 **Canonicalization.** Rejecting duplicate member names and non-I-JSON
 input before canonicalization, and committing over parsed data, keeps
 two parties from computing different digests for what they believe is
-the same object ({{algorithm}}).
+the same object ({{construction}}).
 
 **Algorithm downgrade.** A verifier rejects an unknown prefix, and no
 negotiation exists, so a weaker algorithm cannot be substituted.
