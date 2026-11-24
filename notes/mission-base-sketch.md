@@ -878,6 +878,8 @@ A specification that extends Missions can:
   the scope value that authorizes it, such as reporting completion or
   suspending a Mission, and further members of its responses, of the
   token response, and of the introspection `mission` member;
+- define further members of the JWT `mission` claim, which every
+  audience of the token sees ({{disclosure}});
 - define how `scope` is bounded by the Approved Authority, so that a
   Mission-bound token can carry it;
 - register termination reasons for further ways a Mission ends, and
@@ -947,7 +949,9 @@ basis of one, so `scope` cannot carry authority the approval did not
 The Mission Identifier joins every token of a Mission, so any party
 that sees several of them can link them; the identifier is opaque and
 carries no information about the resource owner or the work. The
-`mission` claim carries only the identifier and issuer. The record
+`mission` claim carries the identifier and issuer, and only such
+further members as another specification adds for every audience of
+the token ({{disclosure}}). The record
 and the Approved Authority are disclosed at the Mission Record endpoint
 only to authorized callers, and the endpoint's uniform 404 avoids
 revealing which Missions exist.
