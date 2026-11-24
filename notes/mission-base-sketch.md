@@ -440,8 +440,9 @@ member grants or widens authority.
 
 ## The Subset Rule {#subset}
 
-Every access token the authorization server issues under a Mission
-has an audience: the resource the request names with `resource`
+Every access token the authorization server issues under a Mission,
+and every token that carries a Mission to another issuer
+({{other-issuers}}), has an audience: the resource the request names with `resource`
 ({{RFC8707}}), or with `resource` or `audience` at Token Exchange
 ({{RFC8693}}), or, where the request names none, one the authorization
 server assigns. Each entry of the token's `authorization_details` MUST
