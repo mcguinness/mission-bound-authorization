@@ -660,7 +660,9 @@ For an operation it protects under this document, a resource server:
    by introspection {{RFC7662}}, including any sender constraint;
 2. requires the `mission` member, and requires `mission.issuer` to
    equal the token's issuer, which it trusts to issue Mission-bound
-   tokens;
+   tokens, unless a specification defines a relationship under which
+   another issuer mints tokens for a Mission, such as across trust
+   domains, and the resource server trusts the token's issuer under it;
 3. treats the carried `authorization_details` as the authoritative
    statement of the token's authority, using only the entries that apply
    to it ({{subset}}): where several entries apply
@@ -738,6 +740,8 @@ A specification that extends Missions can:
   of a standing approval ({{creation-paths}});
 - define delegation, admitting parties other than the Mission's client
   to exchange ({{delegation-exchange}});
+- define a relationship under which an issuer other than the Mission's
+  issues tokens for it ({{rs-enforcement}});
 - define an authorization request parameter that the authorization
   server records with the Mission at approval, such as a description
   of the work, as an additional record member that, like the others,
