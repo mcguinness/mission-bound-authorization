@@ -831,12 +831,13 @@ response from the client:
 
 - the Mission has ended: `invalid_token`, with a `mission_error`
   parameter carrying the Mission's termination reason where the
-  resource server knows it; the client confirms the Mission's state at the
+  resource server has learned it from the authorization server; the client confirms the Mission's state at the
   authorization server, for example by a refresh, and then stops the
   work, since a resource server's `mission_error` alone is advisory;
 - the Mission is in a state another specification registers:
   `invalid_token`, with a `mission_refusal` parameter carrying that
-  state's name where the resource server knows it; the client keeps
+  state's name where the resource server has learned it from the
+  authorization server; the client keeps
   its grant and acts on the state only as the authorization server
   reports it ({{gating}});
 - the operation is outside the carried authority:
@@ -846,7 +847,10 @@ response from the client:
 - only the credential failed: `invalid_token`; the client can obtain
   a new token while the Mission is active.
 
-Where more than one applies, an ended Mission takes precedence. An
+A resource server validates the token, including its sender
+constraint, before it distinguishes these causes, so a party that
+cannot present the token learns nothing about the Mission. Where more
+than one applies, an ended Mission takes precedence. An
 inactive introspection response does not tell a resource server
 whether the credential or the Mission ended
 ({{Section 2.2 of RFC7662}}); it then responds `invalid_token` without
