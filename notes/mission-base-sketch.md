@@ -157,8 +157,9 @@ Approved Authority:
   Mission.
 
 Mission grant lineage:
-: The authorization code issued at a Mission's approval and the
-  refresh tokens issued from it.
+: The grant that created a Mission (the authorization code, or the
+  grant a creation path defines; {{creation-paths}}) and the refresh
+  tokens issued from it.
 
 Mission-bound token:
 : An access token or refresh token issued under a Mission.
@@ -250,12 +251,35 @@ authenticates them. A specification can define approval by another
 party, such as an administrator approving for the resource owner,
 together with the record member that names that party
 ({{extension-points}}). An approval decision creates the Mission and the
-authorization code together: the authorization server issues the code
-only when the Mission is recorded, and a declined or abandoned request
+grant that starts its lineage together: on the path this document
+defines, the authorization code, which the authorization server issues
+only when the Mission is recorded. A declined or abandoned request
 creates neither. A retried or duplicate delivery of one approval
-decision MUST receive the outcome of the first, the same authorization
-response or the same refusal, and MUST NOT create a second Mission or
-yield a second authorization code.
+decision MUST receive the outcome of the first, the same response or
+the same refusal, and MUST NOT create a second Mission or yield a
+second creating grant.
+
+## Other Creation Paths {#creation-paths}
+
+A specification can define another path that creates a Mission, such
+as a backchannel or device authorization flow, a deferred approval, or
+the activation of a standing approval. Such a path:
+
+- creates the Mission atomically with the grant it issues, which
+  starts the Mission's grant lineage ({{lineage}});
+- carries the client's requested lifetime, as `mission_expires_in` or
+  an equivalent the path defines, and the requested
+  `authorization_details`;
+- establishes the Approved Authority as {{approval}} requires, under
+  the approval model it or another specification defines; and
+- issues tokens under the Mission only as this document does, with the
+  token response members ({{token-response}}), the subset rule
+  ({{subset}}), and issuance gating ({{gating}}).
+
+A standing approval that authorizes later activations is not itself a
+Mission: each activation is its own approval decision under this
+document and creates one Mission, which the specification defining the
+standing approval relates to it.
 
 # The Mission Record {#record}
 
@@ -284,7 +308,8 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
 `expires_at`:
 : REQUIRED. A string: an RFC 3339 date-time set by the authorization
   server. It MUST be later than `approved_at` and MUST NOT be later
-  than `approved_at` plus the requested `mission_expires_in`.
+  than `approved_at` plus the requested lifetime (`mission_expires_in`,
+  or the equivalent a creation path defines).
 
 `authorization_details`:
 : REQUIRED. The Approved Authority.
@@ -326,8 +351,9 @@ record, or a part of it, is exchanged.
 
 ## Token Response {#token-response}
 
-The token response that redeems a Mission's authorization code MUST
-carry a refresh token, so that the client can always end its Mission
+The token response that first issues tokens under a Mission,
+redeeming its authorization code or the grant a creation path defines,
+MUST carry a refresh token, so that the client can always end its Mission
 ({{lifecycle}}), and, besides the tokens and the granted
 `authorization_details` ({{Section 7 of RFC9396}}):
 
@@ -344,8 +370,8 @@ Any other token response under a Mission SHOULD carry both.
 
 ## Mission Grant Lineage {#lineage}
 
-The authorization code issued at a Mission's approval, and every
-refresh token issued from it, belong to that Mission and to no other.
+The grant that created a Mission, and every refresh token issued from
+it, belong to that Mission and to no other.
 Each Mission has its own lineage: creating a Mission replaces no
 refresh token the client already holds, for this or any other Mission
 or grant.
@@ -384,8 +410,8 @@ meet three conditions:
 1. **Within the bound.** It is an entry of the bound carried
    unchanged, or a narrowing of one such entry under a comparison that
    the entry's type defines, and it never combines rights from several
-   entries. At code redemption and refresh, the bound is the Approved
-   Authority: a refresh can ask for any authority the Mission's grant
+   entries. At the first issuance and at refresh, the bound is the
+   Approved Authority: a refresh can ask for any authority the Mission's grant
    lineage holds, as a refresh under {{Section 6 of RFC6749}} can ask
    for any scope originally granted. At Token Exchange, the bound is
    the subject token's `authorization_details`, so an exchange never
@@ -486,7 +512,7 @@ at step 5, with `invalid_request` and no `mission_error`.
 
 The authorization server MUST NOT issue a token under a Mission, at
 any issuance path, unless the Mission is `active` at the instant of
-issuance. It refuses a code redemption or a refresh under a Mission
+issuance. It refuses a first issuance or a refresh under a Mission
 that is not active with `invalid_grant` ({{Section 5.2 of RFC6749}}),
 and a Token Exchange whose subject token's Mission is not active with
 `invalid_request` ({{Section 2.2.2 of RFC8693}}). When the Mission is
@@ -502,11 +528,12 @@ value, including one it does not recognize, stops the work and does
 not seek another credential for it: the Mission has ended, and no
 retry under it succeeds.
 
-At code redemption and refresh, the authorization server validates
-the grant as {{RFC6749}} requires before it applies this gate, and at
-Token Exchange it follows the order of {{exchange}}. It returns
-`mission_error` only to a request that passes the checks preceding this
-gate: the grant's validation at code redemption and refresh, and the
+At the first issuance and at refresh, the authorization server
+validates the grant as {{RFC6749}} or the creation path requires
+before it applies this gate, and at Token Exchange it follows the
+order of {{exchange}}. It returns `mission_error` only to a request
+that passes the checks preceding this gate: the grant's validation at
+the first issuance and at refresh, and the
 token endpoint's checks and steps 1 to 3 at Token Exchange.
 
 # Lifecycle {#lifecycle}
@@ -694,6 +721,8 @@ A specification that extends Missions can:
 
 - define approval by a party other than the resource owner, with the
   record member that names that party;
+- define another path that creates a Mission, including the activation
+  of a standing approval ({{creation-paths}});
 - define an authorization request parameter that the authorization
   server records with the Mission at approval, such as a description
   of the work, as an additional record member that, like the others,
