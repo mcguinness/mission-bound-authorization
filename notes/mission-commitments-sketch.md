@@ -54,22 +54,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  MISSION-INTENT:
-    title: "OAuth 2.0 Mission Intent"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-intent-sketch.md
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  MISSION-APPROVAL-CEREMONY:
-    title: "OAuth 2.0 Mission Approval Ceremony"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-approval-ceremony-sketch.md
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-liu-mcguinness-oauth-bounded-work:
     title: "OAuth 2.0 Bounded Work Authorization"
     target: https://datatracker.ietf.org/doc/draft-liu-mcguinness-oauth-bounded-work/
@@ -286,7 +270,11 @@ construction. There is no registry of `typ` values.
 A commitment can take one of three forms, and a specification that
 defines one states which:
 
-- **Anchor**: the envelope construction of {{construction}}.
+- **Anchor**: the envelope construction of {{construction}}. A
+  commitment over an object governed outside the authorization server,
+  such as an organizational policy, uses the issuer that the object's
+  format defines, so the object commits identically wherever it is
+  recorded.
 - **Canonical-object digest**: the `sha-256:` digest of the JCS form of
   a JSON object without the envelope, where the protocol context
   already fixes what is committed.
@@ -315,21 +303,13 @@ management endpoint's `GET` response carries them only to such a
 caller. A party that holds the Mission's recorded Approved Authority
 verifies `authority_hash` by recomputing it.
 
-# Composition with Other Layers {#composition}
+# Use by Other Layers {#composition}
 
-- **OAuth 2.0 Mission Intent** {{MISSION-INTENT}}: its `intent_hash`
-  is the anchor of {{construction}} with `typ` `mission-intent` over the
-  approved Intent, which that document restates for that one object.
-  Where both documents are implemented, `authority_hash`
-  ({{authority-commitment}}) commits the authority beside the Intent.
-- **OAuth 2.0 Mission Approval Ceremony** {{MISSION-APPROVAL-CEREMONY}}:
-  the `digest` of an organizational `authority_source.policy` is a
-  commitment in one of the forms of {{other-commitments}}. Its issuer
-  is the policy's governing authority, not the authorization server,
-  so the same policy commits identically wherever it is recorded.
-- A layer that roots a Mission in an earlier approval, such as standing
-  consent, refers to that approval through `approval_event_id` and to
-  its consented authority through `authority_hash`.
+Another layer commits the objects it records with the construction of
+{{construction}}, under its own `typ` ({{other-commitments}}). A layer
+that roots a Mission in an earlier approval, such as standing consent,
+refers to that approval through `approval_event_id` and to its
+consented authority through `authority_hash`.
 
 # Authorization Server Metadata {#metadata}
 
