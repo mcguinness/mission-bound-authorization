@@ -344,9 +344,9 @@ defines, so the task and the authority are committed separately.
 `intent_hash` is the anchor that OAuth 2.0 Mission defines
 ({{MISSION-BASE}}, Section "Anchors"), with `typ` `mission-intent`,
 `iss` the Mission's issuer identifier, and `value` the recorded
-`intent`. As that section requires, the authorization server rejects a
-Submission envelope that is not I-JSON or that has duplicate member
-names, rather than adapting it. The construction produces the same
+`intent`. The authorization server MUST reject a Submission envelope
+that is not I-JSON, or that has duplicate member names, rather than
+adapt it, so that what it records can be committed. The construction produces the same
 bytes as the `intent_hash` of Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} for the same Intent and issuer.
 
@@ -355,7 +355,7 @@ bytes as the `intent_hash` of Mission-Bound Authorization for OAuth 2.0
 An authorization server that implements only the base can ignore
 `mission_intent` as an unrecognized parameter and still create a
 Mission, so a Mission's existence does not show that its Intent was
-bound. The token response that redeems the authorization code for an
+bound. The token response that first issues tokens under an
 Intent-bound Mission carries:
 
 `mission_intent_hash`:

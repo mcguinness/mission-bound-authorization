@@ -182,8 +182,8 @@ Where a composed document leaves a choice, this profile fixes it:
 - **Every Mission lists the three layers.** Its `extensions` lists
   `intent`, `approval-ceremony`, and `commitments`, and the token
   response's `mission_extensions` confirms them.
-- **The token response confirms both.** The response that redeems the
-  authorization code carries `mission_intent_hash` and
+- **The token response confirms both.** The response that first
+  issues tokens under a Mission carries `mission_intent_hash` and
   `mission_subject`, and a client confirms each as its document
   states.
 
@@ -244,7 +244,7 @@ citations each received.
 | Mission Record (10) | Base, "The Mission Record", with the facts each layer records |
 | Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope" |
 | Revocation (8) | Base, "Lifecycle" and "Mission Record Endpoint" |
-| Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, created only by the authorization code |
+| Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, started only by the grant that creates it |
 | Caller Authorization and Minimization (8) | Each layer's "Disclosure", for its own members only; no general rule covers other members |
 | Mission State via Token Introspection (7) | Base, "Mission Record Endpoint" (`GET`); introspection reports activity, not the Mission's state |
 | Intent Submission Evidence (7) | Intent, "The Submission Envelope" |

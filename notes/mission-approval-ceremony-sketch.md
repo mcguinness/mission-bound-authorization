@@ -390,7 +390,8 @@ source's semantics.
 
 # Confirming the Subject {#confirming}
 
-The token response that redeems the authorization code MUST carry:
+The token response that first issues tokens under a Mission MUST
+carry:
 
 `mission_subject`:
 : An object with `iss` and `sub`: the Subject as the authorization
@@ -435,7 +436,8 @@ response ({{Section 4.1.2.1 of RFC6749}}):
 | The source is unrecognized, or the authority exceeds it | `access_denied` |
 {: title="Approval refusals"}
 
-No refused approval creates a Mission or an authorization code.
+No refused approval creates a Mission or a grant that starts its
+lineage.
 
 # Authorization Server Metadata {#metadata}
 

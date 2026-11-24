@@ -157,6 +157,11 @@ An authorization server that emits or verifies a Mission's
 Mission's recorded Approved Authority: never from the subset a token
 carries, a projection it serves, or authority narrowed after approval.
 
+Each Mission that an authorization server implementing this document
+creates records `approval_event_id` ({{approval-event}}), may record
+`authority_hash`, and lists `commitments` in its `extensions`
+({{MISSION-BASE}}).
+
 `authority_hash` commits authority, not a Mission. Two Missions that
 approve byte-identical authority share it, so a party MUST NOT use it
 as a Mission Identifier or as a replay or idempotency key.
@@ -191,7 +196,7 @@ It is the approval's idempotency key: the authorization server
 recognizes a retried or duplicate delivery of one approval decision,
 such as a replayed callback or a double-submitted consent form, by it,
 and answers as its base requires, with the outcome of the first
-decision and never a second Mission or authorization code
+decision and never a second Mission or creating grant
 ({{MISSION-BASE}}).
 
 The authorization server:
@@ -298,9 +303,7 @@ of them correlate Missions; the same disclosure rule bounds that.
 This document requests registration of `mission_commitments_supported`
 in the "OAuth Authorization Server Metadata" registry, Reference
 {{metadata}}, and of `commitments` in the "OAuth Mission Extensions"
-registry, Reference {{authority-commitment}}. A Mission whose
-`extensions` lists `commitments` records `authority_hash` and
-`approval_event_id` ({{MISSION-BASE}}).
+registry, Reference {{authority-commitment}}.
 
 This document requests registration of `authority_hash` and
 `approval_event_id` in the "OAuth Mission Members" registry

@@ -388,7 +388,9 @@ MUST carry a refresh token, so that the client can always end its Mission
 `mission_extensions`:
 : The Mission's `extensions` ({{record}}), when it has any.
 
-Any other token response under a Mission SHOULD carry both.
+Any other token response under a Mission SHOULD carry `mission_id`
+and `mission_expires_at`, and `mission_extensions` when the Mission has
+any.
 
 ## Mission Grant Lineage {#lineage}
 
@@ -566,7 +568,8 @@ retry under it succeeds.
 When the authorization server refuses an issuance under a Mission that
 has not ended, because the Mission is in a state another specification
 registers or because such a specification refuses the issuance while
-the Mission is active, it MUST add this member instead:
+the Mission is active, it refuses with the error code above for that
+path, and MUST add this member in place of `mission_error`:
 
 `mission_refusal`:
 : A string: why the issuance is refused while the Mission continues, a
@@ -689,8 +692,8 @@ the caller is not authorized for both return HTTP 404, so the endpoint
 does not reveal which identifiers exist.
 
 `GET` returns HTTP 200 and a JSON object with the Mission's `id`,
-`issuer`, `state`, `expires_at`, and, for a terminated Mission,
-`termination`. It
+`issuer`, `state`, `expires_at`, its `extensions` when it has any,
+and, for a terminated Mission, `termination`. It
 also returns `authorization_details` to a caller the authorization
 server authorizes to read the Approved Authority.
 
@@ -701,18 +704,15 @@ changes nothing and returns HTTP 204.
 # Disclosure of Mission Facts {#disclosure}
 
 The `id` and `issuer` of a Mission are references that any party
-holding one of its tokens can see. The authorization server MUST NOT
+holding one of its tokens can see. The authorization server MUST
 disclose any other fact of a Mission, whether this document or another
 specification defines it, through introspection {{RFC7662}} or the
-Mission's endpoint ({{management}}), except:
-
-- to a caller it authenticates and authorizes for that fact;
-- filtered to the caller's audience, never disclosing
-  `authorization_details` entries or facts addressed to other
-  audiences; and
-- as audit and correlation information that a resource server does not
-  need to enforce the token, unless the specification defining the
-  fact says otherwise.
+Mission Record endpoint ({{management}}), only to a caller it
+authenticates and authorizes for that fact, and gives a resource server
+only the `authorization_details` entries that apply to it
+({{subset}}). A fact another specification defines serves audit and
+correlation, and a resource server derives no authority from it, unless
+that specification says otherwise.
 
 A member another specification adds to the JWT `mission` claim reaches
 every audience of the token, so such a specification adds only a
@@ -758,7 +758,7 @@ metadata:
 A client that receives that refusal for a token without `mission`
 obtains a Mission-bound token, rather than another of the same kind.
 
-Denials distinguish three causes, because each calls for a different
+Denials distinguish four causes, because each calls for a different
 response from the client:
 
 - the Mission has ended: `invalid_token`, with a `mission_error`
@@ -766,6 +766,11 @@ response from the client:
   resource server knows it; the client confirms the Mission's state at the
   authorization server, for example by a refresh, and then stops the
   work, since a resource server's `mission_error` alone is advisory;
+- the Mission is in a state another specification registers:
+  `invalid_token`, with a `mission_refusal` parameter carrying that
+  state's name where the resource server knows it; the client keeps
+  its grant and acts on the state only as the authorization server
+  reports it ({{gating}});
 - the operation is outside the carried authority:
   `insufficient_scope` ({{RFC6750}}); the client obtains a token for
   the operation by refresh or exchange where the Approved Authority
@@ -773,10 +778,7 @@ response from the client:
 - only the credential failed: `invalid_token`; the client can obtain
   a new token while the Mission is active.
 
-Where more than one applies, an ended Mission takes precedence. A
-resource server that knows the Mission is in a state it can return
-from responds `invalid_token` with a `mission_refusal` parameter
-instead, and the client keeps its grant. An
+Where more than one applies, an ended Mission takes precedence. An
 inactive introspection response does not tell a resource server
 whether the credential or the Mission ended
 ({{Section 2.2 of RFC7662}}); it then responds `invalid_token` without
@@ -905,13 +907,17 @@ A specification that extends Missions can:
   subset rule uses ({{subset}}).
 
 An authorization server's metadata shows which extensions it
-implements; a Mission's `extensions` shows which apply to that
-Mission. An extension applies to a Mission only when the authorization
-server lists it there when it creates the Mission. A client that relies
-on an extension for a Mission confirms that `mission_extensions` lists
-it, and otherwise does not rely on it for that Mission, since an
-authorization server that does not implement the extension can ignore
-what the client sent for it and still create the Mission.
+implements; a Mission's `extensions` shows which of them apply to that
+Mission. A specification whose extension applies to some Missions and
+not others, such as one whose request parameter a client can omit,
+registers an identifier ({{iana-extensions}}), and its extension
+applies to a Mission only when the authorization server lists that
+identifier in the Mission's `extensions` when it creates the Mission. A
+client that relies on such an extension for a Mission confirms that
+`mission_extensions` lists it, and otherwise does not rely on it for
+that Mission, since an authorization server that does not implement the
+extension can ignore what the client sent for it and still create the
+Mission.
 
 A specification registers the names of the members it adds in the
 OAuth Mission Members registry ({{iana-members}}), so independent
@@ -1054,11 +1060,11 @@ Specification Required, for the names of members of the Mission
 Record, of the `mission` claim and introspection member, and of the
 Mission Record endpoint's responses. Each registration gives the name,
 where it appears, and the specification that defines it; a name means
-one thing wherever it appears. The initial values are `id` and
-`issuer` (record, claim, introspection, endpoint), and `client_id`,
-`sub`, `approved_at`, `expires_at`, `authorization_details`, `state`,
-`termination`, and `extensions` (record, endpoint), all defined in
-{{record}}.
+one thing wherever it appears. The initial values, all defined in
+{{record}}, are `id` and `issuer` (record, claim, introspection,
+endpoint); `expires_at`, `authorization_details`, `state`,
+`termination`, and `extensions` (record, endpoint); and `client_id`,
+`sub`, and `approved_at` (record).
 
 ## OAuth Mission Extensions {#iana-extensions}
 
