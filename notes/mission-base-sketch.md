@@ -159,6 +159,10 @@ Mission Identifier:
 : The string that identifies a Mission at the authorization server
   that holds it ({{record}}).
 
+Approval decision:
+: The authorization server's decision on a Mission request: to create
+  the Mission, or to refuse ({{approval}}).
+
 Mission request:
 : A request that asks the authorization server to create a Mission:
   an authorization request that carries `mission_expires_in`
@@ -228,9 +232,10 @@ This document defines the following authorization request parameter:
 : A positive integer: the requested maximum lifetime of the Mission,
   in seconds from approval. Its presence requests a Mission.
 
-A request that carries `mission_expires_in` MUST also carry
-`authorization_details` {{RFC9396}}. The authorization server MUST
-refuse a request that carries `mission_expires_in` without
+An authorization request that carries `mission_expires_in` MUST also
+carry `authorization_details` {{RFC9396}}. The authorization server
+MUST refuse an authorization request that carries `mission_expires_in`
+without
 `authorization_details`, or with a value that is not a positive
 integer, with the `invalid_request` error code. A client SHOULD send
 the request as a Pushed Authorization Request {{RFC9126}}. The request
@@ -459,7 +464,10 @@ meet three conditions:
 3. **For the audience.** The entry applies to every audience of the
    token: its `locations` ({{Section 2.2 of RFC9396}}) include the
    audience value, compared as strings, or its type defines how it
-   applies to that audience. An entry with neither applies nowhere.
+   applies to that audience, or, for a token that carries the Mission
+   to another issuer, the issuer relationship defines how it applies
+   to that issuer ({{other-issuers}}). An entry with none of these
+   applies nowhere.
 
 Where the request carries no `authorization_details`, the
 authorization server issues the entries of the bound that apply to the
@@ -567,20 +575,26 @@ A specification can define a relationship under which an issuer other
 than the Mission's issues tokens for it, such as an authorization
 server in another trust domain. It defines the token the Mission's
 issuer issues by exchange to carry the Mission to that issuer, which
-can be of another token type; when an entry of the Approved Authority
-applies to that issuer for the subset rule; and who may redeem that
-token at the other issuer and how that party shows that it holds it,
-so that no party redeems a token it cannot show it holds. It requires
-that the other issuer:
+can be of another token type, and when an entry of the Approved
+Authority applies to that issuer for the subset rule. The Mission's
+issuer MUST report that token as active, at introspection, only while
+the Mission is active. The specification defines how the other issuer
+redeems the token, in place of this section's exchange rules, and MUST
+require that the other issuer:
 
+- issues tokens only to a party that shows it holds the carrying
+  token, as the specification defines;
 - issues only access tokens, each carrying the same `mission` claim,
-  meeting the subset rule against the token it received, and expiring
-  no later than that token;
-- issues no refresh token under the Mission; and
+  meeting the subset rule against the carrying token, expiring no
+  later than it, and bound to the key of the redeeming party's proof
+  of possession where there is one;
+- issues no refresh token under the Mission;
 - issues nothing unless the Mission is active at the instant of
-  issuance, which it confirms as the specification defines, for
-  example by introspecting the token it received at the Mission's
-  issuer, so that issuance gating ({{gating}}) holds at every issuer.
+  issuance, which it confirms as the specification defines, such as
+  by introspecting the carrying token at the Mission's issuer, so that
+  issuance gating ({{gating}}) holds at every issuer; and
+- reports a token it issued as active, at introspection, only while
+  the Mission is active.
 
 A resource server accepts such a token only under that relationship
 ({{rs-enforcement}}).
@@ -984,7 +998,8 @@ the type cannot compare is refused rather than guessed.
 specification admits, exchanges, and only for a token it shows it
 holds, and an exchange issues nothing that outlives
 its subject token ({{exchange}}). A token carried to another issuer is
-redeemed there only by a party that shows it holds it
+redeemed there only by a party that shows it holds it, and what the
+other issuer issues is bound to that party's key where it proves one
 ({{other-issuers}}). A resource server that receives a
 token therefore cannot turn it into others, and because every token
 carries only the entries that apply to its audience ({{subset}}), it
@@ -1088,8 +1103,8 @@ the "OAuth Protected Resource Metadata" registry, with Reference
 This document requests a new "OAuth Mission States" registry, under
 Specification Required, with initial values `active` and `terminated`
 ({{lifecycle}}). A state registered later is one a Mission can return
-to `active` from; every state other than `active` permits no issuance
-or reliance.
+to `active` from; {{lifecycle}} says how a party treats every state
+other than `active`.
 
 ## OAuth Mission Termination Reasons {#iana-reasons}
 
@@ -1156,7 +1171,8 @@ and `expired`; a specification can register reasons for the others
 ({{iana-reasons}}), and every party still reads a Mission terminated
 for a reason it does not recognize as ended. The
 framework's case of work that reaches a second authorization server is
-outside this document.
+left to a specification that defines an issuer relationship
+({{other-issuers}}).
 
 # Example {#example}
 {:numbered="false"}
