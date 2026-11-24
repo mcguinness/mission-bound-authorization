@@ -132,9 +132,11 @@ authorization with these properties; a Mission realizes it, and
 {{bounded-work-mapping}} maps this document to that framework's
 requirements. Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} defines a Mission that also
-records a description of the task and adds further mechanisms; the
-token claim, response parameters, and error member this document
-shares with it have the same meaning.
+records a description of the task and adds further mechanisms. The
+token claim and response parameters this document shares with it have
+the same meaning; `mission_error` is narrower here, reporting only an
+ended Mission, with `mission_refusal` for a refusal while a Mission
+continues.
 
 ## Conventions and Terminology {#terminology}
 
@@ -495,14 +497,15 @@ order, and MUST refuse it at the first failure with `invalid_request`
    authorization server issued, by its signature or its own record;
 3. that the client holds the subject token, as above;
 4. issuance gating ({{gating}}), which refuses with `mission_error`
-   when the Mission is not `active`, including when it has expired;
+   when the Mission has ended, including when it has expired, and with
+   `mission_refusal` when it has not;
 5. that the subject token itself is still valid: not revoked on its
    own, not expired, and meeting any other condition the authorization
    server applies to it; and
 6. the subset rule ({{subset}}), with its own error codes.
 
 Only an exchange that passes the token endpoint's checks and steps 1
-to 3 can receive `mission_error`, so a party that cannot show it holds
+to 3 can receive `mission_error` or `mission_refusal`, so a party that cannot show it holds
 the subject token learns nothing about the Mission. Step 4 precedes
 step 5, so a Mission that has ended takes precedence over the token's
 own expiry or revocation, including when the token expires with its
@@ -535,17 +538,34 @@ and a Token Exchange whose subject token's Mission is not active with
 : A string: the Mission's termination reason ({{record}}).
 
 The authorization server MUST NOT add `mission_error` for a Mission
-that is not terminated: a refusal because the Mission is in another
-registered state carries what that state's specification defines. A client that receives `mission_error`, with any
-value, including one it does not recognize, stops the work and does
-not seek another credential for it: the Mission has ended, and no
+that is not terminated. A client that receives `mission_error`, with
+any value, including one it does not recognize, stops the work and
+does not seek another credential for it: the Mission has ended, and no
 retry under it succeeds.
+
+When the authorization server refuses an issuance under a Mission that
+has not ended, because the Mission is in a state another specification
+registers or because such a specification refuses the issuance while
+the Mission is active, it MUST add this member instead:
+
+`mission_refusal`:
+: A string: why the issuance is refused while the Mission continues, a
+  value of the OAuth Mission Refusal Reasons registry
+  ({{iana-refusals}}). For a refusal because of the Mission's state, it
+  is the name of that state.
+
+A refusal with `mission_refusal` leaves the presented grant usable: it
+does not consume an authorization code, rotate or revoke a refresh
+token, or count as reuse of either. A client that receives
+`mission_refusal`, with any value, including one it does not
+recognize, keeps its grant, does not treat the Mission as ended, and
+retries only as the value's specification allows.
 
 At the first issuance and at refresh, the authorization server
 validates the grant as {{RFC6749}} or the creation path requires
 before it applies this gate, and at Token Exchange it follows the
-order of {{exchange}}. It returns `mission_error` only to a request
-that passes the checks preceding this gate: the grant's validation at
+order of {{exchange}}. It returns `mission_error` or `mission_refusal`
+only to a request that passes the checks preceding this gate: the grant's validation at
 the first issuance and at refresh, and the
 token endpoint's checks and steps 1 to 3 at Token Exchange.
 
@@ -585,7 +605,10 @@ extend the lifecycle without changing this document:
 - a specification that defines a lifecycle a Mission can return from,
   such as a pause, registers a state ({{iana-states}}). A Mission in
   such a state is neither active nor terminated, and is never reported
-  with a termination reason or `mission_error`.
+  with a termination reason or `mission_error`; a refusal in it carries
+  `mission_refusal` ({{gating}}). A specification that registers a
+  state also registers a refusal value of the same name
+  ({{iana-refusals}}).
 
 A party MUST treat every state other than `active`, including one it
 does not recognize, as permitting no issuance or reliance, and MUST
@@ -707,7 +730,10 @@ response from the client:
 - only the credential failed: `invalid_token`; the client can obtain
   a new token while the Mission is active.
 
-Where more than one applies, an ended Mission takes precedence. An
+Where more than one applies, an ended Mission takes precedence. A
+resource server that knows the Mission is in a state it can return
+from responds `invalid_token` with a `mission_refusal` parameter
+instead, and the client keeps its grant. An
 inactive introspection response does not tell a resource server
 whether the credential or the Mission ended
 ({{Section 2.2 of RFC7662}}); it then responds `invalid_token` without
@@ -751,7 +777,9 @@ A specification that extends Missions can:
 - define how `scope` is bounded by the Approved Authority, so that a
   Mission-bound token can carry it;
 - register termination reasons for further ways a Mission ends, and
-  states for lifecycles a Mission returns from ({{lifecycle}}); and
+  states for lifecycles a Mission returns from ({{lifecycle}});
+- register refusal values for an issuance a specification refuses while
+  the Mission continues ({{gating}}); and
 - define, for a type of authorization details, the comparison the
   subset rule uses ({{subset}}).
 
@@ -822,11 +850,11 @@ revealing which Missions exist.
 
 # IANA Considerations {#iana}
 
-The token claim, response parameters, and error member below share
-their names and meanings with Mission-Bound Authorization for OAuth
-2.0 {{I-D.draft-mcguinness-oauth-mission}}, which requests the same
-registrations. The two documents are expected to converge on one
-registration, in which that document cites this one for these names.
+The token claim, response parameters, and `mission_error` below share
+their names with Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}}, which requests the same
+registrations; `mission_error` is narrower here ({{gating}}). The two
+documents are expected to converge on one registration.
 
 ## OAuth Parameters {#iana-oauth-parameters}
 
@@ -839,6 +867,7 @@ Parameters" registry:
 | `mission_id` | token response | {{token-response}} |
 | `mission_expires_at` | token response | {{token-response}} |
 | `mission_error` | token response | {{gating}} |
+| `mission_refusal` | token response | {{gating}} |
 {: title="OAuth Parameters"}
 
 ## JSON Web Token Claims {#iana-jwt}
@@ -880,6 +909,15 @@ This document requests a new "OAuth Mission Termination Reasons"
 registry, under Specification Required, with initial values `revoked`
 and `expired` ({{lifecycle}}). Each registration names the event that
 ends a Mission with that reason.
+
+## OAuth Mission Refusal Reasons {#iana-refusals}
+
+This document requests a new "OAuth Mission Refusal Reasons" registry,
+under Specification Required, with no initial values. Each
+registration names the condition under which an issuance is refused
+while the Mission continues, and what lifts it. A state registered in
+the OAuth Mission States registry is also registered here under the
+same name.
 
 --- back
 
