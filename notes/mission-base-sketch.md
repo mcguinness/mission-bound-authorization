@@ -647,13 +647,17 @@ ends it. A client that receives
 recognize, keeps its grant, does not treat the Mission as ended, and
 retries only as the value's specification allows.
 
-At the first issuance and at refresh, the authorization server
-validates the grant as {{RFC6749}} or the creation path requires
-before it applies this gate, and at Token Exchange it follows the
-order of {{exchange}}. It returns `mission_error` or `mission_refusal`
-only to a request that passes the checks preceding this gate: the grant's validation at
-the first issuance and at refresh, and the
-token endpoint's checks and steps 1 to 3 at Token Exchange.
+At the first issuance, the authorization server validates the grant
+as {{RFC6749}} or the creation path requires before it applies this
+gate. At refresh, it authenticates the client and confirms that the
+refresh token belongs to a lineage issued to that client, including
+any sender constraint the token carries; it then applies this gate,
+and only then checks the token's own validity, including its expiry,
+revocation, and reuse. So a refresh token of an ended Mission,
+including one revoked or expired with it, is refused with
+`mission_error`. At Token Exchange it follows the order of
+{{exchange}}. It returns `mission_error` or `mission_refusal` only to a
+request that passes the checks preceding this gate.
 
 # Lifecycle {#lifecycle}
 
