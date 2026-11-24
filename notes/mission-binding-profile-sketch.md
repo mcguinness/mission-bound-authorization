@@ -27,9 +27,9 @@ author:
 normative:
   RFC8414:
   RFC9728:
-  MISSION-GRANTS:
-    title: "OAuth 2.0 Mission Grants"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-grants-sketch.md
+  MISSION-BASE:
+    title: "OAuth 2.0 Mission"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-base-sketch.md
     author:
       -
         ins: K. McGuinness
@@ -83,7 +83,7 @@ informative:
 
 --- abstract
 
-OAuth 2.0 Mission Grants defines a minimal Mission: one approval of
+OAuth 2.0 Mission defines a minimal Mission: one approval of
 authorization details, identified, bounded, gated, and ended through
 standard OAuth surfaces. Independent layers add a description of the
 work, an approval ceremony, and commitments, and each evolves on its
@@ -98,7 +98,7 @@ composed contract to the document that defines it.
 
 # Introduction {#introduction}
 
-OAuth 2.0 Mission Grants {{MISSION-GRANTS}} is the smallest Mission:
+OAuth 2.0 Mission {{MISSION-BASE}} is the smallest Mission:
 the substrate for approved bounded work
 {{I-D.draft-liu-mcguinness-oauth-bounded-work}} that others build on.
 Layers extend it without changing it: OAuth 2.0 Mission Intent
@@ -131,7 +131,7 @@ layer defines yet are listed in {{not-composed}}.
 {::boilerplate bcp14-tagged}
 
 This document uses the terms Mission, Mission request, Mission Record,
-Approved Authority, and Mission-bound token from {{MISSION-GRANTS}}.
+Approved Authority, and Mission-bound token from {{MISSION-BASE}}.
 
 Composed document:
 : A document this profile requires a conforming party to implement
@@ -143,7 +143,7 @@ A conforming authorization server implements all of these:
 
 | Document | Role |
 |---|---|
-| OAuth 2.0 Mission Grants {{MISSION-GRANTS}} | Base: the Mission, its record, issuance by code, refresh and Token Exchange, the subset rule, gating, lifecycle, the management endpoint, and resource server enforcement |
+| OAuth 2.0 Mission {{MISSION-BASE}} | Base: the Mission, its record, issuance by code, refresh and Token Exchange, the subset rule, gating, lifecycle, the management endpoint, and resource server enforcement |
 | OAuth 2.0 Mission Intent {{MISSION-INTENT}} | Layer: the Mission Intent, its ceiling on resources, lifetime and audiences, and its confirmation |
 | OAuth 2.0 Mission Approval Ceremony {{MISSION-APPROVAL-CEREMONY}} | Layer: the Approver and Subject, approval authentication, authority sources, presentation, and the recorded approval |
 | OAuth 2.0 Mission Commitments {{MISSION-COMMITMENTS}} | Layer: the commitment construction, the authority commitment, the entry commitment, and the approval event identifier |
@@ -182,12 +182,12 @@ apply unchanged.
 # Conformance and Discovery {#conformance}
 
 An authorization server shows conformance by advertising the metadata
-of every composed document {{RFC8414}}: `mission_grants_supported`,
+of every composed document {{RFC8414}}: `mission_supported`,
 `mission_intent_supported`, `mission_approval_ceremony_supported`, and
 `mission_commitments_supported`, each `true`. A client relies on this
 profile only at an authorization server that advertises all four. A
 resource server declares Mission-governed operations with
-`mission_grants_required` in its protected resource metadata
+`mission_required` in its protected resource metadata
 {{RFC9728}}, as the base defines.
 
 This profile defines no metadata member, parameter, claim, or error
@@ -203,29 +203,29 @@ citations each received.
 
 | Contract part (citations) | Defined in |
 |---|---|
-| Resource Server Enforcement (16) | Grants, "Resource Server Enforcement" |
+| Resource Server Enforcement (16) | Base, "Resource Server Enforcement" |
 | Integrity Anchors (15) | Commitments, "The Commitment Construction" and "The Authority Commitment"; Intent, "The Intent Anchor" |
-| Mission Approval (13) | Grants, "Approval and Creation"; Approval Ceremony |
-| Mission Authority (13) | Grants, "Approval and Creation"; Intent, "The Intent Ceiling" |
-| Mission Termination (13) | Grants, "Lifecycle" and "The Mission Record" |
+| Mission Approval (13) | Base, "Approval and Creation"; Approval Ceremony |
+| Mission Authority (13) | Base, "Approval and Creation"; Intent, "The Intent Ceiling" |
+| Mission Termination (13) | Base, "Lifecycle" and "The Mission Record" |
 | Principals and Approval Basis (12) | Approval Ceremony, "Principals" and "The Recorded Approval" |
-| Subset Rule (12) | Grants, "The Subset Rule" |
-| Issuance Gating (12) | Grants, "Issuance Gating" |
-| Mission Record (10) | Grants, "The Mission Record", with the facts each layer records |
+| Subset Rule (12) | Base, "The Subset Rule" |
+| Issuance Gating (12) | Base, "Issuance Gating" |
+| Mission Record (10) | Base, "The Mission Record", with the facts each layer records |
 | Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope" |
-| Revocation (8) | Grants, "Lifecycle" and "Management Endpoint" |
-| Binding the Mission to the Grant (8) | Grants, "Mission Grant Lineage" |
+| Revocation (8) | Base, "Lifecycle" and "Management Endpoint" |
+| Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage" |
 | Caller Authorization and Minimization (8) | Each layer's "Disclosure" |
-| Mission State via Token Introspection (7) | Grants, "The mission Claim" and "Lifecycle" |
+| Mission State via Token Introspection (7) | Base, "The mission Claim" and "Lifecycle" |
 | Intent Submission Evidence (7) | Intent, "The Submission Envelope" |
-| Mission-Bound Token Issuance (6) | Grants, "Mission-Bound Tokens" |
-| Mission Lifecycle (6) | Grants, "Lifecycle" |
+| Mission-Bound Token Issuance (6) | Base, "Mission-Bound Tokens" |
+| Mission Lifecycle (6) | Base, "Lifecycle" |
 | Commitment Mechanisms (5) | Commitments, "Other Commitments" |
 | Authority Sources (5) | Approval Ceremony, "Authority Sources" |
 | Consent Binding (5) | Approval Ceremony, "Presenting the Approval" and "Changes Before the Decision" |
-| Mission Claim (3) | Grants, "The mission Claim" |
-| Self-Exchange Down-Scoping (3) | Grants, "Token Exchange" |
-| Extensibility (2) | Grants, "Extension Points"; Commitments, "Other Commitments" |
+| Mission Claim (3) | Base, "The mission Claim" |
+| Self-Exchange Down-Scoping (3) | Base, "Token Exchange" |
+| Extensibility (2) | Base, "Extension Points"; Commitments, "Other Commitments" |
 {: title="Where each cited part of the contract is defined"}
 
 Several of these parts are re-expressed rather than copied, and their
@@ -285,5 +285,5 @@ This document has no IANA actions.
 -00
 
 - Initial version: Mission-Bound Authorization composed from OAuth 2.0
-  Mission Grants and the Intent, Approval Ceremony, and Commitments
+  OAuth 2.0 Mission and the Intent, Approval Ceremony, and Commitments
   layers, with profile choices and a citation map.

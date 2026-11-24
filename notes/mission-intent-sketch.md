@@ -42,9 +42,9 @@ normative:
   RFC9101:
   RFC9126:
   RFC9396:
-  MISSION-GRANTS:
-    title: "OAuth 2.0 Mission Grants"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-grants-sketch.md
+  MISSION-BASE:
+    title: "OAuth 2.0 Mission"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-base-sketch.md
     author:
       -
         ins: K. McGuinness
@@ -82,7 +82,7 @@ informative:
 
 --- abstract
 
-OAuth 2.0 Mission Grants records one approval of authorization details
+OAuth 2.0 Mission records one approval of authorization details
 as a Mission and governs the tokens issued under it, but records
 nothing about the work the authority is for. This document adds a
 Mission Intent, a client-authored description of the task, to it. The
@@ -98,7 +98,7 @@ without relaxing any.
 
 # Introduction {#introduction}
 
-OAuth 2.0 Mission Grants {{MISSION-GRANTS}}, the Mission base this
+OAuth 2.0 Mission {{MISSION-BASE}}, the Mission base this
 document extends, records one approval of authorization details
 {{RFC9396}} as a Mission and governs every token issued under it
 through a refresh token lineage and a management endpoint. It records
@@ -144,7 +144,7 @@ owner, and access token from {{RFC6749}}, and authorization details
 from {{RFC9396}}.
 
 Mission base:
-: OAuth 2.0 Mission Grants {{MISSION-GRANTS}}. This document uses its
+: OAuth 2.0 Mission {{MISSION-BASE}}. This document uses its
   terms Mission, Mission Identifier, Mission Record, Approved Authority,
   and Mission-bound token, and its extension points for a request
   parameter recorded at approval, record members, token response

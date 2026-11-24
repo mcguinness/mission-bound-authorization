@@ -1,9 +1,9 @@
 ---
-title: "OAuth 2.0 Mission Grants"
-abbrev: "Mission Grants"
+title: "OAuth 2.0 Mission"
+abbrev: "OAuth Mission"
 category: std
 
-docname: draft-mcguinness-oauth-mission-grants-latest
+docname: draft-mcguinness-oauth-mission-base-latest
 submissiontype: IETF
 workgroup: Web Authorization Protocol
 number:
@@ -19,7 +19,7 @@ keyword:
  - revocation
 venue:
   github: "mcguinness/mission-bound-authorization"
-  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-grants.html"
+  latest: "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-base.html"
 
 author:
  -
@@ -225,7 +225,7 @@ Mission-bound access token conveys no authority through it
 ({{subset}}).
 
 A client learns that it will not get a Mission from the absence of
-`mission_grants_supported` ({{metadata}}) before it sends the request,
+`mission_supported` ({{metadata}}) before it sends the request,
 and from the absence of `mission_id` in the token response after it.
 An authorization server that does not implement this document can
 ignore `mission_expires_in` as an unrecognized parameter
@@ -643,7 +643,7 @@ Mission ends. It refuses with `invalid_token` and the
 declares Mission-governed operations in that protected resource
 metadata:
 
-`mission_grants_required`:
+`mission_required`:
 : A boolean. `true` declares that the resource's protected operations
   are Mission-governed. Absent means `false`.
 
@@ -676,13 +676,13 @@ whether the credential or the Mission ended
 This document defines these authorization server metadata parameters
 {{RFC8414}}:
 
-`mission_grants_supported`:
+`mission_supported`:
 : A boolean. `true` declares that the authorization server implements
   this document. Absent means `false`.
 
 `mission_management_endpoint`:
 : A URL: the management endpoint ({{management}}). REQUIRED when
-  `mission_grants_supported` is `true`.
+  `mission_supported` is `true`.
 
 The authorization server lists the authorization details types it
 accepts in a Mission request in `authorization_details_types_supported`
@@ -807,27 +807,27 @@ and Reference {{mission-claim}}.
 
 ## Authorization Server Metadata {#iana-as-metadata}
 
-This document requests registration of `mission_grants_supported` and
+This document requests registration of `mission_supported` and
 `mission_management_endpoint` in the "OAuth Authorization Server
 Metadata" registry, with Reference {{metadata}}.
 
 ## Protected Resource Metadata {#iana-prm}
 
-This document requests registration of `mission_grants_required` in
+This document requests registration of `mission_required` in
 the "OAuth Protected Resource Metadata" registry, with Reference
 {{rs-enforcement}}.
 
-## Mission Grant States {#iana-states}
+## OAuth Mission States {#iana-states}
 
-This document requests a new "Mission Grant States" registry, under
+This document requests a new "OAuth Mission States" registry, under
 Specification Required, with initial values `active` and `terminated`
 ({{lifecycle}}). A state registered later is one a Mission can return
 to `active` from; every state other than `active` permits no issuance
 or reliance.
 
-## Mission Grant Termination Reasons {#iana-reasons}
+## OAuth Mission Termination Reasons {#iana-reasons}
 
-This document requests a new "Mission Grant Termination Reasons"
+This document requests a new "OAuth Mission Termination Reasons"
 registry, under Specification Required, with initial values `revoked`
 and `expired` ({{lifecycle}}). Each registration names the event that
 ends a Mission with that reason.

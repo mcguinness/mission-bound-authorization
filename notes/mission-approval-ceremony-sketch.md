@@ -40,9 +40,9 @@ normative:
     author:
       - org: OpenID Foundation
     date: 2023
-  MISSION-GRANTS:
-    title: "OAuth 2.0 Mission Grants"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-grants-sketch.md
+  MISSION-BASE:
+    title: "OAuth 2.0 Mission"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-base-sketch.md
     author:
       -
         ins: K. McGuinness
@@ -81,7 +81,7 @@ informative:
 
 --- abstract
 
-OAuth 2.0 Mission Grants has the resource owner approve a Mission and
+OAuth 2.0 Mission has the resource owner approve a Mission and
 records the approved authority, but says little about the approval
 itself. This document defines the approval ceremony as a layer on it:
 who
@@ -96,7 +96,7 @@ parties, and adds requirements to its base without relaxing any.
 
 # Introduction {#introduction}
 
-OAuth 2.0 Mission Grants {{MISSION-GRANTS}}, the Mission base this
+OAuth 2.0 Mission {{MISSION-BASE}}, the Mission base this
 document extends, records one approval of authorization details
 {{RFC9396}} and governs every token issued under it. In it the
 resource owner approves, the authorization server authenticates them,
@@ -147,7 +147,7 @@ owner, and access token from {{RFC6749}}, and authorization details
 from {{RFC9396}}.
 
 Mission base:
-: OAuth 2.0 Mission Grants {{MISSION-GRANTS}}. This document uses its
+: OAuth 2.0 Mission {{MISSION-BASE}}. This document uses its
   terms Mission, Mission Record, Approved Authority, and Mission-bound
   token, and its extension points for approval by a party other than
   the resource owner, record members, token response members,
@@ -177,7 +177,7 @@ High-risk authority:
 
 ## Approval by Another Party {#reading}
 
-Mission Grants has the resource owner the Mission is for approve it,
+OAuth 2.0 Mission has the resource owner the Mission is for approve it,
 named by `sub`, unless a specification defines approval by another
 party. This document is such a specification: the Approver approves,
 is authenticated, narrows the authority, and is presented it; the
@@ -417,7 +417,7 @@ JWT access token.
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `approver`, `subject`, `authority_source`, and
 `approver_authentication` as members of its `mission` member, and the authorization server MUST disclose each only
-to a caller it authorizes for that member. On Mission Grants, the
+to a caller it authorizes for that member. On OAuth 2.0 Mission, the
 management endpoint's `GET` response carries them only to such a
 caller.
 
@@ -521,7 +521,7 @@ them.
 # Example {#example}
 {:numbered="false"}
 
-On Mission Grants, an administrator approves a Mission for a user. The
+On OAuth 2.0 Mission, an administrator approves a Mission for a user. The
 client pushes the Mission request with a requested strength (line
 breaks for display):
 

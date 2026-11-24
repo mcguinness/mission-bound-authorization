@@ -35,9 +35,9 @@ normative:
   RFC8414:
   RFC8785:
   RFC9396:
-  MISSION-GRANTS:
-    title: "OAuth 2.0 Mission Grants"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-grants-sketch.md
+  MISSION-BASE:
+    title: "OAuth 2.0 Mission"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-base-sketch.md
     author:
       -
         ins: K. McGuinness
@@ -68,7 +68,7 @@ informative:
 
 --- abstract
 
-OAuth 2.0 Mission Grants fixes what was approved but gives no way to
+OAuth 2.0 Mission fixes what was approved but gives no way to
 check it later or to cite it compactly. This document defines
 commitments as a layer on it: one construction for a domain-separated, issuer-bound
 digest of a JSON object; an authority commitment over a Mission's
@@ -83,7 +83,7 @@ any.
 
 # Introduction {#introduction}
 
-OAuth 2.0 Mission Grants {{MISSION-GRANTS}}, the Mission base this
+OAuth 2.0 Mission {{MISSION-BASE}}, the Mission base this
 document extends, records one approval of authorization details
 {{RFC9396}} and governs every token issued under it. It fixes the
 Approved Authority when the Mission is created, but gives no party a compact value to check the
@@ -121,7 +121,7 @@ This document uses the terms authorization server and client from
 {{RFC6749}}, and authorization details from {{RFC9396}}.
 
 Mission base:
-: OAuth 2.0 Mission Grants {{MISSION-GRANTS}}. This document uses its
+: OAuth 2.0 Mission {{MISSION-BASE}}. This document uses its
   terms Mission, Mission Identifier, Mission Record, Approved
   Authority, and Mission-bound token, and its extension points for
   record members, introspection `mission` members, and management
@@ -246,7 +246,7 @@ recognizes a retried or duplicate delivery of one approval decision,
 such as a replayed callback or a double-submitted consent form, by it,
 and answers as its base requires, with the outcome of the first
 decision and never a second Mission or authorization code
-({{MISSION-GRANTS}}).
+({{MISSION-BASE}}).
 
 The authorization server:
 
@@ -298,7 +298,7 @@ details a token carries, not the Approved Authority as a whole.
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `authority_hash` and `approval_event_id` as members of its
 `mission` member, and the authorization server MUST disclose each only
-to a caller it authorizes for that member. On Mission Grants, the
+to a caller it authorizes for that member. On OAuth 2.0 Mission, the
 management endpoint's `GET` response carries them only to such a
 caller. A party that holds the Mission's recorded Approved Authority
 verifies `authority_hash` by recomputing it.

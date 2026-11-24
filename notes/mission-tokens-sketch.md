@@ -71,9 +71,9 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC9700:
-  MISSION-GRANTS:
-    title: "OAuth 2.0 Mission Grants"
-    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-grants-sketch.md
+  MISSION-BASE:
+    title: "OAuth 2.0 Mission"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-base-sketch.md
     author:
       -
         ins: K. McGuinness
@@ -213,7 +213,7 @@ The authorization server MUST refuse, with `invalid_target`
 `authorization_details` and names its issuer identifier together with
 another `resource`, since a mission token has exactly
 one audience. An authorization server that implements this document MUST
-NOT also implement OAuth 2.0 Mission Grants {{MISSION-GRANTS}} at the
+NOT also implement OAuth 2.0 Mission {{MISSION-BASE}} at the
 same issuer, so a client and a resource server can tell from the
 issuer's metadata which rules govern its Missions ({{metadata}}).
 
@@ -580,7 +580,7 @@ This document defines one authorization server metadata parameter
   this document. Absent means `false`.
 
 An authorization server that advertises `mission_tokens_supported`
-MUST NOT advertise `mission_grants_supported` ({{request}}).
+MUST NOT advertise `mission_supported` ({{request}}).
 
 An authorization server that sets it lists
 `urn:ietf:params:oauth:grant-type:token-exchange` in
@@ -669,7 +669,7 @@ This document requests registration of:
   Description "Mission reference" and Reference {{lifecycle}};
 - `mission_id` and `mission_expires_at` in the "OAuth Parameters"
   registry, usage location token response, Reference {{token-response}},
-  which OAuth 2.0 Mission Grants requests with the same meaning;
+  which OAuth 2.0 Mission requests with the same meaning;
 - `mission_error` in the "OAuth Parameters" registry, usage location
   token response, Reference {{gating}};
 - `mission_tokens_supported` in the "OAuth Authorization Server
