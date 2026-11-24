@@ -564,6 +564,7 @@ approval reads the Mission:
   "issuer": "https://as.example.com",
   "state": "active",
   "expires_at": "2026-12-01T00:00:00Z",
+  "extensions": ["approval-ceremony"],
   "approver": {
     "iss": "https://as.example.com",
     "sub": "admin_Q4vR8tLm"

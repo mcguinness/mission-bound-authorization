@@ -283,10 +283,10 @@ the activation of a standing approval. Such a path:
 
 - creates the Mission atomically with the grant it issues, which
   starts the Mission's grant lineage ({{lineage}});
-- carries the client's requested lifetime and requested authority, as
-  `mission_expires_in` and `authorization_details` or an equivalent
-  the path defines, such as a reference to a standing approval that
-  states them;
+- carries the client's requested lifetime, as `mission_expires_in` or
+  an equivalent the path defines, and the requested authority, as
+  `authorization_details` or by reference to a standing approval that
+  states it;
 - establishes the Approved Authority as {{approval}} requires, under
   the approval model it or another specification defines; and
 - issues tokens under the Mission only as this document does, with the
@@ -502,7 +502,8 @@ client exchanges, unless a specification defines delegation
   only sender-constrained subject tokens.
 
 The issued token is an access token (the response's
-`issued_token_type` is `urn:ietf:params:oauth:token-type:access_token`).
+`issued_token_type` is `urn:ietf:params:oauth:token-type:access_token`),
+except the token an issuer relationship defines ({{other-issuers}}).
 It carries the same `mission` claim, meets the subset rule
 ({{subset}}), has an expiry no later than the subject token's, is bound
 to the key of the request's proof of possession where there is one,
@@ -566,16 +567,20 @@ A specification can define a relationship under which an issuer other
 than the Mission's issues tokens for it, such as an authorization
 server in another trust domain. It defines the token the Mission's
 issuer issues by exchange to carry the Mission to that issuer, which
-can be of another token type, and when an entry of the Approved
-Authority applies to that issuer for the subset rule. It requires that
-the other issuer:
+can be of another token type; when an entry of the Approved Authority
+applies to that issuer for the subset rule; and who may redeem that
+token at the other issuer and how that party shows that it holds it,
+so that no party redeems a token it cannot show it holds. It requires
+that the other issuer:
 
 - issues only access tokens, each carrying the same `mission` claim,
   meeting the subset rule against the token it received, and expiring
   no later than that token;
 - issues no refresh token under the Mission; and
-- stops issuing once it learns that the Mission is not active, which
-  it learns as the specification defines.
+- issues nothing unless the Mission is active at the instant of
+  issuance, which it confirms as the specification defines, for
+  example by introspecting the token it received at the Mission's
+  issuer, so that issuance gating ({{gating}}) holds at every issuer.
 
 A resource server accepts such a token only under that relationship
 ({{rs-enforcement}}).
@@ -978,7 +983,9 @@ the type cannot compare is refused rather than guessed.
 **Copied tokens.** Only the Mission's client, or a party a delegation
 specification admits, exchanges, and only for a token it shows it
 holds, and an exchange issues nothing that outlives
-its subject token ({{exchange}}). A resource server that receives a
+its subject token ({{exchange}}). A token carried to another issuer is
+redeemed there only by a party that shows it holds it
+({{other-issuers}}). A resource server that receives a
 token therefore cannot turn it into others, and because every token
 carries only the entries that apply to its audience ({{subset}}), it
 cannot be replayed at another resource server.

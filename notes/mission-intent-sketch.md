@@ -541,6 +541,7 @@ for the payment service, a refresh token, and the confirmation:
   "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
   "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lY",
   "mission_expires_at": "2026-12-01T00:00:00Z",
+  "mission_extensions": ["intent"],
   "authorization_details": [
     {
       "type": "payment_initiation",
