@@ -25,6 +25,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  MISSION-ANCHORS:
+    title: "OAuth 2.0 Mission Anchors"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-anchors-sketch.md
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC8414:
   RFC9728:
   MISSION-BASE:
@@ -148,8 +156,12 @@ A conforming authorization server implements all of these:
 | OAuth 2.0 Mission {{MISSION-BASE}} | Base: the Mission, its record, issuance by code, refresh and Token Exchange, the subset rule, gating, lifecycle, the Mission Record endpoint, and resource server enforcement |
 | OAuth 2.0 Mission Intent {{MISSION-INTENT}} | Layer: the Mission Intent, its ceiling on resources, lifetime and audiences, and its confirmation |
 | OAuth 2.0 Mission Approval Ceremony {{MISSION-APPROVAL-CEREMONY}} | Layer: the Approver and Subject, approval authentication, authority sources, presentation, and the recorded approval |
-| OAuth 2.0 Mission Commitments {{MISSION-COMMITMENTS}} | Layer: the commitment construction, the authority commitment, the entry commitment, and the approval event identifier |
+| OAuth 2.0 Mission Commitments {{MISSION-COMMITMENTS}} | Layer: the authority commitment, the entry commitment, and the approval event identifier |
 {: title="Documents this profile composes"}
+
+Intent and Commitments compute their anchors with OAuth 2.0 Mission
+Anchors {{MISSION-ANCHORS}}, which a conforming authorization server
+therefore also implements.
 
 A conforming client and a conforming resource server implement the
 roles each composed document gives them.
@@ -231,7 +243,7 @@ citations each received.
 | Contract part (citations) | Defined in |
 |---|---|
 | Resource Server Enforcement (16) | Base, "Resource Server Enforcement" |
-| Integrity Anchors (15) | Commitments, "The Commitment Construction" and "The Authority Commitment"; Intent, "The Intent Anchor" |
+| Integrity Anchors (15) | Anchors, "Anchors"; Commitments, "The Authority Commitment"; Intent, "The Intent Anchor" |
 | Mission Approval (13) | Base, "Approval and Creation"; Approval Ceremony. Standing-consent approval is not composed |
 | Mission Authority (13) | Base, "Approval and Creation"; Intent, "The Intent Ceiling" |
 | Mission Termination (13) | Base, "Lifecycle" and "The Mission Record" |
@@ -247,7 +259,7 @@ citations each received.
 | Intent Submission Evidence (7) | Intent, "The Submission Envelope" |
 | Mission-Bound Token Issuance (6) | Base, "Mission-Bound Tokens" |
 | Mission Lifecycle (6) | Base, "Lifecycle" |
-| Commitment Mechanisms (5) | Commitments, "Other Commitments" |
+| Commitment Mechanisms (5) | Commitments, "Other Commitments"; Anchors, "Anchors" |
 | Authority Sources (5) | Approval Ceremony, "Authority Sources" |
 | Consent Binding (5) | Not composed: its citers rely on the `authority_hash` trust analysis, which no composed document carries; Approval Ceremony, "Presenting the Approval" and "Changes Before the Decision" carry only the presentation rules |
 | Mission Claim (3) | Base, "The mission Claim" |

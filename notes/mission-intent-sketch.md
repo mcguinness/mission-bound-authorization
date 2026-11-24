@@ -26,6 +26,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  MISSION-ANCHORS:
+    title: "OAuth 2.0 Mission Anchors"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-anchors-sketch.md
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC3339:
   RFC5646:
   RFC6749:
@@ -125,8 +133,8 @@ introspection, to a caller the authorization server authorizes
 This document defines the Mission Intent and the Submission envelope
 with the members and meaning they have in Mission-Bound Authorization
 for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}}, and computes
-`intent_hash` with the anchor construction its base defines
-({{intent-hash}}). A Mission created under this document is not a
+`intent_hash` with the construction of OAuth 2.0 Mission Anchors
+{{MISSION-ANCHORS}} ({{intent-hash}}). A Mission created under this document is not a
 Mission of that document: it has its base's record, lifecycle, and
 tokens. The names it shares with that document have the same meaning.
 
@@ -340,8 +348,8 @@ separately from the task.
 
 ## The Intent Anchor {#intent-hash}
 
-`intent_hash` is the anchor that OAuth 2.0 Mission defines
-({{MISSION-BASE}}, Section "Anchors"), with `typ` `mission-intent`,
+`intent_hash` is the anchor that OAuth 2.0 Mission Anchors defines
+{{MISSION-ANCHORS}}, with `typ` `mission-intent`,
 `iss` the Mission's issuer identifier, and `value` the recorded
 `intent`. The authorization server MUST reject a Submission envelope
 that is not I-JSON, or that has duplicate member names, rather than
@@ -579,4 +587,4 @@ the access token and receives, among other members:
 - Initial version: a Mission Intent layered on a Mission base,
   narrowing only, with the Intent restated with the meaning
   Mission-Bound Authorization for OAuth 2.0 gives it, and an intent
-  anchor computed with the base's anchor construction.
+  anchor computed with OAuth 2.0 Mission Anchors.

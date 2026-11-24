@@ -26,6 +26,14 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  MISSION-ANCHORS:
+    title: "OAuth 2.0 Mission Anchors"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-anchors-sketch.md
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC7493:
   RFC7662:
   RFC8414:
@@ -65,7 +73,8 @@ informative:
 
 OAuth 2.0 Mission fixes what was approved but gives no way to
 check it later or to cite it compactly. This document defines
-commitments as a layer on it, using the base's anchor construction: an
+commitments as a layer on it, using the anchor construction of OAuth
+2.0 Mission Anchors: an
 authority commitment over a Mission's
 approved authority; an entry commitment that cites one approved entry;
 and an approval event identifier that keeps one approval from creating
@@ -87,8 +96,8 @@ identifier for the approval event itself.
 
 This document adds those as a layer on the base:
 
-- the use of the base's anchor construction for the objects below
-  ({{construction}});
+- the use of the anchor construction of OAuth 2.0 Mission Anchors for
+  the objects below ({{construction}});
 - `authority_hash`, the authority commitment over the Approved
   Authority ({{authority-commitment}});
 - the entry commitment, which cites one approved entry
@@ -131,9 +140,9 @@ Anchor:
 
 # The Commitment Construction {#construction}
 
-This document computes its anchors with the construction OAuth 2.0
-Mission defines ({{MISSION-BASE}}, Section "Anchors"), under its
-canonicalization, input, and algorithm rules. An authorization server
+This document computes its anchors with the construction of OAuth 2.0
+Mission Anchors {{MISSION-ANCHORS}}, under its canonicalization,
+input, and algorithm rules. An authorization server
 that implements this document MUST refuse `authorization_details` that
 is not I-JSON {{RFC7493}}, or that has duplicate member names, with
 `invalid_authorization_details` ({{RFC9396}}), so that what it records
@@ -212,8 +221,8 @@ The authorization server:
 # Other Commitments {#other-commitments}
 
 A specification can commit other objects with the construction of
-{{construction}}. It defines a new `typ` value under the base's naming
-rule for anchors.
+{{construction}}. It defines a new `typ` value under the naming rule
+of {{MISSION-ANCHORS}}.
 
 A commitment can take one of three forms, and a specification that
 defines one states which:
@@ -230,7 +239,8 @@ defines one states which:
   sequence the specification defines, such as an artifact as
   exchanged.
 
-The base's input and algorithm rules bind all three forms, including
+The input and algorithm rules of {{MISSION-ANCHORS}} bind all three
+forms, including
 its rules for a new algorithm prefix, and its I-JSON rule binds the two
 JSON forms ({{construction}}).
 
@@ -387,5 +397,5 @@ entry_commitment =
 -00
 
 - Initial version: the authority and entry commitments, computed with
-  the base's anchor construction, and the approval event identifier,
+  OAuth 2.0 Mission Anchors, and the approval event identifier,
   layered on a Mission base.
