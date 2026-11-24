@@ -533,12 +533,12 @@ the proof's validity, including any nonce it requires
 order, and MUST refuse it at the first failure with `invalid_request`
 ({{Section 2.2.2 of RFC8693}}) unless a step names another code:
 
-1. that the client is the Mission's client: by its authentication, or,
-   for a public client, by the `client_id` it presents together with
-   the proof of the subject token's key, which only the Mission's client
-   received;
-2. that the subject token is a Mission-bound access token the
+1. that the subject token is a Mission-bound access token the
    authorization server issued, by its signature or its own record;
+2. that the client is that Mission's client: by its authentication,
+   or, for a public client, by the `client_id` it presents together
+   with the proof of the subject token's key, which only the Mission's
+   client received;
 3. that the client holds the subject token, as above;
 4. issuance gating ({{gating}}), which refuses with `mission_error`
    when the Mission has ended, including when it has expired, and with
@@ -562,7 +562,7 @@ A specification that defines delegation can admit a party other than
 the Mission's client to exchange, for example a delegate that presents
 an `actor_token` ({{Section 2.1 of RFC8693}}). It states which parties
 it admits, how each shows that it holds what it presents, in place of
-the holder rules listed above and steps 1 and 3, so that no party
+the holder rules listed above and steps 2 and 3, so that no party
 exchanges a token it cannot show it holds, and how the issued token
 identifies the party,
 for example in the `act` claim. It does not relax any other rule of
