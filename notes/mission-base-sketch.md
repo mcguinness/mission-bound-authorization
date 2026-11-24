@@ -1181,6 +1181,6 @@ HTTP/1.1 204 No Content
   built from Rich Authorization Requests and the refresh token
   lineage, with the `mission` claim, the subset rule, Token Exchange,
   issuance gating and refusal signals, a lifecycle, a Mission Record
-  endpoint, one disclosure rule, an anchor construction for layers that
-  commit Mission facts, and extension points with registries for
-  states, termination and refusal reasons, members, and extensions.
+  endpoint, one disclosure rule, and extension points bounded by limits
+  no extension crosses, with registries for states, termination and
+  refusal reasons, and members.
