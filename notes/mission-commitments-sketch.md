@@ -302,9 +302,11 @@ registry, Reference {{authority-commitment}}. A Mission whose
 `extensions` lists `commitments` records `authority_hash` and
 `approval_event_id` ({{MISSION-BASE}}).
 
-The `authority_hash` and `approval_event_id` members of the
-introspection `mission` member need no registration, and this document
-defines no registry of `typ` values ({{other-commitments}}).
+This document requests registration of `authority_hash` and
+`approval_event_id` in the "OAuth Mission Members" registry
+({{MISSION-BASE}}), as Mission Record members that also appear in the
+introspection `mission` member and the endpoint's response, Reference
+{{authority-commitment}}. It defines no registry of `typ` values.
 
 --- back
 

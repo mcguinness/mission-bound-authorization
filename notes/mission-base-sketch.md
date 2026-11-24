@@ -913,6 +913,10 @@ it, and otherwise does not rely on it for that Mission, since an
 authorization server that does not implement the extension can ignore
 what the client sent for it and still create the Mission.
 
+A specification registers the names of the members it adds in the
+OAuth Mission Members registry ({{iana-members}}), so independent
+specifications do not collide.
+
 No extension widens the Approved Authority, permits issuance or
 reliance in any state other than `active`, or reactivates an ended
 Mission.
@@ -1042,6 +1046,19 @@ This document requests a new "OAuth Mission Termination Reasons"
 registry, under Specification Required, with initial values `revoked`
 and `expired` ({{lifecycle}}). Each registration names the event that
 ends a Mission with that reason.
+
+## OAuth Mission Members {#iana-members}
+
+This document requests a new "OAuth Mission Members" registry, under
+Specification Required, for the names of members of the Mission
+Record, of the `mission` claim and introspection member, and of the
+Mission Record endpoint's responses. Each registration gives the name,
+where it appears, and the specification that defines it; a name means
+one thing wherever it appears. The initial values are `id` and
+`issuer` (record, claim, introspection, endpoint), and `client_id`,
+`sub`, `approved_at`, `expires_at`, `authorization_details`, `state`,
+`termination`, and `extensions` (record, endpoint), all defined in
+{{record}}.
 
 ## OAuth Mission Extensions {#iana-extensions}
 

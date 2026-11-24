@@ -502,9 +502,11 @@ This document requests registration of:
 - `approval-ceremony` in the "OAuth Mission Extensions" registry,
   Reference {{record}}.
 
-The `approver`, `subject`, `authority_source`, and
-`approver_authentication` members of the introspection `mission`
-member need no registration.
+This document requests registration of `approver`, `subject`,
+`authority_source`, and `approver_authentication` in the "OAuth
+Mission Members" registry ({{MISSION-BASE}}), as Mission Record
+members that also appear in the introspection `mission` member and the
+endpoint's response, Reference {{record}}.
 
 --- back
 

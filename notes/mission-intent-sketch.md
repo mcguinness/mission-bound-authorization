@@ -457,8 +457,11 @@ error response and token error response, and Reference {{envelope}}.
 with the same meaning, and the documents are expected to converge on
 one registration.
 
-The `intent_hash` member of the introspection
-`mission` member needs no registration.
+This document requests registration of `intent`, `intent_hash`, and
+`submission_evidence` in the "OAuth Mission Members" registry
+({{MISSION-BASE}}), as Mission Record members, `intent_hash` also in
+the introspection `mission` member and the endpoint's response,
+Reference {{record}}.
 
 --- back
 
