@@ -335,7 +335,8 @@ Mission is created:
 
 `intent_hash`:
 : The intent anchor over `intent` ({{intent-hash}}). A Mission that
-  does not record it has the implied value computed over `intent`.
+  does not record it has the implied value computed over `intent`. A
+  recorded value MUST equal the implied value.
 
 `submission_evidence`:
 : Present only when the Submission envelope carried evidence: the

@@ -242,27 +242,27 @@ citations each received.
 
 | Contract part (citations) | Defined in |
 |---|---|
-| Resource Server Enforcement (16) | Base, "Resource Server Enforcement" |
+| Resource Server Enforcement (16) | Base, "Resource Server Enforcement", in part: `mission_denial`, `insufficient_user_authentication`, and the rule against inferring the approved agent from `client_id` are not composed |
 | Integrity Anchors (15) | Anchors, "Anchors"; Commitments, "The Authority Commitment"; Intent, "The Intent Anchor" |
 | Mission Approval (13) | Base, "Approval and Creation"; Approval Ceremony. Standing-consent approval is not composed |
 | Mission Authority (13) | Base, "Approval and Creation"; Intent, "The Intent Ceiling" |
-| Mission Termination (13) | Base, "Lifecycle" and "The Mission Record" |
-| Principals and Approval Basis (12) | Approval Ceremony, "Principals" and "The Recorded Approval" |
+| Mission Termination (13) | Base, "Lifecycle" and "The Mission Record", in part: termination when the Subject is deprovisioned is not composed |
+| Principals and Approval Basis (12) | Approval Ceremony, "Principals" and "The Recorded Approval", in part: the Ceremony records a lighter `approver`, and `approval_basis` with its `consent_principal` is not composed |
 | Subset Rule (12) | Base, "The Subset Rule" |
-| Issuance Gating (12) | Base, "Issuance Gating". The minimum checks for issuance paths a companion defines are not composed |
-| Mission Record (10) | Base, "The Mission Record", with the facts each layer records |
-| Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope" |
-| Revocation (8) | Base, "Lifecycle" and "Mission Record Endpoint" |
-| Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, started only by the grant that creates it |
+| Issuance Gating (12) | Base, "Issuance Gating", where `mission_error` reports only an ended Mission and `mission_refusal` a refusal while it continues. The minimum checks for issuance paths a companion defines, and the check at release after an acknowledged revocation, are not composed |
+| Mission Record (10) | Base, "The Mission Record", with the facts each layer records; members are renamed (`authorization_details` for `authority_set`, `approved_at` for `created_at`), and `policy_version` is not composed |
+| Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope"; the request is the base's Mission request, and back-channel carriage is not composed |
+| Revocation (8) | Base, "Lifecycle" and "Mission Record Endpoint"; revoking a refresh token ends the Mission here, where revoking a token does not by itself in Mission-Bound Authorization |
+| Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, started only by the grant that creates it; further grant bindings and the consent-reuse rule are not composed |
 | Caller Authorization and Minimization (8) | Base, "Disclosure of Mission Facts"; each layer's "Disclosure" for its own members |
 | Mission State via Token Introspection (7) | Base, "Mission Record Endpoint" (`GET`); introspection reports activity, not the Mission's state |
-| Intent Submission Evidence (7) | Intent, "The Submission Envelope" |
+| Intent Submission Evidence (7) | Intent, "The Submission Envelope", in part: the evidence element shape and the required-evidence hook are not composed |
 | Mission-Bound Token Issuance (6) | Base, "Mission-Bound Tokens" |
 | Mission Lifecycle (6) | Base, "Lifecycle" |
 | Commitment Mechanisms (5) | Commitments, "Other Commitments"; Anchors, "Anchors" |
 | Authority Sources (5) | Approval Ceremony, "Authority Sources" |
 | Consent Binding (5) | Not composed: its citers rely on the `authority_hash` trust analysis, which no composed document carries; Approval Ceremony, "Presenting the Approval" and "Changes Before the Decision" carry only the presentation rules |
-| Mission Claim (3) | Base, "The mission Claim" |
+| Mission Claim (3) | Base, "The mission Claim", in part: the claim carries `id` and `issuer`, and its `expires_at` member is not composed |
 | Self-Exchange Down-Scoping (3) | Base, "Token Exchange" |
 | Extensibility (2) | Base, "Extension Points"; Commitments, "Other Commitments" |
 {: title="Where each cited part of the contract is defined"}
@@ -274,6 +274,21 @@ particular, the composed record does not retain the authority proposal,
 so a specification that relies on the original request, such as which
 requested entry an approval removed, keeps citing that document for
 it ({{not-composed}}).
+
+Other cited parts map as follows. Authorization Server Metadata and
+Protected Resource Metadata are the base's "Authorization Server
+Metadata" and "Resource Server Enforcement", with the members renamed
+`mission_supported` and `mission_required`. Authority Proposal,
+Delegation Constraints, Claim Reservation, and Error and Challenge
+Mapping are not composed ({{not-composed}}).
+
+The composed documents do not share the wire of Mission-Bound
+Authorization for OAuth 2.0. Their Mission request carries
+`mission_expires_in`; their metadata, record members, and registries
+have their own names; and `mission_error` reports only an ended
+Mission, where that document lets it report other refusals and has a
+client ignore a value it does not recognize. A specification that
+moves its citation here checks each of these.
 
 # Parts Not Yet Composed {#not-composed}
 
@@ -294,6 +309,15 @@ needs one cites that document for it until a layer defines it:
 - **Further termination reasons**, such as supersession, which a layer
   registers in the base's termination reasons registry.
 - **Error and challenge mapping** as one table, and conformance roles.
+- **Guarantees no composed document carries**: the authorization
+  server's refusal to issue a token for a Mission-governed resource
+  outside a Mission, on any grant type; `policy_version`; termination
+  when the Subject is deprovisioned; the check at release after an
+  acknowledged revocation; the consent-reuse rule; `mission_denial`
+  and `insufficient_user_authentication`; the claim's `expires_at`;
+  `mission.state` in an inactive introspection response; the Mission
+  Intent Members registry; the evidence element shape and the
+  required-evidence hook; and back-channel Intent carriage.
 
 When a layer for one of these exists, a revision of this profile can
 compose it.

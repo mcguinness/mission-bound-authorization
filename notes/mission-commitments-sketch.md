@@ -159,7 +159,8 @@ base's other facts:
 `authority_hash`:
 : OPTIONAL. A string: the authority commitment. A Mission that does not
   record it has an implied value: the anchor computed over its recorded
-  Approved Authority, with `iss` the Mission's issuer.
+  Approved Authority, with `iss` the Mission's issuer. A recorded value
+  MUST equal the implied value.
 
 An authorization server that emits or verifies a Mission's
 `authority_hash` MUST resolve it, recorded or implied, from the
