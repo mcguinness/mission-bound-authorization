@@ -454,7 +454,8 @@ A client exchanges a Mission-bound access token for another with a
 Token Exchange request ({{Section 2.1 of RFC8693}}) whose
 `subject_token` is that access token, with `subject_token_type`
 `urn:ietf:params:oauth:token-type:access_token`. Only the Mission's
-client exchanges, and only a subject token it shows it holds:
+client exchanges, unless a specification defines delegation
+({{delegation-exchange}}), and only a subject token it shows it holds:
 
 - a refresh token is never a subject token;
 - for a sender-constrained subject token, the request's proof of
@@ -507,6 +508,18 @@ step 5, so a Mission that has ended takes precedence over the token's
 own expiry or revocation, including when the token expires with its
 Mission. A token revoked on its own under an active Mission is refused
 at step 5, with `invalid_request` and no `mission_error`.
+
+### Delegation {#delegation-exchange}
+
+A specification that defines delegation can admit a party other than
+the Mission's client to exchange, for example a delegate that presents
+an `actor_token` ({{Section 2.1 of RFC8693}}). It states which parties
+it admits, how each shows that it holds the authority it presents (in
+place of steps 1 and 3), and how the issued token identifies the party,
+for example in the `act` claim. It does not relax any other rule of
+this section: the subject token is an access token, the issued token's
+expiry is no later than the subject token's, no refresh token is
+issued, and the subset rule and issuance gating apply.
 
 ## Issuance Gating {#gating}
 
@@ -723,6 +736,8 @@ A specification that extends Missions can:
   record member that names that party;
 - define another path that creates a Mission, including the activation
   of a standing approval ({{creation-paths}});
+- define delegation, admitting parties other than the Mission's client
+  to exchange ({{delegation-exchange}});
 - define an authorization request parameter that the authorization
   server records with the Mission at approval, such as a description
   of the work, as an additional record member that, like the others,
@@ -750,8 +765,9 @@ refreshing past the approval, or recover authority by exchanging a
 narrowed token. A narrowing
 the type cannot compare is refused rather than guessed.
 
-**Copied tokens.** Only the Mission's client exchanges, only for a
-token it shows it holds, and an exchange issues nothing that outlives
+**Copied tokens.** Only the Mission's client, or a party a delegation
+specification admits, exchanges, and only for a token it shows it
+holds, and an exchange issues nothing that outlives
 its subject token ({{exchange}}). A resource server that receives a
 token therefore cannot turn it into others, and because every token
 carries only the entries that apply to its audience ({{subset}}), it
