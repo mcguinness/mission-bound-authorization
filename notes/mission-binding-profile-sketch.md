@@ -173,7 +173,9 @@ Where a composed document leaves a choice, this profile fixes it:
 - **Every Mission is Intent-bound.** A Mission request under this
   profile MUST carry `mission_intent` ({{MISSION-INTENT}}), and the
   authorization server MUST refuse one that does not with
-  `invalid_request`.
+  `invalid_request`. Missions are therefore created through the base's
+  authorization request, since no composed document carries an Intent
+  on another creation path.
 - **Every Mission records the approval and its commitments.** The
   Mission Record carries the facts of Mission Intent (`intent`,
   `intent_hash`), of Mission Approval Ceremony (`approver`, `subject`,
@@ -186,7 +188,8 @@ Where a composed document leaves a choice, this profile fixes it:
   context.
 - **High-risk content in the Intent raises the approval floor.** For
   this profile, high-risk authority, as the Approval Ceremony defines
-  it, also includes a Mission Intent that carries high-risk authority,
+  it, also includes a Mission Intent whose content marks the work as
+  high-risk,
   such as a cumulative consumption bound that an Intent member defined
   by a profile the authorization server implements expresses. The Approval Ceremony's
   approval-authentication floor therefore applies when either the

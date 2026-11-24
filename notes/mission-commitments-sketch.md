@@ -274,7 +274,9 @@ This document defines one authorization server metadata parameter
 `mission_commitments_supported`:
 : A boolean. `true` declares that the authorization server implements
   this document. Absent means
-  `false`.
+  `false`. Because this document applies to every Mission an
+  implementing authorization server creates, this member is a client's
+  confirmation that a Mission carries its facts.
 
 # Security Considerations {#security}
 

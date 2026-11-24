@@ -447,7 +447,9 @@ meet three conditions:
    for any scope originally granted. At Token Exchange, the bound is
    the subject token's `authorization_details`, so an exchange never
    restores authority the subject token does not carry, and a chain of
-   exchanges only narrows.
+   exchanges only narrows. At another issuer's redemption of a token
+   that carries the Mission ({{other-issuers}}), the bound is that
+   token's `authorization_details`.
 2. **Within the request.** Where the request carries
    `authorization_details`, the entry is a requested entry or a
    narrowing of one; an entry broader than the requested one is never
@@ -564,9 +566,11 @@ server in another trust domain. It defines the token the Mission's
 issuer issues by exchange to carry the Mission to that issuer, which
 can be of another token type; when an entry of the Approved Authority
 applies to that issuer for the subset rule; and how that issuer
-redeems the token, in place of this section's exchange rules. The
-Mission's issuer MUST report that token as active, at introspection,
-only while the Mission is active. The specification MUST restrict the
+redeems the token, in place of this section's exchange rules, and how
+the other issuer learns that the Mission is no longer active, such as
+by introspecting the carrying token at the Mission's issuer before
+each issuance. The Mission's issuer MUST report that token as active,
+at introspection, only while the Mission is active. The specification MUST restrict the
 other issuer to issuing access tokens, and the limits of
 {{extension-points}} bind it as they bind the Mission's issuer. A resource server accepts its tokens only under
 that relationship ({{rs-enforcement}}).
@@ -606,26 +610,33 @@ error code above for that path, and MUST add this member in place of
 
 A refusal because of what the request asks for, such as an audience
 or authority outside a bound, carries the error code its rule names and
-neither member.
+neither member. A specification that defines a condition states
+whether a refusal under it is because of the Mission or the request.
 
-A refusal with `mission_refusal` leaves a presented refresh token
-usable: it does not rotate or revoke it, or count as its reuse. An
-authorization code is used once ({{Section 4.1.2 of RFC6749}}), so a
-first issuance refused this way leaves the Mission without a grant,
-and the Mission ends at its `expires_at` or when an authorized party
-ends it. A client that receives
+A refusal with `mission_refusal` leaves the client's grant usable: at
+refresh, it does not rotate or revoke the presented refresh token.
+A client that does not implement this document reads the
+`invalid_grant` as {{RFC6749}} defines; `mission_refusal` tells one
+that does that the grant remains usable. An authorization code is used
+once ({{Section 4.1.2 of RFC6749}}), so at the first issuance, under a
+Mission that is not active and has not ended, the authorization server
+instead terminates the Mission with reason `revoked` and refuses with
+`mission_error`: a Mission whose code is spent has no grant through
+which its client could use or end it. A client that receives
 `mission_refusal`, with any value, including one it does not
 recognize, keeps its grant, does not treat the Mission as ended, and
 retries only as the value's specification allows.
 
 At the first issuance, the authorization server validates the grant
 as {{RFC6749}} or the creation path requires before it applies this
-gate. At refresh, it authenticates the client and confirms that the
+gate. At refresh, it authenticates the client, confirms that the
 refresh token belongs to a lineage issued to that client, including
-any sender constraint the token carries; it then applies this gate,
-and only then checks the token's own validity, including its expiry,
-revocation, and reuse. So a refresh token of an ended Mission,
-including one revoked or expired with it, is refused with
+any sender constraint the token carries, and, for a rotated lineage,
+that the token is the lineage's current one, treating the presentation
+of a replaced one as reuse; it then applies this gate, and only then
+checks the token's own expiry and revocation. So a refresh token of an
+ended Mission that the authorization server still recognizes,
+including one it revoked when the Mission ended, is refused with
 `mission_error`. At Token Exchange it follows the order of
 {{exchange}}. It returns `mission_error` or `mission_refusal` only to a
 request that passes the checks preceding this gate.
@@ -755,7 +766,8 @@ authenticates and authorizes for that fact, and gives a resource server
 only the `authorization_details` entries that apply to it
 ({{subset}}). A fact another specification defines serves audit and
 correlation, and a resource server derives no authority from it: a
-token's authority is its `authorization_details` ({{rs-enforcement}}).
+token's authority is its `authorization_details`, and any `scope` value
+a specification bounds by the Approved Authority ({{rs-enforcement}}).
 
 A member another specification adds to the JWT `mission` claim reaches
 every audience of the token, so such a specification adds only a
@@ -779,7 +791,8 @@ For an operation it protects under this document, a resource server:
    grants nothing, and it never combines parts of several entries to
    authorize one request;
 4. grants nothing, for a Mission-governed operation, on the basis of
-   a `scope` value the token carries; and
+   a `scope` value the token carries, unless a specification bounds
+   `scope` by the Approved Authority ({{extension-points}}); and
 5. relies on the Mission's state in one of two ways ({{lifecycle}}):
    it introspects the token at use, and an active response shows that
    the Mission is active at that instant; or it accepts a JWT until its
@@ -864,26 +877,34 @@ decision ({{approval}}), other creation paths ({{creation-paths}}),
 delegation ({{delegation-exchange}}), and other issuers
 ({{other-issuers}}).
 
-A specification that extends Missions MUST NOT let any issuer,
-including another issuer under {{other-issuers}}:
+A specification replaces a rule of this document only where this
+document says it can ({{approval}}, {{creation-paths}},
+{{delegation-exchange}}, {{other-issuers}}). Whatever it adds or
+replaces, a specification that extends Missions MUST NOT let any
+issuer, including another issuer under {{other-issuers}}:
 
-- issue a token under a Mission that does not carry the Mission's
-  `mission` claim or does not meet the subset rule, or widen the
+- issue an access token under a Mission that does not identify the
+  Mission as {{mission-claim}} defines, or whose
+  `authorization_details` do not meet the subset rule, or widen the
   Approved Authority;
-- convey authority to a resource server other than through a token's
-  `authorization_details`, or a `scope` value it bounds by the Approved
-  Authority;
+- let a resource server permit a Mission-governed operation that the
+  token's `authorization_details` do not cover, except through a
+  `scope` value bounded by the Approved Authority as that
+  specification defines;
 - issue a token under a Mission that is not `active` at the instant of
-  issuance, report a token as active at introspection after its
-  Mission ends, or reactivate an ended Mission;
-- issue a refresh token outside the Mission's grant lineage, or issue
-  by exchange a token that expires later than the token presented;
-- issue a token in exchange for another to a party that has not shown,
-  as this document or that specification defines, that it holds what
-  it presents, or leave the issued token unbound when that party
-  proved a key; or
+  issuance, report a token as active at introspection while its
+  Mission is not active, or reactivate an ended Mission;
+- issue a refresh token outside the Mission's grant lineage;
+- issue a token from another token, by exchange or by redemption at
+  another issuer, that expires later than that token or exceeds the
+  bound the subset rule sets against it, or to a party that has not
+  shown, as this document or that specification defines, that it
+  holds that token;
+- leave such a token unbound to the key of the party's proof of
+  possession, where the request carries one; or
 - create a Mission without recording what decided it: an
-  authenticated party, or a named policy.
+  authenticated party, a named policy, or a standing approval that one
+  of them gave.
 
 A member another specification adds never grants authority, and a
 member of the JWT `mission` claim never narrows what a resource server
@@ -917,8 +938,8 @@ specification admits, exchanges, and only for a token it shows it
 holds, and an exchange issues nothing that outlives
 its subject token ({{exchange}}). A token carried to another issuer is
 redeemed there only by a party that shows it holds it, and what the
-other issuer issues is bound to that party's key where it proves one
-({{other-issuers}}). A resource server that receives a
+other issuer issues is bound to that party's proof-of-possession key
+where it presents one ({{other-issuers}}, {{extension-points}}). A resource server that receives a
 token therefore cannot turn it into others, and because every token
 carries only the entries that apply to its audience ({{subset}}), it
 cannot be replayed at another resource server.
@@ -1021,7 +1042,8 @@ This document requests a new "OAuth Mission States" registry, under
 Specification Required, with initial values `active` and `terminated`
 ({{lifecycle}}). A state registered later is one a Mission can return
 to `active` from; {{lifecycle}} says how a party treats every state
-other than `active`.
+other than `active`. No state takes the name of a registered refusal
+value.
 
 ## OAuth Mission Termination Reasons {#iana-reasons}
 

@@ -291,7 +291,8 @@ The Intent bounds the authority a Mission can approve:
   recorded `target_resources`, at code redemption, refresh, or Token
   Exchange, wherever its base issues a resource token, and refuses such
   a request with `invalid_target` ({{Section 2 of RFC8707}},
-  {{Section 2.2.2 of RFC8693}}). An entry whose type makes it apply to
+  {{Section 2.2.2 of RFC8693}}), before the base's subset rule, so a
+  request that fails both is refused with `invalid_target`. An entry whose type makes it apply to
   another audience therefore does not carry the Mission past the
   resources the resource owner was shown.
 
