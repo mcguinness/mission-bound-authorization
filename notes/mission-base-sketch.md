@@ -270,8 +270,8 @@ party, such as an administrator approving for the resource owner,
 together with the record member that names that party. It can also
 define approval with no person at the decision, such as by an
 organizational policy; such a specification states what replaces the
-presentation and the authentication above, and records what decided
-({{extension-points}}). An approval decision creates the Mission and the
+presentation and the authentication above, and records what decided:
+the authenticated party, or a named policy ({{extension-points}}). An approval decision creates the Mission and the
 grant that starts its lineage together: on the path this document
 defines, the authorization code, which the authorization server issues
 only when the Mission is recorded. A declined or abandoned request
@@ -787,8 +787,8 @@ Mission Record endpoint ({{management}}), only to a caller it
 authenticates and authorizes for that fact, and gives a resource server
 only the `authorization_details` entries that apply to it
 ({{subset}}). A fact another specification defines serves audit and
-correlation, and a resource server derives no authority from it, unless
-that specification says otherwise.
+correlation, and a resource server derives no authority from it: a
+token's authority is its `authorization_details` ({{rs-enforcement}}).
 
 A member another specification adds to the JWT `mission` claim reaches
 every audience of the token, so such a specification adds only a
