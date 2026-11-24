@@ -159,6 +159,12 @@ Mission Identifier:
 : The string that identifies a Mission at the authorization server
   that holds it ({{record}}).
 
+Mission request:
+: A request that asks the authorization server to create a Mission:
+  an authorization request that carries `mission_expires_in`
+  ({{requesting}}), or the request a creation path defines
+  ({{creation-paths}}).
+
 Approved Authority:
 : The `authorization_details` array the approval established for a
   Mission.
@@ -267,7 +273,7 @@ only when the Mission is recorded. A declined or abandoned request
 creates neither. A retried or duplicate delivery of one approval
 decision MUST receive the outcome of the first, the same response or
 the same refusal, and MUST NOT create a second Mission or yield a
-second creating grant.
+second grant that starts a Mission grant lineage.
 
 ## Other Creation Paths {#creation-paths}
 
@@ -277,9 +283,10 @@ the activation of a standing approval. Such a path:
 
 - creates the Mission atomically with the grant it issues, which
   starts the Mission's grant lineage ({{lineage}});
-- carries the client's requested lifetime, as `mission_expires_in` or
-  an equivalent the path defines, and the requested
-  `authorization_details`;
+- carries the client's requested lifetime and requested authority, as
+  `mission_expires_in` and `authorization_details` or an equivalent
+  the path defines, such as a reference to a standing approval that
+  states them;
 - establishes the Approved Authority as {{approval}} requires, under
   the approval model it or another specification defines; and
 - issues tokens under the Mission only as this document does, with the
@@ -349,12 +356,16 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
   Mission, each a value of the OAuth Mission Extensions registry
   ({{iana-extensions}}). Absent means none.
 
-Every member except `state` and `termination` is fixed when the
-Mission is created and never changes, including members another
-specification defines ({{extension-points}}). The authorization server writes
-`termination` once, together with the transition to `terminated`, and
-MUST NOT change it: a later event does not replace the reason of a
-Mission already terminated.
+`state` changes only as {{lifecycle}} allows. The authorization
+server writes `termination` once, together with the transition to
+`terminated`, and MUST NOT change it: a later event does not replace
+the reason of a Mission already terminated. A member another
+specification defines to record an ending is written with
+`termination`, and one it defines for a state it registers is written
+on entering that state and holds only while the Mission is in it
+({{extension-points}}). Every other member, including members another
+specification defines, is fixed when the Mission is created and never
+changes.
 More authority than the Approved Authority requires a new Mission
 through a new approval; the existing Mission continues under its own
 Approved Authority until it ends.
@@ -424,8 +435,8 @@ member grants or widens authority.
 
 ## The Subset Rule {#subset}
 
-Every token the authorization server issues under a Mission has an
-audience: the resource the request names with `resource`
+Every access token the authorization server issues under a Mission
+has an audience: the resource the request names with `resource`
 ({{RFC8707}}), or with `resource` or `audience` at Token Exchange
 ({{RFC8693}}), or, where the request names none, one the authorization
 server assigns. Each entry of the token's `authorization_details` MUST
@@ -497,7 +508,8 @@ It carries the same `mission` claim, meets the subset rule
 to the key of the request's proof of possession where there is one,
 and is gated on the same Mission ({{gating}}). The authorization server
 MUST refuse, with `invalid_request`, an exchange whose
-`requested_token_type` names another token type, and MUST NOT include a
+`requested_token_type` names another token type, except as an issuer
+relationship defines ({{other-issuers}}), and MUST NOT include a
 `refresh_token` in its response, although {{Section 2.2.1 of RFC8693}}
 permits one: the Mission's grant lineage ({{lineage}}) is its only
 refresh path.
@@ -539,12 +551,34 @@ at step 5, with `invalid_request` and no `mission_error`.
 A specification that defines delegation can admit a party other than
 the Mission's client to exchange, for example a delegate that presents
 an `actor_token` ({{Section 2.1 of RFC8693}}). It states which parties
-it admits, how each shows that it holds the authority it presents (in
-place of steps 1 and 3), and how the issued token identifies the party,
+it admits, how each shows that it holds what it presents, in place of
+the holder rules listed above and steps 1 and 3, so that no party
+exchanges a token it cannot show it holds, and how the issued token
+identifies the party,
 for example in the `act` claim. It does not relax any other rule of
 this section: the subject token is an access token, the issued token's
 expiry is no later than the subject token's, no refresh token is
 issued, and the subset rule and issuance gating apply.
+
+### Other Issuers {#other-issuers}
+
+A specification can define a relationship under which an issuer other
+than the Mission's issues tokens for it, such as an authorization
+server in another trust domain. It defines the token the Mission's
+issuer issues by exchange to carry the Mission to that issuer, which
+can be of another token type, and when an entry of the Approved
+Authority applies to that issuer for the subset rule. It requires that
+the other issuer:
+
+- issues only access tokens, each carrying the same `mission` claim,
+  meeting the subset rule against the token it received, and expiring
+  no later than that token;
+- issues no refresh token under the Mission; and
+- stops issuing once it learns that the Mission is not active, which
+  it learns as the specification defines.
+
+A resource server accepts such a token only under that relationship
+({{rs-enforcement}}).
 
 ## Issuance Gating {#gating}
 
@@ -594,8 +628,9 @@ token endpoint's checks and steps 1 to 3 at Token Exchange.
 
 # Lifecycle {#lifecycle}
 
-A Mission is `active` from approval until it ends, and then
-`terminated` with a reason ({{record}}):
+A Mission is `active` from approval and `terminated`, with a reason,
+once it ends ({{record}}); other specifications can register states
+between the two:
 
 - `active`: the only state in which the authorization server issues
   tokens under it and a resource server relies on it.
@@ -618,7 +653,9 @@ Mission Record endpoint ({{management}}), or when its grant lineage is
 revoked: the client revoking a refresh token of the lineage
 {{RFC7009}}, or the authorization server revoking the lineage, for
 example on detecting refresh token replay. So a client ends its own
-Mission by revoking its refresh token. Rotation, which replaces a
+Mission by revoking its refresh token, and the authorization server
+MUST offer revocation of a lineage's refresh tokens at a
+`revocation_endpoint` it advertises ({{RFC8414}}). Rotation, which replaces a
 refresh token with another of the same lineage, is not revocation.
 
 Separating the ending from its reason lets other specifications
@@ -636,8 +673,8 @@ extend the lifecycle without changing this document:
   state also registers a refusal value of the same name
   ({{iana-refusals}}).
 
-A party MUST treat every state other than `active`, including one it
-does not recognize, as permitting no issuance or reliance, and MUST
+A party that learns a Mission's state MUST treat every state other
+than `active`, including one it does not recognize, as permitting no issuance or reliance, and MUST
 treat `terminated`, with any reason, including one it does not
 recognize, as an ended Mission.
 
@@ -654,9 +691,9 @@ already accepted.
 
 An authorization server that implements this document offers a
 Mission Record endpoint, which it advertises as
-`mission_record_endpoint` ({{metadata}}). The resource for a
-Mission is the endpoint URL followed by `/` and the Mission Identifier
-as a path segment.
+`mission_record_endpoint` ({{metadata}}). Each Mission has a URL at
+the endpoint, at which `GET` and `DELETE` act: the endpoint URL
+followed by `/` and the Mission Identifier as a path segment.
 
 A request for an access token for the endpoint is not a Mission
 request. The token's audience is the endpoint URL, which the request
@@ -883,14 +920,14 @@ A specification that extends Missions can:
 - define delegation, admitting parties other than the Mission's client
   to exchange ({{delegation-exchange}});
 - define a relationship under which an issuer other than the Mission's
-  issues tokens for it ({{rs-enforcement}});
+  issues tokens for it ({{other-issuers}});
 - define an authorization request parameter that the authorization
   server records with the Mission at approval, such as a description
   of the work, as an additional record member;
 - define further members of the Mission Record that the authorization
-  server establishes when it creates the Mission, or, for a member
-  that records an ending, when it terminates it; like the others, they
-  never change once written;
+  server writes when it creates the Mission, when it terminates it, or,
+  for a state the specification registers, while the Mission is in
+  that state ({{record}});
 - define further operations at the Mission Record endpoint, each with
   the scope value that authorizes it, such as reporting completion or
   suspending a Mission, and further members of its responses, of the
@@ -907,7 +944,8 @@ A specification that extends Missions can:
   subset rule uses ({{subset}}).
 
 An authorization server's metadata shows which extensions it
-implements; a Mission's `extensions` shows which of them apply to that
+implements, through the members each extension's specification
+defines; a Mission's `extensions` shows which of them apply to that
 Mission. A specification whose extension applies to some Missions and
 not others, such as one whose request parameter a client can omit,
 registers an identifier ({{iana-extensions}}), and its extension
@@ -1057,14 +1095,15 @@ ends a Mission with that reason.
 
 This document requests a new "OAuth Mission Members" registry, under
 Specification Required, for the names of members of the Mission
-Record, of the `mission` claim and introspection member, and of the
-Mission Record endpoint's responses. Each registration gives the name,
+Record and its `termination` object, of the `mission` claim and
+introspection member, and of the Mission Record endpoint's responses. Each registration gives the name,
 where it appears, and the specification that defines it; a name means
 one thing wherever it appears. The initial values, all defined in
 {{record}}, are `id` and `issuer` (record, claim, introspection,
 endpoint); `expires_at`, `authorization_details`, `state`,
-`termination`, and `extensions` (record, endpoint); and `client_id`,
-`sub`, and `approved_at` (record).
+`termination`, and `extensions` (record, endpoint); `client_id`,
+`sub`, and `approved_at` (record); and `reason` and `terminated_at`
+(`termination`).
 
 ## OAuth Mission Extensions {#iana-extensions}
 
@@ -1094,7 +1133,7 @@ framework for approved bounded work
 | Requirement | Met by |
 |---|---|
 | R1: an identifier distinct from the client, any token, and any refresh token family | The Mission Identifier ({{record}}) |
-| R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the resource owner who approved (`sub`), not the request: it does not distinguish the authorization server's narrowing from the resource owner's. An accountable approver other than the resource owner, and a description of the work, are left to specifications that add them through {{extension-points}}. |
+| R2: what was approved is fixed at approval; more authority creates a new authorization | The record's fixed members and a new Mission for more authority ({{record}}). The record fixes the approved authority and the resource owner the Mission is for (`sub`), not the request: it does not distinguish the authorization server's narrowing from the resource owner's. An accountable approver other than the resource owner, and a description of the work, are left to specifications that add them through {{extension-points}}. |
 | R3: no credential broader than the approved bounds, under a comparison defined for the type, refusing where it cannot decide | The subset rule at every issuance path: the bound (the Approved Authority at code redemption and refresh, the subject token at exchange), the request, and the audience ({{subset}}) |
 | R4: every issuance path refuses once the authorization has ended | Issuance gating on every path; the grant lineage is the only refresh path, since an exchange issues no refresh token ({{gating}}, {{exchange}}) |
 | R5: a party holding no token ends one authorization without affecting the client's other work | `DELETE` at the Mission Record endpoint, and a lineage per Mission ({{management}}, {{lineage}}) |

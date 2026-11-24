@@ -196,7 +196,7 @@ It is the approval's idempotency key: the authorization server
 recognizes a retried or duplicate delivery of one approval decision,
 such as a replayed callback or a double-submitted consent form, by it,
 and answers as its base requires, with the outcome of the first
-decision and never a second Mission or creating grant
+decision and never a second Mission or a second grant that starts its lineage
 ({{MISSION-BASE}}).
 
 The authorization server:
