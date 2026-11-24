@@ -620,10 +620,12 @@ does not seek another credential for it: the Mission has ended, and no
 retry under it succeeds.
 
 When the authorization server refuses an issuance under a Mission that
-has not ended, because the Mission is in a state another specification
-registers or because such a specification refuses the issuance while
-the Mission is active, it refuses with the error code above for that
-path, and MUST add this member in place of `mission_error`:
+has not ended because of the Mission rather than the request, either
+because the Mission is in a state another specification registers or
+because of a condition of the Mission as a whole that another
+specification defines, such as an exhausted budget, it refuses with the
+error code above for that path, and MUST add this member in place of
+`mission_error`:
 
 `mission_refusal`:
 : A string: why the issuance is refused while the Mission continues, a
@@ -631,9 +633,16 @@ path, and MUST add this member in place of `mission_error`:
   ({{iana-refusals}}). For a refusal because of the Mission's state, it
   is the name of that state.
 
-A refusal with `mission_refusal` leaves the presented grant usable: it
-does not consume an authorization code, rotate or revoke a refresh
-token, or count as reuse of either. A client that receives
+A refusal because of what the request asks for, such as an audience
+or authority outside a bound, carries the error code its rule names and
+neither member.
+
+A refusal with `mission_refusal` leaves a presented refresh token
+usable: it does not rotate or revoke it, or count as its reuse. An
+authorization code is used once ({{Section 4.1.2 of RFC6749}}), so a
+first issuance refused this way leaves the Mission without a grant,
+and the Mission ends at its `expires_at` or when an authorized party
+ends it. A client that receives
 `mission_refusal`, with any value, including one it does not
 recognize, keeps its grant, does not treat the Mission as ended, and
 retries only as the value's specification allows.
