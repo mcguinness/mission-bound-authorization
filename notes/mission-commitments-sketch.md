@@ -388,6 +388,6 @@ entry_commitment =
 
 -00
 
-- Initial version: the commitment construction, the authority and entry
-  commitments, and the approval event identifier, layered on a Mission
-  base.
+- Initial version: the authority and entry commitments, computed with
+  the base's anchor construction, and the approval event identifier,
+  layered on a Mission base.

@@ -582,5 +582,4 @@ the access token and receives, among other members:
 - Initial version: a Mission Intent layered on a Mission base,
   narrowing only, with the Intent restated with the meaning
   Mission-Bound Authorization for OAuth 2.0 gives it, and an intent
-  anchor computed with the construction it and OAuth 2.0 Mission
-  Commitments use.
+  anchor computed with the base's anchor construction.
