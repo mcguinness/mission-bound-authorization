@@ -256,7 +256,10 @@ terms the resource owner can understand.
 The resource owner approves, and the authorization server
 authenticates them. A specification can define approval by another
 party, such as an administrator approving for the resource owner,
-together with the record member that names that party
+together with the record member that names that party. It can also
+define approval with no person at the decision, such as by an
+organizational policy; such a specification states what replaces the
+presentation and the authentication above, and records what decided
 ({{extension-points}}). An approval decision creates the Mission and the
 grant that starts its lineage together: on the path this document
 defines, the authorization code, which the authorization server issues
@@ -860,7 +863,8 @@ an implied value.
 A specification that extends Missions can:
 
 - define approval by a party other than the resource owner, with the
-  record member that names that party;
+  record member that names that party, including approval with no
+  person at the decision ({{approval}});
 - define another path that creates a Mission, including the activation
   of a standing approval ({{creation-paths}});
 - define delegation, admitting parties other than the Mission's client
