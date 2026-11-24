@@ -297,8 +297,8 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
 : Present exactly when `state` is `terminated`. An object:
 
   `reason`:
-  : REQUIRED. A string: why the Mission ended, a value of the Mission
-    Grant Termination Reasons registry ({{iana-reasons}}): `revoked`
+  : REQUIRED. A string: why the Mission ended, a value of the OAuth
+    Mission Termination Reasons registry ({{iana-reasons}}): `revoked`
     or `expired` in this document, or a reason a specification
     registers.
 

@@ -91,8 +91,9 @@ own. This document composes the base and those layers into
 Mission-Bound Authorization, the full contract that a specification
 building on Missions cites as one target. It names the documents a
 conforming party implements, fixes the choices they leave to a
-profile, defines no new protocol element, and maps each part of the
-composed contract to the document that defines it.
+profile, adds one metadata member with which a server shows that it
+applies the profile, and maps each part of the composed contract to
+the document that defines it.
 
 --- middle
 
@@ -116,8 +117,8 @@ documents that evolve separately. This document is that target. It:
 
 - names the documents a conforming party implements ({{composed}});
 - fixes the choices those documents leave to a profile ({{choices}});
-- states how a party shows conformance, with no new protocol element
-  ({{conformance}}); and
+- defines one metadata member with which a server shows that it
+  applies the profile to every Mission ({{conformance}}); and
 - maps each part of the composed contract to the document and section
   that defines it, for specifications that cite it ({{map}}).
 
@@ -130,8 +131,9 @@ layer defines yet are listed in {{not-composed}}.
 
 {::boilerplate bcp14-tagged}
 
-This document uses the terms Mission, Mission request, Mission Record,
-Approved Authority, and Mission-bound token from {{MISSION-BASE}}.
+This document uses the terms Mission, Mission Record, Approved
+Authority, and Mission-bound token from {{MISSION-BASE}}, and Mission
+request from {{MISSION-INTENT}}.
 
 Composed document:
 : A document this profile requires a conforming party to implement
@@ -170,6 +172,13 @@ Where a composed document leaves a choice, this profile fixes it:
   facts the Approval Ceremony presents, so a change to any of them
   before the decision requires the Approver's consent to the changed
   context.
+- **High-risk content in the Intent raises the approval floor.** For
+  this profile, high-risk authority, as the Approval Ceremony defines
+  it, also includes a Mission Intent that carries high-risk authority,
+  such as a cumulative consumption bound that an Intent member defined
+  by another specification expresses. The Approval Ceremony's
+  approval-authentication floor therefore applies when either the
+  Approved Authority or the Mission Intent carries high-risk authority.
 - **The token response confirms both.** The response that redeems the
   authorization code carries `mission_intent_hash` and
   `mission_subject`, and a client confirms each as its document
@@ -181,17 +190,35 @@ apply unchanged.
 
 # Conformance and Discovery {#conformance}
 
-An authorization server shows conformance by advertising the metadata
-of every composed document {{RFC8414}}: `mission_supported`,
-`mission_intent_supported`, `mission_approval_ceremony_supported`, and
-`mission_commitments_supported`, each `true`. A client relies on this
-profile only at an authorization server that advertises all four. A
-resource server declares Mission-governed operations with
-`mission_required` in its protected resource metadata
-{{RFC9728}}, as the base defines.
+An authorization server that applies this profile to every Mission it
+issues MUST advertise this metadata member {{RFC8414}}, and MUST NOT
+advertise it otherwise:
 
-This profile defines no metadata member, parameter, claim, or error
-code of its own.
+`mission_binding_profile_supported`:
+: A boolean. `true` declares that the authorization server implements
+  every composed document and applies this profile's choices
+  ({{choices}}) to every Mission it issues. Absent means `false`.
+
+It also advertises each composed document's own member:
+`mission_supported`, `mission_intent_supported`,
+`mission_approval_ceremony_supported`, and
+`mission_commitments_supported`. Those four show only that the
+documents are implemented, not that their choices apply to every
+Mission: a server can implement all four and still issue Missions
+without an Intent. A client relies on this profile's promises only at
+an authorization server that advertises
+`mission_binding_profile_supported`, and still confirms each Mission
+through `mission_intent_hash` and `mission_subject` ({{choices}}).
+Those confirmations establish the client's own task and Subject, not
+the authorization server's policy for other Missions, which the
+metadata member declares.
+
+A resource server declares Mission-governed operations with
+`mission_required` in its protected resource metadata {{RFC9728}}, as
+the base defines.
+
+Apart from `mission_binding_profile_supported`, this profile defines
+no parameter, claim, or error code.
 
 # Citation Map {#map}
 
@@ -205,24 +232,24 @@ citations each received.
 |---|---|
 | Resource Server Enforcement (16) | Base, "Resource Server Enforcement" |
 | Integrity Anchors (15) | Commitments, "The Commitment Construction" and "The Authority Commitment"; Intent, "The Intent Anchor" |
-| Mission Approval (13) | Base, "Approval and Creation"; Approval Ceremony |
+| Mission Approval (13) | Base, "Approval and Creation"; Approval Ceremony. Standing-consent approval is not composed |
 | Mission Authority (13) | Base, "Approval and Creation"; Intent, "The Intent Ceiling" |
 | Mission Termination (13) | Base, "Lifecycle" and "The Mission Record" |
 | Principals and Approval Basis (12) | Approval Ceremony, "Principals" and "The Recorded Approval" |
 | Subset Rule (12) | Base, "The Subset Rule" |
-| Issuance Gating (12) | Base, "Issuance Gating" |
+| Issuance Gating (12) | Base, "Issuance Gating". The minimum checks for issuance paths a companion defines are not composed |
 | Mission Record (10) | Base, "The Mission Record", with the facts each layer records |
 | Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope" |
 | Revocation (8) | Base, "Lifecycle" and "Management Endpoint" |
-| Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage" |
-| Caller Authorization and Minimization (8) | Each layer's "Disclosure" |
-| Mission State via Token Introspection (7) | Base, "The mission Claim" and "Lifecycle" |
+| Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, created only by the authorization code |
+| Caller Authorization and Minimization (8) | Each layer's "Disclosure", for its own members only; no general rule covers other members |
+| Mission State via Token Introspection (7) | Base, "Management Endpoint" (`GET`); introspection reports activity, not the Mission's state |
 | Intent Submission Evidence (7) | Intent, "The Submission Envelope" |
 | Mission-Bound Token Issuance (6) | Base, "Mission-Bound Tokens" |
 | Mission Lifecycle (6) | Base, "Lifecycle" |
 | Commitment Mechanisms (5) | Commitments, "Other Commitments" |
 | Authority Sources (5) | Approval Ceremony, "Authority Sources" |
-| Consent Binding (5) | Approval Ceremony, "Presenting the Approval" and "Changes Before the Decision" |
+| Consent Binding (5) | Not composed: its citers rely on the `authority_hash` trust analysis, which no composed document carries; Approval Ceremony, "Presenting the Approval" and "Changes Before the Decision" carry only the presentation rules |
 | Mission Claim (3) | Base, "The mission Claim" |
 | Self-Exchange Down-Scoping (3) | Base, "Token Exchange" |
 | Extensibility (2) | Base, "Extension Points"; Commitments, "Other Commitments" |
@@ -230,7 +257,11 @@ citations each received.
 
 Several of these parts are re-expressed rather than copied, and their
 details differ from Mission-Bound Authorization for OAuth 2.0; a
-citing specification checks the composed section it cites.
+citing specification checks the composed section it cites. In
+particular, the composed record does not retain the authority proposal,
+so a specification that relies on the original request, such as which
+requested entry an approval removed, keeps citing that document for
+it ({{not-composed}}).
 
 # Parts Not Yet Composed {#not-composed}
 
@@ -273,7 +304,9 @@ disclosure rule of the composed documents applies to it.
 
 # IANA Considerations {#iana}
 
-This document has no IANA actions.
+This document requests registration of
+`mission_binding_profile_supported` in the "OAuth Authorization Server
+Metadata" registry, Reference {{conformance}}.
 
 --- back
 
@@ -285,5 +318,5 @@ This document has no IANA actions.
 -00
 
 - Initial version: Mission-Bound Authorization composed from OAuth 2.0
-  OAuth 2.0 Mission and the Intent, Approval Ceremony, and Commitments
+  Mission and the Intent, Approval Ceremony, and Commitments
   layers, with profile choices and a citation map.

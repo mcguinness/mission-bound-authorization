@@ -106,7 +106,7 @@ authenticates, lets anyone other than the resource owner approve,
 records whose authority the approval draws on, or states what the
 approver must be shown beyond the authority itself.
 
-This document defines that approval ceremony as a layer on either
+This document defines that approval ceremony as a layer on the
 base:
 
 - the approver and the subject are distinct principals, so an
