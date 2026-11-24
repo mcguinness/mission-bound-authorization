@@ -257,13 +257,12 @@ Mission. It is fixed with the Mission:
   Missions: the identifier of the approval event that created this
   Mission.
 
-It is the approval's idempotency key. A retried or duplicate delivery
-of the same approval decision, such as a replayed callback or a
-double-submitted consent form, MUST NOT create a second Mission. The
-authorization server answers it with the outcome of the first
-decision, the same authorization response or the same refusal, and
-never with a second authorization code, which would yield a second
-refresh token lineage.
+It is the approval's idempotency key: the authorization server
+recognizes a retried or duplicate delivery of one approval decision,
+such as a replayed callback or a double-submitted consent form, by it,
+and answers as its base requires, with the outcome of the first
+decision and never a second Mission or authorization code
+({{MISSION-GRANTS}}).
 
 The authorization server:
 
