@@ -297,7 +297,10 @@ of them correlate Missions; the same disclosure rule bounds that.
 
 This document requests registration of `mission_commitments_supported`
 in the "OAuth Authorization Server Metadata" registry, Reference
-{{metadata}}.
+{{metadata}}, and of `commitments` in the "OAuth Mission Extensions"
+registry, Reference {{authority-commitment}}. A Mission whose
+`extensions` lists `commitments` records `authority_hash` and
+`approval_event_id` ({{MISSION-BASE}}).
 
 The `authority_hash` and `approval_event_id` members of the
 introspection `mission` member need no registration, and this document

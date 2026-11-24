@@ -333,7 +333,8 @@ Mission is created:
   verified evidence facts that the evidence type's specification
   defines.
 
-These facts are members of the Mission Record. Where the authorization
+These facts are members of the Mission Record, and the Mission's
+`extensions` lists `intent` ({{MISSION-BASE}}). Where the authorization
 server also implements OAuth 2.0 Mission Commitments
 {{MISSION-COMMITMENTS}}, it records `authority_hash` as that document
 defines, so the task and the authority are committed separately.
@@ -442,9 +443,11 @@ This document requests registration of:
   registration with the same meaning, and the documents are expected
   to converge on one registration;
 - `mission_intent_hash` in the "OAuth Parameters" registry, usage
-  location token response, Reference {{confirming}}; and
+  location token response, Reference {{confirming}};
 - `mission_intent_supported` in the "OAuth Authorization Server
-  Metadata" registry, Reference {{metadata}}.
+  Metadata" registry, Reference {{metadata}}; and
+- `intent` in the "OAuth Mission Extensions" registry, Reference
+  {{record}}.
 
 This document also requests registration of
 `invalid_mission_intent_evidence` in the "OAuth Extensions Error"

@@ -344,6 +344,11 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
   A specification that registers a termination reason can define
   further members of `termination` for it.
 
+`extensions`:
+: OPTIONAL. An array of strings: the extensions that apply to this
+  Mission, each a value of the OAuth Mission Extensions registry
+  ({{iana-extensions}}). Absent means none.
+
 Every member except `state` and `termination` is fixed when the
 Mission is created and never changes, including members another
 specification defines ({{extension-points}}). The authorization server writes
@@ -379,6 +384,9 @@ MUST carry a refresh token, so that the client can always end its Mission
 : The exact RFC 3339 string of the Mission's `expires_at`. The
   `expires_in` parameter describes the access token's lifetime, not
   the Mission's.
+
+`mission_extensions`:
+: The Mission's `extensions` ({{record}}), when it has any.
 
 Any other token response under a Mission SHOULD carry both.
 
@@ -896,6 +904,15 @@ A specification that extends Missions can:
 - define, for a type of authorization details, the comparison the
   subset rule uses ({{subset}}).
 
+An authorization server's metadata shows which extensions it
+implements; a Mission's `extensions` shows which apply to that
+Mission. An extension applies to a Mission only when the authorization
+server lists it there when it creates the Mission. A client that relies
+on an extension for a Mission confirms that `mission_extensions` lists
+it, and otherwise does not rely on it for that Mission, since an
+authorization server that does not implement the extension can ignore
+what the client sent for it and still create the Mission.
+
 No extension widens the Approved Authority, permits issuance or
 reliance in any state other than `active`, or reactivates an ended
 Mission.
@@ -983,6 +1000,7 @@ Parameters" registry:
 | `mission_expires_at` | token response | {{token-response}} |
 | `mission_error` | token response | {{gating}} |
 | `mission_refusal` | token response | {{gating}} |
+| `mission_extensions` | token response | {{token-response}} |
 {: title="OAuth Parameters"}
 
 ## JSON Web Token Claims {#iana-jwt}
@@ -1024,6 +1042,13 @@ This document requests a new "OAuth Mission Termination Reasons"
 registry, under Specification Required, with initial values `revoked`
 and `expired` ({{lifecycle}}). Each registration names the event that
 ends a Mission with that reason.
+
+## OAuth Mission Extensions {#iana-extensions}
+
+This document requests a new "OAuth Mission Extensions" registry,
+under Specification Required, with no initial values. Each
+registration gives a short identifier and the specification that
+defines the extension.
 
 ## OAuth Mission Refusal Reasons {#iana-refusals}
 

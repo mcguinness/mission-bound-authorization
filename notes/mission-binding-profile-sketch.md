@@ -179,6 +179,9 @@ Where a composed document leaves a choice, this profile fixes it:
   by another specification expresses. The Approval Ceremony's
   approval-authentication floor therefore applies when either the
   Approved Authority or the Mission Intent carries high-risk authority.
+- **Every Mission lists the three layers.** Its `extensions` lists
+  `intent`, `approval-ceremony`, and `commitments`, and the token
+  response's `mission_extensions` confirms them.
 - **The token response confirms both.** The response that redeems the
   authorization code carries `mission_intent_hash` and
   `mission_subject`, and a client confirms each as its document
