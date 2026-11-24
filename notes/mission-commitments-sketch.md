@@ -297,10 +297,9 @@ details a token carries, not the Approved Authority as a whole.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `authority_hash` and `approval_event_id` as members of its
-`mission` member, and the authorization server MUST disclose each only
-to a caller it authorizes for that member. On OAuth 2.0 Mission, the
-management endpoint's `GET` response carries them only to such a
-caller. A party that holds the Mission's recorded Approved Authority
+`mission` member, and the management endpoint's `GET` response MAY
+carry them, each under the base's rule for disclosing Mission facts
+({{MISSION-BASE}}). A party that holds the Mission's recorded Approved Authority
 verifies `authority_hash` by recomputing it.
 
 # Use by Other Layers {#composition}

@@ -679,6 +679,26 @@ server authorizes to read the Approved Authority.
 `revoked` and returns HTTP 204. A `DELETE` for a Mission that has already ended
 changes nothing and returns HTTP 204.
 
+# Disclosure of Mission Facts {#disclosure}
+
+The `id` and `issuer` of a Mission are references that any party
+holding one of its tokens can see. The authorization server MUST NOT
+disclose any other fact of a Mission, whether this document or another
+specification defines it, through introspection {{RFC7662}} or the
+Mission's endpoint ({{management}}), except:
+
+- to a caller it authenticates and authorizes for that fact;
+- filtered to the caller's audience, never disclosing
+  `authorization_details` entries or facts addressed to other
+  audiences; and
+- as audit and correlation information that a resource server does not
+  need to enforce the token, unless the specification defining the
+  fact says otherwise.
+
+A member another specification adds to the JWT `mission` claim reaches
+every audience of the token, so such a specification adds only a
+member that every audience may see.
+
 # Resource Server Enforcement {#rs-enforcement}
 
 For an operation it protects under this document, a resource server:

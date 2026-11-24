@@ -393,14 +393,10 @@ JWT access token, since every token issued under the Mission carries
 that claim and no resource server enforces these facts.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
-carry `intent_hash` as a member of its `mission` member. The
-authorization server MUST disclose it only to a caller it authorizes
-for that member. It serves audit and correlation, not enforcement: a
-resource server never derives authority from it.
-
-The management endpoint's `GET` response MAY carry `intent_hash`, and
-carries `intent` only to a caller the authorization server authorizes
-to read it.
+carry `intent_hash` as a member of its `mission` member, and the
+management endpoint's `GET` response MAY carry `intent_hash` and
+`intent`, each under the base's rule for disclosing Mission facts
+({{MISSION-BASE}}).
 
 # Authorization Server Metadata {#metadata}
 

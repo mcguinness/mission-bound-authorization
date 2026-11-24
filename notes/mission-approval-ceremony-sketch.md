@@ -416,10 +416,9 @@ JWT access token.
 
 An introspection response {{RFC7662}} for a Mission-bound token MAY
 carry `approver`, `subject`, `authority_source`, and
-`approver_authentication` as members of its `mission` member, and the authorization server MUST disclose each only
-to a caller it authorizes for that member. On OAuth 2.0 Mission, the
-management endpoint's `GET` response carries them only to such a
-caller.
+`approver_authentication` as members of its `mission` member, and the
+management endpoint's `GET` response MAY carry them, each under the
+base's rule for disclosing Mission facts ({{MISSION-BASE}}).
 
 # Error Responses {#errors}
 
