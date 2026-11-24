@@ -207,7 +207,7 @@ citations each received.
 | Integrity Anchors (15) | Commitments, "The Commitment Construction" and "The Authority Commitment"; Intent, "The Intent Anchor" |
 | Mission Approval (13) | Grants, "Approval and Creation"; Approval Ceremony |
 | Mission Authority (13) | Grants, "Approval and Creation"; Intent, "The Intent Ceiling" |
-| Mission Termination (13) | Grants, "Lifecycle" |
+| Mission Termination (13) | Grants, "Lifecycle" and "The Mission Record" |
 | Principals and Approval Basis (12) | Approval Ceremony, "Principals" and "The Recorded Approval" |
 | Subset Rule (12) | Grants, "The Subset Rule" |
 | Issuance Gating (12) | Grants, "Issuance Gating" |
@@ -248,8 +248,8 @@ needs one cites that document for it until a layer defines it:
 - **Cross-domain**: claim reservation, issuer-only members, and
   introspected consumption.
 - **Scope projection.**
-- **Termination detail**: termination reasons beyond the base's
-  states, such as supersession.
+- **Further termination reasons**, such as supersession, which a layer
+  registers in the base's termination reasons registry.
 - **Error and challenge mapping** as one table, and conformance roles.
 
 When a layer for one of these exists, a revision of this profile can
