@@ -628,10 +628,10 @@ error code above for that path, and MUST add this member in place of
 `mission_error`:
 
 `mission_refusal`:
-: A string: why the issuance is refused while the Mission continues, a
-  value of the OAuth Mission Refusal Reasons registry
-  ({{iana-refusals}}). For a refusal because of the Mission's state, it
-  is the name of that state.
+: A string: why the issuance is refused while the Mission continues:
+  for a refusal because of the Mission's state, the name of that state
+  ({{iana-states}}); otherwise a value of the OAuth Mission Refusal
+  Reasons registry ({{iana-refusals}}).
 
 A refusal because of what the request asks for, such as an audience
 or authority outside a bound, carries the error code its rule names and
@@ -698,9 +698,7 @@ extend the lifecycle without changing this document:
   such as a pause, registers a state ({{iana-states}}). A Mission in
   such a state is neither active nor terminated, and is never reported
   with a termination reason or `mission_error`; a refusal in it carries
-  `mission_refusal` ({{gating}}). A specification that registers a
-  state also registers a refusal value of the same name
-  ({{iana-refusals}}).
+  `mission_refusal` with the state's name ({{gating}}).
 
 A party that learns a Mission's state MUST treat every state other
 than `active`, including one it does not recognize, as permitting no issuance or reliance, and MUST
@@ -1148,10 +1146,10 @@ defines the extension.
 
 This document requests a new "OAuth Mission Refusal Reasons" registry,
 under Specification Required, with no initial values. Each
-registration names the condition under which an issuance is refused
-while the Mission continues, and what lifts it. A state registered in
-the OAuth Mission States registry is also registered here under the
-same name.
+registration names a condition of the Mission as a whole, other than
+a state, under which an issuance is refused while the Mission
+continues, and what lifts it. No value equals the name of a registered
+state.
 
 --- back
 
