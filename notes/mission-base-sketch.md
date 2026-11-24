@@ -47,6 +47,7 @@ normative:
   RFC9126:
   RFC9396:
   RFC9449:
+  RFC9700:
   RFC9728:
 
 informative:
@@ -77,7 +78,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  RFC9700:
 
 --- abstract
 
@@ -408,6 +408,10 @@ Any other token response under a Mission SHOULD carry `mission_id`
 and `mission_expires_at`, and `mission_extensions` when the Mission has
 any.
 
+A public client's refresh token MUST be sender-constrained or rotated
+on each use ({{Section 2.2.2 of RFC9700}}), since it carries the
+Mission's authority for the Mission's whole lifetime.
+
 ## Mission Grant Lineage {#lineage}
 
 The grant that created a Mission, and every refresh token issued from
@@ -690,6 +694,10 @@ Mission by revoking its refresh token, and the authorization server
 MUST offer revocation of a lineage's refresh tokens at a
 `revocation_endpoint` it advertises ({{RFC8414}}). Rotation, which replaces a
 refresh token with another of the same lineage, is not revocation.
+Revoking an access token alone does not end the Mission; where the
+authorization server also revokes the refresh token, as
+{{Section 2.1 of RFC7009}} permits, the lineage is revoked and the
+Mission ends.
 
 Separating the ending from its reason lets other specifications
 extend the lifecycle without changing this document:
