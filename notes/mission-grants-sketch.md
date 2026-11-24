@@ -252,9 +252,10 @@ together with the record member that names that party
 ({{extension-points}}). An approval decision creates the Mission and the
 authorization code together: the authorization server issues the code
 only when the Mission is recorded, and a declined or abandoned request
-creates neither. A retried or duplicate delivery of one approval decision receives
-the outcome of the first, the same authorization response or the same
-refusal, and never a second authorization code.
+creates neither. A retried or duplicate delivery of one approval
+decision MUST receive the outcome of the first, the same authorization
+response or the same refusal, and MUST NOT create a second Mission or
+yield a second authorization code.
 
 # The Mission Record {#record}
 
