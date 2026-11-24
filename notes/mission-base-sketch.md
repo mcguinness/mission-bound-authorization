@@ -595,9 +595,12 @@ A Mission is `active` from approval until it ends, and then
 | From | Event | To | Reason |
 |---|---|---|---|
 | (none) | approval | `active` | |
-| `active` | revocation | `terminated` | `revoked` |
-| `active` | `expires_at` reached | `terminated` | `expired` |
+| not `terminated` | revocation | `terminated` | `revoked` |
+| not `terminated` | `expires_at` reached | `terminated` | `expired` |
 {: title="Mission lifecycle"}
+
+Revocation and expiry end a Mission from any state other than
+`terminated`, including a state another specification registers.
 
 A Mission is revoked when an authorized party ends it at the
 Mission Record endpoint ({{management}}), or when its grant lineage is
@@ -683,8 +686,8 @@ does not reveal which identifiers exist.
 also returns `authorization_details` to a caller the authorization
 server authorizes to read the Approved Authority.
 
-`DELETE` moves an active Mission to `terminated` with reason
-`revoked` and returns HTTP 204. A `DELETE` for a Mission that has already ended
+`DELETE` moves a Mission that has not ended to `terminated` with
+reason `revoked` and returns HTTP 204. A `DELETE` for a Mission that has already ended
 changes nothing and returns HTTP 204.
 
 # Disclosure of Mission Facts {#disclosure}
