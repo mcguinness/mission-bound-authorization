@@ -554,16 +554,12 @@ at step 5, with `invalid_request` and no `mission_error`.
 ### Delegation {#delegation-exchange}
 
 A specification that defines delegation can admit a party other than
-the Mission's client to exchange, for example a delegate that presents
-an `actor_token` ({{Section 2.1 of RFC8693}}). It states which parties
-it admits, how each shows that it holds what it presents, in place of
-the holder rules listed above and steps 2 and 3, so that no party
-exchanges a token it cannot show it holds, and how the issued token
-identifies the party,
-for example in the `act` claim. It does not relax any other rule of
-this section: the subject token is an access token, the issued token's
-expiry is no later than the subject token's, no refresh token is
-issued, and the subset rule and issuance gating apply.
+the Mission's client to exchange, such as a delegate that presents an
+`actor_token` ({{Section 2.1 of RFC8693}}). It replaces the holder
+rules above and steps 2 and 3 with how each party it admits shows that
+it holds what it presents, and states how the issued token identifies
+the party, such as in the `act` claim. Every other rule of this
+section applies, and so do the limits of {{extension-points}}.
 
 ### Other Issuers {#other-issuers}
 
@@ -571,29 +567,14 @@ A specification can define a relationship under which an issuer other
 than the Mission's issues tokens for it, such as an authorization
 server in another trust domain. It defines the token the Mission's
 issuer issues by exchange to carry the Mission to that issuer, which
-can be of another token type, and when an entry of the Approved
-Authority applies to that issuer for the subset rule. The Mission's
-issuer MUST report that token as active, at introspection, only while
-the Mission is active. The specification defines how the other issuer
-redeems the token, in place of this section's exchange rules, and MUST
-require that the other issuer:
-
-- issues tokens only to a party that shows it holds the carrying
-  token, as the specification defines;
-- issues only access tokens, each carrying the same `mission` claim,
-  meeting the subset rule against the carrying token, expiring no
-  later than it, and bound to the key of the redeeming party's proof
-  of possession where there is one;
-- issues no refresh token under the Mission;
-- issues nothing unless the Mission is active at the instant of
-  issuance, which it confirms as the specification defines, such as
-  by introspecting the carrying token at the Mission's issuer, so that
-  issuance gating ({{gating}}) holds at every issuer; and
-- reports a token it issued as active, at introspection, only while
-  the Mission is active.
-
-A resource server accepts such a token only under that relationship
-({{rs-enforcement}}).
+can be of another token type; when an entry of the Approved Authority
+applies to that issuer for the subset rule; and how that issuer
+redeems the token, in place of this section's exchange rules. The
+Mission's issuer MUST report that token as active, at introspection,
+only while the Mission is active. The other issuer issues only access
+tokens, and the limits of {{extension-points}} bind it as they bind
+the Mission's issuer. A resource server accepts its tokens only under
+that relationship ({{rs-enforcement}}).
 
 ## Issuance Gating {#gating}
 
@@ -944,38 +925,45 @@ an implied value.
 
 # Extension Points {#extension-points}
 
-A specification that extends Missions can:
+A specification can extend Missions. It can add requirements,
+authorization request parameters, record members ({{record}}),
+members of the token response, of the introspection `mission` member,
+of the JWT `mission` claim, and of the Mission Record endpoint's
+responses, operations at that endpoint with the scope values that
+authorize them, termination reasons and states ({{lifecycle}}),
+refusal values ({{gating}}), comparisons for types of authorization
+details ({{subset}}), and a bound on `scope` by the Approved Authority
+so that a Mission-bound token can carry it. This document names where
+several attach: approval by another party or with no person at the
+decision ({{approval}}), other creation paths ({{creation-paths}}),
+delegation ({{delegation-exchange}}), and other issuers
+({{other-issuers}}).
 
-- define approval by a party other than the resource owner, with the
-  record member that names that party, including approval with no
-  person at the decision ({{approval}});
-- define another path that creates a Mission, including the activation
-  of a standing approval ({{creation-paths}});
-- define delegation, admitting parties other than the Mission's client
-  to exchange ({{delegation-exchange}});
-- define a relationship under which an issuer other than the Mission's
-  issues tokens for it ({{other-issuers}});
-- define an authorization request parameter that the authorization
-  server records with the Mission at approval, such as a description
-  of the work, as an additional record member;
-- define further members of the Mission Record that the authorization
-  server writes when it creates the Mission, when it terminates it, or,
-  for a state the specification registers, while the Mission is in
-  that state ({{record}});
-- define further operations at the Mission Record endpoint, each with
-  the scope value that authorizes it, such as reporting completion or
-  suspending a Mission, and further members of its responses, of the
-  token response, and of the introspection `mission` member;
-- define further members of the JWT `mission` claim, which every
-  audience of the token sees ({{disclosure}});
-- define how `scope` is bounded by the Approved Authority, so that a
-  Mission-bound token can carry it;
-- register termination reasons for further ways a Mission ends, and
-  states for lifecycles a Mission returns from ({{lifecycle}});
-- register refusal values for an issuance a specification refuses while
-  the Mission continues ({{gating}}); and
-- define, for a type of authorization details, the comparison the
-  subset rule uses ({{subset}}).
+A specification that extends Missions MUST NOT let any issuer,
+including another issuer under {{other-issuers}}:
+
+- issue a token under a Mission that does not carry the Mission's
+  `mission` claim or does not meet the subset rule, or widen the
+  Approved Authority;
+- convey authority to a resource server other than through a token's
+  `authorization_details`, or a `scope` value it bounds by the Approved
+  Authority;
+- issue a token under a Mission that is not `active` at the instant of
+  issuance, report a token as active at introspection after its
+  Mission ends, or reactivate an ended Mission;
+- issue a refresh token outside the Mission's grant lineage, or issue
+  by exchange a token that expires later than the token presented;
+- issue a token in exchange for another to a party that has not shown,
+  as this document or that specification defines, that it holds what
+  it presents, or leave the issued token unbound when that party
+  proved a key; or
+- create a Mission without recording what decided it: an
+  authenticated party, or a named policy.
+
+A member another specification adds never grants authority, and a
+member of the JWT `mission` claim never narrows what a resource server
+enforces, since a resource server that does not understand a member
+ignores it ({{mission-claim}}).
 
 An authorization server's metadata shows which extensions it
 implements, through the members each extension's specification
@@ -988,10 +976,6 @@ still create the Mission.
 A specification registers the names of the members it adds in the
 OAuth Mission Members registry ({{iana-members}}), so independent
 specifications do not collide.
-
-No extension widens the Approved Authority, permits issuance or
-reliance in any state other than `active`, or reactivates an ended
-Mission.
 
 # Security Considerations {#security}
 
