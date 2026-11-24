@@ -379,8 +379,7 @@ fixed like the base's other facts:
   `amr`:
   : OPTIONAL. An array of strings: the authentication methods used.
 
-These are members of the Mission Record, and the Mission's
-`extensions` lists `approval-ceremony` ({{MISSION-BASE}}).
+These are members of the Mission Record ({{MISSION-BASE}}).
 
 These facts are provenance. They never grant or widen authority, and a
 resource server does not consult them. A consumer preserves an
@@ -498,11 +497,9 @@ Subject already permits.
 This document requests registration of:
 
 - `mission_approval_ceremony_supported` in the "OAuth Authorization
-  Server Metadata" registry, Reference {{metadata}};
+  Server Metadata" registry, Reference {{metadata}}; and
 - `mission_subject` in the "OAuth Parameters" registry, usage location
-  token response, Reference {{confirming}}; and
-- `approval-ceremony` in the "OAuth Mission Extensions" registry,
-  Reference {{record}}.
+  token response, Reference {{confirming}}.
 
 This document requests registration of `approver`, `subject`,
 `authority_source`, and `approver_authentication` in the "OAuth
@@ -564,7 +561,6 @@ approval reads the Mission:
   "issuer": "https://as.example.com",
   "state": "active",
   "expires_at": "2026-12-01T00:00:00Z",
-  "extensions": ["approval-ceremony"],
   "approver": {
     "iss": "https://as.example.com",
     "sub": "admin_Q4vR8tLm"

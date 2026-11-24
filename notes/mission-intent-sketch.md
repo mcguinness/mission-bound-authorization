@@ -334,8 +334,7 @@ Mission is created:
   verified evidence facts that the evidence type's specification
   defines.
 
-These facts are members of the Mission Record, and the Mission's
-`extensions` lists `intent` ({{MISSION-BASE}}). OAuth 2.0 Mission
+These facts are members of the Mission Record ({{MISSION-BASE}}). OAuth 2.0 Mission
 Commitments {{MISSION-COMMITMENTS}} can commit the authority
 separately from the task.
 
@@ -443,11 +442,9 @@ This document requests registration of:
   registration with the same meaning, and the documents are expected
   to converge on one registration;
 - `mission_intent_hash` in the "OAuth Parameters" registry, usage
-  location token response, Reference {{confirming}};
+  location token response, Reference {{confirming}}; and
 - `mission_intent_supported` in the "OAuth Authorization Server
-  Metadata" registry, Reference {{metadata}}; and
-- `intent` in the "OAuth Mission Extensions" registry, Reference
-  {{record}}.
+  Metadata" registry, Reference {{metadata}}.
 
 This document also requests registration of
 `invalid_mission_intent_evidence` in the "OAuth Extensions Error"
@@ -541,7 +538,6 @@ for the payment service, a refresh token, and the confirmation:
   "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
   "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lY",
   "mission_expires_at": "2026-12-01T00:00:00Z",
-  "mission_extensions": ["intent"],
   "authorization_details": [
     {
       "type": "payment_initiation",

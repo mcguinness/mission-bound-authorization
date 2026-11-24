@@ -356,11 +356,6 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
   A specification that registers a termination reason can define
   further members of `termination` for it.
 
-`extensions`:
-: OPTIONAL. An array of strings: the extensions that apply to this
-  Mission, each a value of the OAuth Mission Extensions registry
-  ({{iana-extensions}}). Absent means none.
-
 `state` changes only as {{lifecycle}} allows. The authorization
 server writes `termination` once, together with the transition to
 `terminated`, and MUST NOT change it: a later event does not replace
@@ -401,12 +396,8 @@ MUST carry a refresh token, so that the client can always end its Mission
   `expires_in` parameter describes the access token's lifetime, not
   the Mission's.
 
-`mission_extensions`:
-: The Mission's `extensions` ({{record}}), when it has any.
-
 Any other token response under a Mission SHOULD carry `mission_id`
-and `mission_expires_at`, and `mission_extensions` when the Mission has
-any.
+and `mission_expires_at`.
 
 A public client's refresh token MUST be sender-constrained or rotated
 on each use ({{Section 2.2.2 of RFC9700}}), since it carries the
@@ -768,8 +759,8 @@ the caller is not authorized for both return HTTP 404, so the endpoint
 does not reveal which identifiers exist.
 
 `GET` returns HTTP 200 and a JSON object with the Mission's `id`,
-`issuer`, `state`, `expires_at`, its `extensions` when it has any,
-and, for a terminated Mission, `termination`. It
+`issuer`, `state`, `expires_at`, and, for a terminated Mission,
+`termination`. It
 also returns `authorization_details` to a caller the authorization
 server authorizes to read the Approved Authority.
 
@@ -988,17 +979,11 @@ A specification that extends Missions can:
 
 An authorization server's metadata shows which extensions it
 implements, through the members each extension's specification
-defines; a Mission's `extensions` shows which of them apply to that
-Mission. A specification whose extension applies to some Missions and
-not others, such as one whose request parameter a client can omit,
-registers an identifier ({{iana-extensions}}), and its extension
-applies to a Mission only when the authorization server lists that
-identifier in the Mission's `extensions` when it creates the Mission. A
-client that relies on such an extension for a Mission confirms that
-`mission_extensions` lists it, and otherwise does not rely on it for
-that Mission, since an authorization server that does not implement the
-extension can ignore what the client sent for it and still create the
-Mission.
+defines. A client that relies on an extension for a Mission confirms
+it as that extension's specification defines, and otherwise does not
+rely on it for that Mission: an authorization server that does not
+implement the extension can ignore what the client sent for it and
+still create the Mission.
 
 A specification registers the names of the members it adds in the
 OAuth Mission Members registry ({{iana-members}}), so independent
@@ -1094,7 +1079,6 @@ Parameters" registry:
 | `mission_expires_at` | token response | {{token-response}} |
 | `mission_error` | token response | {{gating}} |
 | `mission_refusal` | token response | {{gating}} |
-| `mission_extensions` | token response | {{token-response}} |
 {: title="OAuth Parameters"}
 
 ## JSON Web Token Claims {#iana-jwt}
@@ -1146,17 +1130,10 @@ introspection member, and of the Mission Record endpoint's responses. Each regis
 where it appears, and the specification that defines it; a name means
 one thing wherever it appears. The initial values, all defined in
 {{record}}, are `id` and `issuer` (record, claim, introspection,
-endpoint); `expires_at`, `authorization_details`, `state`,
-`termination`, and `extensions` (record, endpoint); `client_id`,
+endpoint); `expires_at`, `authorization_details`, `state`, and
+`termination` (record, endpoint); `client_id`,
 `sub`, and `approved_at` (record); and `reason` and `terminated_at`
 (`termination`).
-
-## OAuth Mission Extensions {#iana-extensions}
-
-This document requests a new "OAuth Mission Extensions" registry,
-under Specification Required, with no initial values. Each
-registration gives a short identifier and the specification that
-defines the extension.
 
 ## OAuth Mission Refusal Reasons {#iana-refusals}
 
