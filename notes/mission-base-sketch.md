@@ -613,7 +613,7 @@ relationship ({{rs-enforcement}}).
 The authorization server MUST NOT issue a token under a Mission, at
 any issuance path, unless the Mission is `active` at the instant of
 issuance. It refuses a first issuance or a refresh under a Mission
-that is not active with `invalid_grant` ({{Section 5.2 of RFC6749}}),
+that has ended with `invalid_grant` ({{Section 5.2 of RFC6749}}),
 and a Token Exchange whose subject token's Mission is not active with
 `invalid_request` ({{Section 2.2.2 of RFC8693}}). When the Mission is
 `terminated`, it adds this member to either error response:
@@ -637,9 +637,10 @@ When the authorization server refuses an issuance under a Mission that
 has not ended because of the Mission rather than the request, either
 because the Mission is in a state another specification registers or
 because of a condition of the Mission as a whole that another
-specification defines, such as an exhausted budget, it refuses with the
-error code above for that path, and, except at the first issuance,
-MUST add this member in place of `mission_error`:
+specification defines, such as an exhausted budget, it refuses at
+refresh with the error code `mission_refused` and at Token Exchange
+with `invalid_request` ({{Section 2.2.2 of RFC8693}}), and, except at
+the first issuance, MUST add this member in place of `mission_error`:
 
 `mission_refusal`:
 : A string: why the issuance is refused while the Mission continues:
@@ -652,11 +653,11 @@ or authority outside a bound, carries the error code its rule names and
 neither member. A specification that defines a condition states
 whether a refusal under it is because of the Mission or the request.
 
-A refusal with `mission_refusal` leaves the client's grant usable: at
-refresh, it does not rotate or revoke the presented refresh token.
-A client that does not implement this document reads the
-`invalid_grant` as {{RFC6749}} defines; `mission_refusal` tells one
-that does that the grant remains usable. Access tokens already issued can remain usable, since a condition such
+`mission_refused` is a token error response code
+({{Section 5.2 of RFC6749}}): the issuance is refused while the
+Mission continues, and the presented refresh token remains usable. A refusal with it does not
+rotate or revoke that token, so a client that does not understand
+`mission_refusal` still has no instruction to discard its grant. Access tokens already issued can remain usable, since a condition such
 as an exhausted limit stops further issuance without withdrawing what
 was issued. A client that receives `mission_refusal` keeps its grant,
 does not treat the Mission as ended, and retries only as the value's
@@ -691,8 +692,9 @@ checks the token's own expiry and revocation. So a refresh token of an
 ended Mission that the authorization server still recognizes,
 including one it revoked when the Mission ended, is refused with
 `mission_error`. At Token Exchange it follows the order of
-{{exchange}}. It returns `mission_error` or `mission_refusal` only to a
-request that passes the checks preceding this gate.
+{{exchange}}. It returns `mission_error`, `mission_refused`, or
+`mission_refusal` only to a request that passes the checks preceding
+this gate.
 
 # Lifecycle {#lifecycle}
 
@@ -1092,6 +1094,12 @@ Description "Mission reference", Change Controller IETF, Reference
 This document requests registration of `mission` in the "OAuth Token
 Introspection Response" registry, with Description "Mission reference"
 and Reference {{mission-claim}}.
+
+## OAuth Extensions Error {#iana-errors}
+
+This document requests registration of `mission_refused` in the
+"OAuth Extensions Error" registry ({{Section 11.4 of RFC6749}}), with
+usage location token error response and Reference {{gating}}.
 
 ## Authorization Server Metadata {#iana-as-metadata}
 
