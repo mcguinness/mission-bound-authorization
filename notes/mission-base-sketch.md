@@ -228,11 +228,13 @@ This document defines the following authorization request parameter:
   in seconds from approval. Its presence requests a Mission.
 
 An authorization request that carries `mission_expires_in` MUST also
-carry `authorization_details` {{RFC9396}}. The authorization server
-MUST refuse an authorization request that carries `mission_expires_in`
-without
-`authorization_details`, or with a value that is not a positive
-integer, with the `invalid_request` error code. A client SHOULD send
+carry `authorization_details` {{RFC9396}}, unless the authorization
+server implements a derivation specification that supplies candidate
+entries for it ({{derivation}}). The authorization server MUST refuse,
+with the `invalid_request` error code, an authorization request that
+carries `mission_expires_in` with a value that is not a positive
+integer, or without `authorization_details` when no derivation
+specification it implements supplies candidates for the request. A client SHOULD send
 the request as a Pushed Authorization Request {{RFC9126}}. The request
 can also carry `scope`, as {{Section 3.1 of RFC9396}} allows, but a
 Mission-bound access token conveys no authority through it
@@ -251,10 +253,12 @@ requested the Mission for, and SHOULD revoke them {{RFC7009}}.
 # Approval and Creation {#approval}
 
 The authorization server establishes the Approved Authority from the
-requested `authorization_details`. It MAY narrow the request under its
-policy, and the resource owner MAY narrow it further. Each entry of the
-Approved Authority MUST be of the same type as a requested entry and
-MUST grant no more than that entry; an entry is never widened and
+requested `authorization_details`, or, where a derivation
+specification supplies them, from candidate entries ({{derivation}}).
+It MAY narrow them under its policy, and the resource owner MAY narrow
+them further. Each entry of the Approved Authority MUST be of the same
+type as a requested or candidate entry and MUST grant no more than
+that entry; an entry is never widened and
 entries are never combined. Before approval, the authorization server
 presents the authority it will approve, as it will be granted, in
 terms the resource owner can understand.
@@ -297,6 +301,24 @@ A standing approval that authorizes later activations is not itself a
 Mission: each activation is its own approval decision under this
 document and creates one Mission, which the specification defining the
 standing approval relates to it.
+
+## Derived Authority {#derivation}
+
+A specification can define derivation: before approval, it supplies
+candidate entries for a Mission request from a mapping the
+authorization server is configured to trust, such as a configured
+mapping when the client sends no `authorization_details`, or one keyed
+on the inputs of a verified task description. No input grants
+authority by itself: a task description, a signature over one, or a
+stated purpose yields entries only through such a mapping. The
+authorization server applies its policy to the candidates, presents
+the resulting entries as {{approval}} requires, and fixes the Approved
+Authority at the approval decision. Where the request also carries
+`authorization_details`, they remain the ceiling: each candidate is of
+the same type as a requested entry and grants no more than it. An
+authorization server that implements no derivation specification
+refuses a Mission request without `authorization_details`
+({{requesting}}).
 
 # The Mission Record {#record}
 

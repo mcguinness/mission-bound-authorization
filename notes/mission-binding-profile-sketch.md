@@ -308,7 +308,8 @@ needs one cites that document for it until a layer defines it:
   template or policy, and `approval_basis`.
 - **Derivation**: configured-mapping derivation, the authority
   proposal and `proposal_hash`, and declared transformation
-  capabilities.
+  capabilities. The base's "Derived Authority" is the hook such a
+  layer uses; the layer is not yet written.
 - **Delegation**: designation, delegated exchange, instance context,
   and delegation constraints.
 - **Cross-domain**: claim reservation, issuer-only members, and
