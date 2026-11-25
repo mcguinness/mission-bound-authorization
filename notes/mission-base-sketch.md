@@ -1344,7 +1344,9 @@ HTTP/1.1 204 No Content
 - Initial version: the Mission without a description of the work,
   built from Rich Authorization Requests and the refresh token
   lineage, with the `mission` claim, the subset rule, Token Exchange,
-  issuance gating and refusal signals, a lifecycle, a Mission Record
-  endpoint, one disclosure rule, and extension points bounded by limits
-  no extension crosses, with registries for states, termination and
+  issuance gating and refusal signals, the refusal of tokens for
+  Mission-governed resources outside a Mission, a lifecycle, a Mission
+  Record endpoint, one disclosure rule, challenge attributes, a hook
+  for derived authority, and extension points bounded by limits no
+  extension crosses, with registries for states, termination and
   refusal reasons, and members.
