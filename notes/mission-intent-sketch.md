@@ -122,8 +122,9 @@ This document adds that description, a Mission Intent, to the base:
   ({{confirming}}).
 
 The Intent describes and narrows; it never supplies authority. The
-approved authority still comes only from the `authorization_details`
-the client requested. This document adds requirements to its base and
+approved authority still comes from the `authorization_details` the
+client requested, which every Intent-bound request carries
+({{request}}). This document adds requirements to its base and
 relaxes none: token issuance, the subset rule, issuance gating, and
 resource server enforcement are the base's.
 What this document records reaches a resource server only through

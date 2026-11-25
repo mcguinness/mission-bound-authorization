@@ -688,11 +688,15 @@ requires. At refresh, it authenticates the client, confirms that the
 refresh token belongs to a lineage issued to that client, including
 any sender constraint the token carries, and, for a rotated lineage,
 that the token is the lineage's current one, treating the presentation
-of a replaced one as reuse; it then applies this gate, and only then
-checks the token's own expiry and revocation. So a refresh token of an
+of a replaced one as reuse. It then refuses with `mission_error` a
+refresh under a Mission that has ended; then checks the token's own
+expiry and revocation, refusing a token that fails them with
+`invalid_grant`; and only then refuses with `mission_refused` a
+refresh under a Mission that has not ended. So a refresh token of an
 ended Mission that the authorization server still recognizes,
 including one it revoked when the Mission ended, is refused with
-`mission_error`. At Token Exchange it follows the order of
+`mission_error`, and `mission_refused` is returned only for a refresh
+token that remains usable. At Token Exchange it follows the order of
 {{exchange}}. It returns `mission_error`, `mission_refused`, or
 `mission_refusal` only to a request that passes the checks preceding
 this gate.
@@ -727,8 +731,9 @@ between the two:
   tokens under it and a resource server relies on it.
 - `terminated`: a terminal state. Its `termination.reason` says why
   the Mission ended: `revoked` when an authorized party ended it, its
-  grant lineage was revoked, or its first issuance was refused
-  ({{gating}}), or `expired` when its `expires_at` passed.
+  grant lineage was revoked, or this gate refused its first issuance
+  through a validated authorization code ({{gating}}), or `expired`
+  when its `expires_at` passed.
 
 | From | Event | To | Reason |
 |---|---|---|---|
@@ -741,9 +746,9 @@ Revocation and expiry end a Mission from any state other than
 `terminated`, including a state another specification registers.
 
 A Mission is revoked when an authorized party ends it at the
-Mission Record endpoint ({{management}}), when the authorization
-server refuses its first issuance ({{gating}}), or when its grant
-lineage is revoked: the client revoking a refresh token of the lineage
+Mission Record endpoint ({{management}}), when issuance gating
+refuses its first issuance through a validated authorization code
+({{gating}}), or when its grant lineage is revoked: the client revoking a refresh token of the lineage
 {{RFC7009}}, or the authorization server revoking the lineage, for
 example on detecting refresh token replay. So a client ends its own
 Mission by revoking its refresh token, and the authorization server
@@ -768,7 +773,9 @@ extend the lifecycle without changing this document:
   such as a pause, registers a state ({{iana-states}}). A Mission in
   such a state is neither active nor terminated, and is never reported
   with a termination reason or `mission_error`; a refusal in it carries
-  `mission_refusal` with the state's name ({{gating}}).
+  `mission_refusal` with the state's name, except a refused first
+  issuance through an authorization code, which ends the Mission
+  ({{gating}}).
 
 A party that learns a Mission's state MUST treat every state other
 than `active`, including one it does not recognize, as permitting no issuance or reliance, and MUST
@@ -892,11 +899,11 @@ For an operation it protects under this document, a resource server:
 A resource server MUST refuse an access token without the `mission`
 member for a Mission-governed operation; otherwise a client holding an
 ordinary token for the same resource would be unaffected when the
-Mission ends. It refuses with `invalid_token` and the
-`resource_metadata` parameter ({{Section 5.1 of RFC9728}}), adds
-`mission_denial` with the value `mission_required` when it has
+Mission ends. It refuses with HTTP 401, `invalid_token`, and the
+`resource_metadata` parameter ({{Section 5.1 of RFC9728}}), and MUST
+add `mission_denial` with the value `mission_required` when it has
 established that the token is otherwise valid for it, addressed to it,
-and presented by its holder ({{challenge}}), and declares
+and presented by its holder ({{challenge}}). It declares
 Mission-governed operations in that protected resource metadata:
 
 `mission_required`:
@@ -940,10 +947,12 @@ whether the credential or the Mission ended
 
 ## Challenge Attributes {#challenge}
 
-A resource server that refuses a request under this document can add
+A resource server that refuses a request under this document adds
 these attributes to the `WWW-Authenticate` challenge of the `Bearer`
 ({{Section 3 of RFC6750}}) or `DPoP` ({{Section 7.1 of RFC9449}})
-scheme. It adds one only to a response to a token it has validated,
+scheme: `mission_denial` as {{rs-enforcement}} requires, and
+`mission_error` or `mission_refusal` where it has learned the value.
+It adds one only to a response to a token it has validated,
 including its sender constraint, and that is addressed to it, so a
 party that cannot present the token learns nothing from it:
 
@@ -1002,12 +1011,12 @@ details ({{subset}}), and a bound on `scope` by the Approved Authority
 so that a Mission-bound token can carry it. This document names where
 several attach: approval by another party or with no person at the
 decision ({{approval}}), other creation paths ({{creation-paths}}),
-delegation ({{delegation-exchange}}), and other issuers
-({{other-issuers}}).
+derived authority ({{derivation}}), delegation
+({{delegation-exchange}}), and other issuers ({{other-issuers}}).
 
 A specification replaces a rule of this document only where this
 document says it can ({{approval}}, {{creation-paths}},
-{{delegation-exchange}}, {{other-issuers}}). Whatever it adds or
+{{derivation}}, {{delegation-exchange}}, {{other-issuers}}). Whatever it adds or
 replaces, a specification that extends Missions MUST NOT let any
 issuer, including another issuer under {{other-issuers}}:
 
@@ -1096,9 +1105,11 @@ authorized for ({{management}}).
 
 **Downgrade.** Without a Mission, a client's tokens are unaffected
 when the work is withdrawn. A client that requested a Mission and got
-none does not use the tokens for the work ({{requesting}}), and a
-resource server refuses tokens without a Mission for Mission-governed
-operations ({{rs-enforcement}}).
+none does not use the tokens for the work ({{requesting}}), the
+authorization server issues no token for a Mission-governed resource
+outside a Mission ({{governed}}), and a resource server refuses tokens
+without a Mission for Mission-governed operations
+({{rs-enforcement}}).
 
 **Scope.** A Mission-bound access token carries no `scope`, and a
 resource server grants nothing for a Mission-governed operation on the

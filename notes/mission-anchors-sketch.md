@@ -176,6 +176,7 @@ that defines them.
 | `mission-policy-view` | draft-mcguinness-mission-runtime | a materialized policy view manifest |
 | `mission-proposed-authority` | draft-mcguinness-oauth-mission | the submitted `authorization_details`, as recorded |
 | `mission-shaping-evidence` | draft-mcguinness-mission-shaping | a shaping evidence object |
+| `mission-substrate-context` | draft-mcguinness-mission-substrate | the context object of that document's illustrative worked example |
 | `mission-submission-evidence-v1` | draft-mcguinness-mission-approval-governance | the recorded `submission_evidence` array |
 | `mission-submission-provenance` | draft-mcguinness-oauth-mission-consent-evidence | the recorded `submission_evidence` array |
 | `mission-template` | draft-mcguinness-oauth-mission-template | a Mission Template |
