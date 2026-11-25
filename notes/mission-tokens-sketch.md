@@ -27,6 +27,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC3339:
   RFC6749:
   RFC6750:
   RFC7009:
@@ -70,6 +71,14 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC9700:
+  MISSION-BASE:
+    title: "OAuth 2.0 Mission"
+    target: https://github.com/mcguinness/mission-bound-authorization/blob/main/notes/mission-base-sketch.md
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -82,7 +91,8 @@ through OAuth 2.0 Token Exchange, and inspects and ends the Mission
 through token introspection and token revocation. Every token issued
 from a mission token names the Mission and conveys no more than was
 approved. This document defines no new endpoint, grant type, or
-request parameter; it adds one token claim, one error response member,
+request parameter; it adds one token claim, two token response members, one error
+response member,
 and the rules that make a mission token govern the tokens issued from
 it.
 
@@ -112,8 +122,9 @@ holds the approved authority for the Mission's whole lifetime. Then:
 - revoking the mission token {{RFC7009}} ends the Mission.
 
 A client and a resource server use only endpoints they already know.
-This document adds the `mission` token claim, the `mission_error`
-error response member, two metadata flags, and these rules: how a
+This document adds the `mission` token claim, the `mission_id` and
+`mission_expires_at` token response members, the `mission_error` error
+response member, two metadata flags, and these rules: how a
 mission token is requested and bound, what an exchange may issue from
 it, and how its state governs the tokens issued from it. It defines no
 description of the work; a separate specification can add one
@@ -134,8 +145,8 @@ with it have the same meaning.
 
 This document uses the terms authorization server, client, resource
 server, resource owner, and access token from {{RFC6749}};
-authorization details from {{RFC9396}}; and subject token and actor
-token from {{RFC8693}}.
+authorization details from {{RFC9396}}; and subject token from
+{{RFC8693}}.
 
 Mission:
 : An authorization server's durable record of one approval of
@@ -192,14 +203,19 @@ A client requests a Mission with an authorization request that carries
 {{RFC8707}}, the authorization server's issuer identifier
 {{RFC8414}}. The token request that redeems the code names the same
 `resource`. The request can also carry `scope`, as
-{{Section 3.1 of RFC9396}} allows; this document does not govern it. A
+{{Section 3.1 of RFC9396}} allows, but a Mission-bound token conveys
+no authority through it ({{subset}}). A
 client SHOULD send the request as a Pushed Authorization Request
 {{RFC9126}}.
 
 The authorization server MUST refuse, with `invalid_target`
-({{Section 2 of RFC8707}}), a request that names its issuer identifier
-together with another `resource`, since a mission token has exactly
-one audience.
+({{Section 2 of RFC8707}}), a request that carries
+`authorization_details` and names its issuer identifier together with
+another `resource`, since a mission token has exactly
+one audience. An authorization server that implements this document MUST
+NOT also implement OAuth 2.0 Mission {{MISSION-BASE}} at the
+same issuer, so a client and a resource server can tell from the
+issuer's metadata which rules govern its Missions ({{metadata}}).
 
 A client first establishes that the authorization server advertises
 `mission_tokens_supported` ({{metadata}}). An authorization server
@@ -207,7 +223,9 @@ that does not implement this document can refuse the request with
 `invalid_target`, or issue an ordinary access token for itself. A
 client that has not established support MUST NOT treat the issued
 token as a mission token or use tokens obtained from it for the work
-it requested the Mission for.
+it requested the Mission for. A client that receives a token response
+without `mission_id` ({{token-response}}) likewise MUST NOT use the
+issued token for the work, and SHOULD revoke it {{RFC7009}}.
 
 ## Approval {#approval}
 
@@ -225,7 +243,9 @@ authenticates them. An approval decision creates the Mission and the
 authorization code together: the authorization server issues the code
 only when the Mission is recorded, and a declined or abandoned request
 creates neither. The Mission can end before the client redeems the
-code; the redemption is then refused ({{gating}}).
+code; the redemption is then refused ({{gating}}). A retried or duplicate delivery of one approval decision receives
+the outcome of the first, the same authorization response or the same
+refusal, and never a second authorization code.
 
 ## Token Response {#token-response}
 
@@ -236,6 +256,7 @@ server:
 
 - issues the mission token only while the Mission is `active`
   ({{gating}});
+- carries `mission_id` and `mission_expires_at`, below;
 - MUST bind the mission token to the key of the DPoP proof in the
   token request ({{Section 5 of RFC9449}}), and MUST refuse a token
   request for a mission token that carries no DPoP proof, with
@@ -244,12 +265,23 @@ server:
   token lasts as long as the Mission; and
 - sets `expires_in` to the time remaining until the Mission's expiry.
 
+`mission_id`:
+: A string: the Mission Identifier. It is a reference only; presenting
+  it authorizes nothing.
+
+`mission_expires_at`:
+: The exact RFC 3339 {{RFC3339}} string of the Mission's expiry.
+
+The client learns its Mission from these members, not from the mission
+token, which it treats as opaque ({{Section 6 of RFC9068}}).
+
 # The Mission and the Mission Token {#mission-token}
 
 A Mission is a logical record at the authorization server with these
 facts: its identifier; the authorization server's issuer identifier;
-the client it was approved for; the resource owner who approved; the
-instant of approval; its expiry, set by the authorization server; the
+the client it was approved for; the resource owner it is for, who
+approves it unless a specification defines approval by another party;
+the instant of approval; its expiry, set by the authorization server; the
 Approved Authority; and its state ({{lifecycle}}). Everything except
 the state is fixed when the Mission is created. More authority than
 the Approved Authority requires a new Mission through a new approval.
@@ -261,7 +293,10 @@ its authorization server.
 The mission token is an access token, either a JWT {{RFC9068}} or an
 opaque token the authorization server introspects. Its audience is the
 authorization server's issuer identifier, so a resource server
-rejects it. It carries the `mission` claim, the Approved Authority as
+rejects it. The authorization server accepts it only at its token
+endpoint for Token Exchange, at introspection, and at revocation: a
+resource it hosts, such as UserInfo or an account API, MUST refuse a
+mission token. It carries the `mission` claim, the Approved Authority as
 `authorization_details`, an expiry equal to the Mission's, and the
 DPoP key binding. The authorization server issues exactly one mission
 token for a Mission and never reissues it.
@@ -274,6 +309,10 @@ The `mission` claim is a JSON object:
 `issuer`:
 : REQUIRED. A string: the authorization server's issuer identifier.
 
+The `mission` claim and the introspection `mission` member are open
+objects: a consumer ignores a member it does not understand, and no
+member grants or widens authority.
+
 # Exchanging for Resource Tokens {#exchange}
 
 ## Request {#exchange-request}
@@ -283,9 +322,10 @@ Exchange request ({{Section 2.1 of RFC8693}}) whose `subject_token` is
 the mission token, or an access token issued from it, with
 `subject_token_type` `urn:ietf:params:oauth:token-type:access_token`.
 It names the target with `resource` or `audience`, and can narrow the
-authority with `authorization_details`. An exchange can also carry an
-`actor_token`; the issued token then carries the `act` claim
-({{Section 4.1 of RFC8693}}).
+authority with `authorization_details`. An exchange carries no
+`actor_token`, and the authorization server refuses one with
+`invalid_request`; delegation to another party is left to a
+specification ({{extension-points}}).
 
 **Proof of possession.** RFC 9449 binds an issued token to the key of
 the token request's DPoP proof, but does not require that proof to
@@ -294,7 +334,47 @@ whose subject token is Mission-bound, this document does: the
 authorization server MUST verify that the request's DPoP proof is
 signed with the key the subject token is bound to, and MUST refuse
 the request otherwise, with `invalid_request`
-({{Section 2.2.2 of RFC8693}}).
+({{Section 2.2.2 of RFC8693}}). The authorization server SHOULD require
+a DPoP server nonce ({{Section 8 of RFC9449}}) at Token Exchange, so
+that proofs for a key that lasts the Mission's lifetime cannot be
+made ahead of use.
+
+**The Mission's client.** Only the Mission's client exchanges. The
+authorization server compares the requesting client with the client
+the Mission records. A confidential client is established by its
+authentication. A public client, which has no credentials, is
+established by the `client_id` it presents together with the proof of
+the subject token's key: that key was bound to the mission token when
+the client redeemed the code, which PKCE ties to the client that began
+the request, so only the Mission's client holds it.
+
+The authorization server first applies its token endpoint's own
+checks, with their own error codes: client authentication
+(`invalid_client`, {{Section 5.2 of RFC6749}}) and, where DPoP is used,
+the proof's validity, including any nonce it requires
+(`invalid_dpop_proof`, or `use_dpop_nonce` with a `DPoP-Nonce` header,
+{{Section 8 of RFC9449}}). It then MUST check the exchange in this
+order, and MUST refuse it at the first failure with `invalid_request`
+({{Section 2.2.2 of RFC8693}}) unless a step names another code:
+
+1. that the client is the Mission's client, as above;
+2. that the subject token is a Mission-bound access token the
+   authorization server issued, by its signature or its own record;
+3. that the client holds the subject token, as above;
+4. issuance gating ({{gating}}), which refuses with `mission_error`
+   when the Mission is not `active`, including when it has expired;
+5. that the subject token itself is still valid: not revoked on its
+   own, not expired, and meeting any other condition the authorization
+   server applies to it; and
+6. the subset rule ({{subset}}), with its own error codes.
+
+Only an exchange that passes the token endpoint's checks and steps 1
+to 3 can receive `mission_error`, so a party that cannot show it holds
+the subject token learns nothing about the Mission. Step 4 precedes
+step 5, so a Mission that has ended takes precedence over the token's
+own expiry or revocation, including when the token expires with its
+Mission. A token revoked on its own under an active Mission is refused
+at step 5, with `invalid_request` and no `mission_error`.
 
 ## Issued Token {#issued-token}
 
@@ -338,13 +418,14 @@ exchange MUST meet three conditions:
 
 Where the exchange carries no `authorization_details`, the
 authorization server issues the entries of the subject token's
-authority that apply to the audience, unchanged. It MUST refuse, with
-`invalid_authorization_details` ({{Section 6 of RFC9396}}), an
-exchange that requests an entry outside the subject token's authority
-or one that does not apply to the audience, or that needs a
-comparison the entry's type does not define or cannot decide. It MUST
-refuse, with `invalid_target` ({{Section 2.2.2 of RFC8693}}), an
-exchange for an audience that no entry applies to.
+authority that apply to the audience, unchanged. It MUST refuse an
+exchange that carries `authorization_details` with
+`invalid_authorization_details` ({{Section 6 of RFC9396}}) when a
+requested entry fails a condition, or needs a comparison that the
+entry's type does not define or that cannot decide it; and MUST refuse
+an exchange that carries none with `invalid_target`
+({{Section 2.2.2 of RFC8693}}) when no entry of the subject token's
+authority applies to the audience.
 
 The rule applies at every exchange. When the subject token was itself
 issued by exchange, its authority, already narrowed and filtered to its
@@ -353,6 +434,13 @@ Access Profile {{I-D.draft-mcguinness-oauth-mission-resource-access}}
 is an example of a type specification that defines a comparison. This
 document defines no way to discover which narrowings an authorization
 server accepts; a client that needs one learns from the refusal.
+
+A Mission-bound access token carries no `scope`, in the token or in an
+introspection response, unless a specification that bounds `scope` by
+the Approved Authority applies ({{extension-points}}). A `scope` value
+requested with a Mission, such as `openid`, keeps its own meaning
+outside the Mission and conveys no authority through a Mission-bound
+token.
 
 ## Issuance Gating {#gating}
 
@@ -370,6 +458,14 @@ to either error response:
 A client that receives `mission_error`, with any value, stops the
 work and does not seek another credential for it.
 
+At code redemption, the authorization server validates the code as
+{{RFC6749}} requires, and the DPoP proof, before it applies this gate;
+at Token Exchange it follows the order of {{exchange-request}}. It
+returns `mission_error` only to a request that passes the checks
+preceding this gate: the code's validation and the DPoP proof at code
+redemption, and the token endpoint's checks and steps 1 to 3 at Token
+Exchange.
+
 # Lifecycle, Introspection, and Revocation {#lifecycle}
 
 A Mission is `active` from approval until it ends, then `revoked` or
@@ -380,12 +476,22 @@ not recognize as an ended Mission.
 **Expiry.** When its expiry passes, the Mission is `expired`, and so
 is its mission token.
 
-**Revocation by the client.** The client revokes the mission token
-with RFC 7009, which lets a client revoke only tokens issued to it
-({{Section 2.1 of RFC7009}}). RFC 7009 leaves revoking related tokens
-to the authorization server's policy; this document requires that
-revoking a mission token end its Mission (`revoked`). Revoking a token
-issued from the mission token revokes only that token.
+**Revocation.** Any revocation of the mission token ends its Mission
+(`revoked`): by the client, with RFC 7009, which lets a client revoke
+only tokens issued to it ({{Section 2.1 of RFC7009}}) and leaves
+revoking related tokens to the authorization server's policy; or by
+the authorization server, for example on detecting reuse of the
+authorization code ({{Section 4.1.2 of RFC6749}}). Revoking a token
+issued from the mission token revokes only that token. RFC 7009
+authenticates only a confidential client ({{Section 2.1 of RFC7009}}),
+so a public client that revokes its mission token MUST present with
+the revocation request a DPoP proof ({{Section 4 of RFC9449}}) for the
+revocation endpoint, signed with the mission token's key. The
+authorization server MUST NOT revoke a mission token for a public
+client without that proof, and refuses the request with
+`invalid_request`, so a copied mission token cannot end the Mission. A
+resource owner whose client has lost the key ends the Mission without a
+token, as below.
 
 **Ending without a token.** The authorization server MUST offer the
 resource owner a means to end the resource owner's Missions without
@@ -426,11 +532,12 @@ For an operation it protects under this document, a resource server:
    equal the token's issuer, which it trusts to issue Mission-bound
    tokens;
 3. treats the carried `authorization_details` as the authoritative
-   statement of the token's authority: where several entries apply
+   statement of the token's authority, using only the entries that apply
+   to it ({{subset}}): where several entries apply
    they are alternative grants, an entry it cannot fully enforce
    grants nothing, and it never combines parts of several entries;
-4. never grants, on the basis of a `scope` value the token also
-   carries, access broader than the corresponding entry permits; and
+4. grants nothing, for a Mission-governed operation, on the basis of
+   a `scope` value the token carries; and
 5. relies on the Mission's state in one of two ways ({{lifecycle}}):
    it introspects the token at use, and an active response shows that
    the Mission is active at that instant; or it accepts a JWT until its
@@ -438,18 +545,26 @@ For an operation it protects under this document, a resource server:
    ends.
 
 A resource server MUST refuse an access token without the `mission`
-member for a Mission-governed operation, and declares such operations
-in its protected resource metadata {{RFC9728}}:
+member for a Mission-governed operation, with `invalid_token` and the
+`resource_metadata` parameter ({{Section 5.1 of RFC9728}}), and
+declares such operations in that protected resource metadata:
 
 `mission_tokens_required`:
 : A boolean. `true` declares that the resource's protected operations
   are Mission-governed. Absent means `false`.
 
+A client that receives that refusal for a token without `mission`
+obtains a Mission-bound token, rather than another of the same kind.
+
 Denials distinguish three causes: the Mission has ended
 (`invalid_token`, with a `mission_error` parameter carrying the state
-where the resource server knows it); the operation is outside the
-carried authority (`insufficient_scope` {{RFC6750}}); or only the
-credential failed (`invalid_token`). Where more than one applies, an
+where the resource server knows it, which is advisory: the client
+confirms it at the authorization server, by introspecting its mission
+token or attempting an exchange, before it stops the work); the
+operation is outside the carried authority (`insufficient_scope`
+{{RFC6750}}: the client exchanges for a token that covers it where the
+Approved Authority does, and otherwise needs a new Mission); or only
+the credential failed (`invalid_token`). Where more than one applies, an
 ended Mission takes precedence. An inactive introspection response
 does not tell a resource server whether the credential or the Mission
 ended ({{Section 2.2 of RFC7662}}); it then responds `invalid_token`
@@ -464,6 +579,9 @@ This document defines one authorization server metadata parameter
 : A boolean. `true` declares that the authorization server implements
   this document. Absent means `false`.
 
+An authorization server that advertises `mission_tokens_supported`
+MUST NOT advertise `mission_supported` ({{request}}).
+
 An authorization server that sets it lists
 `urn:ietf:params:oauth:grant-type:token-exchange` in
 `grant_types_supported`, and the authorization details types it
@@ -476,8 +594,15 @@ A specification that extends Missions can:
 
 - define approval by a party other than the resource owner, or record
   a description of the work, as further facts fixed with the Mission;
+- define an authorization request parameter that the authorization
+  server records with the Mission at approval, and members of the token
+  response and of the introspection `mission` member;
 - define a means for a party holding no token to end a Mission or read
   its state by its identifier;
+- define delegation to another party at exchange, such as through an
+  `actor_token`;
+- define how `scope` is bounded by the Approved Authority, so that a
+  Mission-bound token can carry it;
 - define further Mission states and `mission_error` values; and
 - define, for a type of authorization details, the comparison the
   subset rule uses ({{subset}}).
@@ -490,8 +615,8 @@ Mission.
 
 **A long-lived token.** A mission token holds the whole Approved
 Authority for the Mission's lifetime. Three rules contain it: its
-audience is the authorization server, so no resource server accepts
-it; it is DPoP-bound; and an exchange must prove possession of its
+audience is the authorization server, which accepts it only at token
+exchange, introspection, and revocation; it is DPoP-bound; and an exchange must prove possession of its
 key ({{exchange-request}}). Without the last rule, a copied mission
 token presented with any fresh DPoP key would yield resource tokens.
 The security best current practice {{RFC9700}} applies.
@@ -542,8 +667,11 @@ This document requests registration of:
   Description "Mission reference" and Reference {{mission-token}};
 - `mission` in the "OAuth Token Introspection Response" registry, with
   Description "Mission reference" and Reference {{lifecycle}};
+- `mission_id` and `mission_expires_at` in the "OAuth Parameters"
+  registry, usage location token response, Reference {{token-response}},
+  which OAuth 2.0 Mission requests with the same meaning;
 - `mission_error` in the "OAuth Parameters" registry, usage location
-  token error response, Reference {{gating}};
+  token response, Reference {{gating}};
 - `mission_tokens_supported` in the "OAuth Authorization Server
   Metadata" registry, Reference {{metadata}}; and
 - `mission_tokens_required` in the "OAuth Protected Resource Metadata"
@@ -603,6 +731,8 @@ refresh token:
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "DPoP",
   "expires_in": 86400,
+  "mission_id": "msn_K9iLTMIDFUiBucaPegc_B4lY",
+  "mission_expires_at": "2026-11-20T09:00:00Z",
   "authorization_details": [
     {
       "type": "payment_initiation",
