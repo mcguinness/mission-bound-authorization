@@ -783,6 +783,16 @@ server authorizes to read the Approved Authority.
 reason `revoked` and returns HTTP 204. A `DELETE` for a Mission that has already ended
 changes nothing and returns HTTP 204.
 
+This endpoint is the one operation that reads, and the one that
+revokes, a Mission by its identifier that this document requires.
+Another specification can offer a further route that reads or ends a
+Mission by its identifier, such as a route it keeps for compatibility;
+that route MUST apply caller authorization and disclosure equivalent
+to this endpoint's, and MUST commit to the same Mission state. Further
+operations, such as suspension, resumption, completion, or richer
+status reporting, belong to the specifications that define them
+({{extension-points}}).
+
 # Disclosure of Mission Facts {#disclosure}
 
 The `id` and `issuer` of a Mission are references that any party

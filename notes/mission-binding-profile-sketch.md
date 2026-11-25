@@ -228,6 +228,11 @@ Those confirmations establish the client's own task and Subject, not
 the authorization server's policy for other Missions, which the
 metadata member declares.
 
+A conforming authorization server offers one operation that reads,
+and one that revokes, a Mission by its identifier: the base's Mission
+Record endpoint. A specification that keeps another route for either
+applies the base's rules for such routes.
+
 A resource server declares Mission-governed operations with
 `mission_required` in its protected resource metadata {{RFC9728}}, as
 the base defines.
