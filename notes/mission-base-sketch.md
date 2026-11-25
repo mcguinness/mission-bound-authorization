@@ -681,7 +681,8 @@ failures keep their own errors and leave the Mission unchanged. At the
 first issuance through an authorization code, it authenticates the
 client, validates the code, including any code verifier, proof of
 possession, and DPoP nonce ({{Section 8 of RFC9449}}) it requires, and
-checks the audiences the request names ({{subset}}). At the first
+checks the audiences the request names ({{subset}}, {{governed}}). At
+the first
 issuance on another creation path, it validates the grant as that path
 requires. At refresh, it authenticates the client, confirms that the
 refresh token belongs to a lineage issued to that client, including
@@ -695,6 +696,26 @@ including one it revoked when the Mission ended, is refused with
 {{exchange}}. It returns `mission_error`, `mission_refused`, or
 `mission_refusal` only to a request that passes the checks preceding
 this gate.
+
+## Mission-Governed Resources {#governed}
+
+A resource is Mission-governed when the deployment classifies it so,
+or when protected resource metadata the authorization server has
+authenticated declares `mission_required` as `true`
+({{rs-enforcement}}); metadata that omits the member does not clear a
+deployment's classification. The authorization server MUST NOT issue a
+token for a Mission-governed resource outside a Mission, on any grant
+type. It checks every audience the token would carry, including one
+it assigns by default, and refuses the whole request with
+`invalid_target` ({{Section 2 of RFC8707}}) when any of them is
+Mission-governed and the issuance is not under a Mission, before it
+consumes an authorization code or rotates a refresh token. An
+issuance is under a Mission when it derives from the Mission's grant
+lineage, from an exchange of a Mission-bound token, or from a token an
+issuer relationship names ({{other-issuers}}). A token for the Mission
+Record endpoint ({{management}}) is not a token for a Mission-governed
+resource. Authentication, syntax, and grant-validation failures keep
+their own errors and precedence.
 
 # Lifecycle {#lifecycle}
 

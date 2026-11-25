@@ -176,6 +176,13 @@ Where a composed document leaves a choice, this profile fixes it:
   `invalid_request`. Missions are therefore created through the base's
   authorization request, since no composed document carries an Intent
   on another creation path.
+- **A Mission-governed client cannot drop the Mission.** An
+  authorization server that registers a client as Mission-governed
+  MUST refuse, with `invalid_request`, an authorization request from it
+  that carries `authorization_details` without `mission_intent` or
+  without `mission_expires_in`, so the client cannot drop the Intent
+  or the Mission from a request that still carries
+  `authorization_details`.
 - **Every Mission records the approval and its commitments.** The
   Mission Record carries the facts of Mission Intent (`intent`,
   `intent_hash`), of Mission Approval Ceremony (`approver`, `subject`,
@@ -323,9 +330,7 @@ needs one cites that document for it until a layer defines it:
 - **Further termination reasons**, such as supersession, which a layer
   registers in the base's termination reasons registry.
 - **Error and challenge mapping** as one table, and conformance roles.
-- **Guarantees no composed document carries**: the authorization
-  server's refusal to issue a token for a Mission-governed resource
-  outside a Mission, on any grant type; `policy_version`; termination
+- **Guarantees no composed document carries**: `policy_version`; termination
   when the Subject is deprovisioned; the check at release after an
   acknowledged revocation; the consent-reuse rule; the
   `mission_denial` values `insufficient_authority` and
