@@ -683,8 +683,10 @@ lineage is revoked: the client revoking a refresh token of the lineage
 {{RFC7009}}, or the authorization server revoking the lineage, for
 example on detecting refresh token replay. So a client ends its own
 Mission by revoking its refresh token, and the authorization server
-MUST offer revocation of a lineage's refresh tokens at a
-`revocation_endpoint` it advertises ({{RFC8414}}). Rotation, which replaces a
+MUST accept a lineage's refresh token for revocation at a {{RFC7009}}
+endpoint it advertises as `revocation_endpoint` ({{RFC8414}}). The
+Mission Record endpoint serves a separate case: an authorized party
+acting on a Mission by its identifier. Rotation, which replaces a
 refresh token with another of the same lineage, is not revocation.
 Revoking an access token alone does not end the Mission; where the
 authorization server also revokes the refresh token, as
