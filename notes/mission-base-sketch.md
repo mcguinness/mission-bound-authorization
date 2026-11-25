@@ -617,21 +617,31 @@ A refusal with `mission_refusal` leaves the client's grant usable: at
 refresh, it does not rotate or revoke the presented refresh token.
 A client that does not implement this document reads the
 `invalid_grant` as {{RFC6749}} defines; `mission_refusal` tells one
-that does that the grant remains usable. An authorization code is used
-once ({{Section 4.1.2 of RFC6749}}), so the first issuance never
-carries `mission_refusal`: where the authorization server would refuse
-it under a Mission that has not ended, it instead revokes the Mission's
-grant lineage, which ends the Mission with reason `revoked`
-({{lifecycle}}), and refuses with `mission_error`, since a Mission
-whose code is spent has no grant through which its client could use or
-end it. A client that receives
+that does that the grant remains usable. A client that receives
 `mission_refusal`, with any value, including one it does not
 recognize, keeps its grant, does not treat the Mission as ended, and
 retries only as the value's specification allows.
 
-At the first issuance, the authorization server validates the grant
-as {{RFC6749}} or the creation path requires before it applies this
-gate. At refresh, it authenticates the client, confirms that the
+The first issuance through an authorization code is the exception. An
+authorization code is used once ({{Section 4.1.2 of RFC6749}}), so
+when this gate would refuse a validated code, the authorization server
+consumes the code and, atomically with consuming it, records the
+Mission `terminated` with reason `revoked`, unless the Mission has
+already ended, in which case it keeps the reason already recorded; it
+then refuses with `invalid_grant` and a `mission_error` carrying that
+reason. Ending the Mission is this document's choice: a Mission whose
+code is spent has no grant through which its client could use or end
+it. A creation path whose grant can be presented again defines its own
+behavior for a refused first issuance ({{creation-paths}}).
+
+Before this gate, the authorization server applies the checks whose
+failures keep their own errors and leave the Mission unchanged. At the
+first issuance through an authorization code, it authenticates the
+client, validates the code, including any code verifier, proof of
+possession, and DPoP nonce ({{Section 8 of RFC9449}}) it requires, and
+checks the audiences the request names ({{subset}}). At the first
+issuance on another creation path, it validates the grant as that path
+requires. At refresh, it authenticates the client, confirms that the
 refresh token belongs to a lineage issued to that client, including
 any sender constraint the token carries, and, for a rotated lineage,
 that the token is the lineage's current one, treating the presentation
@@ -652,8 +662,9 @@ between the two:
 - `active`: the only state in which the authorization server issues
   tokens under it and a resource server relies on it.
 - `terminated`: a terminal state. Its `termination.reason` says why
-  the Mission ended: `revoked` when an authorized party ended it, or
-  `expired` when its `expires_at` passed.
+  the Mission ended: `revoked` when an authorized party ended it, its
+  grant lineage was revoked, or its first issuance was refused
+  ({{gating}}), or `expired` when its `expires_at` passed.
 
 | From | Event | To | Reason |
 |---|---|---|---|
@@ -666,8 +677,9 @@ Revocation and expiry end a Mission from any state other than
 `terminated`, including a state another specification registers.
 
 A Mission is revoked when an authorized party ends it at the
-Mission Record endpoint ({{management}}), or when its grant lineage is
-revoked: the client revoking a refresh token of the lineage
+Mission Record endpoint ({{management}}), when the authorization
+server refuses its first issuance ({{gating}}), or when its grant
+lineage is revoked: the client revoking a refresh token of the lineage
 {{RFC7009}}, or the authorization server revoking the lineage, for
 example on detecting refresh token replay. So a client ends its own
 Mission by revoking its refresh token, and the authorization server
