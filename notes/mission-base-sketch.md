@@ -872,27 +872,31 @@ A resource server MUST refuse an access token without the `mission`
 member for a Mission-governed operation; otherwise a client holding an
 ordinary token for the same resource would be unaffected when the
 Mission ends. It refuses with `invalid_token` and the
-`resource_metadata` parameter ({{Section 5.1 of RFC9728}}), and
-declares Mission-governed operations in that protected resource
-metadata:
+`resource_metadata` parameter ({{Section 5.1 of RFC9728}}), adds
+`mission_denial` with the value `mission_required` when it has
+established that the token is otherwise valid for it, addressed to it,
+and presented by its holder ({{challenge}}), and declares
+Mission-governed operations in that protected resource metadata:
 
 `mission_required`:
 : A boolean. `true` declares that the resource's protected operations
   are Mission-governed. Absent means `false`.
 
-A client that receives that refusal for a token without `mission`
-obtains a Mission-bound token, rather than another of the same kind.
+A client that receives `mission_denial` with `mission_required`
+obtains a Mission-bound token, rather than another of the same kind. A
+bare `invalid_token` is for a refusal where the resource server cannot
+establish that distinction.
 
 Denials distinguish four causes, because each calls for a different
 response from the client:
 
 - the Mission has ended: `invalid_token`, with a `mission_error`
-  parameter carrying the Mission's termination reason where the
+  attribute ({{challenge}}) carrying the Mission's termination reason where the
   resource server has learned it from the authorization server; the client confirms the Mission's state at the
   authorization server, for example by a refresh, and then stops the
   work, since a resource server's `mission_error` alone is advisory;
 - the Mission is in a state another specification registers:
-  `invalid_token`, with a `mission_refusal` parameter carrying that
+  `invalid_token`, with a `mission_refusal` attribute carrying that
   state's name where the resource server has learned it from the
   authorization server; the client keeps
   its grant and acts on the state only as the authorization server
@@ -912,6 +916,40 @@ inactive introspection response does not tell a resource server
 whether the credential or the Mission ended
 ({{Section 2.2 of RFC7662}}); it then responds `invalid_token` without
 `mission_error`.
+
+## Challenge Attributes {#challenge}
+
+A resource server that refuses a request under this document can add
+these attributes to the `WWW-Authenticate` challenge of the `Bearer`
+({{Section 3 of RFC6750}}) or `DPoP` ({{Section 7.1 of RFC9449}})
+scheme. It adds one only to a response to a token it has validated,
+including its sender constraint, and that is addressed to it, so a
+party that cannot present the token learns nothing from it:
+
+`mission_denial`:
+: Why a token the resource server could otherwise accept is refused.
+  This document defines one value, `mission_required`: the token
+  carries no `mission` member and the operation is Mission-governed. A
+  client that receives it obtains a Mission-bound token. A client
+  treats a value it does not recognize as giving no remedy beyond the
+  error code's.
+
+`mission_error`:
+: The termination reason of the token's Mission, with
+  `invalid_token`, where the resource server has learned it from the
+  authorization server. A client confirms the Mission's state at the
+  authorization server, for example by a refresh, before it stops the
+  work, since the attribute alone is advisory.
+
+`mission_refusal`:
+: The state of the token's Mission, or a refusal value, with
+  `invalid_token`, where the resource server has learned it from the
+  authorization server. A client keeps its grant and acts only on what
+  the authorization server reports ({{gating}}).
+
+These attributes extend the auth-param space of the `Bearer` and
+`DPoP` schemes, for which no IANA registry exists, so this document
+requests no registration for them.
 
 # Authorization Server Metadata {#metadata}
 

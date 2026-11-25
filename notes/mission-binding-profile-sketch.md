@@ -250,7 +250,7 @@ citations each received.
 
 | Contract part (citations) | Defined in |
 |---|---|
-| Resource Server Enforcement (16) | Base, "Resource Server Enforcement", in part: `mission_denial`, `insufficient_user_authentication`, and the rule against inferring the approved agent from `client_id` are not composed |
+| Resource Server Enforcement (16) | Base, "Resource Server Enforcement" and "Challenge Attributes", in part: `mission_denial` defines only `mission_required` here, and Mission-Bound Authorization's values, `insufficient_user_authentication`, and the rule against inferring the approved agent from `client_id` are not composed |
 | Integrity Anchors (15) | Anchors, "Anchors"; Commitments, "The Authority Commitment"; Intent, "The Intent Anchor" |
 | Mission Approval (13) | Base, "Approval and Creation"; Approval Ceremony. Standing-consent approval is not composed |
 | Mission Authority (13) | Base, "Approval and Creation"; Intent, "The Intent Ceiling" |
@@ -327,8 +327,9 @@ needs one cites that document for it until a layer defines it:
   server's refusal to issue a token for a Mission-governed resource
   outside a Mission, on any grant type; `policy_version`; termination
   when the Subject is deprovisioned; the check at release after an
-  acknowledged revocation; the consent-reuse rule; `mission_denial`
-  and `insufficient_user_authentication`; the claim's `expires_at`;
+  acknowledged revocation; the consent-reuse rule; the
+  `mission_denial` values `insufficient_authority` and
+  `constraint_unrecognized`, and `insufficient_user_authentication`; the claim's `expires_at`;
   `mission.state` in an inactive introspection response; the Mission
   Intent Members registry; the evidence element shape and the
   required-evidence hook; and back-channel Intent carriage.
