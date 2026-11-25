@@ -107,8 +107,8 @@ value, which MUST be a collision-resistant name, for example a short
 name prefixed within a namespace the defining specification controls,
 following the Collision-Resistant Name guidance of
 {{Section 2 of RFC7519}}. Values with the `mission-` prefix form a
-namespace coordinated through this document's change controller, and
-there is no registry of `typ` values.
+namespace that this document lists ({{namespace}}); there is no IANA
+registry of `typ` values.
 
 ## Canonicalization {#canonicalization}
 
@@ -148,6 +148,49 @@ the same object, producer and verifier behavior while both are in use,
 and the transition; it never changes an anchor already made, including
 an implied value.
 
+## The mission- Namespace {#namespace}
+
+This document lists every value with the `mission-` prefix. Each entry
+gives the exact value, the specification that defines it, and the
+object it commits. A listed value never changes and is never reused
+for another object, so anchors and test vectors computed under it
+stay valid. OAuth 2.0 Mission Intent and OAuth 2.0 Mission Commitments
+use `mission-intent`, `mission-authority-set`, and
+`mission-authority-entry` for the same objects as the specification
+that defines them.
+
+| Value | Defined by | Committed object |
+|---|---|---|
+| `mission-activation-policy` | draft-mcguinness-mission-approval-governance | an activation policy snapshot: its media type and exact bytes |
+| `mission-approval-context-v1` | draft-mcguinness-mission-approval-governance | the approval context manifest |
+| `mission-approval-policy` | draft-mcguinness-mission-approval-governance | an approval policy snapshot: its media type and exact bytes |
+| `mission-authority-ceiling` | draft-mcguinness-oauth-mission-progressive | an authority ceiling and its drawdown policy |
+| `mission-authority-entry` | draft-mcguinness-oauth-mission | one entry of the approved authority, as recorded |
+| `mission-authority-set` | draft-mcguinness-oauth-mission | the approved authority, as recorded |
+| `mission-consent-disclosure` | draft-mcguinness-oauth-mission-consent-evidence | the consent disclosure object |
+| `mission-creation-fingerprint` | draft-mcguinness-oauth-mission-expansion | a creation operation fingerprint |
+| `mission-delegation-chain` | draft-mcguinness-oauth-mission-cross-org-delegation | an ordered chain of compact JWS delegation tokens |
+| `mission-derivation-entries` | draft-mcguinness-mission-audit | the `authorization_details` of an issued token |
+| `mission-intent` | draft-mcguinness-oauth-mission | the approved Mission Intent |
+| `mission-intent-evidence` | draft-mcguinness-oauth-mission | one submission evidence entry, as presented |
+| `mission-policy-view` | draft-mcguinness-mission-runtime | a materialized policy view manifest |
+| `mission-proposed-authority` | draft-mcguinness-oauth-mission | the submitted `authorization_details`, as recorded |
+| `mission-shaping-evidence` | draft-mcguinness-mission-shaping | a shaping evidence object |
+| `mission-submission-evidence-v1` | draft-mcguinness-mission-approval-governance | the recorded `submission_evidence` array |
+| `mission-submission-provenance` | draft-mcguinness-oauth-mission-consent-evidence | the recorded `submission_evidence` array |
+| `mission-template` | draft-mcguinness-oauth-mission-template | a Mission Template |
+| `mission-unwind-plan` | draft-mcguinness-mission-orchestration | a step's unwind plan |
+| `mission-work-product-provenance` | draft-mcguinness-oauth-mission-work-products | a work product's provenance object |
+{: title="Values with the mission- prefix"}
+
+The change controller of this document, its author until a working
+group adopts it, maintains this list. A specification adds a value by
+asking in the public issue tracker of this document's repository,
+giving the value, its defining specification, and the committed
+object, and the next revision of this document lists it. A
+specification that does not use this list names its `typ` values in a
+namespace it controls ({{anchors}}).
+
 # Security Considerations
 
 The `typ` value separates object types, so a digest of one kind of
@@ -179,4 +222,5 @@ This document has no IANA actions.
 -00
 
 - Initial version: the anchor construction, separated from OAuth 2.0
-  Mission so that the base defines no construction it does not use.
+  Mission so that the base defines no construction it does not use,
+  and the list of values with the `mission-` prefix.

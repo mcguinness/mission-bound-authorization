@@ -223,7 +223,8 @@ The authorization server:
 
 A specification can commit other objects with the construction of
 {{construction}}. It defines a new `typ` value under the naming rule
-of {{MISSION-ANCHORS}}.
+of {{MISSION-ANCHORS}}, which lists every value with the `mission-`
+prefix.
 
 A commitment can take one of three forms, and a specification that
 defines one states which:
