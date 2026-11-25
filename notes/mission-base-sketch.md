@@ -627,10 +627,12 @@ A refusal with `mission_refusal` leaves the client's grant usable: at
 refresh, it does not rotate or revoke the presented refresh token.
 A client that does not implement this document reads the
 `invalid_grant` as {{RFC6749}} defines; `mission_refusal` tells one
-that does that the grant remains usable. A client that receives
-`mission_refusal`, with any value, including one it does not
-recognize, keeps its grant, does not treat the Mission as ended, and
-retries only as the value's specification allows.
+that does that the grant remains usable. Access tokens already issued can remain usable, since a condition such
+as an exhausted limit stops further issuance without withdrawing what
+was issued. A client that receives `mission_refusal` keeps its grant,
+does not treat the Mission as ended, and retries only as the value's
+specification allows; for a value it does not recognize, it keeps its
+grant and stops automatic retries.
 
 The first issuance through an authorization code is the exception. An
 authorization code is used once ({{Section 4.1.2 of RFC6749}}), so
