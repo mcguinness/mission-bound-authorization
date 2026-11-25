@@ -504,14 +504,16 @@ client exchanges, unless a specification defines delegation
 
 The issued token is an access token (the response's
 `issued_token_type` is `urn:ietf:params:oauth:token-type:access_token`),
-except the token an issuer relationship defines ({{other-issuers}}).
+except the distinct token type an issuer relationship names
+({{other-issuers}}).
 It carries the same `mission` claim, meets the subset rule
 ({{subset}}), has an expiry no later than the subject token's, is bound
 to the key of the request's proof of possession where there is one,
 and is gated on the same Mission ({{gating}}). The authorization server
 MUST refuse, with `invalid_request`, an exchange whose
-`requested_token_type` names another token type, except as an issuer
-relationship defines ({{other-issuers}}), and MUST NOT include a
+`requested_token_type` names another token type, except the distinct
+token type an issuer relationship names ({{other-issuers}}), and MUST
+NOT include a
 `refresh_token` in its response, although {{Section 2.2.1 of RFC8693}}
 permits one: the Mission's grant lineage ({{lineage}}) is its only
 refresh path.
@@ -562,18 +564,26 @@ section applies, and so do the limits of {{extension-points}}.
 
 A specification can define a relationship under which an issuer other
 than the Mission's issues tokens for it, such as an authorization
-server in another trust domain. It defines the token the Mission's
-issuer issues by exchange to carry the Mission to that issuer, which
-can be of another token type; when an entry of the Approved Authority
-applies to that issuer for the subset rule; and how that issuer
+server in another trust domain. Such a specification names a distinct
+token type that the Mission's issuer issues by exchange to carry the
+Mission to the receiving issuer: the token is addressed to that
+issuer, and is redeemable once, by the party that proves it holds it.
+The specification defines when an entry of the Approved Authority
+applies to the receiving issuer for the subset rule, how that issuer
 redeems the token, in place of this section's exchange rules, and how
-the other issuer learns that the Mission is no longer active, such as
-by introspecting the carrying token at the Mission's issuer before
-each issuance. The Mission's issuer MUST report that token as active,
-at introspection, only while the Mission is active. The specification MUST restrict the
-other issuer to issuing access tokens, and the limits of
-{{extension-points}} bind it as they bind the Mission's issuer. A resource server accepts its tokens only under
-that relationship ({{rs-enforcement}}).
+it learns that the Mission is no longer active, such as by
+introspecting the carrying token at the Mission's issuer before each
+issuance. The Mission's issuer MUST report the carrying token as
+active, at introspection, only while the Mission is active.
+
+The specification MUST restrict the receiving issuer to issuing
+sender-constrained access tokens that keep the Mission reference, only
+while the Mission is active, and within the carrying token's authority
+and expiry. The receiving issuer issues no refresh token: the client
+renews by a new exchange at the Mission's issuer. The limits of
+{{extension-points}} bind the receiving issuer as they bind the
+Mission's issuer. A resource server accepts its tokens only under that
+relationship ({{rs-enforcement}}).
 
 ## Issuance Gating {#gating}
 
@@ -953,9 +963,9 @@ the type cannot compare is refused rather than guessed.
 specification admits, exchanges, and only for a token it shows it
 holds, and an exchange issues nothing that outlives
 its subject token ({{exchange}}). A token carried to another issuer is
-redeemed there only by a party that shows it holds it, and what the
-other issuer issues is bound to that party's proof-of-possession key
-where it presents one ({{other-issuers}}, {{extension-points}}). A resource server that receives a
+redeemed there once, only by a party that proves it holds it, and what
+the receiving issuer issues is sender-constrained ({{other-issuers}},
+{{extension-points}}). A resource server that receives a
 token therefore cannot turn it into others, and because every token
 carries only the entries that apply to its audience ({{subset}}), it
 cannot be replayed at another resource server.
