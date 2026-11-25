@@ -340,18 +340,19 @@ A Mission Record is a JSON object {{RFC8259}} with these members:
   the Mission unless a specification defines approval by another party
   ({{extension-points}}).
 
-`approved_at`:
+`created_at`:
 : REQUIRED. A string: an RFC 3339 {{RFC3339}} date-time, the instant
-  of approval.
+  of the approval decision that created the Mission.
 
 `expires_at`:
 : REQUIRED. A string: an RFC 3339 date-time set by the authorization
-  server. It MUST be later than `approved_at` and MUST NOT be later
-  than `approved_at` plus the requested lifetime (`mission_expires_in`,
+  server. It MUST be later than `created_at` and MUST NOT be later
+  than `created_at` plus the requested lifetime (`mission_expires_in`,
   or the equivalent a creation path defines).
 
-`authorization_details`:
-: REQUIRED. The Approved Authority.
+`authority_set`:
+: REQUIRED. An array: the Approved Authority, as the approved
+  `authorization_details` entries.
 
 `state`:
 : REQUIRED. A string: the Mission's lifecycle state, `active` or
@@ -624,7 +625,13 @@ The authorization server MUST NOT add `mission_error` for a Mission
 that is not terminated. A client that receives `mission_error`, with
 any value, including one it does not recognize, stops the work and
 does not seek another credential for it: the Mission has ended, and no
-retry under it succeeds.
+retry under it succeeds. These semantics apply to a grant created by a
+Mission request of this document at an authorization server that
+advertises `mission_supported` ({{metadata}}). A grant created under
+Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} keeps that document's
+semantics, under which a value such as `suspended` reports a refusal
+the Mission can return from.
 
 When the authorization server refuses an issuance under a Mission that
 has not ended because of the Mission rather than the request, either
@@ -798,8 +805,8 @@ does not reveal which identifiers exist.
 `GET` returns HTTP 200 and a JSON object with the Mission's `id`,
 `issuer`, `state`, `expires_at`, and, for a terminated Mission,
 `termination`. It
-also returns `authorization_details` to a caller the authorization
-server authorizes to read the Approved Authority.
+also returns `authority_set` to a caller the authorization server
+authorizes to read the Approved Authority.
 
 `DELETE` moves a Mission that has not ended to `terminated` with
 reason `revoked` and returns HTTP 204. A `DELETE` for a Mission that has already ended
@@ -1051,11 +1058,13 @@ revealing which Missions exist.
 
 # IANA Considerations {#iana}
 
-The token claim, response parameters, and `mission_error` below share
-their names with Mission-Bound Authorization for OAuth 2.0
+The token claim, response parameters, `mission_error`, and the
+Mission Lifecycle States and Mission Termination Reasons registries
+below share their names with Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}}, which requests the same
-registrations; `mission_error` is narrower here ({{gating}}). The two
-documents are expected to converge on one registration.
+registrations with the same fields; `mission_error` is narrower here
+({{gating}}). The two documents are expected to converge on one
+registration of each.
 
 ## OAuth Parameters {#iana-oauth-parameters}
 
@@ -1096,21 +1105,28 @@ This document requests registration of `mission_required` in
 the "OAuth Protected Resource Metadata" registry, with Reference
 {{rs-enforcement}}.
 
-## OAuth Mission States {#iana-states}
+## Mission Lifecycle States {#iana-states}
 
-This document requests a new "OAuth Mission States" registry, under
-Specification Required, with initial values `active` and `terminated`
-({{lifecycle}}). A state registered later is one a Mission can return
-to `active` from; {{lifecycle}} says how a party treats every state
+This document requests a new "Mission Lifecycle States" registry,
+under Specification Required. Each registration gives a `Value`
+matching `^[a-z][a-z0-9_]*$` not already registered, a `Terminal`
+value, and a `Semantics` sentence that distinguishes the state from
+every registered state. The initial values are `active` and
+`terminated` ({{lifecycle}}); `terminated` is the one terminal state.
+A state registered later is not terminal: it is one a Mission can
+return to `active` from; {{lifecycle}} says how a party treats every state
 other than `active`. No state takes the name of a registered refusal
 value.
 
-## OAuth Mission Termination Reasons {#iana-reasons}
+## Mission Termination Reasons {#iana-reasons}
 
-This document requests a new "OAuth Mission Termination Reasons"
-registry, under Specification Required, with initial values `revoked`
-and `expired` ({{lifecycle}}). Each registration names the event that
-ends a Mission with that reason.
+This document requests a new "Mission Termination Reasons" registry,
+under Specification Required. Each registration gives a `Value`
+matching `^[a-z][a-z0-9_]*$` not already registered, a `Semantics`
+sentence naming the event that ends a Mission with that reason, and a
+`Members` list naming each further `termination` member the reason
+defines, with its presence. The initial values are `revoked` and
+`expired` ({{lifecycle}}), which define no further members.
 
 ## OAuth Mission Members {#iana-members}
 
@@ -1121,9 +1137,8 @@ introspection member, and of the Mission Record endpoint's responses. Each regis
 where it appears, and the specification that defines it; a name means
 one thing wherever it appears. The initial values, all defined in
 {{record}}, are `id` and `issuer` (record, claim, introspection,
-endpoint); `expires_at`, `authorization_details`, `state`, and
-`termination` (record, endpoint); `client_id`,
-`sub`, and `approved_at` (record); and `reason` and `terminated_at`
+endpoint); `expires_at`, `authority_set`, `state`, and `termination`
+(record, endpoint); `client_id`, `sub`, and `created_at` (record); and `reason` and `terminated_at`
 (`termination`).
 
 ## OAuth Mission Refusal Reasons {#iana-refusals}

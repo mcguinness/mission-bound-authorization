@@ -258,7 +258,7 @@ citations each received.
 | Principals and Approval Basis (12) | Approval Ceremony, "Principals" and "The Recorded Approval", in part: the Ceremony records a lighter `approver`, and `approval_basis` with its `consent_principal` is not composed |
 | Subset Rule (12) | Base, "The Subset Rule" |
 | Issuance Gating (12) | Base, "Issuance Gating", where `mission_error` reports only an ended Mission and `mission_refusal` a refusal while it continues. The minimum checks for issuance paths a companion defines, and the check at release after an acknowledged revocation, are not composed |
-| Mission Record (10) | Base, "The Mission Record", with the facts each layer records; members are renamed (`authorization_details` for `authority_set`, `approved_at` for `created_at`), and `policy_version` is not composed |
+| Mission Record (10) | Base, "The Mission Record", with the facts each layer records; member names match Mission-Bound Authorization for OAuth 2.0 (`authority_set`, `created_at`), and `policy_version` is not composed |
 | Submitting a Mission Intent (9) | Intent, "Requesting an Intent-Bound Mission" and "The Submission Envelope"; the request is the base's Mission request, and back-channel carriage is not composed |
 | Revocation (8) | Base, "Lifecycle" and "Mission Record Endpoint"; revoking a refresh token ends the Mission here, where revoking a token does not by itself in Mission-Bound Authorization |
 | Binding the Mission to the Grant (8) | Base, "Mission Grant Lineage", in part: one lineage per Mission, started only by the grant that creates it; further grant bindings and the consent-reuse rule are not composed |
@@ -290,13 +290,18 @@ Metadata" and "Resource Server Enforcement", with the members renamed
 Delegation Constraints, Claim Reservation, and Error and Challenge
 Mapping are not composed ({{not-composed}}).
 
-The composed documents do not share the wire of Mission-Bound
-Authorization for OAuth 2.0. Their Mission request carries
-`mission_expires_in`; their metadata, record members, and registries
-have their own names; and `mission_error` reports only an ended
-Mission, where that document lets it report other refusals and has a
-client ignore a value it does not recognize. A specification that
-moves its citation here checks each of these.
+The composed documents keep the names of Mission-Bound Authorization
+for OAuth 2.0 wherever their meaning survives, including the record
+members and the Mission Lifecycle States and Mission Termination
+Reasons registries. They differ where the meaning differs. Their
+Mission request carries `mission_expires_in`. Their discovery members
+(`mission_supported`, `mission_required`, and this profile's
+`mission_binding_profile_supported`) are distinct, so a client can
+tell which contract applies. For a grant created under the base,
+`mission_error` reports only an ended Mission; a grant created under
+that document keeps its semantics, in which `suspended` reports a
+refusal the Mission can return from. A specification that moves its
+citation here checks each of these.
 
 # Parts Not Yet Composed {#not-composed}
 
